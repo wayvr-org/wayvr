@@ -1,0 +1,9 @@
+<layout>
+  <include src="../t_group_box.xml" />
+
+  <elements>
+    <rectangle macro="group_box">
+      <GroupBoxTitle src_builtin="dashboard/not_a_bug.svg" text="Debug timings (TODO)" />
+    </rectangle>
+  </elements>
+</layout>

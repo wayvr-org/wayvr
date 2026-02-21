@@ -45,7 +45,7 @@ pub type FrontendTasks = Tasks<FrontendTask>;
 
 pub struct Frontend<T> {
 	pub layout: Layout,
-	globals: WguiGlobals,
+	pub globals: WguiGlobals,
 
 	pub interface: BoxDashInterface<T>,
 

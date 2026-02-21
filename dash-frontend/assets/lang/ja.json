@@ -161,5 +161,6 @@
   "PROCESS": {
     "STOP": "停止",
     "FORCE_KILL": "強制終了"
-  }
+  },
+  "DEBUG_INFO": "デバッグ情報"
 }

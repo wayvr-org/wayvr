@@ -1,0 +1,35 @@
+<layout>
+  <include src="../t_group_box.xml" />
+
+  <!-- key: str, value: str -->
+  <template name="BoolFlag">
+    <div flex_direction="row" gap="4">
+      <label text="${key}" />
+      <label weight="bold" text="${value}" />
+    </div>
+  </template>
+
+  <!-- name, checked, flag_* -->
+  <template name="Cell">
+    <rectangle macro="group_box">
+      <CheckBox id="checkbox" text="${name}" checked="${checked}" />
+      <div flex_direction="row" gap="8" flex_wrap="wrap">
+        <BoolFlag key="Active:" value="${flag_active}" />
+        <BoolFlag key="Focused:" value="${flag_focused}" />
+        <BoolFlag key="IO active:" value="${flag_io_active}" />
+        <BoolFlag key="Overlay:" value="${flag_overlay}" />
+        <BoolFlag key="Primary:" value="${flag_primary}" />
+        <BoolFlag key="Visible:" value="${flag_visible}" />
+      </div>
+    </rectangle>
+  </template>
+
+  <elements>
+    <rectangle macro="group_box">
+      <GroupBoxTitle src_builtin="dashboard/cpu.svg" translation="PROCESS_LIST" />
+      <div id="list_parent" flex_direction="column" gap="8">
+        <!-- filled at runtime -->
+      </div>
+    </rectangle>
+  </elements>
+</layout>
