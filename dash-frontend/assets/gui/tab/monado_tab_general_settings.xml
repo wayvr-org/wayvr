@@ -1,0 +1,12 @@
+<layout>
+  <include src="../t_group_box.xml" />
+
+  <elements>
+    <rectangle macro="group_box">
+      <GroupBoxTitle src_builtin="dashboard/settings.svg" translation="GENERAL_SETTINGS" />
+
+      <label translation="DISPLAY_BRIGHTNESS" />
+      <Slider id="slider_brightness" width="300" height="24" min_value="0" max_value="140" />
+    </rectangle>
+  </elements>
+</layout>

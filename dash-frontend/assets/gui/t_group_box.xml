@@ -11,10 +11,10 @@
     gap="8"
     round="8" />
 
-  <!-- src, text, translation -->
+  <!-- src_builtin, text, translation -->
   <template name="GroupBoxTitle">
     <div flex_direction="row" align_items="center" gap="8">
-      <sprite src="${src}" src_builtin="${src_builtin}" width="24" height="24" />
+      <sprite src_builtin="${src_builtin}" width="24" height="24" />
       <label text="${text}" translation="${translation}" weight="bold" size="18" />
     </div>
     <rectangle color="#FFFFFF44" width="100%" height="2" />

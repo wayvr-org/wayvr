@@ -1,37 +1,14 @@
 <layout>
-  <include src="../t_group_box.xml" />
-
-  <!-- key: str, value: str -->
-  <template name="BoolFlag">
-    <div flex_direction="row" gap="4">
-      <label text="${key}" />
-      <label weight="bold" text="${value}" />
-    </div>
-  </template>
-
-  <!-- name, checked, flag_* -->
-  <template name="Cell">
-    <rectangle macro="group_box">
-      <CheckBox id="checkbox" text="${name}" checked="${checked}" />
-      <div flex_direction="row" gap="8">
-        <BoolFlag key="Active:" value="${flag_active}" />
-        <BoolFlag key="Focused:" value="${flag_focused}" />
-        <BoolFlag key="IO active:" value="${flag_io_active}" />
-        <BoolFlag key="Overlay:" value="${flag_overlay}" />
-        <BoolFlag key="Primary:" value="${flag_primary}" />
-        <BoolFlag key="Visible:" value="${flag_visible}" />
-      </div>
-    </rectangle>
-  </template>
-
   <elements>
-    <label translation="DISPLAY_BRIGHTNESS" />
-    <Slider id="slider_brightness" width="300" height="24" min_value="0" max_value="140" />
-
-    <label translation="PROCESS_LIST" />
-    <div id="list_parent" flex_direction="column" gap="8">
-      <!-- filled at runtime -->
+    <div gap="4">
+      <Tabs id="tabs">
+        <Tab name="general_settings" translation="GENERAL_SETTINGS" sprite_src_builtin="dashboard/settings.svg" />
+        <Tab name="process_list" translation="PROCESS_LIST" sprite_src_builtin="dashboard/cpu.svg" />
+        <Tab name="debug_timings" translation="DEBUG_INFO" sprite_src_builtin="dashboard/not_a_bug.svg" />
+      </Tabs>
+      <div gap="4" id="content" width="100%">
+        <!-- filled-in at runtime -->
+      </div>
     </div>
-
   </elements>
 </layout>
