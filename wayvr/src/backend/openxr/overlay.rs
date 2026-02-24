@@ -97,13 +97,13 @@ impl OverlayWindowData<OpenXrOverlayData> {
 
         let transform = state.transform * self.config.backend.frame_meta().unwrap().transform; // contract
 
-        let aspect_ratio = swapchain.extent[0] as f32 / swapchain.extent[1] as f32;
+        let aspect_ratio = swapchain.extent[1] as f32 / swapchain.extent[0] as f32;
         let (scale_x, scale_y) = if aspect_ratio < 1.0 {
             let major = transform.matrix3.col(0).length();
-            (major * aspect_ratio, major)
+            (major, major * aspect_ratio)
         } else {
             let major = transform.matrix3.col(1).length();
-            (major, major / aspect_ratio)
+            (major / aspect_ratio, major)
         };
 
         let flags = if state.additive {
