@@ -1,4 +1,5 @@
 pub mod astr_containers;
+pub mod async_executor;
 pub mod audio;
 pub mod cache_dir;
 pub mod common;

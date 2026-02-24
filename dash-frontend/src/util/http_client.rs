@@ -13,8 +13,7 @@ use smol::{net::TcpStream, prelude::*};
 use std::convert::TryInto;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-
-use crate::util::various::AsyncExecutor;
+use wlx_common::async_executor::AsyncExecutor;
 pub struct HttpClientResponse {
 	pub data: Vec<u8>,
 }

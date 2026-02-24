@@ -470,11 +470,11 @@ impl DashInterface<AppState> for DashInterfaceLive {
         &mut self,
         app: &mut AppState,
     ) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return Ok(Vec::new()); // no monado available
         };
 
-        let clients = monado_list_clients_filtered(monado)?;
+        let clients = monado_list_clients_filtered(&mut monado.ipc)?;
 
         let mut res = Vec::<dash_interface::MonadoClient>::new();
 
@@ -498,29 +498,29 @@ impl DashInterface<AppState> for DashInterfaceLive {
 
     #[cfg(feature = "openxr")]
     fn monado_client_focus(&mut self, app: &mut AppState, name: &str) -> anyhow::Result<()> {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return Ok(()); // no monado avoilable
         };
 
-        monado_client_focus(monado, name)
+        monado_client_focus(&mut monado.ipc, name)
     }
 
     #[cfg(feature = "openxr")]
     fn monado_brightness_get(&mut self, app: &mut AppState) -> Option<f32> {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return None;
         };
 
-        monado_get_brightness(monado)
+        monado_get_brightness(&mut monado.ipc)
     }
 
     #[cfg(feature = "openxr")]
     fn monado_brightness_set(&mut self, app: &mut AppState, brightness: f32) -> Option<()> {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return None;
         };
 
-        monado_set_brightness(monado, brightness).ok()
+        monado_set_brightness(&mut monado.ipc, brightness).ok()
     }
 
     #[cfg(not(feature = "openxr"))]

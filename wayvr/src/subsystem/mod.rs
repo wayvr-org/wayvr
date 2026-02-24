@@ -5,3 +5,6 @@ pub mod notifications;
 
 #[cfg(feature = "osc")]
 pub mod osc;
+
+#[cfg(feature = "openxr")]
+pub mod monado_metrics;

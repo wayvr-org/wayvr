@@ -192,7 +192,7 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
             wlx_panel_modify(state, overlay, element, command).await;
         }
         Subcommands::SwitchSet { set_or_0: set } => {
-            let set = if set <= 0 { None } else { Some((set - 1) as _) };
+            let set = if set == 0 { None } else { Some((set - 1) as _) };
             wlx_switch_set(state, set).await;
         }
     }
