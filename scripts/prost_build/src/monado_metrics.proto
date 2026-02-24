@@ -1,0 +1,174 @@
+syntax = "proto3";
+
+package monado_metrics;
+
+
+message Version
+{
+	uint32 major = 1;
+	uint32 minor = 2;
+}
+
+message SessionFrame
+{
+	//! Which session this frame belongs to.
+	int64 session_id = 1;
+
+	//! ID of frame.
+	int64 frame_id = 2;
+
+	//! How long we thought the frame would take.
+	uint64 predicted_frame_time_ns = 3;
+
+	//! When we predicted the app should wake up.
+	uint64 predicted_wake_up_time_ns = 4;
+
+	//! When the client's GPU work should have completed.
+	uint64 predicted_gpu_done_time_ns = 5;
+
+	//! When we predicted this frame to be shown.
+	uint64 predicted_display_time_ns = 6;
+
+	//! The selected display period.
+	uint64 predicted_display_period_ns = 7;
+
+	/*!
+	 * When the app told us to display this frame, can be different
+	 * then the predicted display time so we track that separately.
+	 */
+	uint64 display_time_ns = 8;
+
+	//! When the predict call was made (inside of xrWaitFrame).
+	uint64 when_predicted_ns = 9;
+
+	//! When the waiting thread was woken up.
+	uint64 when_wait_woke_ns = 10;
+
+	//! When xrBeginFrame was called.
+	uint64 when_begin_ns = 11;
+
+	//! When the layer information was delivered, (inside of xrEndFrame).
+	uint64 when_delivered_ns = 12;
+
+	//! When the scheduled GPU work was completed.
+	uint64 when_gpu_done_ns = 13;
+
+	//! Was this frame discarded.
+	bool discarded = 14;
+}
+
+message Used
+{
+	//! Owning session of the frame.
+	int64 session_id = 1;
+
+	//! Which session frame was used by the compositor.
+	int64 session_frame_id = 2;
+
+	//! The system frame that the session was used by.
+	int64 system_frame_id = 3;
+
+	//! When the frame was latched.
+	uint64 when_ns = 4;
+}
+
+message SystemFrame
+{
+	//! ID of frame.
+	int64 frame_id = 1;
+
+	//! Projected pixels to photon time.
+	uint64 predicted_display_time_ns = 2;
+
+	//! Current period of displaying of frames.
+	uint64 predicted_display_period_ns = 3;
+
+	//! When the compositor should hand pixels to display hardware.
+	uint64 desired_present_time_ns = 4;
+
+	//! The time that the compositor should wake up.
+	uint64 wake_up_time_ns = 5;
+	uint64 present_slop_ns = 6;
+}
+
+/*!
+ * Out of band info about a GPU timing from a system compositor.
+ */
+message SystemGpuInfo
+{
+	//! ID of frame.
+	int64 frame_id = 1;
+
+	//! Start of GPU work.
+	uint64 gpu_start_ns = 2;
+
+	//! End of GPU work.
+	uint64 gpu_end_ns = 3;
+
+	//! When the information was gathered.
+	uint64 when_ns = 4;
+}
+
+/*!
+ * Information that comes from the vulkan present timing.
+ */
+message SystemPresentInfo
+{
+	//! ID of frame.
+	int64 frame_id = 1;
+
+	//! The total expected time for the compositor to complete a frame.
+	uint64 expected_comp_time_ns = 2;
+
+	//! The time we predicted the compositor to wake up time.
+	uint64 predicted_wake_up_time_ns = 3;
+
+	//! Predicted time for completion of the GPU work.
+	uint64 predicted_done_time_ns = 4;
+
+	//! Predicted display time.
+	uint64 predicted_display_time_ns = 5;
+
+	//! When was this frame predicted.
+	uint64 when_predict_ns = 6;
+
+	//! When we last woke up the compositor after its equivalent of wait_frame.
+	uint64 when_woke_ns = 7;
+
+	//! When the compositor started rendering a frame
+	uint64 when_began_ns = 8;
+
+	//! When the compositor finished rendering a frame
+	uint64 when_submitted_ns = 9;
+
+	//! When new frame timing info was last added.
+	uint64 when_infoed_ns = 10;
+
+	//! When we wanted to start presenting.
+	uint64 desired_present_time_ns = 11;
+
+	//! The slop used for this frame.
+	uint64 present_slop_ns = 12;
+
+	//! Margin of GPU to present time.
+	uint64 present_margin_ns = 13;
+
+	//! When the present time actually happened.
+	uint64 actual_present_time_ns = 14;
+
+	//! The earliest we could have presented.
+	uint64 earliest_present_time_ns = 15;
+}
+
+
+message Record
+{
+	oneof record {
+		Version version = 1;
+		SessionFrame session_frame = 2;
+		Used used = 3;
+		SystemFrame system_frame = 4;
+		SystemGpuInfo system_gpu_info = 5;
+		SystemPresentInfo system_present_info = 6;
+	};
+}

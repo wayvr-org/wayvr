@@ -30,6 +30,7 @@ members = [
   "dash-frontend",
   "wayvr-ipc",
   "wayvrctl",
+  "scripts/prost_build",
 ]
 resolver = "3"
 
@@ -38,6 +39,7 @@ vulkano = { git = "https://github.com/galister/vulkano.git", rev = "cf7f92867928
 
 [workspace.dependencies]
 anyhow = "1.0.100"
+smol = "2.0.2"
 glam = { version = "0.30.9", features = ["mint", "serde"] }
 clap = { version = "4.5.53", features = ["derive"] }
 xdg = "3.0.0"

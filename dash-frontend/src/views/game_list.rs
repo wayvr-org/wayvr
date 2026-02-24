@@ -13,6 +13,7 @@ use wgui::{
 		label::{WidgetLabel, WidgetLabelParams},
 	},
 };
+use wlx_common::async_executor::AsyncExecutor;
 
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
@@ -20,7 +21,6 @@ use crate::{
 		cached_fetcher::CoverArt,
 		popup_manager::{MountPopupParams, PopupHandle},
 		steam_utils::{self, AppID, SteamUtils},
-		various::AsyncExecutor,
 	},
 	views::{self, game_cover, game_launcher},
 };

@@ -25,11 +25,11 @@ use wgui::{
 		util::WLength,
 	},
 };
+use wlx_common::async_executor::AsyncExecutor;
 
 use crate::util::{
 	cached_fetcher::{self, CoverArt},
 	steam_utils::{self, AppID},
-	various::AsyncExecutor,
 };
 
 pub struct ViewCommon {
