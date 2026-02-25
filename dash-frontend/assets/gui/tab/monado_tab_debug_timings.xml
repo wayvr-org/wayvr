@@ -3,7 +3,10 @@
 
   <elements>
     <rectangle macro="group_box">
-      <GroupBoxTitle src_builtin="dashboard/not_a_bug.svg" text="Debug timings (TODO)" />
+      <GroupBoxTitle src_builtin="dashboard/not_a_bug.svg" text="Debug timings" />
+
+      <BarGraph id="graph_first" width="200" height="100" unit="%" limit_min="0" limit_max="50" capacity="100" />
+      <BarGraph id="graph_second" width="300" height="200" unit="ms" capacity="50" />
     </rectangle>
   </elements>
 </layout>

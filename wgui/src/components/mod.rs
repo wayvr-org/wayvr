@@ -7,6 +7,7 @@ use crate::{
 	layout::WidgetID,
 };
 
+pub mod bar_graph;
 pub mod button;
 pub mod checkbox;
 pub mod editbox;

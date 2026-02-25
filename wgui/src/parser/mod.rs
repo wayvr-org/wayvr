@@ -1,3 +1,4 @@
+mod component_bar_graph;
 mod component_button;
 mod component_checkbox;
 mod component_editbox;
@@ -21,6 +22,7 @@ use crate::{
 	layout::{Layout, LayoutParams, LayoutState, Widget, WidgetID, WidgetMap, WidgetPair},
 	log::LogErr,
 	parser::{
+		component_bar_graph::parse_component_bar_graph,
 		component_button::parse_component_button,
 		component_checkbox::{CheckboxKind, parse_component_checkbox},
 		component_editbox::parse_component_editbox,
@@ -1056,6 +1058,7 @@ fn parse_child<'a>(
 			)?);
 		}
 		"EditBox" => new_widget_id = Some(parse_component_editbox(ctx, parent_id, &attribs, tag_name)?),
+		"BarGraph" => new_widget_id = Some(parse_component_bar_graph(ctx, parent_id, &attribs, tag_name)?),
 		"Tabs" => {
 			new_widget_id = Some(parse_component_tabs(ctx, child_node, parent_id, &attribs, tag_name)?);
 		}

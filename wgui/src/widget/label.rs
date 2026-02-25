@@ -17,7 +17,7 @@ use crate::{
 
 use super::{WidgetObj, WidgetState};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct WidgetLabelParams {
 	pub content: Translation,
 	pub style: TextStyle,

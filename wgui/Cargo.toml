@@ -35,3 +35,4 @@ vulkano.workspace = true
 vulkano-shaders.workspace = true
 rust-embed.workspace = true
 flate2 = "1.1.5"
+ringbuffer = "0.16.0"

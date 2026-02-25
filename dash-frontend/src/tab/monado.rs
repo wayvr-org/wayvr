@@ -2,7 +2,13 @@ use std::{collections::HashMap, marker::PhantomData, rc::Rc};
 
 use wgui::{
 	assets::AssetPath,
-	components::{checkbox::ComponentCheckbox, slider::ComponentSlider, tabs::ComponentTabs},
+	components::{
+		bar_graph::{ComponentBarGraph, ValueCell},
+		checkbox::ComponentCheckbox,
+		slider::ComponentSlider,
+		tabs::ComponentTabs,
+	},
+	drawing,
 	globals::WguiGlobals,
 	layout::{Layout, WidgetID},
 	parser::{self, Fetchable, ParseDocumentParams, ParserState},
@@ -56,6 +62,9 @@ struct SubtabGeneralSettings {
 struct SubtabDebugTimings {
 	#[allow(dead_code)]
 	state: ParserState,
+
+	graph_first: Rc<ComponentBarGraph>,
+	graph_second: Rc<ComponentBarGraph>,
 }
 
 #[allow(dead_code)]
@@ -121,11 +130,20 @@ impl<T> Tab<T> for TabMonado<T> {
 			}
 		}
 
-		// every few seconds
-		if let Subtab::ProcessList(_) = &self.subtab
-			&& self.ticks.is_multiple_of(500)
-		{
-			self.tasks.push(Task::ProcessListRefresh);
+		match &mut self.subtab {
+			Subtab::Empty => {}
+			Subtab::GeneralSettings(_) => {}
+			Subtab::ProcessList(_) => {
+				// every few seconds
+				if let Subtab::ProcessList(_) = &self.subtab
+					&& self.ticks.is_multiple_of(500)
+				{
+					self.tasks.push(Task::ProcessListRefresh);
+				}
+			}
+			Subtab::DebugTimings(timings) => {
+				timings.update(&mut frontend.layout);
+			}
 		}
 
 		self.ticks += 1;
@@ -214,7 +232,28 @@ impl SubtabDebugTimings {
 			parent_id,
 		)?;
 
-		Ok(Self { state })
+		let graph_first = state.fetch_component_as::<ComponentBarGraph>("graph_first")?;
+		let graph_second = state.fetch_component_as::<ComponentBarGraph>("graph_second")?;
+
+		Ok(Self {
+			state,
+			graph_first,
+			graph_second,
+		})
+	}
+
+	fn update(&mut self, layout: &mut Layout) {
+		self.graph_first.push_value(ValueCell {
+			value: rand::random_range(0.0..50.0),
+			color: drawing::Color::new(rand::random_range(0.0..1.0), rand::random_range(0.0..1.0), 0.0, 1.0),
+		});
+
+		self.graph_second.push_value(ValueCell {
+			value: rand::random_range(0.0..30.0),
+			color: drawing::Color::new(0.0, rand::random_range(0.0..1.0), rand::random_range(0.0..1.0), 1.0),
+		});
+
+		layout.mark_redraw();
 	}
 }
 

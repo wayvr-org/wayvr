@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     io::Read,
     os::{fd::AsFd, unix::net::UnixStream},
 };
@@ -8,6 +9,8 @@ use crate::subsystem::monado_metrics::proto;
 pub struct MonadoMetricsFd {
     stream_reader: UnixStream,
     stream_writer: UnixStream,
+
+    records: VecDeque<proto::Record>,
 }
 
 impl MonadoMetricsFd {
@@ -21,11 +24,18 @@ impl MonadoMetricsFd {
         Ok(Self {
             stream_reader,
             stream_writer,
+            records: VecDeque::new(),
         })
     }
 
-    fn parse_message(&self, record: proto::Record) {
+    fn parse_message(&mut self, record: proto::Record) {
         log::debug!("metrics message: {record:?}");
+
+        if self.records.len() < 500 {
+            self.records.push_back(record);
+        } else {
+            log::warn!("record queue full, discarding");
+        }
     }
 
     // called every frame

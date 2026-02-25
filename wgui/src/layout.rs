@@ -883,6 +883,7 @@ impl Layout {
 			widget::WidgetType::Label => drawing::Color::new(0.4, 1.0, 0.0, 1.0),
 			widget::WidgetType::Sprite => drawing::Color::new(0.0, 0.8, 1.0, 1.0),
 			widget::WidgetType::Rectangle => drawing::Color::new(1.0, 0.5, 0.2, 1.0),
+			widget::WidgetType::CustomDraw => drawing::Color::new(1.0, 1.0, 1.0, 1.0),
 		};
 
 		let line = format!(

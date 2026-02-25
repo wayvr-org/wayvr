@@ -225,11 +225,13 @@ pub struct ImagePrimitive {
 	pub round_units: u8,
 }
 
+#[derive(Clone)]
 pub struct PrimitiveExtent {
 	pub(super) boundary: Boundary,
 	pub(super) transform: Mat4,
 }
 
+#[derive(Clone)]
 pub enum RenderPrimitive {
 	NewPass,
 	Rectangle(PrimitiveExtent, Rectangle),
