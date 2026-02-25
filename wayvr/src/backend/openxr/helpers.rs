@@ -3,6 +3,18 @@ use glam::{Affine3A, Quat, Vec3, Vec3A};
 use openxr::{self as xr, SessionCreateFlags, Version, sys::Handle};
 use xr::OverlaySessionCreateFlagsEXTX;
 
+macro_rules! next_chain_insert {
+    ($layer:expr, $payload:expr) => {{
+        let payload_ptr = $payload as *mut _ as *mut xr::sys::BaseInStructure;
+        let new_elem = payload_ptr.as_mut().unwrap();
+        let mut raw = $layer.into_raw();
+        new_elem.next = raw.next as _;
+        raw.next = payload_ptr as *const _;
+        raw
+    }};
+}
+pub(crate) use next_chain_insert;
+
 pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
     let entry = xr::Entry::linked();
 
