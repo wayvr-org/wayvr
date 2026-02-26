@@ -8,23 +8,32 @@ pub struct MonadoState {
 impl MonadoState {
     pub fn new() -> anyhow::Result<Self> {
         let ipc = libmonado::Monado::auto_connect().map_err(|s| anyhow::anyhow!("{s}"))?;
-        let mut res = Self { ipc, metrics: None };
-        res.set_metrics_enabled(true)?;
+        let res = Self { ipc, metrics: None };
         Ok(res)
     }
 
     pub fn update(&mut self) {
         if let Some(metrics) = &mut self.metrics {
             metrics.update();
+
+            if metrics.is_full() {
+                let _ = self.set_metrics_enabled(false); // disable metrics if they aren't used
+            }
         }
     }
 
     pub fn set_metrics_enabled(&mut self, enabled: bool) -> anyhow::Result<()> {
-        if enabled && self.metrics.is_none() {
-            self.metrics = Some(monado_metrics::metrics_fd::MonadoMetricsFd::new(
-                &mut self.ipc,
-            )?);
+        if enabled {
+            if self.metrics.is_none() {
+                log::info!("Starting Monado metrics");
+                self.metrics = Some(monado_metrics::metrics_fd::MonadoMetricsFd::new(
+                    &mut self.ipc,
+                )?);
+            }
         } else {
+            if self.metrics.is_some() {
+                log::info!("Stopping Monado metrics");
+            }
             self.metrics = None;
         }
 

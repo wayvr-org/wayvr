@@ -524,6 +524,70 @@ impl DashInterface<AppState> for DashInterfaceLive {
         monado_set_brightness(&mut monado.ipc, brightness).ok()
     }
 
+    #[cfg(feature = "openxr")]
+    fn monado_metrics_set_enabled(&mut self, app: &mut AppState, enabled: bool) -> bool {
+        let Some(monado) = &mut app.monado_state else {
+            return false;
+        };
+
+        if let Err(e) = monado.set_metrics_enabled(enabled) {
+            log::error!("failed to enable metrics: {e:?}");
+            return false;
+        }
+
+        true
+    }
+
+    #[cfg(feature = "openxr")]
+    #[allow(clippy::match_same_arms)]
+    fn monado_metrics_dump_session_frames(
+        &mut self,
+        app: &mut AppState,
+    ) -> Vec<dash_interface::MonadoDumpSessionFrame> {
+        let Some(monado) = &mut app.monado_state else {
+            return Vec::new();
+        };
+
+        let Some(metrics) = &mut monado.metrics else {
+            return Vec::new(); // metrics not enabled or not available
+        };
+
+        metrics
+            .dump_records()
+            .iter()
+            .filter_map(|record| {
+                use crate::subsystem::monado_metrics::proto::record;
+                let record = record.record?;
+                match record {
+                    record::Record::SessionFrame(sframe) => {
+                        // map it to our struct
+                        Some(dash_interface::MonadoDumpSessionFrame {
+                            session_id: sframe.session_id,
+                            frame_id: sframe.frame_id,
+                            predicted_frame_time_ns: sframe.predicted_frame_time_ns,
+                            predicted_wake_up_time_ns: sframe.predicted_wake_up_time_ns,
+                            predicted_gpu_done_time_ns: sframe.predicted_gpu_done_time_ns,
+                            predicted_display_time_ns: sframe.predicted_display_time_ns,
+                            predicted_display_period_ns: sframe.predicted_display_period_ns,
+                            display_time_ns: sframe.display_time_ns,
+                            when_predicted_ns: sframe.when_predicted_ns,
+                            when_wait_woke_ns: sframe.when_wait_woke_ns,
+                            when_begin_ns: sframe.when_begin_ns,
+                            when_delivered_ns: sframe.when_delivered_ns,
+                            when_gpu_done_ns: sframe.when_gpu_done_ns,
+                            discarded: sframe.discarded,
+                        })
+                    }
+                    record::Record::Version(_) => None,
+                    record::Record::Used(_) => None,
+                    record::Record::SystemFrame(_) => None,
+                    record::Record::SystemGpuInfo(_) => None,
+                    record::Record::SystemPresentInfo(_) => None,
+                }
+            })
+            .collect()
+    }
+
     #[cfg(not(feature = "openxr"))]
     fn monado_client_list(
         &mut self,
@@ -542,6 +606,19 @@ impl DashInterface<AppState> for DashInterfaceLive {
     #[cfg(not(feature = "openxr"))]
     fn monado_brightness_set(&mut self, _: &mut AppState, _: f32) -> Option<()> {
         None
+    }
+
+    #[cfg(not(feature = "openxr"))]
+    fn monado_metrics_set_enabled(&mut self, _: &mut AppState, _enabled: bool) {
+        // not supported in this build
+    }
+
+    #[cfg(not(feature = "openxr"))]
+    fn monado_metrics_dump_session_frames(
+        &mut self,
+        _: &mut AppState,
+    ) -> Vec<dash_interface::MonadoDumpSessionFrame> {
+        Vec::new() // not supported in this build
     }
 }
 
