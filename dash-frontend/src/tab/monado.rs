@@ -8,13 +8,13 @@ use wgui::{
 		slider::ComponentSlider,
 		tabs::ComponentTabs,
 	},
-	drawing,
+	drawing::{self, Color},
 	globals::WguiGlobals,
 	layout::{Layout, WidgetID},
-	parser::{self, Fetchable, ParseDocumentParams, ParserState},
+	parser::{self, Fetchable, ParseDocumentParams, ParserData, ParserState},
 	task::Tasks,
 };
-use wlx_common::dash_interface;
+use wlx_common::dash_interface::{self, DashInterface, MonadoDumpSessionFrame};
 
 use crate::{
 	frontend::Frontend,
@@ -59,12 +59,37 @@ struct SubtabGeneralSettings {
 	state: ParserState,
 }
 
+struct DebugGraph {
+	graph: Rc<ComponentBarGraph>,
+	#[allow(dead_code)]
+	data: ParserData,
+}
+
+struct TimingsSession {
+	last_frame: MonadoDumpSessionFrame,
+}
+
+struct Graphs {
+	predicted_display_time: DebugGraph,
+	predicted_frame_time: DebugGraph,
+	predicted_wake_up_time: DebugGraph,
+	predicted_gpu_done_time: DebugGraph,
+	predicted_display_period: DebugGraph,
+	display_time: DebugGraph,
+	when_predicted: DebugGraph,
+	when_wait_woke: DebugGraph,
+	when_begin: DebugGraph,
+	when_delivered: DebugGraph,
+	when_gpu_done: DebugGraph,
+}
+
 struct SubtabDebugTimings {
 	#[allow(dead_code)]
 	state: ParserState,
 
-	graph_first: Rc<ComponentBarGraph>,
-	graph_second: Rc<ComponentBarGraph>,
+	graphs: Graphs,
+
+	sessions: HashMap<i64 /* session id */, TimingsSession>,
 }
 
 #[allow(dead_code)]
@@ -142,7 +167,7 @@ impl<T> Tab<T> for TabMonado<T> {
 				}
 			}
 			Subtab::DebugTimings(timings) => {
-				timings.update(&mut frontend.layout);
+				timings.update(data, frontend);
 			}
 		}
 
@@ -224,36 +249,177 @@ impl SubtabGeneralSettings {
 	}
 }
 
+fn mount_graph(
+	state: &mut ParserState,
+	globals: &WguiGlobals,
+	layout: &mut Layout,
+	id_parent: WidgetID,
+	name: &'static str,
+	limits: (f32, f32),
+) -> anyhow::Result<DebugGraph> {
+	let mut params = HashMap::new();
+	params.insert(Rc::from("name"), Rc::from(name));
+	params.insert(Rc::from("limit_min"), Rc::from(limits.0.to_string()));
+	params.insert(Rc::from("limit_max"), Rc::from(limits.1.to_string()));
+
+	let data = state.parse_template(
+		&doc_params_tab_debug_timings(globals),
+		"DebugGraph",
+		layout,
+		id_parent,
+		params,
+	)?;
+
+	let graph = data.fetch_component_as::<ComponentBarGraph>("graph")?;
+	Ok(DebugGraph { graph, data })
+}
+
+fn ns_to_ms(ns: i64) -> f32 {
+	(ns / 1000) as f32 / 1000.0
+}
+
 impl SubtabDebugTimings {
 	fn new<T>(parent_id: WidgetID, frontend: &mut Frontend<T>) -> anyhow::Result<Self> {
-		let state = wgui::parser::parse_from_assets(
+		let mut state = wgui::parser::parse_from_assets(
 			&doc_params_tab_debug_timings(&frontend.globals),
 			&mut frontend.layout,
 			parent_id,
 		)?;
 
-		let graph_first = state.fetch_component_as::<ComponentBarGraph>("graph_first")?;
-		let graph_second = state.fetch_component_as::<ComponentBarGraph>("graph_second")?;
+		let id_parent = state.get_widget_id("parent")?;
+
+		let mut graphs: Vec<DebugGraph> = Vec::new();
+
+		let mut graph = |name: &'static str, limits: (f32, f32)| -> anyhow::Result<DebugGraph> {
+			mount_graph(
+				&mut state,
+				&frontend.globals,
+				&mut frontend.layout,
+				id_parent,
+				name,
+				limits,
+			)
+		};
+
+		// populate graphs
+		let graphs = Graphs {
+			predicted_display_time: graph("Predicted display time", (0.0, 30.0))?,
+			predicted_frame_time: graph("Predicted frame time", (0.0, 30.0))?,
+			predicted_wake_up_time: graph("Predicted wake-up time", (0.0, 30.0))?,
+			predicted_gpu_done_time: graph("Predicted GPU done time", (0.0, 30.0))?,
+			predicted_display_period: graph("Predicted display period", (0.0, 30.0))?,
+			display_time: graph("Display time", (0.0, 30.0))?,
+			when_predicted: graph("When predicted", (0.0, 30.0))?,
+			when_wait_woke: graph("When wait woke", (0.0, 30.0))?,
+			when_begin: graph("When begin", (0.0, 30.0))?,
+			when_delivered: graph("When delivered", (0.0, 30.0))?,
+			when_gpu_done: graph("When gpu done", (0.0, 30.0))?,
+		};
 
 		Ok(Self {
 			state,
-			graph_first,
-			graph_second,
+			graphs,
+			sessions: Default::default(),
 		})
 	}
 
-	fn update(&mut self, layout: &mut Layout) {
-		self.graph_first.push_value(ValueCell {
-			value: rand::random_range(0.0..50.0),
-			color: drawing::Color::new(rand::random_range(0.0..1.0), rand::random_range(0.0..1.0), 0.0, 1.0),
-		});
+	fn update<T>(&mut self, data: &mut T, frontend: &mut Frontend<T>) {
+		if !frontend.interface.monado_metrics_set_enabled(data, true) {
+			return;
+		}
 
-		self.graph_second.push_value(ValueCell {
-			value: rand::random_range(0.0..30.0),
-			color: drawing::Color::new(0.0, rand::random_range(0.0..1.0), rand::random_range(0.0..1.0), 1.0),
-		});
+		let frames = frontend.interface.monado_metrics_dump_session_frames(data);
+		if frames.is_empty() {
+			return;
+		}
 
-		layout.mark_redraw();
+		let col_green = Color::new(0.0, 1.0, 0.0, 1.0);
+
+		for frame in frames {
+			log::info!("{:?}", frame);
+
+			match self.sessions.get_mut(&frame.session_id) {
+				Some(session) => {
+					let predicted_display_time = ns_to_ms(session.last_frame.predicted_display_time_ns as i64);
+					let predicted_frame_time = ns_to_ms(frame.predicted_frame_time_ns as i64);
+					let predicted_wake_up_time =
+						ns_to_ms(frame.predicted_wake_up_time_ns as i64 - session.last_frame.predicted_wake_up_time_ns as i64);
+					let predicted_gpu_done_time =
+						ns_to_ms(frame.predicted_gpu_done_time_ns as i64 - session.last_frame.predicted_gpu_done_time_ns as i64);
+					let predicted_display_period = ns_to_ms(session.last_frame.predicted_display_period_ns as i64); // 6.944 ms for 144Hz
+					let display_time = ns_to_ms(frame.display_time_ns as i64 - session.last_frame.display_time_ns as i64);
+					let when_predicted = ns_to_ms(frame.when_predicted_ns as i64 - session.last_frame.when_predicted_ns as i64);
+					let when_wait_woke = ns_to_ms(frame.when_wait_woke_ns as i64 - session.last_frame.when_wait_woke_ns as i64);
+					let when_begin = ns_to_ms(frame.when_begin_ns as i64 - session.last_frame.when_begin_ns as i64);
+					let when_delivered = ns_to_ms(frame.when_delivered_ns as i64 - session.last_frame.when_delivered_ns as i64);
+					let when_gpu_done = ns_to_ms(frame.when_gpu_done_ns as i64 - session.last_frame.when_gpu_done_ns as i64);
+
+					self.graphs.predicted_display_time.graph.push_value(ValueCell {
+						value: predicted_display_time,
+						color: col_green,
+					});
+
+					self.graphs.predicted_frame_time.graph.push_value(ValueCell {
+						value: predicted_frame_time,
+						color: col_green,
+					});
+
+					self.graphs.predicted_wake_up_time.graph.push_value(ValueCell {
+						value: predicted_wake_up_time,
+						color: col_green,
+					});
+
+					self.graphs.predicted_gpu_done_time.graph.push_value(ValueCell {
+						value: predicted_gpu_done_time,
+						color: col_green,
+					});
+
+					self.graphs.predicted_display_period.graph.push_value(ValueCell {
+						value: predicted_display_period,
+						color: col_green,
+					});
+
+					self.graphs.display_time.graph.push_value(ValueCell {
+						value: display_time,
+						color: col_green,
+					});
+
+					self.graphs.when_predicted.graph.push_value(ValueCell {
+						value: when_predicted,
+						color: col_green,
+					});
+
+					self.graphs.when_wait_woke.graph.push_value(ValueCell {
+						value: when_wait_woke,
+						color: col_green,
+					});
+
+					self.graphs.when_begin.graph.push_value(ValueCell {
+						value: when_begin,
+						color: col_green,
+					});
+
+					self.graphs.when_delivered.graph.push_value(ValueCell {
+						value: when_delivered,
+						color: col_green,
+					});
+
+					self.graphs.when_gpu_done.graph.push_value(ValueCell {
+						value: when_gpu_done,
+						color: col_green,
+					});
+
+					session.last_frame = frame;
+				}
+				None => {
+					self
+						.sessions
+						.insert(frame.session_id, TimingsSession { last_frame: frame });
+				}
+			}
+		}
+
+		frontend.layout.mark_redraw();
 	}
 }
 

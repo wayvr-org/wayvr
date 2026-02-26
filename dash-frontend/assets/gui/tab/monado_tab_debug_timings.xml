@@ -1,12 +1,17 @@
 <layout>
   <include src="../t_group_box.xml" />
 
-  <elements>
-    <rectangle macro="group_box">
-      <GroupBoxTitle src_builtin="dashboard/not_a_bug.svg" text="Debug timings" />
+  <!-- name, limit_min, limit_max -->
+  <template name="DebugGraph">
+    <rectangle flex_direction="column" align_items="center" gap="8" border="2" color="#ffffff11" color2="#ffffff22" gradient="vertical" border_color="#ffffff33" round="4" padding="4">
+      <label text="${name}" size="9" weight="bold" />
+      <BarGraph id="graph" width="180" height="70" unit="ms" limit_min="${limit_min}" limit_max="${limit_max}" capacity="50" />
+    </rectangle>
+  </template>
 
-      <BarGraph id="graph_first" width="200" height="100" unit="%" limit_min="0" limit_max="50" capacity="100" />
-      <BarGraph id="graph_second" width="300" height="200" unit="ms" capacity="50" />
+  <elements>
+    <rectangle macro="group_box" id="parent" flex_wrap="wrap" flex_direction="row">
+      <GroupBoxTitle src_builtin="dashboard/not_a_bug.svg" text="Debug timings" />
     </rectangle>
   </elements>
 </layout>

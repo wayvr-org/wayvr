@@ -1,7 +1,6 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
 use glam::Vec2;
-use ringbuffer::{AllocRingBuffer, RingBuffer};
 use taffy::{
 	FlexDirection, JustifyContent,
 	prelude::{auto, length, percent},
@@ -39,7 +38,7 @@ pub struct ValueCell {
 
 struct State {
 	limits: (f32, f32), /* min - max */
-	values: AllocRingBuffer<ValueCell>,
+	values: VecDeque<ValueCell>,
 }
 
 #[allow(clippy::struct_field_names)]
@@ -51,6 +50,7 @@ struct Data {
 	id_label_val_max: WidgetID,
 
 	unit: String,
+	capacity: u32,
 }
 
 pub struct ComponentBarGraph {
@@ -99,7 +99,10 @@ impl ComponentBarGraph {
 
 	pub fn push_value(&self, cell: ValueCell) {
 		let mut state = self.state.borrow_mut();
-		state.values.enqueue(cell);
+		if state.values.len() > self.data.capacity as usize {
+			state.values.pop_front();
+		}
+		state.values.push_back(cell);
 	}
 }
 
@@ -151,7 +154,7 @@ pub fn construct(
 
 	let state = Rc::new(RefCell::new(State {
 		limits: params.limits,
-		values: AllocRingBuffer::new(params.capacity.clamp(1, 1000) as usize),
+		values: VecDeque::new(),
 	}));
 
 	let (_, _) = ess.layout.add_child(
@@ -227,6 +230,7 @@ pub fn construct(
 		id_label_val_min: label_val_min.id,
 		id_label_val_max: label_val_max.id,
 		unit: params.unit,
+		capacity: params.capacity,
 	});
 
 	let base = ComponentBase {

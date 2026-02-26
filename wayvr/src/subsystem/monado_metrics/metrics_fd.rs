@@ -13,6 +13,8 @@ pub struct MonadoMetricsFd {
     records: VecDeque<proto::Record>,
 }
 
+const RECORD_QUEUE_SIZE: usize = 500;
+
 impl MonadoMetricsFd {
     pub fn new(monado: &mut libmonado::Monado) -> anyhow::Result<Self> {
         let (stream_reader, stream_writer) = std::os::unix::net::UnixStream::pair()?;
@@ -29,13 +31,19 @@ impl MonadoMetricsFd {
     }
 
     fn parse_message(&mut self, record: proto::Record) {
-        log::debug!("metrics message: {record:?}");
-
-        if self.records.len() < 500 {
-            self.records.push_back(record);
-        } else {
-            log::warn!("record queue full, discarding");
+        self.records.push_back(record);
+        if self.records.len() >= RECORD_QUEUE_SIZE {
+            self.records.pop_front();
         }
+    }
+
+    pub fn dump_records(&mut self) -> Vec<proto::Record> {
+        let records = std::mem::take(&mut self.records);
+        records.into_iter().collect()
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.records.len() >= RECORD_QUEUE_SIZE - 1
     }
 
     // called every frame
