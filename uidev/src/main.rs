@@ -65,7 +65,7 @@ fn load_testbed(audio_sample_player: &mut audio::SamplePlayer) -> anyhow::Result
 
 	let name = std::env::var("TESTBED").unwrap_or_default();
 	Ok(match name.as_str() {
-		"dashboard" => Box::new(TestbedDashboard::new()?),
+		"dashboard" => Box::new(TestbedDashboard::new(assets)?),
 		"" => Box::new(TestbedGeneric::new(assets)?),
 		_ => Box::new(TestbedAny::new(assets, &name)?),
 	})

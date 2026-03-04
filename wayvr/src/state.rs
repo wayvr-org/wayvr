@@ -2,6 +2,7 @@ use glam::Affine3A;
 use idmap::IdMap;
 use smallvec::{SmallVec, smallvec};
 use std::sync::Arc;
+use wgui::assets::AssetProvider;
 use wgui::log::LogErr;
 use wgui::{
     drawing, font_config::WguiFontConfig, gfx::WGfx, globals::WguiGlobals, parser::parse_color_hex,
@@ -112,6 +113,10 @@ impl AppState {
         let mut assets = Box::new(gui::asset::GuiAsset {});
         audio_sample_player.register_wgui_samples(assets.as_mut())?;
 
+        let font_binary_bold = assets.load_from_path_gzip("Quicksand-Bold.ttf.gz")?;
+        let font_binary_regular = assets.load_from_path_gzip("Quicksand-Regular.ttf.gz")?;
+        let font_binary_light = assets.load_from_path_gzip("Quicksand-Light.ttf.gz")?;
+
         let mut defaults = wgui::globals::Defaults::default();
 
         {
@@ -131,6 +136,7 @@ impl AppState {
 
         defaults.animation_mult = 1. / session.config.ui_animation_speed;
         defaults.rounding_mult = session.config.ui_round_multiplier;
+        defaults.gradient_intensity = session.config.ui_gradient_intensity;
 
         let dbus = DbusConnector::default();
 
@@ -158,7 +164,12 @@ impl AppState {
                 assets,
                 &lang_provider,
                 defaults,
-                &WguiFontConfig::default(),
+                &WguiFontConfig {
+                    binaries: vec![&font_binary_regular, &font_binary_bold, &font_binary_light],
+                    family_name_sans_serif: "Quicksand",
+                    family_name_serif: "Quicksand",
+                    family_name_monospace: "",
+                },
                 get_config_file_path(&theme),
             )?,
             dbus,

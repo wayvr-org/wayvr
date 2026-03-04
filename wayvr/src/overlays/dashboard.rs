@@ -81,9 +81,9 @@ impl DashFrontend {
             frontend::InitParams {
                 interface: Box::new(interface),
                 lang_provider: &WayVRLangProvider::from_config(&app.session.config),
+                globals: app.wgui_globals.clone(),
                 has_monado: matches!(app.xr_backend, XrBackend::OpenXR),
             },
-            app,
         )?;
 
         frontend

@@ -1,11 +1,10 @@
-use std::{path::PathBuf, rc::Rc};
+use std::rc::Rc;
 
 use chrono::Timelike;
 use glam::Vec2;
 use wgui::{
-	assets::{AssetPath, AssetProvider},
+	assets::{AssetPath},
 	components::button::ComponentButton,
-	font_config::WguiFontConfig,
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, LayoutParams, LayoutUpdateParams, LayoutUpdateResult, WidgetID},
@@ -23,7 +22,6 @@ use wlx_common::{
 };
 
 use crate::{
-	assets,
 	tab::{Tab, TabType, apps::TabApps, games::TabGames, home::TabHome, monado::TabMonado, settings::TabSettings},
 	util::{
 		popup_manager::{MountPopupParams, PopupManager, PopupManagerParams},
@@ -85,6 +83,7 @@ pub struct FrontendUpdateResult {
 pub struct InitParams<'a, T> {
 	pub interface: BoxDashInterface<T>,
 	pub lang_provider: &'a WayVRLangProvider,
+	pub globals: WguiGlobals,
 	pub has_monado: bool,
 }
 
@@ -111,31 +110,11 @@ pub enum FrontendTask {
 }
 
 impl<T: 'static> Frontend<T> {
-	pub fn new(mut params: InitParams<T>, data: &mut T) -> anyhow::Result<Frontend<T>> {
-		let mut assets = Box::new(assets::Asset {});
-
-		let font_binary_bold = assets.load_from_path_gzip("Quicksand-Bold.ttf.gz")?;
-		let font_binary_regular = assets.load_from_path_gzip("Quicksand-Regular.ttf.gz")?;
-		let font_binary_light = assets.load_from_path_gzip("Quicksand-Light.ttf.gz")?;
-
-		let globals = WguiGlobals::new(
-			assets,
-			params.lang_provider,
-			wgui::globals::Defaults::default(),
-			&WguiFontConfig {
-				binaries: vec![&font_binary_regular, &font_binary_bold, &font_binary_light],
-				family_name_sans_serif: "Quicksand",
-				family_name_serif: "Quicksand",
-				family_name_monospace: "",
-			},
-			PathBuf::new(), //FIXME: pass from somewhere else
-		)?;
-
-		Frontend::update_defaults_from_config(&globals, &mut params.interface, data);
+	pub fn new(params: InitParams<T>) -> anyhow::Result<Frontend<T>> {
 
 		let (layout, state) = wgui::parser::new_layout_from_assets(
 			&ParseDocumentParams {
-				globals: globals.clone(),
+				globals: params.globals.clone(),
 				path: AssetPath::BuiltIn("gui/dashboard.xml"),
 				extra: Default::default(),
 			},
@@ -163,7 +142,7 @@ impl<T: 'static> Frontend<T> {
 			layout,
 			state,
 			current_tab: None,
-			globals,
+			globals: params.globals.clone(),
 			tasks,
 			ticks: 0,
 			widgets: FrontendWidgets {
@@ -194,16 +173,6 @@ impl<T: 'static> Frontend<T> {
 
 	fn queue_play_sound(&mut self, sound_type: SoundType) {
 		self.sounds_to_play.push(sound_type);
-	}
-
-	fn update_defaults_from_config(globals: &WguiGlobals, interface: &mut BoxDashInterface<T>, data: &mut T) {
-		let config = interface.general_config(data);
-
-		let mut globals = globals.get();
-		let defaults = &mut globals.defaults;
-
-		defaults.animation_mult = 1.0 / config.ui_animation_speed;
-		defaults.gradient_intensity = config.ui_gradient_intensity;
 	}
 
 	fn play_sound(&mut self, audio_system: &mut audio::AudioSystem, sound_type: SoundType) -> anyhow::Result<()> {
@@ -375,7 +344,7 @@ impl<T: 'static> Frontend<T> {
 			FrontendTask::PlaySound(sound_type) => self.queue_play_sound(sound_type),
 			FrontendTask::HideDashboard => self.action_hide_dashboard(params.data),
 			FrontendTask::UpdateWguiDefaultsFromConfig => {
-				Frontend::update_defaults_from_config(&self.globals, &mut self.interface, params.data)
+				// Frontend::update_defaults_from_config(&self.globals, &mut self.interface, params.data)
 			}
 		};
 		Ok(())
