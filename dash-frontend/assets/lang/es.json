@@ -90,7 +90,9 @@
     "BLOCK_POSES_ON_KBD_INTERACTION": "Bloquear poses al interactuar con el teclado",
     "BLOCK_POSES_ON_KBD_INTERACTION_HELP": "Bloquea que el juego reciba poses cuando el teclado está sobre él y 'Bloquear entrada del juego' está habilitado",
     "LANGUAGE": "Idioma",
-    "REQUIRES_RESTART": "Requiere reinicio"
+    "REQUIRES_RESTART": "Requiere reinicio",
+    "GRID_OPACITY": "Opacidad de la cuadrícula del suelo",
+    "GRID_OPACITY_HELP": "Opacidad de la cuadrícula del suelo cuando el skybox está habilitado"
   },
   "HELLO": "¡Hola!",
   "AUDIO": {
