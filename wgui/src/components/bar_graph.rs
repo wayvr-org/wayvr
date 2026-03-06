@@ -110,8 +110,6 @@ pub fn construct(
 	ess: &mut ConstructEssentials,
 	mut params: Params,
 ) -> anyhow::Result<(WidgetPair, Rc<ComponentBarGraph>)> {
-	let globals = ess.layout.state.globals.clone();
-
 	params.style.flex_direction = FlexDirection::Row;
 	params.style.gap = length(4.0);
 
@@ -213,17 +211,11 @@ pub fn construct(
 		..Default::default()
 	};
 
-	let (label_val_max, _) = ess.layout.add_child(
-		vertical_texts.id,
-		WidgetLabel::create(&mut globals.get(), label_params.clone()),
-		Default::default(),
-	)?;
+	let label = WidgetLabel::create(&mut ess.layout.state, label_params.clone());
+	let (label_val_max, _) = ess.layout.add_child(vertical_texts.id, label, Default::default())?;
 
-	let (label_val_min, _) = ess.layout.add_child(
-		vertical_texts.id,
-		WidgetLabel::create(&mut globals.get(), label_params),
-		Default::default(),
-	)?;
+	let label = WidgetLabel::create(&mut ess.layout.state, label_params);
+	let (label_val_min, _) = ess.layout.add_child(vertical_texts.id, label, Default::default())?;
 
 	let data = Rc::new(Data {
 		id_root: root.id,

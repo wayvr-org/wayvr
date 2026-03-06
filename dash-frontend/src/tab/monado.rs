@@ -8,13 +8,13 @@ use wgui::{
 		slider::ComponentSlider,
 		tabs::ComponentTabs,
 	},
-	drawing::{self, Color},
+	drawing::Color,
 	globals::WguiGlobals,
 	layout::{Layout, WidgetID},
 	parser::{self, Fetchable, ParseDocumentParams, ParserData, ParserState},
 	task::Tasks,
 };
-use wlx_common::dash_interface::{self, DashInterface, MonadoDumpSessionFrame};
+use wlx_common::dash_interface::{self, MonadoDumpSessionFrame};
 
 use crate::{
 	frontend::Frontend,
@@ -287,8 +287,6 @@ impl SubtabDebugTimings {
 		)?;
 
 		let id_parent = state.get_widget_id("parent")?;
-
-		let mut graphs: Vec<DebugGraph> = Vec::new();
 
 		let mut graph = |name: &'static str, limits: (f32, f32)| -> anyhow::Result<DebugGraph> {
 			mount_graph(
