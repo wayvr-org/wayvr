@@ -355,7 +355,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 	let color_checked = if let Some(color) = params.color_checked {
 		color
 	} else {
-		theme.button_color
+		theme.accent_color
 	};
 
 	let color_unchecked = if let Some(color) = params.color_unchecked {
