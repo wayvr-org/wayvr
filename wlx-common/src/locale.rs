@@ -9,7 +9,7 @@ use crate::config::GeneralConfig;
 pub enum Language {
 	#[strum(props(Text = "English"))]
 	English,
-	#[strum(props(Text = "British"))]
+	#[strum(props(Text = "English(UK)"))]
 	British,
 	#[strum(props(Text = "Polski"))]
 	Polish,
