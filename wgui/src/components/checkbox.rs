@@ -31,6 +31,8 @@ use crate::{
 pub struct Params {
 	pub text: Translation,
 	pub style: taffy::Style,
+	pub color_checked: Option<Color>,
+	pub color_unchecked: Option<Color>,
 	pub box_size: f32,
 	pub checked: bool,
 	pub radio_group: Option<Rc<ComponentRadioGroup>>,
@@ -43,6 +45,8 @@ impl Default for Params {
 		Self {
 			text: Translation::from_raw_text(""),
 			style: Default::default(),
+			color_checked: None,
+			color_unchecked: None,
 			box_size: 24.0,
 			checked: false,
 			radio_group: None,
@@ -84,6 +88,9 @@ struct Data {
 	id_label: WidgetID,     // Label, parent of container
 	value: Option<Rc<str>>, // arbitrary value assigned to the element
 	radio_group: Option<Weak<ComponentRadioGroup>>,
+
+	color_checked: Color,
+	color_unchecked: Color,
 }
 
 pub struct ComponentCheckbox {
@@ -106,12 +113,13 @@ impl ComponentTrait for ComponentCheckbox {
 	}
 }
 
-const COLOR_CHECKED: Color = Color::new(0.1, 0.5, 1.0, 1.0);
-const COLOR_UNCHECKED: Color = Color::new(0.1, 0.5, 1.0, 0.0);
-
 fn set_box_checked(widgets: &layout::WidgetMap, data: &Data, checked: bool) {
 	widgets.call(data.id_inner_box, |rect: &mut WidgetRectangle| {
-		rect.params.color = if checked { COLOR_CHECKED } else { COLOR_UNCHECKED }
+		rect.params.color = if checked {
+			data.color_checked
+		} else {
+			data.color_unchecked
+		}
 	});
 }
 
@@ -315,6 +323,7 @@ fn register_event_mouse_release(
 
 pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Result<(WidgetPair, Rc<ComponentCheckbox>)> {
 	let mut style = params.style;
+	let theme = &ess.layout.state.theme;
 
 	// force-override style
 	style.flex_wrap = taffy::FlexWrap::NoWrap;
@@ -341,6 +350,23 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		(WLength::Percent(1.0), WLength::Percent(1.0))
 	} else {
 		(WLength::Units(5.0), WLength::Units(8.0))
+	};
+
+	let color_checked = if let Some(color) = params.color_checked {
+		color
+	} else {
+		theme.button_color
+	};
+
+	let color_unchecked = if let Some(color) = params.color_unchecked {
+		color
+	} else {
+		Color {
+			r: color_checked.r,
+			g: color_checked.g,
+			b: color_checked.b,
+			a: 0.0,
+		}
 	};
 
 	let (root, _) = ess.layout.add_child(
@@ -383,7 +409,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		outer_box.id,
 		WidgetRectangle::create(WidgetRectangleParams {
 			round: round_5,
-			color: if params.checked { COLOR_CHECKED } else { COLOR_UNCHECKED },
+			color: if params.checked { color_checked } else { color_unchecked },
 			..Default::default()
 		}),
 		taffy::Style {
@@ -413,6 +439,8 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id_label: label.id,
 		value: params.value,
 		radio_group: params.radio_group.as_ref().map(Rc::downgrade),
+		color_checked,
+		color_unchecked,
 	});
 
 	let state = Rc::new(RefCell::new(State {
