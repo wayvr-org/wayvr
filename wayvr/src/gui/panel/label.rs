@@ -130,6 +130,14 @@ pub(super) fn setup_custom_label<S: 'static>(
                         .ok()
                 }),
                 format: format.into(),
+                locale: {
+                    let i18n = app.wgui_globals.i18n();
+                    let locale = i18n.get_locale();
+                    match pure_rust_locales::Locale::try_from(locale.to_string().as_str()) {
+                        Ok(loc) => loc,
+                        Err(_) => pure_rust_locales::Locale::en_US,
+                    }
+                },
             };
 
             Box::new(move |common, data, _, _| {
@@ -213,6 +221,7 @@ fn battery_on_tick(
 struct ClockLabelState {
     timezone: Option<Tz>,
     format: Rc<str>,
+    locale: chrono::Locale,
 }
 
 fn clock_on_tick(
@@ -220,22 +229,19 @@ fn clock_on_tick(
     common: &mut event::CallbackDataCommon,
     data: &mut event::CallbackData,
 ) {
-    let locale = {
-        let binding = common.i18n();
-        let locale = binding.get_locale();
-        match pure_rust_locales::Locale::try_from(locale.to_string().as_str()) {
-            Ok(loc) => loc,
-            Err(_) => pure_rust_locales::Locale::en_US,
-        }
-    };
     let date_time = state.timezone.as_ref().map_or_else(
-        || format!("{}", Local::now().format_localized(&state.format, locale)),
+        || {
+            format!(
+                "{}",
+                Local::now().format_localized(&state.format, state.locale)
+            )
+        },
         |tz| {
             format!(
                 "{}",
                 Local::now()
                     .with_timezone(tz)
-                    .format_localized(&state.format, locale)
+                    .format_localized(&state.format, state.locale)
             )
         },
     );
