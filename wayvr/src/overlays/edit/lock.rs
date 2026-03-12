@@ -11,7 +11,7 @@ use wgui::{
     widget::rectangle::WidgetRectangle,
 };
 
-use crate::{backend::task::ModifyOverlayTask, overlays::edit::EditModeWrapPanel, state::AppState};
+use crate::{backend::task::ModifyOverlayTask, overlays::edit::EditModeWrapPanel};
 
 #[derive(Default)]
 pub(super) struct InteractLockHandler {
@@ -53,21 +53,18 @@ impl InteractLockHandler {
             button.set_sticky_state(common, !interactable);
         }
 
-        let globals = common.state.globals.get();
         if interactable {
-            set_anim_color(&mut rect, 0.0, self.color, globals.defaults.danger_color);
+            set_anim_color(&mut rect, 0.0, self.color, common.state.theme.danger_color);
         } else {
-            set_anim_color(&mut rect, 0.2, self.color, globals.defaults.danger_color);
+            set_anim_color(&mut rect, 0.2, self.color, common.state.theme.danger_color);
         }
     }
 
     pub fn toggle(
         &mut self,
         common: &mut CallbackDataCommon,
-        app: &mut AppState,
         anim_mult: f32,
     ) -> Box<ModifyOverlayTask> {
-        let defaults = app.wgui_globals.defaults().clone();
         let rect_color = self.color;
 
         self.interactable = !self.interactable;
@@ -86,7 +83,7 @@ impl InteractLockHandler {
                         rect,
                         0.2 - (data.pos * 0.2),
                         rect_color,
-                        defaults.danger_color,
+                        common.state.theme.danger_color,
                     );
                     common.alterables.mark_redraw();
                 }),
@@ -98,7 +95,12 @@ impl InteractLockHandler {
                 AnimationEasing::OutBack,
                 Box::new(move |common, data| {
                     let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();
-                    set_anim_color(rect, data.pos * 0.2, rect_color, defaults.danger_color);
+                    set_anim_color(
+                        rect,
+                        data.pos * 0.2,
+                        rect_color,
+                        common.state.theme.danger_color,
+                    );
                     common.alterables.mark_redraw();
                 }),
             )

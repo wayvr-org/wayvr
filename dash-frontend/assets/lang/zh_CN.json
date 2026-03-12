@@ -111,7 +111,9 @@
     "BLOCK_POSES_ON_KBD_INTERACTION": "与键盘交互时阻止姿势",
     "BLOCK_POSES_ON_KBD_INTERACTION_HELP": "当键盘悬停且启用“阻止游戏输入”时，阻止游戏接收姿势",
     "LANGUAGE": "语言",
-    "REQUIRES_RESTART": "需要重启"
+    "REQUIRES_RESTART": "需要重启",
+    "GRID_OPACITY": "地面网格不透明度",
+    "GRID_OPACITY_HELP": "启用天空盒时地板网格的不透明度"
   },
   "APPLICATION_LAUNCHER": "应用启动器",
   "APPLICATION_STARTED": "应用已启动",

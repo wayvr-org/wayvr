@@ -324,4 +324,7 @@ pub struct GeneralConfig {
 
 	#[serde(default)]
 	pub handsfree_pointer: HandsfreePointer,
+
+	#[serde(default = "def_one")]
+	pub grid_opacity: f32,
 }

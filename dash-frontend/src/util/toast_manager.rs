@@ -5,7 +5,6 @@ use wgui::{
 	animation::{Animation, AnimationEasing},
 	components::tooltip::{TOOLTIP_BORDER_COLOR, TOOLTIP_COLOR},
 	drawing::Color,
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, LayoutTask, LayoutTasks, WidgetID},
 	renderer_vk::{
@@ -61,15 +60,7 @@ impl ToastManager {
 		}
 	}
 
-	fn mount_toast(
-		&self,
-		globals: &WguiGlobals,
-		layout: &mut Layout,
-		state: &mut State,
-		content: Translation,
-	) -> anyhow::Result<()> {
-		let mut globals = globals.get();
-
+	fn mount_toast(&self, layout: &mut Layout, state: &mut State, content: Translation) -> anyhow::Result<()> {
 		let (root, _) = layout.add_topmost_child(
 			WidgetDiv::create(),
 			taffy::Style {
@@ -110,27 +101,24 @@ impl ToastManager {
 			},
 		)?;
 
-		let (label, _) = layout.add_child(
-			rect.id,
-			WidgetLabel::create(
-				&mut globals,
-				WidgetLabelParams {
-					content,
-					style: TextStyle {
-						weight: Some(FontWeight::Bold),
-						align: Some(HorizontalAlign::Center),
-						wrap: true,
-						..Default::default()
-					},
+		let label = WidgetLabel::create(
+			&mut layout.state,
+			WidgetLabelParams {
+				content,
+				style: TextStyle {
+					weight: Some(FontWeight::Bold),
+					align: Some(HorizontalAlign::Center),
+					wrap: true,
+					..Default::default()
 				},
-			),
-			taffy::Style { ..Default::default() },
-		)?;
+			},
+		);
+		let (label, _) = layout.add_child(rect.id, label, taffy::Style { ..Default::default() })?;
 
 		// show-up animation
 		layout.animations.add(Animation::new(
 			rect.id,
-			(TOAST_DURATION_TICKS as f32 * globals.defaults.animation_mult) as u32,
+			(TOAST_DURATION_TICKS as f32 * layout.state.theme.animation_mult) as u32,
 			AnimationEasing::Linear,
 			Box::new(move |common, data| {
 				let pos_showup = AnimationEasing::OutQuint.interpolate((data.pos * 4.0).min(1.0));
@@ -161,7 +149,7 @@ impl ToastManager {
 		Ok(())
 	}
 
-	pub fn tick(&mut self, globals: &WguiGlobals, layout: &mut Layout) -> anyhow::Result<()> {
+	pub fn tick(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
 		let mut state = self.state.borrow_mut();
 		if state.timeout > 0 {
 			state.timeout -= 1;
@@ -176,7 +164,7 @@ impl ToastManager {
 			state.timeout = TOAST_DURATION_TICKS;
 			// mount next
 			if let Some(content) = state.queue.pop_front() {
-				self.mount_toast(globals, layout, &mut state, content)?;
+				self.mount_toast(layout, &mut state, content)?;
 			}
 		}
 

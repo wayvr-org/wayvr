@@ -125,6 +125,9 @@
 ## If disabled, there will be no background rendered (solid black).
 #use_skybox: true
 
+## Monado/WiVRn only. Opacity of the floor grid if use_skybox is enabled.
+#grid_opacity: true
+
 ## Hide the help popup that appears on your hand while grabbing an overlay
 #hide_grab_help: false
 

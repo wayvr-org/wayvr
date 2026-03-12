@@ -98,15 +98,9 @@ impl View {
 		Ok(())
 	}
 
-	fn mount_placeholder_text(
-		&self,
-		globals: &WguiGlobals,
-		layout: &mut Layout,
-		parent: WidgetID,
-		text: &str,
-	) -> anyhow::Result<()> {
+	fn mount_placeholder_text(&self, layout: &mut Layout, parent: WidgetID, text: &str) -> anyhow::Result<()> {
 		let label = WidgetLabel::create(
-			&mut globals.get(),
+			&mut layout.state,
 			WidgetLabelParams {
 				content: Translation::from_raw_text(text),
 				style: TextStyle {
@@ -153,7 +147,7 @@ impl View {
 			// mount placeholder
 			let img = view_common.get_placeholder_image()?.clone();
 			self.mount_image(layout, &img)?;
-			self.mount_placeholder_text(&view_common.globals, layout, self.id_image_parent, &self.app_name)?;
+			self.mount_placeholder_text(layout, self.id_image_parent, &self.app_name)?;
 		} else {
 			// mount image
 			let path = format!("app:{:?}", self.app_id);

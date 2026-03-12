@@ -51,11 +51,9 @@ pub(super) fn create_keyboard_panel(
 
     let doc_params = new_doc_params(&mut panel);
 
-    let globals = app.wgui_globals.clone();
-
     let (accent_color, anim_mult) = {
-        let def = globals.defaults();
-        (def.accent_color, def.animation_mult)
+        let theme = &app.wgui_theme;
+        (theme.accent_color, theme.animation_mult)
     };
 
     let root = panel

@@ -67,8 +67,8 @@ impl ComponentTrait for ComponentTabs {
 impl State {
 	fn select_entry(&mut self, common: &mut CallbackDataCommon, name: &Rc<str>) {
 		let (color_accent, color_button) = {
-			let def = common.state.globals.defaults();
-			(def.accent_color, def.button_color)
+			let theme = &common.state.theme;
+			(theme.accent_color, theme.button_color)
 		};
 
 		for entry in &self.mounted_entries {

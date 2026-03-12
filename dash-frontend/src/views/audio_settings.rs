@@ -110,8 +110,7 @@ struct MultiSelectorParams<'a> {
 }
 
 fn mount_multi_selector(params: MultiSelectorParams) -> anyhow::Result<()> {
-	let globals = params.ess.layout.state.globals.clone();
-	let accent_color = globals.defaults().accent_color;
+	let accent_color = params.ess.layout.state.theme.accent_color;
 
 	for cell in params.cells {
 		let highlighted = cell.key == params.def_cell;
@@ -654,8 +653,6 @@ impl View {
 	}
 
 	fn update_button_highlights(&self, layout: &mut Layout) -> anyhow::Result<()> {
-		let defaults = self.globals.defaults();
-
 		let mut c = layout.start_common();
 		let mut common = c.common();
 
@@ -667,14 +664,12 @@ impl View {
 		};
 
 		let mut perform = |btn_num: u8, btn: &Rc<ComponentButton>| {
-			btn.set_color(
-				&mut common,
-				if num == btn_num {
-					defaults.accent_color
-				} else {
-					defaults.button_color
-				},
-			);
+			let color = if num == btn_num {
+				common.state.theme.accent_color
+			} else {
+				common.state.theme.button_color
+			};
+			btn.set_color(&mut common, color);
 		};
 
 		perform(0, &self.btn_sinks);

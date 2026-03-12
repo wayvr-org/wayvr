@@ -462,7 +462,7 @@ impl ParserContext<'_> {
 	}
 
 	fn populate_theme_variables(&mut self) {
-		let def = self.doc_params.globals.defaults();
+		let theme = self.layout.state.theme.clone();
 
 		macro_rules! insert_color_vars {
 			($self:expr, $name:literal, $field:expr, $alpha:expr) => {
@@ -479,11 +479,11 @@ impl ParserContext<'_> {
 			};
 		}
 
-		insert_color_vars!(self, "text", def.text_color, def.translucent_alpha);
-		insert_color_vars!(self, "accent", def.accent_color, def.translucent_alpha);
-		insert_color_vars!(self, "danger", def.danger_color, def.translucent_alpha);
-		insert_color_vars!(self, "faded", def.faded_color, def.translucent_alpha);
-		insert_color_vars!(self, "bg", def.bg_color, def.translucent_alpha);
+		insert_color_vars!(self, "text", theme.text_color, theme.translucent_alpha);
+		insert_color_vars!(self, "accent", theme.accent_color, theme.translucent_alpha);
+		insert_color_vars!(self, "danger", theme.danger_color, theme.translucent_alpha);
+		insert_color_vars!(self, "faded", theme.faded_color, theme.translucent_alpha);
+		insert_color_vars!(self, "bg", theme.bg_color, theme.translucent_alpha);
 	}
 
 	fn print_invalid_attrib(&self, tag_name: &str, key: &str, value: &str) {
@@ -1232,7 +1232,7 @@ pub fn parse_from_assets(
 
 pub fn new_layout_from_assets(
 	doc_params: &ParseDocumentParams,
-	layout_params: &LayoutParams,
+	layout_params: LayoutParams,
 ) -> anyhow::Result<(Layout, ParserState)> {
 	let mut layout = Layout::new(doc_params.globals.clone(), layout_params)?;
 	let widget = layout.content_root_widget;

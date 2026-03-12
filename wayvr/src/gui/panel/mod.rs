@@ -147,8 +147,9 @@ impl<S: 'static> GuiPanel<S> {
 
         let (mut layout, mut parser_state) = wgui::parser::new_layout_from_assets(
             &doc_params,
-            &LayoutParams {
+            LayoutParams {
                 resize_to_parent: params.resize_to_parent,
+                theme: app.wgui_theme.clone(),
             },
         )?;
 

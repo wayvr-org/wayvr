@@ -1,8 +1,10 @@
 use glam::Affine3A;
 use idmap::IdMap;
 use smallvec::{SmallVec, smallvec};
+use std::rc::Rc;
 use std::sync::Arc;
 use wgui::log::LogErr;
+use wgui::theme::WguiTheme;
 use wgui::{
     drawing, font_config::WguiFontConfig, gfx::WGfx, globals::WguiGlobals, parser::parse_color_hex,
     renderer_vk::context::SharedContext as WSharedContext,
@@ -48,6 +50,7 @@ pub struct AppState {
     pub anchor_grabbed: bool,
 
     pub wgui_globals: WguiGlobals,
+    pub wgui_theme: Rc<WguiTheme>,
 
     pub dbus: DbusConnector,
 
@@ -90,7 +93,7 @@ impl AppState {
         let osc_sender = crate::subsystem::osc::OscSender::new(session.config.osc_out_port).ok();
 
         let wgui_shared = WSharedContext::new(gfx.clone())?;
-        let theme = session.config.theme_path.clone();
+        let theme_path = session.config.theme_path.clone();
 
         let mut audio_sample_player = audio::SamplePlayer::new();
         audio_sample_player.register_sample(
@@ -112,7 +115,7 @@ impl AppState {
         let mut assets = Box::new(gui::asset::GuiAsset {});
         audio_sample_player.register_wgui_samples(assets.as_mut())?;
 
-        let mut defaults = wgui::globals::Defaults::default();
+        let mut theme = WguiTheme::default();
 
         {
             #[allow(clippy::ref_option)]
@@ -122,15 +125,15 @@ impl AppState {
                 }
             }
 
-            apply_color(&mut defaults.text_color, &session.config.color_text);
-            apply_color(&mut defaults.accent_color, &session.config.color_accent);
-            apply_color(&mut defaults.danger_color, &session.config.color_danger);
-            apply_color(&mut defaults.faded_color, &session.config.color_faded);
-            apply_color(&mut defaults.bg_color, &session.config.color_background);
+            apply_color(&mut theme.text_color, &session.config.color_text);
+            apply_color(&mut theme.accent_color, &session.config.color_accent);
+            apply_color(&mut theme.danger_color, &session.config.color_danger);
+            apply_color(&mut theme.faded_color, &session.config.color_faded);
+            apply_color(&mut theme.bg_color, &session.config.color_background);
         }
 
-        defaults.animation_mult = 1. / session.config.ui_animation_speed;
-        defaults.rounding_mult = session.config.ui_round_multiplier;
+        theme.animation_mult = 1. / session.config.ui_animation_speed;
+        theme.rounding_mult = session.config.ui_round_multiplier;
 
         let dbus = DbusConnector::default();
 
@@ -157,10 +160,10 @@ impl AppState {
             wgui_globals: WguiGlobals::new(
                 assets,
                 &lang_provider,
-                defaults,
                 &WguiFontConfig::default(),
-                get_config_file_path(&theme),
+                get_config_file_path(&theme_path),
             )?,
+            wgui_theme: Rc::new(theme),
             dbus,
             xr_backend,
             ipc_server,

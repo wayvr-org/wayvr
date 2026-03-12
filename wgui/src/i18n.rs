@@ -123,13 +123,7 @@ impl Locale {
 
 		// check if forced language is set
 		if let Some(forced_lang) = lang_provider.forced_lang() {
-			let matched =
-				Self::match_locale(default_lang, forced_lang, None, lang_provider.langs_list().all_locale()).to_string();
-			return Self {
-				lang: forced_lang.to_string(),
-				region: None,
-				matched,
-			};
+			return Self::parse_str(lang_provider.langs_list(), forced_lang);
 		}
 
 		// fallback to environment variables

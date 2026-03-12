@@ -15,6 +15,7 @@ use crate::{
 	globals::WguiGlobals,
 	sound::WguiSoundType,
 	task::Tasks,
+	theme::WguiTheme,
 	widget::{self, EventParams, EventResult, WidgetObj, WidgetState, WidgetStateFlags, div::WidgetDiv},
 };
 
@@ -118,6 +119,7 @@ impl WidgetMap {
 
 pub struct LayoutState {
 	pub globals: WguiGlobals,
+	pub theme: Rc<WguiTheme>,
 	pub widgets: WidgetMap,
 	pub nodes: WidgetNodeMap,
 	pub tree: taffy::tree::TaffyTree<WidgetID>,
@@ -185,6 +187,7 @@ pub struct Layout {
 #[derive(Default)]
 pub struct LayoutParams {
 	pub resize_to_parent: bool,
+	pub theme: Rc<WguiTheme>,
 }
 
 fn add_child_internal(
@@ -526,12 +529,13 @@ impl Layout {
 		Ok(event_result)
 	}
 
-	pub fn new(globals: WguiGlobals, params: &LayoutParams) -> anyhow::Result<Self> {
+	pub fn new(globals: WguiGlobals, params: LayoutParams) -> anyhow::Result<Self> {
 		let mut state = LayoutState {
 			tree: TaffyTree::new(),
 			widgets: WidgetMap::new(),
 			nodes: WidgetNodeMap::default(),
 			globals,
+			theme: params.theme,
 		};
 
 		let size = if params.resize_to_parent {

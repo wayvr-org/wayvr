@@ -6,7 +6,10 @@ use xr::EyeVisibility;
 
 use super::{CompositionLayer, XrState, helpers, swapchain::WlxSwapchain};
 use crate::{
-    backend::openxr::swapchain::{SwapchainOpts, WlxSwapchainImage, create_swapchain},
+    backend::openxr::{
+        helpers::next_chain_insert,
+        swapchain::{SwapchainOpts, WlxSwapchainImage, create_swapchain},
+    },
     state::AppState,
     windowing::window::OverlayWindowData,
 };
@@ -18,17 +21,6 @@ pub struct OpenXrOverlayData {
     pub(super) init: bool,
     pub(super) cur_visible: bool,
     color_bias_khr: Option<Box<xr::sys::CompositionLayerColorScaleBiasKHR>>,
-}
-
-macro_rules! next_chain_insert {
-    ($layer:expr, $payload:expr) => {{
-        let payload_ptr = $payload.as_mut() as *mut _ as *mut xr::sys::BaseInStructure;
-        let new_elem = payload_ptr.as_mut().unwrap();
-        let mut raw = $layer.into_raw();
-        new_elem.next = raw.next as _;
-        raw.next = payload_ptr as *const _;
-        raw
-    }};
 }
 
 impl OverlayWindowData<OpenXrOverlayData> {

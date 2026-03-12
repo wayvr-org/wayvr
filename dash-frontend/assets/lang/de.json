@@ -90,7 +90,9 @@
     "BLOCK_POSES_ON_KBD_INTERACTION": "Posen beim Interagieren mit der Tastatur blockieren",
     "BLOCK_POSES_ON_KBD_INTERACTION_HELP": "Verhindert, dass das Spiel Posen empfängt, wenn die Tastatur angefahren wird und „Spieleingabe blockieren“ aktiviert ist",
     "LANGUAGE": "Sprache",
-    "REQUIRES_RESTART": "Erfordert Neustart"
+    "REQUIRES_RESTART": "Erfordert Neustart",
+    "GRID_OPACITY": "Bodenraster-Undurchsichtigkeit",
+    "GRID_OPACITY_HELP": "Undurchsichtigkeit des Bodenrasters, wenn der Skybox aktiviert ist"
   },
   "HELLO": "Hallo!",
   "AUDIO": {

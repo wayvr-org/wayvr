@@ -498,26 +498,20 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		active_tooltip: None,
 	};
 
-	let globals = ess.layout.state.globals.clone();
-
 	let slider_text: Option<(WidgetPair, taffy::NodeId)> = if params.show_value {
-		let pair = ess.layout.add_child(
-			slider_handle.id,
-			WidgetLabel::create(
-				&mut globals.get(),
-				WidgetLabelParams {
-					content: Translation::default(),
-					style: TextStyle {
-						color: Some(drawing::Color::new(0.0, 0.0, 0.0, 1.0)), // always black
-						weight: Some(FontWeight::Bold),
-						align: Some(HorizontalAlign::Center),
-						..Default::default()
-					},
+		let label = WidgetLabel::create(
+			&mut ess.layout.state,
+			WidgetLabelParams {
+				content: Translation::default(),
+				style: TextStyle {
+					color: Some(drawing::Color::new(0.0, 0.0, 0.0, 1.0)), // always black
+					weight: Some(FontWeight::Bold),
+					align: Some(HorizontalAlign::Center),
+					..Default::default()
 				},
-			),
-			Default::default(),
-		)?;
-		Some(pair)
+			},
+		);
+		Some(ess.layout.add_child(slider_handle.id, label, Default::default())?)
 	} else {
 		None
 	};
@@ -535,7 +529,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id: root.id,
 		lhandles: {
 			let listeners = &mut root.widget.state().event_listeners;
-			let anim_mult = ess.layout.state.globals.defaults().animation_mult;
+			let anim_mult = ess.layout.state.theme.animation_mult;
 			vec![
 				register_event_mouse_enter(data.clone(), state.clone(), listeners, params.tooltip, anim_mult),
 				register_event_mouse_leave(data.clone(), state.clone(), listeners, anim_mult),
