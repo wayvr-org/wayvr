@@ -27,7 +27,7 @@ use wgui::{
     widget::{EventResult, div::WidgetDiv, rectangle::WidgetRectangle},
 };
 use crate::overlays::keyboard::layout::KeyData;
-use super::{KeyButtonData, KeyState, KeyboardState, handle_press, handle_release, layout::{self, KeyCapType}, handle_enter};
+use super::{KeyButtonData, KeyState, KeyboardState, handle_press, handle_release, layout::{self, KeyCapType}, handle_mouse_motion};
 
 const PIXELS_PER_UNIT: f32 = 60.;
 
@@ -179,8 +179,6 @@ pub(super) fn create_keyboard_panel(
                     EventListenerKind::MouseEnter,
                     Box::new({
                         let k = key_state.clone();
-                        let k_label = key_label.clone();
-                        let k_cap_type = key_cap_type.clone();
                         move |common, data, _app, state| {
                             common.alterables.trigger_haptics();
                             on_enter_anim(
@@ -192,7 +190,7 @@ pub(super) fn create_keyboard_panel(
                                 width_mul,
                             );
 
-                            handle_enter(&k, &k_label, &k_cap_type, state);
+
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -228,9 +226,25 @@ pub(super) fn create_keyboard_panel(
                             let CallbackMetadata::MouseButton(button) = data.metadata else {
                                 panic!("CallbackMetadata should contain MouseButton!");
                             };
+                            let within_key_pos = data.metadata.get_mouse_pos_normalized(&common.alterables.transform_stack);
 
-                            handle_press(app, &k, &k_cap_type, &k_label, state, button);
+                            handle_press(app, &k, &k_label, &k_cap_type, &within_key_pos, state, button);
                             on_press_anim(k.clone(), common, data);
+                            Ok(EventResult::Pass)
+                        }
+                    }),
+                );
+                panel.add_event_listener(
+                    widget_id,
+                    EventListenerKind::MouseMotion,
+                    Box::new({
+                        let k = key_state.clone();
+                        let k_label = key_label.clone();
+                        let k_cap_type = key_cap_type.clone();
+                        move |common, data, app, state| {
+                            let within_key_pos = data.metadata.get_mouse_pos_normalized(&common.alterables.transform_stack);
+
+                            handle_mouse_motion(&k, &k_label, &k_cap_type, state, &within_key_pos);
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -240,7 +254,6 @@ pub(super) fn create_keyboard_panel(
                     EventListenerKind::MouseRelease,
                     Box::new({
                         let k = key_state.clone();
-                        let k_label = key_label.clone();
                         let k_cap_type = key_cap_type.clone();
                         move |common, data, app, state| {
                             if handle_release(app, &k, &k_cap_type, state) {

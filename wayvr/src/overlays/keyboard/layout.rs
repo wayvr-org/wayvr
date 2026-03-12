@@ -3,7 +3,6 @@ use std::{collections::HashMap, str::FromStr, sync::LazyLock};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use smithay::reexports::wayland_protocols::wp::pointer_gestures::zv1::server::zwp_pointer_gesture_swipe_v1::ZwpPointerGestureSwipeV1;
-use swipe_types::types::Point;
 use crate::{
     config::{ConfigType, load_known_yaml},
     subsystem::hid::{

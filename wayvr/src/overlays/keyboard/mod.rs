@@ -28,10 +28,9 @@ use crate::{
 };
 use anyhow::Context;
 use arboard::Clipboard;
-use glam::{Affine3A, Quat, Vec3, vec3};
+use glam::{Affine3A, Quat, Vec3, vec3, Vec2};
 use regex::Regex;
 use slotmap::{SlotMap, new_key_type};
-use super_swipe_engine::SwipeEngine;
 use wgui::{
     drawing,
     event::{InternalStateChangeEvent, MouseButtonEvent, MouseButtonIndex},
@@ -43,7 +42,7 @@ use wlx_common::{
 };
 use codes_iso_639::part_1::LanguageCode;
 use crate::overlays::keyboard::layout::KeyCapType;
-use crate::overlays::keyboard::swipe_type::{copy_text_to_primary_clipboard, create_new_swipe_engine};
+use crate::overlays::keyboard::swipe_type::SwipeTypingManager;
 
 pub mod builder;
 mod layout;
@@ -62,12 +61,7 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
         overlay_list: OverlayList::default(),
         set_list: SetList::default(),
         clock_12h: app.session.config.clock_12h,
-        swipe_engine: None,
-        current_swipe_input: String::new(),
-        is_swiping: false,
-        last_pressed_key_label: String::new(),
-        clipboard: Clipboard::new()?,
-        last_swiped_word: None
+        swipe_typing_manager: None,
     };
 
     let auto_labels = layout.auto_labels.unwrap_or(true);
@@ -164,7 +158,7 @@ impl KeyboardBackend {
     ) -> anyhow::Result<KeyboardPanelKey> {
         let mut state = self.default_state.take();
 
-        state.swipe_engine =  match create_new_swipe_engine(&keymap, &self.wlx_layout) {
+        state.swipe_typing_manager = match SwipeTypingManager::new() {
             Ok(engine) => Some(engine),
             Err(e) => {
                 log::error!("Error occured while trying to load swipe engine: {:?}", e);
@@ -217,7 +211,7 @@ impl KeyboardBackend {
             .state
             .take();
 
-        state_from.swipe_engine =  match create_new_swipe_engine(&Some(keymap), &self.wlx_layout) {
+        state_from.swipe_typing_manager = match SwipeTypingManager::new() {
             Ok(engine) => Some(engine),
             Err(e) => {
                 log::error!("Error occured while trying to load swipe engine: {:?}", e);
@@ -357,15 +351,7 @@ struct KeyboardState {
     overlay_list: OverlayList,
     set_list: SetList,
     clock_12h: bool,
-
-    // todo move all this swipe stuff into its own class
-    swipe_engine: Option<SwipeEngine>,
-    current_swipe_input: String,
-    last_pressed_key_label: String,
-    is_swiping: bool,
-    clipboard: Clipboard,
-    last_swiped_word: Option<String>
-
+    swipe_typing_manager: Option<SwipeTypingManager>,
 }
 
 macro_rules! take_and_leave_default {
@@ -385,12 +371,7 @@ impl KeyboardState {
             overlay_list: OverlayList::default(),
             set_list: SetList::default(),
             clock_12h: self.clock_12h,
-            swipe_engine: None,
-            current_swipe_input: String::new(),
-            is_swiping: false,
-            last_pressed_key_label: String::new(),
-            clipboard: Clipboard::new().unwrap(),
-            last_swiped_word: None
+            swipe_typing_manager: None,
         }
     }
 }
@@ -431,37 +412,44 @@ enum KeyButtonData {
     },
 }
 
-fn handle_enter(key: &KeyState, key_label: &Vec<String>, key_cap_type: &KeyCapType, keyboard: &mut KeyboardState) {
-    if let Some(_) = keyboard.swipe_engine.as_ref() && *key_cap_type == KeyCapType::Letter {
-        if *key_label.iter().next().unwrap() != keyboard.last_pressed_key_label {
-            keyboard.is_swiping = true;
-        }
-        if keyboard.is_swiping {
+fn handle_mouse_motion(key: &KeyState, key_label: &Vec<String>, key_cap_type: &KeyCapType, keyboard: &mut KeyboardState, within_key_pos: &Option<Vec2>) {
+    if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *key_cap_type == KeyCapType::Letter {
+        if !swipe_manager.is_current_swipe_empty() {
             match &key.button_state {
                 KeyButtonData::Key { vk, pressed } => {
-                    keyboard.current_swipe_input.push_str(&*key_label.iter().next().unwrap().to_ascii_lowercase())
+                    if let Some(pos) = within_key_pos {
+                        // check because mouse motion can trigger despite hover being false
+                        if pos.x >= 0.0 && pos.x <= 1.0 && pos.y >= 0.0 && pos.y <= 1.0 {
+
+                            if let Some(label) = key_label.first() {
+                                swipe_manager.add_swipe(pos, label.chars().next().unwrap_or_default());
+                            }
+                        }
+                    }
                 }
                 _ => {}
             }
         }
     }
+
 }
 fn handle_press(
     app: &mut AppState,
     key: &KeyState,
-    key_cap_type: &KeyCapType,
     key_label: &Vec<String>,
+    key_cap_type: &KeyCapType,
+    within_key_pos: &Option<Vec2>,
     keyboard: &mut KeyboardState,
     button: MouseButtonEvent,
 ) {
-    keyboard.is_swiping = false;
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
-            if let Some(_) = keyboard.swipe_engine.as_ref() && *key_cap_type == KeyCapType::Letter {
-                let actual_label = key_label.iter().next().unwrap();
-                keyboard.last_pressed_key_label = actual_label.clone();
-                keyboard.current_swipe_input.clear();
-                keyboard.current_swipe_input.push_str(&*actual_label.to_ascii_lowercase())
+            if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *key_cap_type == KeyCapType::Letter {
+                if let Some(pos) = within_key_pos {
+                    if let Some(label) = key_label.first() {
+                        swipe_manager.add_swipe(pos, label.chars().next().unwrap_or_default());
+                    }
+                }
             }
             else {
                 keyboard.modifiers |= match button.index {
@@ -508,29 +496,23 @@ fn handle_press(
 fn handle_release(app: &mut AppState, key: &KeyState, k_cap_type: &KeyCapType, keyboard: &mut KeyboardState) -> bool {
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
-            if let Some(engine) = keyboard.swipe_engine.as_ref() && *k_cap_type == KeyCapType::Letter {
-                if keyboard.is_swiping {
-                    if !keyboard.current_swipe_input.is_empty() {
-                        let prediction = engine.predict(&*keyboard.current_swipe_input, keyboard.last_swiped_word.as_ref().map(|x| x.as_str()), 5);
-                        keyboard.current_swipe_input.clear();
-                        println!("swipe path: {}", keyboard.current_swipe_input);
-                        println!("{:?}", prediction);
-
-                        let best_prediction = prediction.first().unwrap().word.as_ref();
-
-                        copy_text_to_primary_clipboard(best_prediction, &mut keyboard.clipboard);
-                        app.hid_provider
-                            .set_modifiers_routed(app.wvr_server.as_mut(), SHIFT);
-                        app.hid_provider
-                            .send_key_routed(app.wvr_server.as_mut(), VirtualKey::Insert, true);
-                        app.hid_provider
-                            .send_key_routed(app.wvr_server.as_mut(), VirtualKey::Insert, false);
-                        app.hid_provider
-                            .set_modifiers_routed(app.wvr_server.as_mut(), keyboard.modifiers);
-                        keyboard.last_swiped_word = Some(best_prediction.parse().unwrap())
+            if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *k_cap_type == KeyCapType::Letter {
+                if swipe_manager.swipe_left_first_key() {
+                    match swipe_manager.predict() {
+                        Ok(predictions) => {
+                            let best_prediction = predictions.first().unwrap();
+                            println!("best prediction for swipe: {best_prediction}");
+                            
+                            swipe_manager.select_word(&best_prediction, app, keyboard.modifiers);                            
+                        },
+                        Err(e) => {
+                            log::error!("{}", e)
+                        }
                     }
                 }
                 else { // pointer must have been released on the same key it was pressed on
+                    swipe_manager.reset(); // drop swipe tracking that was started on press
+                    
                     app.hid_provider
                         .send_key_routed(app.wvr_server.as_mut(), *vk, true);
                     pressed.set(true);
@@ -538,7 +520,6 @@ fn handle_release(app: &mut AppState, key: &KeyState, k_cap_type: &KeyCapType, k
                         .send_key_routed(app.wvr_server.as_mut(), *vk, false);
                     play_key_click(app);
                 }
-
             }
             else {
                 pressed.set(false);

@@ -87,10 +87,9 @@ xcb = { version = "1.6.0", optional = true, features = [
   "as-raw-xcb-connection",
 ] }
 xkbcommon = { version = "0.8.0" } # 0.9.0 breaks keymap import on some distros
-super-swipe-engine = {git="https://github.com/oneshinyboi/swipeType", tag="v0.1.11"}
 codes-iso-639 = "0.1.5"
-swipe-types = "0.1.6"
 arboard = { version="3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
+super-swipe-type = "0.1.2"
 
 
 [build-dependencies]
