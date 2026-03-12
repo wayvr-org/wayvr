@@ -1,6 +1,6 @@
 use std::{
 	any::{Any, TypeId},
-	cell::{Ref, RefMut},
+	cell::RefMut,
 	collections::HashSet,
 	rc::{Rc, Weak},
 };
@@ -180,10 +180,6 @@ impl CallbackDataCommon<'_> {
 
 	pub fn globals(&self) -> RefMut<'_, globals::Globals> {
 		self.state.globals.get()
-	}
-
-	pub fn defaults(&self) -> Ref<'_, globals::Defaults> {
-		self.state.globals.defaults()
 	}
 }
 

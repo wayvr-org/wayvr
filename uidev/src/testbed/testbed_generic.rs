@@ -21,6 +21,7 @@ use wgui::{
 	parser::{Fetchable, ParseDocumentExtra, ParseDocumentParams, ParserState},
 	taffy::{self, prelude::length},
 	task::Tasks,
+	theme::WguiTheme,
 	widget::{div::WidgetDiv, label::WidgetLabel, rectangle::WidgetRectangle},
 	windowing::{
 		context_menu::{self, TickResult},
@@ -91,7 +92,6 @@ impl TestbedGeneric {
 		let globals = WguiGlobals::new(
 			assets,
 			&lang_provider,
-			wgui::globals::Defaults::default(),
 			&WguiFontConfig::default(),
 			PathBuf::new(), // cwd
 		)?;
@@ -125,8 +125,9 @@ impl TestbedGeneric {
 
 		let (layout, parser_state) = wgui::parser::new_layout_from_assets(
 			&TestbedGeneric::doc_params(&globals, extra),
-			&LayoutParams {
+			LayoutParams {
 				resize_to_parent: true,
+				theme: Rc::new(WguiTheme::default()),
 			},
 		)?;
 

@@ -9,8 +9,9 @@ use crate::{
 	event::CallbackDataCommon,
 	globals::Globals,
 	i18n::Translation,
-	layout::WidgetID,
+	layout::{LayoutState, WidgetID},
 	renderer_vk::text::TextStyle,
+	theme::WguiTheme,
 	widget::WidgetStateFlags,
 };
 
@@ -31,9 +32,13 @@ pub struct WidgetLabel {
 }
 
 impl WidgetLabel {
-	pub fn create(globals: &mut Globals, mut params: WidgetLabelParams) -> WidgetState {
+	pub fn create(state: &mut LayoutState, params: WidgetLabelParams) -> WidgetState {
+		WidgetLabel::create_ex(&mut state.globals.get(), &state.theme, params)
+	}
+
+	pub fn create_ex(globals: &mut Globals, theme: &WguiTheme, mut params: WidgetLabelParams) -> WidgetState {
 		if params.style.color.is_none() {
-			params.style.color = Some(globals.defaults.text_color);
+			params.style.color = Some(theme.text_color);
 		}
 
 		let metrics = Metrics::from(&params.style);

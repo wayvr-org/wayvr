@@ -256,17 +256,14 @@ impl View {
 		)?;
 
 		if let Some(text) = text.take() {
-			layout.add_child(
-				self.id_list_parent,
-				WidgetLabel::create(
-					&mut self.globals.get(),
-					WidgetLabelParams {
-						content: text,
-						..Default::default()
-					},
-				),
-				Default::default(),
-			)?;
+			let label = WidgetLabel::create(
+				&mut layout.state,
+				WidgetLabelParams {
+					content: text,
+					..Default::default()
+				},
+			);
+			layout.add_child(self.id_list_parent, label, Default::default())?;
 		}
 
 		Ok(())

@@ -343,8 +343,6 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		(WLength::Units(5.0), WLength::Units(8.0))
 	};
 
-	let globals = ess.layout.state.globals.clone();
-
 	let (root, _) = ess.layout.add_child(
 		ess.parent,
 		WidgetRectangle::create(WidgetRectangleParams {
@@ -397,20 +395,17 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		},
 	)?;
 
-	let (label, _node_label) = ess.layout.add_child(
-		id_container,
-		WidgetLabel::create(
-			&mut globals.get(),
-			WidgetLabelParams {
-				content: params.text,
-				style: TextStyle {
-					weight: Some(FontWeight::Bold),
-					..Default::default()
-				},
+	let widget_label = WidgetLabel::create(
+		&mut ess.layout.state,
+		WidgetLabelParams {
+			content: params.text,
+			style: TextStyle {
+				weight: Some(FontWeight::Bold),
+				..Default::default()
 			},
-		),
-		Default::default(),
-	)?;
+		},
+	);
+	let (label, _node_label) = ess.layout.add_child(id_container, widget_label, Default::default())?;
 
 	let data = Rc::new(Data {
 		id_container,
@@ -433,7 +428,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id: root.id,
 		lhandles: {
 			let listeners = &mut root.widget.state().event_listeners;
-			let anim_mult = ess.layout.state.globals.defaults().animation_mult;
+			let anim_mult = ess.layout.state.theme.animation_mult;
 			vec![
 				register_event_mouse_enter(state.clone(), listeners, params.tooltip, anim_mult),
 				register_event_mouse_leave(state.clone(), listeners, anim_mult),

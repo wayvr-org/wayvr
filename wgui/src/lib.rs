@@ -40,6 +40,7 @@ pub mod renderer_vk;
 pub mod sound;
 pub mod stack;
 pub mod task;
+pub mod theme;
 pub mod widget;
 pub mod windowing;
 

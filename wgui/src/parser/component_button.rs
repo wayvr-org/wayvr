@@ -57,7 +57,7 @@ pub fn parse_component_button<'a>(
 					key,
 					value,
 					&mut round,
-					ctx.doc_params.globals.defaults().rounding_mult,
+					ctx.layout.state.theme.rounding_mult,
 				);
 			}
 			"color" => {

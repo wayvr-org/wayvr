@@ -60,7 +60,7 @@ _They can be used in any widget/component._
 
 `width`, `height`: **float** | **percent**
 
-### Advanced attributes
+## Advanced attributes
 
 `interactable`: "1" | "0"
 
@@ -73,6 +73,32 @@ _Used in case of overlapping pop-ups or windows, most notably applied to various
 `new_pass`: "1" | "0"
 
 _Set to 1 if you want to render overlapping pop-ups to properly render your widgets in order. Wgui renders with as few Vulkan drawcalls as possible, so this is your responsibility._
+
+## Default Colors
+
+_These colors can be defined by the user to control the color scheme. They always exists and can be used in any place a normal color could be used._
+
+`~color_text`: default: white(#FFFFFF)
+`~color_accent`: default: light blue(#21ADFF)
+`~color_danger`: default: red(#E60000)
+`~color_faded`: default: grey(#ABBDCC)
+`~color_bg`: default: black(#00121ABF) (color_background in config)
+
+_Only the default colors can be changed with the following suffixes._
+
+`_translucent`
+
+_Halves the alpha of the color._
+
+`_10`
+`_20`
+`_30`
+`_40`
+`_50`
+
+_Darkens the color by multiplying it with a percentage. `~color_accent_50` Would be half of the normal brightness but the same alpha. You can't combine the suffixes_
+
+### Color
 
 # Widgets
 

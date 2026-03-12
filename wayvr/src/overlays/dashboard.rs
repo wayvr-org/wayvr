@@ -77,14 +77,12 @@ impl DashFrontend {
             let _ = interface.process_launch(app, false, p)?;
         }
 
-        let frontend = frontend::Frontend::new(
-            frontend::InitParams {
-                interface: Box::new(interface),
-                lang_provider: &WayVRLangProvider::from_config(&app.session.config),
-                has_monado: matches!(app.xr_backend, XrBackend::OpenXR),
-            },
-            app,
-        )?;
+        let frontend = frontend::Frontend::new(frontend::InitParams {
+            interface: Box::new(interface),
+            lang_provider: &WayVRLangProvider::from_config(&app.session.config),
+            has_monado: matches!(app.xr_backend, XrBackend::OpenXR),
+            theme: app.wgui_theme.clone(),
+        })?;
 
         frontend
             .tasks

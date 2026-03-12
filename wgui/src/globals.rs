@@ -1,5 +1,5 @@
 use std::{
-	cell::{Ref, RefCell, RefMut},
+	cell::{RefCell, RefMut},
 	io::Read,
 	path::PathBuf,
 	rc::Rc,
@@ -11,53 +11,17 @@ use regex::Regex;
 
 use crate::{
 	assets::{AssetPath, AssetProvider, LangProvider},
-	assets_internal, drawing,
+	assets_internal,
 	font_config::{WguiFontConfig, WguiFontSystem},
 	i18n::I18n,
 	renderer_vk::text::custom_glyph::CustomGlyphCache,
 };
-
-#[derive(Clone)]
-pub struct Defaults {
-	pub dark_mode: bool,
-	pub text_color: drawing::Color,
-	pub button_color: drawing::Color,
-	pub accent_color: drawing::Color,
-	pub danger_color: drawing::Color,
-	pub faded_color: drawing::Color,
-	pub bg_color: drawing::Color,
-	pub editbox_color: drawing::Color,
-	pub translucent_alpha: f32,
-	pub animation_mult: f32,
-	pub rounding_mult: f32,
-	pub gradient_intensity: f32, // currently used for buttons
-}
-
-impl Default for Defaults {
-	fn default() -> Self {
-		Self {
-			dark_mode: true,
-			text_color: drawing::Color::new(1.0, 1.0, 1.0, 1.0),
-			button_color: drawing::Color::new(1.0, 1.0, 1.0, 0.02),
-			accent_color: drawing::Color::new(0.13, 0.68, 1.0, 1.0),
-			danger_color: drawing::Color::new(0.9, 0.0, 0.0, 1.0),
-			faded_color: drawing::Color::new(0.67, 0.74, 0.80, 1.0),
-			bg_color: drawing::Color::new(0.0, 0.07, 0.1, 0.75),
-			editbox_color: drawing::Color::new(0.15, 0.25, 0.35, 0.95),
-			translucent_alpha: 0.5,
-			animation_mult: 1.0,
-			rounding_mult: 1.0,
-			gradient_intensity: 0.3,
-		}
-	}
-}
 
 pub struct Globals {
 	pub assets_internal: Box<dyn AssetProvider>,
 	pub assets_builtin: Box<dyn AssetProvider>,
 	pub asset_folder: PathBuf,
 	pub i18n_builtin: I18n,
-	pub defaults: Defaults,
 	pub font_system: WguiFontSystem,
 	pub custom_glyph_cache: CustomGlyphCache,
 }
@@ -69,7 +33,6 @@ impl WguiGlobals {
 	pub fn new(
 		mut assets_builtin: Box<dyn AssetProvider>,
 		lang_provider: &dyn LangProvider,
-		defaults: Defaults,
 		font_config: &WguiFontConfig,
 		asset_folder: PathBuf,
 	) -> anyhow::Result<Self> {
@@ -79,7 +42,6 @@ impl WguiGlobals {
 		Ok(Self(Rc::new(RefCell::new(Globals {
 			assets_internal,
 			assets_builtin,
-			defaults,
 			asset_folder,
 			font_system: WguiFontSystem::new(font_config, i18n_builtin.get_locale()),
 			i18n_builtin,
@@ -126,10 +88,6 @@ impl WguiGlobals {
 
 	pub fn i18n(&self) -> RefMut<'_, I18n> {
 		RefMut::map(self.0.borrow_mut(), |x| &mut x.i18n_builtin)
-	}
-
-	pub fn defaults(&self) -> Ref<'_, Defaults> {
-		Ref::map(self.0.borrow(), |x| &x.defaults)
 	}
 
 	pub fn assets_internal(&self) -> RefMut<'_, Box<dyn AssetProvider>> {

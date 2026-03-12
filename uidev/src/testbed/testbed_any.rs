@@ -34,7 +34,6 @@ impl TestbedAny {
 		let globals = WguiGlobals::new(
 			assets,
 			&lang_provider,
-			wgui::globals::Defaults::default(),
 			&WguiFontConfig::default(),
 			PathBuf::new(), // cwd
 		)?;
@@ -45,7 +44,7 @@ impl TestbedAny {
 				path,
 				extra: Default::default(),
 			},
-			&LayoutParams::default(),
+			LayoutParams::default(),
 		)?;
 		Ok(Self { layout, state })
 	}

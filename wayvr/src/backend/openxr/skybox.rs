@@ -1,8 +1,4 @@
-use std::{
-    f32::consts::PI,
-    fs::File,
-    sync::{Arc, LazyLock},
-};
+use std::{f32::consts::PI, fs::File, sync::Arc};
 
 use glam::{Quat, Vec3A};
 use openxr as xr;
@@ -14,7 +10,10 @@ use wgui::gfx::{cmd::WGfxClearMode, pipeline::WPipelineCreateInfo};
 use wlx_common::config_io;
 
 use crate::{
-    backend::openxr::{helpers::translation_rotation_to_posef, swapchain::SwapchainOpts},
+    backend::openxr::{
+        helpers::{next_chain_insert, translation_rotation_to_posef},
+        swapchain::SwapchainOpts,
+    },
     graphics::{ExtentExt, GpuFutures, dds::WlxCommandBufferDds},
     state::AppState,
 };
@@ -28,10 +27,12 @@ pub(super) struct Skybox {
     view: Arc<ImageView>,
     sky: Option<WlxSwapchain>,
     grid: Option<WlxSwapchain>,
+    grid_pose: xr::Posef,
+    grid_color_scale_bias_khr: Option<Box<xr::sys::CompositionLayerColorScaleBiasKHR>>,
 }
 
 impl Skybox {
-    pub fn new(app: &AppState) -> anyhow::Result<Self> {
+    pub fn new(xr: &XrState, app: &AppState) -> anyhow::Result<Self> {
         let mut command_buffer = app
             .gfx
             .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
@@ -74,10 +75,30 @@ impl Skybox {
 
         let view = ImageView::new_default(maybe_image.unwrap())?; // safe unwrap
 
+        let grid_color_scale_bias_khr = xr
+            .instance
+            .exts()
+            .khr_composition_layer_color_scale_bias
+            .map(|_| {
+                Box::new(xr::sys::CompositionLayerColorScaleBiasKHR {
+                    ty: xr::StructureType::COMPOSITION_LAYER_COLOR_SCALE_BIAS_KHR,
+                    next: std::ptr::null(),
+                    color_bias: Default::default(),
+                    color_scale: xr::Color4f {
+                        r: 1.0,
+                        g: 1.0,
+                        b: 1.0,
+                        a: 1.0,
+                    },
+                })
+            });
+
         Ok(Self {
             view,
             sky: None,
             grid: None,
+            grid_pose: translation_rotation_to_posef(Vec3A::ZERO, Quat::from_rotation_x(PI * -0.5)),
+            grid_color_scale_bias_khr: grid_color_scale_bias_khr,
         })
     }
 
@@ -205,10 +226,6 @@ impl Skybox {
         const HI_VERT_ANGLE: f32 = 0.5 * PI;
         const LO_VERT_ANGLE: f32 = -0.5 * PI;
 
-        static GRID_POSE: LazyLock<xr::Posef> = LazyLock::new(|| {
-            translation_rotation_to_posef(Vec3A::ZERO, Quat::from_rotation_x(PI * -0.5))
-        });
-
         let pose = xr::Posef {
             orientation: xr::Quaternionf::IDENTITY,
             position: xr::Vector3f {
@@ -232,9 +249,12 @@ impl Skybox {
             .lower_vertical_angle(LO_VERT_ANGLE);
 
         self.grid.as_mut().unwrap().ensure_image_released()?;
-        let grid = xr::CompositionLayerQuad::new()
-            .layer_flags(xr::CompositionLayerFlags::BLEND_TEXTURE_SOURCE_ALPHA)
-            .pose(*GRID_POSE)
+
+        let flags = xr::CompositionLayerFlags::BLEND_TEXTURE_SOURCE_ALPHA
+            | xr::CompositionLayerFlags::UNPREMULTIPLIED_ALPHA;
+        let mut grid = xr::CompositionLayerQuad::new()
+            .layer_flags(flags)
+            .pose(self.grid_pose)
             .size(xr::Extent2Df {
                 width: 10.0,
                 height: 10.0,
@@ -242,6 +262,15 @@ impl Skybox {
             .sub_image(self.grid.as_ref().unwrap().get_subimage(0))
             .eye_visibility(xr::EyeVisibility::BOTH)
             .space(&xr.stage);
+
+        if let Some(grid_color_scale_bias_khr) = self.grid_color_scale_bias_khr.as_mut() {
+            let grid_opacity = app.session.config.grid_opacity;
+            grid_color_scale_bias_khr.color_scale.a = (grid_opacity * grid_opacity).clamp(0.0, 1.0);
+            unsafe {
+                let raw = next_chain_insert!(grid, grid_color_scale_bias_khr);
+                grid = xr::CompositionLayerQuad::from_raw(raw);
+            }
+        }
 
         Ok(vec![
             CompositionLayer::Equirect2(sky),
@@ -254,5 +283,5 @@ pub(super) fn create_skybox(xr: &XrState, app: &AppState) -> Option<Skybox> {
     xr.instance
         .exts()
         .khr_composition_layer_equirect2
-        .and_then(|_| Skybox::new(app).ok())
+        .and_then(|_| Skybox::new(xr, app).ok())
 }

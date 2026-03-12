@@ -99,11 +99,10 @@ fn anim_bottom_rect(
 }
 
 fn refresh_all(common: &mut CallbackDataCommon, data: &Data, state: &mut State) -> Option<()> {
-	let defaults = common.defaults();
-	let editbox_color = defaults.editbox_color;
-	let anim_mult = defaults.animation_mult;
-	let accent_color = defaults.accent_color;
-	drop(defaults);
+	let theme = &common.state.theme;
+	let editbox_color = theme.editbox_color;
+	let anim_mult = theme.animation_mult;
+	let accent_color = theme.accent_color;
 
 	let (rect_color, border_color) = if state.focused {
 		(editbox_color.add_rgb(0.15), editbox_color.add_rgb(0.15 + 0.25))
@@ -279,10 +278,7 @@ pub fn construct(
 	ess: &mut ConstructEssentials,
 	mut params: Params,
 ) -> anyhow::Result<(WidgetPair, Rc<ComponentEditBox>)> {
-	let globals = ess.layout.state.globals.clone();
-	let defaults = globals.defaults();
-	let text_color = defaults.text_color;
-	drop(defaults);
+	let text_color = ess.layout.state.theme.text_color;
 
 	if params.style.size.width.is_auto() {
 		params.style.size.width = length(128.0);
@@ -345,22 +341,23 @@ pub fn construct(
 		},
 	)?;
 
+	let widget_label = WidgetLabel::create(
+		&mut ess.layout.state,
+		WidgetLabelParams {
+			content: Translation::from_raw_text(&params.initial_text),
+			style: TextStyle {
+				shadow: Some(TextShadow {
+					x: 1.0,
+					y: 1.0,
+					color: Color::new(0.0, 0.0, 0.0, 1.0),
+				}),
+				..Default::default()
+			},
+		},
+	);
 	let (label, _node_label) = ess.layout.add_child(
 		label_parent.id,
-		WidgetLabel::create(
-			&mut globals.get(),
-			WidgetLabelParams {
-				content: Translation::from_raw_text(&params.initial_text),
-				style: TextStyle {
-					shadow: Some(TextShadow {
-						x: 1.0,
-						y: 1.0,
-						color: Color::new(0.0, 0.0, 0.0, 1.0),
-					}),
-					..Default::default()
-				},
-			},
-		),
+		widget_label,
 		taffy::Style {
 			position: taffy::Position::Relative,
 			..Default::default()

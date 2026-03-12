@@ -157,7 +157,7 @@ impl ComponentButton {
 	}
 
 	pub fn set_color(&self, common: &mut CallbackDataCommon, color: Color) {
-		let gradient_intensity = common.defaults().gradient_intensity;
+		let gradient_intensity = common.state.theme.gradient_intensity;
 
 		let Some(mut rect) = common.state.widgets.get_as::<WidgetRectangle>(self.data.id_rect) else {
 			return;
@@ -194,8 +194,8 @@ impl ComponentButton {
 		}
 
 		let (anim_mult, gradient_intensity) = {
-			let defaults = common.state.globals.defaults();
-			(defaults.animation_mult, defaults.gradient_intensity)
+			let theme = &common.state.theme;
+			(theme.animation_mult, theme.gradient_intensity)
 		};
 
 		let anim_ticks = if sticky_down { 5. } else { 10. };
@@ -247,7 +247,7 @@ fn anim_hover(
 
 	let bgcolor = init_color.lerp(&colors.hover_color, mult);
 
-	let gradient_intensity = common.globals().defaults.gradient_intensity;
+	let gradient_intensity = common.state.theme.gradient_intensity;
 
 	//let t = Mat4::from_scale(Vec3::splat(1.0 + pos * 0.5)) * Mat4::from_rotation_z(pos * 1.0);
 
@@ -416,8 +416,8 @@ fn register_event_mouse_release(
 }
 
 pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Result<(WidgetPair, Rc<ComponentButton>)> {
-	let globals = ess.layout.state.globals.clone();
 	let mut style = params.style;
+	let theme = &ess.layout.state.theme;
 
 	// force-override style
 	style.align_items = Some(AlignItems::Center);
@@ -431,7 +431,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 	let color = if let Some(color) = params.color {
 		color
 	} else {
-		globals.defaults().button_color
+		theme.button_color
 	};
 
 	let border_color = if let Some(border_color) = params.border_color {
@@ -452,7 +452,12 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		Color::new(color.r + 0.5, color.g + 0.5, color.g + 0.5, color.a + 0.5)
 	};
 
-	let gradient_intensity = ess.layout.state.globals.defaults().gradient_intensity;
+	let gradient_intensity = theme.gradient_intensity;
+
+	let light_text = {
+		let mult = if theme.dark_mode { color.a } else { 1.0 - color.a };
+		(color.r + color.g + color.b) * mult < 1.5
+	};
 
 	let (root, _) = ess.layout.add_child(
 		ess.parent,
@@ -469,15 +474,6 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 
 	let id_rect = root.id;
 
-	let light_text = {
-		let mult = if globals.defaults().dark_mode {
-			color.a
-		} else {
-			1.0 - color.a
-		};
-		(color.r + color.g + color.b) * mult < 1.5
-	};
-
 	let default_margin = taffy::Rect {
 		top: length(4.0),
 		bottom: length(4.0),
@@ -487,7 +483,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 
 	if let Some(sprite_path) = params.sprite_src {
 		let sprite = WidgetSprite::create(WidgetSpriteParams {
-			glyph_data: Some(CustomGlyphData::from_assets(&globals, sprite_path)?),
+			glyph_data: Some(CustomGlyphData::from_assets(&ess.layout.state.globals, sprite_path)?),
 			..Default::default()
 		});
 
@@ -506,23 +502,25 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 	}
 
 	let id_label = if let Some(content) = params.text {
+		let widget_label = WidgetLabel::create(
+			&mut ess.layout.state,
+			WidgetLabelParams {
+				content,
+				style: TextStyle {
+					weight: Some(FontWeight::Bold),
+					color: Some(if light_text {
+						Color::new(1.0, 1.0, 1.0, 1.0)
+					} else {
+						Color::new(0.0, 0.0, 0.0, 1.0)
+					}),
+					..params.text_style
+				},
+			},
+		);
+
 		let (label, _node_label) = ess.layout.add_child(
 			id_rect,
-			WidgetLabel::create(
-				&mut globals.get(),
-				WidgetLabelParams {
-					content,
-					style: TextStyle {
-						weight: Some(FontWeight::Bold),
-						color: Some(if light_text {
-							Color::new(1.0, 1.0, 1.0, 1.0)
-						} else {
-							Color::new(0.0, 0.0, 0.0, 1.0)
-						}),
-						..params.text_style
-					},
-				},
-			),
+			widget_label,
 			taffy::Style {
 				margin: default_margin,
 				..Default::default()
@@ -558,7 +556,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id: root.id,
 		lhandles: {
 			let listeners = &mut root.widget.state().event_listeners;
-			let anim_mult = ess.layout.state.globals.defaults().animation_mult;
+			let anim_mult = ess.layout.state.theme.animation_mult;
 			vec![
 				register_event_mouse_enter(data.clone(), state.clone(), listeners, params.tooltip, anim_mult),
 				register_event_mouse_leave(state.clone(), listeners, anim_mult),

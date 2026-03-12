@@ -163,8 +163,6 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		),
 	};
 
-	let globals = ess.layout.state.globals.clone();
-
 	let (div, _) = ess.layout.add_child(
 		ess.parent,
 		WidgetDiv::create(),
@@ -211,20 +209,17 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		},
 	)?;
 
-	let (label, _) = ess.layout.add_child(
-		rect.id,
-		WidgetLabel::create(
-			&mut globals.get(),
-			WidgetLabelParams {
-				content: params.info.text,
-				style: TextStyle {
-					weight: Some(FontWeight::Bold),
-					..Default::default()
-				},
+	let label = WidgetLabel::create(
+		&mut ess.layout.state,
+		WidgetLabelParams {
+			content: params.info.text,
+			style: TextStyle {
+				weight: Some(FontWeight::Bold),
+				..Default::default()
 			},
-		),
-		Default::default(),
-	)?;
+		},
+	);
+	let (label, _) = ess.layout.add_child(rect.id, label, Default::default())?;
 
 	let data = Rc::new(Data { id_root: div.id });
 
@@ -246,7 +241,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		TooltipSide::Bottom => Vec2::new(0.0, 1.0),
 	};
 
-	let anim_mult = ess.layout.state.globals.defaults().animation_mult;
+	let anim_mult = ess.layout.state.theme.animation_mult;
 	ess.layout.animations.add(Animation::new(
 		rect.id,
 		(10.0 * anim_mult) as u32,

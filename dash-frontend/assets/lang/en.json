@@ -107,6 +107,8 @@
 		"USE_PASSTHROUGH_HELP": "Allow passthrough if the XR runtime supports it",
 		"USE_SKYBOX": "Enable skybox",
 		"USE_SKYBOX_HELP": "Show a skybox if there's no scene app or passthrough",
+		"GRID_OPACITY": "Floor grid opacity",
+		"GRID_OPACITY_HELP": "Opacity of the floor grid when the skybox is enabled",
 		"XR_CLICK_SENSITIVITY": "XR click sensitivity",
 		"XR_CLICK_SENSITIVITY_HELP": "Analog trigger sensitivity",
 		"XR_CLICK_SENSITIVITY_RELEASE": "XR release sensitivity",

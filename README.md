@@ -131,7 +131,10 @@ Typing
 - While using the ORANGE laser, all keystrokes will have SHIFT applied.
 - Purple laser is customizable via the settings, no modifier by default.
 
-**Modifier Keys** are sticky. They will remain pressed until a non-modifier key is pressed, the modifier gets toggled off, or the keyboard gets hidden.
+**Modifier Keys are sticky**. They will remain pressed until eiter:
+- a non-modifier key is pressed
+- the modifier is toggled off by clicking again
+- the keyboard is hidden (including via show-hide)
 
 ### Default Bindings
 
@@ -139,10 +142,22 @@ Typing
 
 ![Touch Controller Bindings](https://github.com/wlx-team/wayvr/blob/guide/wlx-oculus.png)
 
-To customize bindings on OpenXR, refer to the [OpenXR Bindings wiki page](https://github.com/wlx-team/wayvr/wiki/OpenXR-Bindings).
 
-If your bindings are not supported, please reach out. \
+### Changing Bindings
+
+SteamVR: Simply change the bindings from the SteamVR bindings section. If WayVR doesn't show up on the list, select any other title and then press back on the top left. (SteamVR is weird like that sometimes)
+
+OpenXR (Monado/WiVRn): See [Wiki: OpenXR Bindings](https://github.com/wlx-team/wayvr/wiki/OpenXR-Bindings)
+
+If your controllers are not supported, please reach out. \
 We would like to work with you and include additional bindings.
+
+## Customization
+
+See these relevant wiki pages:
+- For all available config options, check [Wiki: Configuration](https://github.com/wlx-team/wayvr/wiki/Configuration)
+- Looking to customize look & feel, or add functionality? See [Wiki: Customization](https://github.com/wlx-team/wayvr/wiki/Customization)
+- Looking to change the OpenXR background? See [Wiki: OpenXR Skybox](https://github.com/wlx-team/wayvr/wiki/OpenXR-Skybox)
 
 ## Troubleshooting
 

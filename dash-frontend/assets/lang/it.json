@@ -111,7 +111,9 @@
     "BLOCK_POSES_ON_KBD_INTERACTION": "Blocca le pose durante l'interazione con la tastiera",
     "BLOCK_POSES_ON_KBD_INTERACTION_HELP": "Impedisce al gioco di ricevere pose quando la tastiera è evidenziata e 'Blocca input di gioco' è abilitato",
     "LANGUAGE": "Lingua",
-    "REQUIRES_RESTART": "Richiede riavvio"
+    "REQUIRES_RESTART": "Richiede riavvio",
+    "GRID_OPACITY": "Opacità della griglia del pavimento",
+    "GRID_OPACITY_HELP": "Opacità della griglia del pavimento quando lo skybox è abilitato"
   },
   "APPLICATION_LAUNCHER": "Lanciatore applicazioni",
   "APPLICATION_STARTED": "Applicazione avviata",

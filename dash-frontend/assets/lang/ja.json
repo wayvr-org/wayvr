@@ -90,7 +90,9 @@
     "BLOCK_POSES_ON_KBD_INTERACTION": "キーボード操作時のポーズをブロック",
     "BLOCK_POSES_ON_KBD_INTERACTION_HELP": "キーボードがホバーされ、「ゲーム入力をブロック」が有効になっている場合、ゲームがポーズを受信することをブロックします",
     "LANGUAGE": "言語",
-    "REQUIRES_RESTART": "再起動が必要です"
+    "REQUIRES_RESTART": "再起動が必要です",
+    "GRID_OPACITY": "フロアグリッドの不透明度",
+    "GRID_OPACITY_HELP": "スカイボックスが有効なときの床グリッドの不透明度"
   },
   "HELLO": "こんにちは！",
   "AUDIO": {

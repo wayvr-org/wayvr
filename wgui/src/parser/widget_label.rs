@@ -45,11 +45,8 @@ pub fn parse_widget_label<'a>(
 		}
 	}
 
-	let globals = ctx.layout.state.globals.clone();
-
-	let (widget, _) = ctx
-		.layout
-		.add_child(parent_id, WidgetLabel::create(&mut globals.get(), params), style)?;
+	let label = WidgetLabel::create(&mut ctx.layout.state, params);
+	let (widget, _) = ctx.layout.add_child(parent_id, label, style)?;
 
 	parse_widget_universal(ctx, &widget, attribs, tag_name);
 	parse_children(file, ctx, node, widget.id)?;

@@ -44,7 +44,8 @@ xdg.workspace = true
 
 ash = "^0.38.0" # must match vulkano
 bytes = { version = "1.11.1" }
-chrono = "0.4.42"
+chrono = { version = "0.4.42", features = [ "unstable-locales"]}
+pure-rust-locales = "0.8.2"
 chrono-tz = "0.10.4"
 config = "0.15.19"
 dbus = { version = "0.9.9" }

@@ -272,7 +272,7 @@ fn make_edit_panel(app: &mut AppState) -> anyhow::Result<EditModeWrapPanel> {
         mouse: SpriteTabHandler::default(),
     };
 
-    let anim_mult = app.wgui_globals.defaults().animation_mult;
+    let anim_mult = app.wgui_theme.animation_mult;
 
     let on_custom_attrib: OnCustomAttribFunc = Box::new(move |layout, parser, attribs, _app| {
         let Ok(button) =
@@ -302,7 +302,7 @@ fn make_edit_panel(app: &mut AppState) -> anyhow::Result<EditModeWrapPanel> {
                         }
 
                         let sel = OverlaySelector::Id(*state.id.borrow());
-                        let task = state.lock.toggle(common, app, anim_mult);
+                        let task = state.lock.toggle(common, anim_mult);
                         app.tasks
                             .enqueue(TaskType::Overlay(OverlayTask::Modify(sel, task)));
                         Ok(EventResult::Consumed)
