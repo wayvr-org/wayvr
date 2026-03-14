@@ -608,8 +608,9 @@ impl DashInterface<AppState> for DashInterfaceLive {
     }
 
     #[cfg(not(feature = "openxr"))]
-    fn monado_metrics_set_enabled(&mut self, _: &mut AppState, _enabled: bool) {
+    fn monado_metrics_set_enabled(&mut self, _: &mut AppState, _enabled: bool) -> bool {
         // not supported in this build
+        false
     }
 
     #[cfg(not(feature = "openxr"))]
