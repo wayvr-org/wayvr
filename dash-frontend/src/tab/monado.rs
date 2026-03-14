@@ -4,6 +4,7 @@ use wgui::{
 	assets::AssetPath,
 	components::{
 		bar_graph::{ComponentBarGraph, ValueCell},
+		button::ComponentButton,
 		checkbox::ComponentCheckbox,
 		slider::ComponentSlider,
 		tabs::ComponentTabs,
@@ -46,6 +47,10 @@ enum Task {
 	// `ProcessList` tab
 	ProcessListRefresh,
 	ProcessListFocusClient(String),
+
+	// `DebugTimings` tab
+	DebugTimingsRefreshSessionList,
+	DebugTimingsSetSessionId(i64),
 }
 
 struct SubtabProcessList {
@@ -65,7 +70,14 @@ struct DebugGraph {
 	data: ParserData,
 }
 
+struct DebugSessionList {
+	buttons: Vec<Rc<ComponentButton>>,
+	#[allow(dead_code)]
+	data_vec: Vec<ParserData>,
+}
+
 struct TimingsSession {
+	resolved_name: Option<String>,
 	last_frame: MonadoDumpSessionFrame,
 }
 
@@ -83,13 +95,20 @@ struct Graphs {
 	when_gpu_done: DebugGraph,
 }
 
+type SessionsMap = HashMap<i64 /* session id */, TimingsSession>;
+
 struct SubtabDebugTimings {
 	#[allow(dead_code)]
 	state: ParserState,
 
-	graphs: Graphs,
+	graphs: Option<Graphs>,
+	session_list: DebugSessionList,
+	selected_session_id: Option<i64>,
 
-	sessions: HashMap<i64 /* session id */, TimingsSession>,
+	id_sessions_list_parent: WidgetID,
+	id_timings_parent: WidgetID,
+
+	sessions: SessionsMap,
 }
 
 #[allow(dead_code)]
@@ -131,6 +150,16 @@ impl<T> Tab<T> for TabMonado<T> {
 						process_list.focus_client(frontend, data, client_name, &self.tasks)?;
 					}
 				}
+				Task::DebugTimingsRefreshSessionList => {
+					if let Subtab::DebugTimings(tab) = &mut self.subtab {
+						tab.refresh_session_list(&mut frontend.layout, &self.tasks)?;
+					}
+				}
+				Task::DebugTimingsSetSessionId(session_id) => {
+					if let Subtab::DebugTimings(tab) = &mut self.subtab {
+						tab.set_session_id(&mut frontend.layout, session_id)?;
+					}
+				}
 				Task::SetBrightness(brightness) => self.set_brightness(frontend, data, brightness),
 				Task::SetTab(tab) => {
 					frontend.layout.remove_children(self.id_content);
@@ -148,7 +177,7 @@ impl<T> Tab<T> for TabMonado<T> {
 							self.subtab = Subtab::ProcessList(SubtabProcessList::new(self.id_content, frontend)?)
 						}
 						TabNameEnum::DebugTimings => {
-							self.subtab = Subtab::DebugTimings(SubtabDebugTimings::new(self.id_content, frontend)?)
+							self.subtab = Subtab::DebugTimings(SubtabDebugTimings::new(self.id_content, frontend, &self.tasks)?)
 						}
 					}
 				}
@@ -167,7 +196,7 @@ impl<T> Tab<T> for TabMonado<T> {
 				}
 			}
 			Subtab::DebugTimings(timings) => {
-				timings.update(data, frontend);
+				timings.update(&self.tasks, data, frontend);
 			}
 		}
 
@@ -249,21 +278,71 @@ impl SubtabGeneralSettings {
 	}
 }
 
+fn mount_sessions_list(
+	state: &mut ParserState,
+	layout: &mut Layout,
+	tasks: &Tasks<Task>,
+	id_parent: WidgetID,
+	sessions: &SessionsMap,
+) -> anyhow::Result<DebugSessionList> {
+	let mut buttons = Vec::new();
+	let mut data_vec = Vec::new();
+	let globals = layout.state.globals.clone();
+	layout.remove_children(id_parent);
+
+	for (session_id, session) in sessions {
+		let mut params = HashMap::new();
+
+		params.insert(
+			Rc::from("text"),
+			Rc::from(format!(
+				"{} (ID {})",
+				session.resolved_name.as_ref().map_or("Unknown", |s| s.as_str()),
+				session_id,
+			)),
+		);
+
+		let data = state.parse_template(
+			&doc_params_tab_debug_timings(&globals),
+			"SessionButton",
+			layout,
+			id_parent,
+			params,
+		)?;
+
+		let button = data.fetch_component_as::<ComponentButton>("button")?;
+
+		button.on_click({
+			let tasks = tasks.clone();
+			let session_id = *session_id;
+			Rc::new(move |_, _| {
+				tasks.push(Task::DebugTimingsSetSessionId(session_id));
+				Ok(())
+			})
+		});
+
+		buttons.push(button);
+		data_vec.push(data);
+	}
+
+	Ok(DebugSessionList { buttons, data_vec })
+}
+
 fn mount_graph(
 	state: &mut ParserState,
-	globals: &WguiGlobals,
 	layout: &mut Layout,
 	id_parent: WidgetID,
 	name: &'static str,
 	limits: (f32, f32),
 ) -> anyhow::Result<DebugGraph> {
+	let globals = layout.state.globals.clone();
 	let mut params = HashMap::new();
 	params.insert(Rc::from("name"), Rc::from(name));
 	params.insert(Rc::from("limit_min"), Rc::from(limits.0.to_string()));
 	params.insert(Rc::from("limit_max"), Rc::from(limits.1.to_string()));
 
 	let data = state.parse_template(
-		&doc_params_tab_debug_timings(globals),
+		&doc_params_tab_debug_timings(&globals),
 		"DebugGraph",
 		layout,
 		id_parent,
@@ -279,28 +358,46 @@ fn ns_to_ms(ns: i64) -> f32 {
 }
 
 impl SubtabDebugTimings {
-	fn new<T>(parent_id: WidgetID, frontend: &mut Frontend<T>) -> anyhow::Result<Self> {
+	fn new<T>(parent_id: WidgetID, frontend: &mut Frontend<T>, tasks: &Tasks<Task>) -> anyhow::Result<Self> {
 		let mut state = wgui::parser::parse_from_assets(
 			&doc_params_tab_debug_timings(&frontend.globals),
 			&mut frontend.layout,
 			parent_id,
 		)?;
 
-		let id_parent = state.get_widget_id("parent")?;
+		let id_timings_parent = state.get_widget_id("timings_parent")?;
+		let id_sessions_list_parent = state.get_widget_id("session_list_parent")?;
+
+		let sessions = Default::default();
+
+		let session_list = mount_sessions_list(
+			&mut state,
+			&mut frontend.layout,
+			tasks,
+			id_sessions_list_parent,
+			&sessions,
+		)?;
+
+		Ok(Self {
+			state,
+			graphs: None,
+			session_list,
+			id_sessions_list_parent,
+			id_timings_parent,
+			sessions,
+			selected_session_id: None,
+		})
+	}
+
+	fn set_session_id(&mut self, layout: &mut Layout, session_id: i64) -> anyhow::Result<()> {
+		layout.remove_children(self.id_timings_parent);
 
 		let mut graph = |name: &'static str, limits: (f32, f32)| -> anyhow::Result<DebugGraph> {
-			mount_graph(
-				&mut state,
-				&frontend.globals,
-				&mut frontend.layout,
-				id_parent,
-				name,
-				limits,
-			)
+			mount_graph(&mut self.state, layout, self.id_timings_parent, name, limits)
 		};
 
 		// populate graphs
-		let graphs = Graphs {
+		self.graphs = Some(Graphs {
 			predicted_display_time: graph("Predicted display time", (0.0, 30.0))?,
 			predicted_frame_time: graph("Predicted frame time", (0.0, 30.0))?,
 			predicted_wake_up_time: graph("Predicted wake-up time", (0.0, 30.0))?,
@@ -311,17 +408,26 @@ impl SubtabDebugTimings {
 			when_wait_woke: graph("When wait woke", (0.0, 30.0))?,
 			when_begin: graph("When begin", (0.0, 30.0))?,
 			when_delivered: graph("When delivered", (0.0, 30.0))?,
-			when_gpu_done: graph("When gpu done", (0.0, 30.0))?,
-		};
+			when_gpu_done: graph("When GPU done", (0.0, 30.0))?,
+		});
 
-		Ok(Self {
-			state,
-			graphs,
-			sessions: Default::default(),
-		})
+		self.selected_session_id = Some(session_id);
+
+		Ok(())
 	}
 
-	fn update<T>(&mut self, data: &mut T, frontend: &mut Frontend<T>) {
+	fn refresh_session_list(&mut self, layout: &mut Layout, tasks: &Tasks<Task>) -> anyhow::Result<()> {
+		self.session_list = mount_sessions_list(
+			&mut self.state,
+			layout,
+			tasks,
+			self.id_sessions_list_parent,
+			&self.sessions,
+		)?;
+		Ok(())
+	}
+
+	fn update<T>(&mut self, tasks: &Tasks<Task>, data: &mut T, frontend: &mut Frontend<T>) {
 		if !frontend.interface.monado_metrics_set_enabled(data, true) {
 			return;
 		}
@@ -334,85 +440,95 @@ impl SubtabDebugTimings {
 		let col_green = Color::new(0.0, 1.0, 0.0, 1.0);
 
 		for frame in frames {
-			log::info!("{:?}", frame);
+			//log::info!("{:?}", frame);
 
 			match self.sessions.get_mut(&frame.session_id) {
 				Some(session) => {
-					let predicted_display_time = ns_to_ms(session.last_frame.predicted_display_time_ns as i64);
-					let predicted_frame_time = ns_to_ms(frame.predicted_frame_time_ns as i64);
-					let predicted_wake_up_time =
-						ns_to_ms(frame.predicted_wake_up_time_ns as i64 - session.last_frame.predicted_wake_up_time_ns as i64);
-					let predicted_gpu_done_time =
-						ns_to_ms(frame.predicted_gpu_done_time_ns as i64 - session.last_frame.predicted_gpu_done_time_ns as i64);
-					let predicted_display_period = ns_to_ms(session.last_frame.predicted_display_period_ns as i64); // 6.944 ms for 144Hz
-					let display_time = ns_to_ms(frame.display_time_ns as i64 - session.last_frame.display_time_ns as i64);
-					let when_predicted = ns_to_ms(frame.when_predicted_ns as i64 - session.last_frame.when_predicted_ns as i64);
-					let when_wait_woke = ns_to_ms(frame.when_wait_woke_ns as i64 - session.last_frame.when_wait_woke_ns as i64);
-					let when_begin = ns_to_ms(frame.when_begin_ns as i64 - session.last_frame.when_begin_ns as i64);
-					let when_delivered = ns_to_ms(frame.when_delivered_ns as i64 - session.last_frame.when_delivered_ns as i64);
-					let when_gpu_done = ns_to_ms(frame.when_gpu_done_ns as i64 - session.last_frame.when_gpu_done_ns as i64);
+					if let Some(graphs) = &mut self.graphs
+						&& let Some(selected_session_id) = self.selected_session_id
+						&& selected_session_id == frame.session_id
+					{
+						let predicted_display_time = ns_to_ms(session.last_frame.predicted_display_time_ns as i64);
+						let predicted_frame_time = ns_to_ms(frame.predicted_frame_time_ns as i64);
+						let predicted_wake_up_time =
+							ns_to_ms(frame.predicted_wake_up_time_ns as i64 - session.last_frame.predicted_wake_up_time_ns as i64);
+						let predicted_gpu_done_time =
+							ns_to_ms(frame.predicted_gpu_done_time_ns as i64 - session.last_frame.predicted_gpu_done_time_ns as i64);
+						let predicted_display_period = ns_to_ms(session.last_frame.predicted_display_period_ns as i64); // 6.944 ms for 144Hz
+						let display_time = ns_to_ms(frame.display_time_ns as i64 - session.last_frame.display_time_ns as i64);
+						let when_predicted = ns_to_ms(frame.when_predicted_ns as i64 - session.last_frame.when_predicted_ns as i64);
+						let when_wait_woke = ns_to_ms(frame.when_wait_woke_ns as i64 - session.last_frame.when_wait_woke_ns as i64);
+						let when_begin = ns_to_ms(frame.when_begin_ns as i64 - session.last_frame.when_begin_ns as i64);
+						let when_delivered = ns_to_ms(frame.when_delivered_ns as i64 - session.last_frame.when_delivered_ns as i64);
+						let when_gpu_done = ns_to_ms(frame.when_gpu_done_ns as i64 - session.last_frame.when_gpu_done_ns as i64);
 
-					self.graphs.predicted_display_time.graph.push_value(ValueCell {
-						value: predicted_display_time,
-						color: col_green,
-					});
+						graphs.predicted_display_time.graph.push_value(ValueCell {
+							value: predicted_display_time,
+							color: col_green,
+						});
 
-					self.graphs.predicted_frame_time.graph.push_value(ValueCell {
-						value: predicted_frame_time,
-						color: col_green,
-					});
+						graphs.predicted_frame_time.graph.push_value(ValueCell {
+							value: predicted_frame_time,
+							color: col_green,
+						});
 
-					self.graphs.predicted_wake_up_time.graph.push_value(ValueCell {
-						value: predicted_wake_up_time,
-						color: col_green,
-					});
+						graphs.predicted_wake_up_time.graph.push_value(ValueCell {
+							value: predicted_wake_up_time,
+							color: col_green,
+						});
 
-					self.graphs.predicted_gpu_done_time.graph.push_value(ValueCell {
-						value: predicted_gpu_done_time,
-						color: col_green,
-					});
+						graphs.predicted_gpu_done_time.graph.push_value(ValueCell {
+							value: predicted_gpu_done_time,
+							color: col_green,
+						});
 
-					self.graphs.predicted_display_period.graph.push_value(ValueCell {
-						value: predicted_display_period,
-						color: col_green,
-					});
+						graphs.predicted_display_period.graph.push_value(ValueCell {
+							value: predicted_display_period,
+							color: col_green,
+						});
 
-					self.graphs.display_time.graph.push_value(ValueCell {
-						value: display_time,
-						color: col_green,
-					});
+						graphs.display_time.graph.push_value(ValueCell {
+							value: display_time,
+							color: col_green,
+						});
 
-					self.graphs.when_predicted.graph.push_value(ValueCell {
-						value: when_predicted,
-						color: col_green,
-					});
+						graphs.when_predicted.graph.push_value(ValueCell {
+							value: when_predicted,
+							color: col_green,
+						});
 
-					self.graphs.when_wait_woke.graph.push_value(ValueCell {
-						value: when_wait_woke,
-						color: col_green,
-					});
+						graphs.when_wait_woke.graph.push_value(ValueCell {
+							value: when_wait_woke,
+							color: col_green,
+						});
 
-					self.graphs.when_begin.graph.push_value(ValueCell {
-						value: when_begin,
-						color: col_green,
-					});
+						graphs.when_begin.graph.push_value(ValueCell {
+							value: when_begin,
+							color: col_green,
+						});
 
-					self.graphs.when_delivered.graph.push_value(ValueCell {
-						value: when_delivered,
-						color: col_green,
-					});
+						graphs.when_delivered.graph.push_value(ValueCell {
+							value: when_delivered,
+							color: col_green,
+						});
 
-					self.graphs.when_gpu_done.graph.push_value(ValueCell {
-						value: when_gpu_done,
-						color: col_green,
-					});
+						graphs.when_gpu_done.graph.push_value(ValueCell {
+							value: when_gpu_done,
+							color: col_green,
+						});
+					}
 
 					session.last_frame = frame;
 				}
 				None => {
-					self
-						.sessions
-						.insert(frame.session_id, TimingsSession { last_frame: frame });
+					self.sessions.insert(
+						frame.session_id,
+						TimingsSession {
+							last_frame: frame,
+							resolved_name: None,
+						},
+					);
+					tasks.push(Task::DebugTimingsRefreshSessionList);
 				}
 			}
 		}
