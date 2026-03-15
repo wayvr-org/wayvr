@@ -477,7 +477,7 @@ pub(super) fn create_keyboard_panel(
                             elems_changed = true;
                         }
                     }
-                    if !app.session.config.swipe_to_type_enabled {
+                    if !app.session.config.keyboard_swipe_to_type_enabled {
                         panel.state.swipe_typing_manager = None;
                         panel.state.swipe_candidate_receiver = None;
 
@@ -495,7 +495,7 @@ pub(super) fn create_keyboard_panel(
 
                         }
                     }
-                    if app.session.config.swipe_to_type_enabled && panel.state.swipe_typing_manager.is_none() {
+                    if app.session.config.keyboard_swipe_to_type_enabled && panel.state.swipe_typing_manager.is_none() {
                         init_swipe_type_manager(&mut panel.state);
 
                         let predictions_root = panel.parser_state

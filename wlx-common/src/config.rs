@@ -329,5 +329,5 @@ pub struct GeneralConfig {
 	pub grid_opacity: f32,
 
 	#[serde(default = "def_true")]
-	pub swipe_to_type_enabled: bool,
+	pub keyboard_swipe_to_type_enabled: bool,
 }
