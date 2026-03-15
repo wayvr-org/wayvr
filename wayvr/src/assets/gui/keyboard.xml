@@ -13,6 +13,11 @@
     width="${width}" height="${height}" min_width="${width}" min_height="${height}" max_width="${width}" max_height="${height}"
   />
 
+  <macro name="prediction_rect"
+    margin="2" padding="8 16" overflow="visible" box_sizing="border_box"
+    border_color="~color_accent_translucent" border="2" round="6" color="~color_accent_40" color2="~color_accent_10" gradient="vertical"
+    align_items="center" justify_content="center" />
+
   <template name="VerticalSeparator">
     <rectangle width="2" height="100%" color="~color_accent" />
   </template>
@@ -88,6 +93,13 @@
         <label text="${text}" size="16" />
       </rectangle>
     </div>
+  </template>
+
+  <!-- Word prediction key for swipe typing -->
+  <template name="KeyPrediction">
+    <rectangle id="${id}" macro="prediction_rect" height="60" min_height="60" flex_grow="1" flex_shrink="1" flex_basis="0">
+      <label text="${text}" size="16" wrap="true" />
+    </rectangle>
   </template>
 
   <macro name="button_style" border="2" border_color="~color_accent_translucent" color="~color_bg" round="6"
@@ -232,6 +244,9 @@
         </div>
       </rectangle>
       <div width="100%" height="13" interactable="0" />
+      <rectangle id="swipe_predictions_root" macro="bg_rect" padding="10" align_items="center" justify_content="space_between" flex_direction="row" min_height="60">
+      </rectangle>
+      <div width="100%" height="7" interactable="0" />
       <rectangle id="keyboard_root" macro="bg_rect" flex_direction="column" padding="10">
       </rectangle>
     </div>

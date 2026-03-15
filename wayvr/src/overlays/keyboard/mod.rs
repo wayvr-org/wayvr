@@ -27,7 +27,6 @@ use crate::{
     },
 };
 use anyhow::Context;
-use arboard::Clipboard;
 use glam::{Affine3A, Quat, Vec3, vec3, Vec2};
 use regex::Regex;
 use slotmap::{SlotMap, new_key_type};
@@ -40,7 +39,7 @@ use wlx_common::{
     config::AltModifier,
     overlays::{BackendAttrib, BackendAttribValue},
 };
-use codes_iso_639::part_1::LanguageCode;
+use crate::overlays::keyboard::builder::update_swipe_prediction_bar;
 use crate::overlays::keyboard::layout::KeyCapType;
 use crate::overlays::keyboard::swipe_type::SwipeTypingManager;
 
@@ -62,6 +61,7 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
         set_list: SetList::default(),
         clock_12h: app.session.config.clock_12h,
         swipe_typing_manager: None,
+        swipe_bar_candidates: Vec::new(),
     };
 
     let auto_labels = layout.auto_labels.unwrap_or(true);
@@ -117,7 +117,7 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
             transform: Affine3A::from_scale_rotation_translation(
                 Vec3::ONE * width,
                 Quat::from_rotation_x(-10f32.to_radians()),
-                vec3(0.0, -0.65, -0.5),
+                vec3(0.0, -0.69, -0.5),
             ),
             ..OverlayWindowState::default()
         },
@@ -257,6 +257,13 @@ impl KeyboardBackend {
         }
     }
 
+    fn update_swipe_prediction_bar(&mut self, app: &mut AppState) -> anyhow::Result<()> {
+        if update_swipe_prediction_bar(self.panel(), app)? {
+            self.panel().process_custom_elems(app);
+        }
+        Ok(())
+    }
+
     fn auto_switch_keymap(&mut self, app: &mut AppState) -> anyhow::Result<bool> {
         let keymap = self.get_effective_keymap()?;
         app.hid_provider
@@ -290,6 +297,7 @@ impl OverlayBackend for KeyboardBackend {
                 });
             }
         }
+        self.update_swipe_prediction_bar(app)?;
         self.panel().should_render(app)
     }
     fn render(&mut self, app: &mut AppState, rdr: &mut RenderResources) -> anyhow::Result<()> {
@@ -352,6 +360,7 @@ struct KeyboardState {
     set_list: SetList,
     clock_12h: bool,
     swipe_typing_manager: Option<SwipeTypingManager>,
+    swipe_bar_candidates: Vec<String>,
 }
 
 macro_rules! take_and_leave_default {
@@ -372,6 +381,7 @@ impl KeyboardState {
             set_list: SetList::default(),
             clock_12h: self.clock_12h,
             swipe_typing_manager: None,
+            swipe_bar_candidates: Vec::new(),
         }
     }
 }
@@ -497,13 +507,13 @@ fn handle_release(app: &mut AppState, key: &KeyState, k_cap_type: &KeyCapType, k
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
             if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *k_cap_type == KeyCapType::Letter {
-                if swipe_manager.swipe_left_first_key() {
+                println!("some");
+                if swipe_manager.did_swipe_leave_first_key() {
+                    println!("left first");
                     match swipe_manager.predict() {
-                        Ok(predictions) => {
-                            let best_prediction = predictions.first().unwrap();
-                            println!("best prediction for swipe: {best_prediction}");
-                            
-                            swipe_manager.select_word(&best_prediction, app, keyboard.modifiers);                            
+                        Ok(top_prediction) => {
+                            println!("best prediction for swipe: {top_prediction}");
+                            swipe_manager.select_word(&top_prediction, app, keyboard.modifiers);
                         },
                         Err(e) => {
                             log::error!("{}", e)
@@ -511,8 +521,9 @@ fn handle_release(app: &mut AppState, key: &KeyState, k_cap_type: &KeyCapType, k
                     }
                 }
                 else { // pointer must have been released on the same key it was pressed on
+                    println!("swipe reset");
                     swipe_manager.reset(); // drop swipe tracking that was started on press
-                    
+
                     app.hid_provider
                         .send_key_routed(app.wvr_server.as_mut(), *vk, true);
                     pressed.set(true);
@@ -522,6 +533,9 @@ fn handle_release(app: &mut AppState, key: &KeyState, k_cap_type: &KeyCapType, k
                 }
             }
             else {
+                if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() {
+                    swipe_manager.reset();
+                }
                 pressed.set(false);
 
                 for m in &AUTO_RELEASE_MODS {
