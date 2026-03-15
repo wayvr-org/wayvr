@@ -507,7 +507,6 @@ pub(super) fn create_keyboard_panel(
                                 predictions_root,
                                 StyleSetRequest::Display(Display::Flex),
                             ));
-
                         }
                     }
                 }

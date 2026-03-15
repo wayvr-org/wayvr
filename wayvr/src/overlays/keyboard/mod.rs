@@ -29,11 +29,15 @@ use crate::{
 use anyhow::Context;
 use glam::{Affine3A, Quat, Vec3, vec3, Vec2};
 use regex::Regex;
-use slotmap::{SlotMap, new_key_type};
+use slotmap::{SlotMap, new_key_type, Key};
 use wgui::{
     drawing,
     event::{InternalStateChangeEvent, MouseButtonEvent, MouseButtonIndex},
 };
+use wgui::event::StyleSetRequest;
+use wgui::layout::{Layout, LayoutTask};
+use wgui::parser::Fetchable;
+use wgui::taffy::Display;
 use wlx_common::windowing::{OverlayWindowState, Positioning};
 use wlx_common::{
     config::AltModifier,
@@ -124,7 +128,7 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
         ..OverlayWindowConfig::from_backend(Box::new(backend))
     })
 }
-pub fn init_swipe_type_manager(state: &mut KeyboardState) {
+pub(self) fn init_swipe_type_manager(state: &mut KeyboardState) {
     match SwipeTypingManager::new() {
         Ok((engine, receiver)) => {
             state.swipe_typing_manager = Some(engine);
@@ -134,6 +138,18 @@ pub fn init_swipe_type_manager(state: &mut KeyboardState) {
             log::error!("Error occured while trying to load swipe engine: {:?}", e);
         }
     };
+}
+pub(self) fn hide_swipe_type_manager(panel: &mut GuiPanel<KeyboardState>) {
+    let predictions_root = panel.parser_state
+        .get_widget_id("swipe_predictions_root")
+        .unwrap_or_default();
+
+    if !predictions_root.is_null() {
+        panel.layout.tasks.push(LayoutTask::SetWidgetStyle(
+            predictions_root,
+            StyleSetRequest::Display(Display::None),
+        ));
+    }
 }
 fn alt_modifier_to_key(m: AltModifier) -> KeyModifier {
     match m {
@@ -168,11 +184,17 @@ impl KeyboardBackend {
     ) -> anyhow::Result<KeyboardPanelKey> {
         let mut state = self.default_state.take();
 
-        init_swipe_type_manager(&mut state);
+        if app.session.config.keyboard_swipe_to_type_enabled {
+            init_swipe_type_manager(&mut state);
+        }
 
         log::info!("swipe engine created");
-        let panel =
+        let mut panel =
             create_keyboard_panel(app, keymap, state, &self.wlx_layout)?;
+
+        if !app.session.config.keyboard_swipe_to_type_enabled {
+            hide_swipe_type_manager(&mut panel);
+        }
 
         let id = self.layout_panels.insert(panel);
         if let Some(layout_name) = keymap.and_then(|k| k.get_name()) {
@@ -198,17 +220,17 @@ impl KeyboardBackend {
             if self.active_layout.eq(new_key) {
                 return Ok(false);
             }
-            self.internal_switch_keymap(*new_key, keymap);
+            self.internal_switch_keymap(*new_key, app);
         } else {
             let new_key = self.add_new_keymap(Some(keymap), app)?;
-            self.internal_switch_keymap(new_key, keymap);
+            self.internal_switch_keymap(new_key, app);
         }
         app.tasks
             .enqueue(TaskType::Overlay(OverlayTask::KeyboardChanged));
         Ok(true)
     }
 
-    fn internal_switch_keymap(&mut self, new_key: KeyboardPanelKey, keymap: &XkbKeymap) {
+    fn internal_switch_keymap(&mut self, new_key: KeyboardPanelKey, app: &AppState) {
         let mut state_from = self
             .layout_panels
             .get_mut(self.active_layout)
@@ -216,7 +238,9 @@ impl KeyboardBackend {
             .state
             .take();
 
-        init_swipe_type_manager(&mut state_from);
+        if app.session.config.keyboard_swipe_to_type_enabled {
+            init_swipe_type_manager(&mut state_from);
+        }
 
         self.active_layout = new_key;
 
@@ -224,6 +248,13 @@ impl KeyboardBackend {
             .get_mut(self.active_layout)
             .unwrap()
             .state = state_from;
+
+        if !app.session.config.keyboard_swipe_to_type_enabled {
+            hide_swipe_type_manager(self.layout_panels
+                .get_mut(self.active_layout)
+                .unwrap()
+            )
+        }
     }
 
     fn get_effective_keymap(&mut self) -> anyhow::Result<XkbKeymap> {

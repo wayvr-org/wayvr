@@ -328,6 +328,6 @@ pub struct GeneralConfig {
 	#[serde(default = "def_one")]
 	pub grid_opacity: f32,
 
-	#[serde(default = "def_true")]
+	#[serde(default = "def_false")]
 	pub keyboard_swipe_to_type_enabled: bool,
 }
