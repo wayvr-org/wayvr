@@ -107,9 +107,10 @@
     "LAST_EXISTING_SET": "これが最後の設定です。",
     "EMPTY_SET": "空のセットです！",
     "LETS_ADD_OVERLAYS": "ウォッチからオーバーレイを追加しましょう！",
-    "FIXING_FLOOR": "5秒後にフロアを固定します...",
     "ONE_CONTROLLER_ON_FLOOR": "コントローラーを床に置いてください！",
     "CANNOT_ADD_SET": "セットを追加できません！",
-    "MAXIMUM_SETS_REACHED": "最大セット数に達しました。"
-  }
+    "MAXIMUM_SETS_REACHED": "最大セット数に達しました。",
+    "FIXING_FLOOR_IN_X_SECS": "{SECONDS}秒で床を固定中..."
+  },
+  "DONE": "完了"
 }

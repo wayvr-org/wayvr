@@ -107,9 +107,10 @@
     "LAST_EXISTING_SET": "To jest ostatni istniejący zestaw.",
     "EMPTY_SET": "Pusty zestaw!",
     "LETS_ADD_OVERLAYS": "Dodajmy kilka nakładek z zegarka!",
-    "FIXING_FLOOR": "Naprawianie podłogi za 5 sekund...",
     "ONE_CONTROLLER_ON_FLOOR": "Umieść jeden kontroler na podłodze!",
     "CANNOT_ADD_SET": "Nie można dodać zestawu!",
-    "MAXIMUM_SETS_REACHED": "Osiągnięto maksymalną liczbę zestawów."
-  }
+    "MAXIMUM_SETS_REACHED": "Osiągnięto maksymalną liczbę zestawów.",
+    "FIXING_FLOOR_IN_X_SECS": "Naprawianie podłogi za {SECONDS} sekund(y)..."
+  },
+  "DONE": "Gotowe"
 }

@@ -109,9 +109,10 @@
     "LAST_EXISTING_SET": "Este es el último conjunto existente.",
     "EMPTY_SET": "¡Conjunto vacío!",
     "LETS_ADD_OVERLAYS": "¡Añadamos algunos overlays desde el reloj!",
-    "FIXING_FLOOR": "Fijando el suelo en 5 segundos...",
     "ONE_CONTROLLER_ON_FLOOR": "¡Coloca un mando en el suelo!",
     "CANNOT_ADD_SET": "¡No se puede agregar el conjunto!",
-    "MAXIMUM_SETS_REACHED": "Se ha alcanzado el número máximo de sets."
-  }
+    "MAXIMUM_SETS_REACHED": "Se ha alcanzado el número máximo de sets.",
+    "FIXING_FLOOR_IN_X_SECS": "Corrigiendo el suelo en {SECONDS} segundo(s)..."
+  },
+  "DONE": "Hecho"
 }

@@ -97,8 +97,8 @@
     "LAST_EXISTING_SET": "Questo è l'ultimo set esistente.",
     "EMPTY_SET": "Set vuoto!",
     "LETS_ADD_OVERLAYS": "Aggiungiamo degli overlay dal Watch!",
-    "FIXING_FLOOR": "Rifissaggio del pavimento tra 5 secondi...",
-    "ONE_CONTROLLER_ON_FLOOR": "Posiziona un controller a terra!"
+    "ONE_CONTROLLER_ON_FLOOR": "Posiziona un controller a terra!",
+    "FIXING_FLOOR_IN_X_SECS": "Correzione del pavimento in {SECONDS} secondo/i..."
   },
   "WATCH": {
     "ADD_NEW_SET": "Aggiungi un nuovo set",
@@ -111,5 +111,6 @@
     "RECENTER": "Recentra l'area di gioco",
     "SWITCH_TO_SET": "Passa a set",
     "TOGGLE_FOR_CURRENT_SET": "Attiva/disattiva per il set corrente"
-  }
+  },
+  "DONE": "Fatto"
 }

@@ -30,6 +30,7 @@ pub struct Toast {
     pub body: String,
     pub opacity: f32,
     pub timeout: f32,
+    pub lerp_amount: f32,
     pub sound: bool,
     pub topic: ToastTopic,
 }
@@ -41,6 +42,7 @@ impl Toast {
             title,
             body,
             opacity: 1.0,
+            lerp_amount: 0.1,
             timeout: 3.0,
             sound: false,
             topic,
@@ -48,6 +50,10 @@ impl Toast {
     }
     pub const fn with_timeout(mut self, timeout: f32) -> Self {
         self.timeout = timeout;
+        self
+    }
+    pub const fn with_lerp_amount(mut self, lerp: f32) -> Self {
+        self.lerp_amount = lerp;
         self
     }
     pub const fn with_opacity(mut self, opacity: f32) -> Self {
@@ -118,7 +124,9 @@ fn new_toast(toast: Toast, app: &mut AppState) -> Option<OverlayWindowConfig> {
         ToastDisplayMethod::Center => (
             vec3(0., -0.2, -0.5),
             Quat::IDENTITY,
-            Positioning::FollowHead { lerp: 0.1 },
+            Positioning::FollowHead {
+                lerp: toast.lerp_amount,
+            },
         ),
         ToastDisplayMethod::Watch => {
             let relative_to = Positioning::FollowHand {

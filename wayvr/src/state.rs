@@ -98,7 +98,7 @@ impl AppState {
         let mut audio_sample_player = audio::SamplePlayer::new();
         audio_sample_player.register_sample(
             "key_click",
-            audio::AudioSample::from_mp3(&*audio::AudioSample::bytes_from_config_or_default(
+            audio::AudioSample::from_mp3(&audio::AudioSample::bytes_from_config_or_default(
                 "sound/key_click.mp3",
                 include_bytes!("res/key_click.mp3"),
             ))?,
@@ -106,9 +106,17 @@ impl AppState {
 
         audio_sample_player.register_sample(
             "toast",
-            audio::AudioSample::from_mp3(&*audio::AudioSample::bytes_from_config_or_default(
+            audio::AudioSample::from_mp3(&audio::AudioSample::bytes_from_config_or_default(
                 "sound/toast.mp3",
                 include_bytes!("res/toast.mp3"),
+            ))?,
+        )?;
+
+        audio_sample_player.register_sample(
+            "fix_floor",
+            audio::AudioSample::from_mp3(&audio::AudioSample::bytes_from_config_or_default(
+                "sound/fix_floor.mp3",
+                include_bytes!("res/fix_floor.mp3"),
             ))?,
         )?;
 

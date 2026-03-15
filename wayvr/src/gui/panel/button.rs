@@ -577,19 +577,37 @@ pub(super) fn setup_custom_button<S: 'static>(
                         return Ok(EventResult::Pass);
                     }
 
-                    Toast::new(
-                        ToastTopic::System,
-                        "TOAST.FIXING_FLOOR".into(),
-                        "TOAST.ONE_CONTROLLER_ON_FLOOR".into(),
-                    )
-                    .with_timeout(5.)
-                    .with_sound(true)
-                    .submit(app);
+                    let globals = app.wgui_globals.clone();
 
-                    app.tasks.enqueue_at(
-                        TaskType::Playspace(PlayspaceTask::FixFloor),
-                        Instant::now() + Duration::from_secs(5),
-                    );
+                    let duration_secs = 5;
+                    let now = Instant::now();
+
+                    for i in 0..duration_secs {
+                        Toast::new(
+                            ToastTopic::System,
+                            globals.i18n().translate_and_replace(
+                                "TOAST.FIXING_FLOOR_IN_X_SECS",
+                                ("{SECONDS}", &format!("{}", duration_secs - i)),
+                            ),
+                            "TOAST.ONE_CONTROLLER_ON_FLOOR".into(),
+                        )
+                        .with_timeout(1.0)
+                        .with_lerp_amount(1.0)
+                        .with_sound(i == 0)
+                        .submit_at(app, now + Duration::from_secs(i as _));
+                    }
+
+                    app.audio_sample_player
+                        .play_sample(&mut app.audio_system, "fix_floor");
+
+                    let deadline = now + Duration::from_secs(duration_secs);
+
+                    app.tasks
+                        .enqueue_at(TaskType::Playspace(PlayspaceTask::FixFloor), deadline);
+
+                    Toast::new(ToastTopic::System, "DONE".into(), String::new())
+                        .with_timeout(2.0)
+                        .submit_at(app, deadline);
                     Ok(EventResult::Consumed)
                 }),
                 "::Shutdown" => Box::new(move |_common, data, app, _| {

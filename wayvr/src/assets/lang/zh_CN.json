@@ -97,8 +97,8 @@
     "LAST_EXISTING_SET": "这是最后一个现有的集合。",
     "EMPTY_SET": "空集合！",
     "LETS_ADD_OVERLAYS": "让我们从手表添加一些覆盖层吧！",
-    "FIXING_FLOOR": "将在 5 秒内修复地面...",
-    "ONE_CONTROLLER_ON_FLOOR": "请将一个控制器放在地面上！"
+    "ONE_CONTROLLER_ON_FLOOR": "请将一个控制器放在地面上！",
+    "FIXING_FLOOR_IN_X_SECS": "{SECONDS}秒内固定地面..."
   },
   "WATCH": {
     "ADD_NEW_SET": "添加新集合",
@@ -111,5 +111,6 @@
     "RECENTER": "重置游玩区中心 (Recenter)",
     "SWITCH_TO_SET": "切换到集合",
     "TOGGLE_FOR_CURRENT_SET": "切换当前集合"
-  }
+  },
+  "DONE": "完成"
 }
