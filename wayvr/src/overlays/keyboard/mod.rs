@@ -4,7 +4,7 @@ use std::{
     process::{Child, Command},
     sync::atomic::Ordering,
 };
-
+use std::sync::mpsc::Receiver;
 use crate::{
     KEYMAP_CHANGE,
     backend::{
@@ -61,7 +61,7 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
         set_list: SetList::default(),
         clock_12h: app.session.config.clock_12h,
         swipe_typing_manager: None,
-        swipe_bar_candidates: Vec::new(),
+        swipe_candidate_receiver: None,
     };
 
     let auto_labels = layout.auto_labels.unwrap_or(true);
@@ -124,7 +124,17 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
         ..OverlayWindowConfig::from_backend(Box::new(backend))
     })
 }
-
+pub fn init_swipe_type_manager(state: &mut KeyboardState) {
+    match SwipeTypingManager::new() {
+        Ok((engine, receiver)) => {
+            state.swipe_typing_manager = Some(engine);
+            state.swipe_candidate_receiver = Some(receiver);
+        },
+        Err(e) => {
+            log::error!("Error occured while trying to load swipe engine: {:?}", e);
+        }
+    };
+}
 fn alt_modifier_to_key(m: AltModifier) -> KeyModifier {
     match m {
         AltModifier::Shift => SHIFT,
@@ -158,13 +168,7 @@ impl KeyboardBackend {
     ) -> anyhow::Result<KeyboardPanelKey> {
         let mut state = self.default_state.take();
 
-        state.swipe_typing_manager = match SwipeTypingManager::new() {
-            Ok(engine) => Some(engine),
-            Err(e) => {
-                log::error!("Error occured while trying to load swipe engine: {:?}", e);
-                None
-            }
-        };
+        init_swipe_type_manager(&mut state);
 
         log::info!("swipe engine created");
         let panel =
@@ -178,6 +182,7 @@ impl KeyboardBackend {
         }
         Ok(id)
     }
+
 
     fn switch_keymap(&mut self, keymap: &XkbKeymap, app: &mut AppState) -> anyhow::Result<bool> {
         if !self.wlx_layout.auto_labels.unwrap_or(true) {
@@ -211,13 +216,8 @@ impl KeyboardBackend {
             .state
             .take();
 
-        state_from.swipe_typing_manager = match SwipeTypingManager::new() {
-            Ok(engine) => Some(engine),
-            Err(e) => {
-                log::error!("Error occured while trying to load swipe engine: {:?}", e);
-                None
-            }
-        };
+        init_swipe_type_manager(&mut state_from);
+
         self.active_layout = new_key;
 
         self.layout_panels
@@ -360,7 +360,7 @@ struct KeyboardState {
     set_list: SetList,
     clock_12h: bool,
     swipe_typing_manager: Option<SwipeTypingManager>,
-    swipe_bar_candidates: Vec<String>,
+    swipe_candidate_receiver: Option<Receiver<Option<Vec<String>>>>
 }
 
 macro_rules! take_and_leave_default {
@@ -381,7 +381,7 @@ impl KeyboardState {
             set_list: SetList::default(),
             clock_12h: self.clock_12h,
             swipe_typing_manager: None,
-            swipe_bar_candidates: Vec::new(),
+            swipe_candidate_receiver: None,
         }
     }
 }
@@ -515,14 +515,9 @@ fn handle_release(app: &mut AppState, key: &KeyState, k_cap_type: &KeyCapType, k
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
             if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *k_cap_type == KeyCapType::Letter {
-                println!("some");
                 if swipe_manager.did_swipe_leave_first_key() {
-                    println!("left first");
                     match swipe_manager.predict() {
-                        Ok(top_prediction) => {
-                            println!("best prediction for swipe: {top_prediction}");
-                            swipe_manager.select_word(&top_prediction, app, keyboard.modifiers);
-                        },
+                        Ok(()) => {},
                         Err(e) => {
                             log::error!("{}", e)
                         }
