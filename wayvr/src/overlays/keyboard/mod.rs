@@ -422,7 +422,14 @@ enum KeyButtonData {
     },
 }
 
-fn handle_mouse_motion(key: &KeyState, key_label: &Vec<String>, key_cap_type: &KeyCapType, keyboard: &mut KeyboardState, within_key_pos: &Option<Vec2>) {
+fn handle_mouse_motion(
+    key: &KeyState,
+    key_label: &Vec<String>,
+    key_cap_type: &KeyCapType,
+    keyboard: &mut KeyboardState,
+    within_key_pos: &Option<Vec2>,
+    device: usize
+) {
     if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *key_cap_type == KeyCapType::Letter {
         if !swipe_manager.is_current_swipe_empty() {
             match &key.button_state {
@@ -432,7 +439,7 @@ fn handle_mouse_motion(key: &KeyState, key_label: &Vec<String>, key_cap_type: &K
                         if pos.x >= 0.0 && pos.x <= 1.0 && pos.y >= 0.0 && pos.y <= 1.0 {
 
                             if let Some(label) = key_label.first() {
-                                swipe_manager.add_swipe(pos, label.chars().next().unwrap_or_default());
+                                swipe_manager.add_swipe(pos, label.chars().next().unwrap_or_default(), device);
                             }
                         }
                     }
@@ -451,13 +458,14 @@ fn handle_press(
     within_key_pos: &Option<Vec2>,
     keyboard: &mut KeyboardState,
     button: MouseButtonEvent,
+    device: usize
 ) {
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
             if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *key_cap_type == KeyCapType::Letter {
                 if let Some(pos) = within_key_pos {
                     if let Some(label) = key_label.first() {
-                        swipe_manager.add_swipe(pos, label.chars().next().unwrap_or_default());
+                        swipe_manager.add_swipe(pos, label.chars().next().unwrap_or_default(), device);
                     }
                 }
             }

@@ -19,6 +19,7 @@ pub struct SwipeTypingManager {
     clipboard: Clipboard,
     swipe_left_first_key: bool,
     first_swipe_char: char,
+    current_swipe_device: Option<usize>, // the pointer that started this swipe
     last_swiped_word: Option<String>
 }
 impl SwipeTypingManager {
@@ -69,6 +70,7 @@ impl SwipeTypingManager {
             clipboard: Clipboard::new()?,
             swipe_left_first_key: false,
             first_swipe_char: char::default(),
+            current_swipe_device: None,
             last_swiped_word: None
         })
     }
@@ -98,11 +100,13 @@ impl SwipeTypingManager {
         self.current_swipe = Vec::new();
         self.first_swipe_char = char::default();
         self.swipe_left_first_key = false;
+        self.current_swipe_device = None;
     }
-    fn start_swipe(&mut self, key_label: char) -> Instant{
+    fn start_swipe(&mut self, key_label: char, device: usize) -> Instant{
         let now = Instant::now();
         self.swipe_start_time = Some(now);
         self.first_swipe_char = key_label.to_ascii_lowercase();
+        self.current_swipe_device = Some(device);
         self.swipe_candidates = Vec::new();
         now
     }
@@ -112,7 +116,7 @@ impl SwipeTypingManager {
     pub fn is_current_swipe_empty(&self) -> bool {
         self.current_swipe.is_empty()
     }
-    pub fn add_swipe(&mut self, within_key_pos_normalized: &Vec2, key_label: char) {
+    pub fn add_swipe(&mut self, within_key_pos_normalized: &Vec2, key_label: char, device: usize) {
         if let Some(pos) = self.keyboard_gird.key_positions.get(&key_label.to_ascii_lowercase()) {
             if self.first_swipe_char != char::default() && self.first_swipe_char != key_label.to_ascii_lowercase() {
                 self.swipe_left_first_key = true;
@@ -122,8 +126,13 @@ impl SwipeTypingManager {
             //println!("char : {key_label} at pos: {key_pos}");
             let start_time = match self.swipe_start_time {
                 Some(time) => time,
-                None => self.start_swipe(key_label)
+                None => self.start_swipe(key_label, device)
             };
+
+            // only allow the pointer that started the swipe to contribute to it
+            if let Some(current_device) = self.current_swipe_device && current_device != device{
+                return;
+            }
 
             let within_key_pos_from_center = Vec2 {
                 x: within_key_pos_normalized.x - 0.5,

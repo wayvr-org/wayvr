@@ -363,7 +363,7 @@ pub(super) fn create_keyboard_panel(
                             };
                             let within_key_pos = data.metadata.get_mouse_pos_normalized(&common.alterables.transform_stack);
 
-                            handle_press(app, &k, &k_label, &k_cap_type, &within_key_pos, state, button);
+                            handle_press(app, &k, &k_label, &k_cap_type, &within_key_pos, state, button, button.device);
                             on_press_anim(k.clone(), common, data);
                             Ok(EventResult::Pass)
                         }
@@ -378,8 +378,11 @@ pub(super) fn create_keyboard_panel(
                         let k_cap_type = key_cap_type.clone();
                         move |common, data, app, state| {
                             let within_key_pos = data.metadata.get_mouse_pos_normalized(&common.alterables.transform_stack);
+                            let CallbackMetadata::MousePosition(position) = data.metadata else {
+                                panic!("CallbackMetadata should contain MousePosition!");
+                            };
 
-                            handle_mouse_motion(&k, &k_label, &k_cap_type, state, &within_key_pos);
+                            handle_mouse_motion(&k, &k_label, &k_cap_type, state, &within_key_pos, position.device);
                             Ok(EventResult::Pass)
                         }
                     }),
