@@ -43,7 +43,7 @@ impl SwipeTypingManager {
 
     pub fn select_word(&mut self, word: &String, app: &mut AppState, original_keyboard_mods: KeyModifier) {
         self.last_swiped_word = Some(word.clone());
-        if let Ok(_) = self.copy_text_to_primary_clipboard(word.as_ref()) {
+        if let Ok(_) = self.copy_text_to_clipboard(word.as_ref()) {
             Self::paste(app, original_keyboard_mods);
         }
     }
@@ -70,7 +70,7 @@ impl SwipeTypingManager {
             .set_modifiers_routed(app.wvr_server.as_mut(), original_keyboard_mods);
     }
 
-    fn copy_text_to_primary_clipboard(&mut self, text: &str) -> Result<(), arboard::Error> {
+    fn copy_text_to_clipboard(&mut self, text: &str) -> Result<(), arboard::Error> {
         self.clipboard.set_text(format!("{text} "))
     }
 
@@ -180,6 +180,12 @@ impl SwipeTypingManager {
 
     pub fn add_swipe(&mut self, within_key_pos_normalized: &Vec2, key_label: char, device: usize) {
         if let Some(pos) = self.keyboard_gird.key_positions.get(&key_label.to_ascii_lowercase()) {
+            if let Some(current_device) = self.current_swipe_device {
+                if current_device != device {
+                    return;
+                }
+            }
+
             if self.first_swipe_char != char::default()
                 && self.first_swipe_char != key_label.to_ascii_lowercase()
             {
@@ -195,12 +201,6 @@ impl SwipeTypingManager {
                 Some(time) => time,
                 None => self.start_swipe(key_label, device),
             };
-
-            if let Some(current_device) = self.current_swipe_device {
-                if current_device != device {
-                    return;
-                }
-            }
 
             let within_key_pos_from_center = Vec2 {
                 x: within_key_pos_normalized.x - 0.5,

@@ -555,7 +555,6 @@ fn handle_release(app: &mut AppState, key: &KeyState, k_cap_type: &KeyCapType, k
                     }
                 }
                 else { // pointer must have been released on the same key it was pressed on
-                    println!("swipe reset");
                     swipe_manager.reset(); // drop swipe tracking that was started on press
 
                     app.hid_provider

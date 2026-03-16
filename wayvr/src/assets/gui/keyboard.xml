@@ -98,7 +98,7 @@
   <!-- Word prediction key for swipe typing -->
   <template name="KeyPrediction">
     <rectangle id="${id}" macro="prediction_rect" height="60" min_height="60" flex_grow="1" flex_shrink="1" flex_basis="0">
-      <label text="${text}" size="16" wrap="true" />
+      <label text="${text}" size="16" flex_wrap="wrap" />
     </rectangle>
   </template>
 
