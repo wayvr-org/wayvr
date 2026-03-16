@@ -208,7 +208,7 @@ impl SwipeTypingManager {
             };
             let key_dimensions = Vec2 {
                 x: QwertyKeyboardGrid::get_key_width() as f32,
-                y: QwertyKeyboardGrid::get_key_width() as f32,
+                y: QwertyKeyboardGrid::get_key_height() as f32,
             };
 
             let point = within_key_pos_from_center * key_dimensions + key_pos;
