@@ -1,6 +1,6 @@
 use crate::state::AppState;
 use crate::subsystem::hid::{KeyModifier, VirtualKey, CTRL};
-use anyhow::{anyhow, bail};
+use anyhow::{bail};
 use arboard::Clipboard;
 use glam::Vec2;
 use std::mem;
@@ -9,7 +9,8 @@ use std::thread::{self, JoinHandle};
 use std::time::Instant;
 use super_swipe_type::keyboard_manager::QwertyKeyboardGrid;
 use super_swipe_type::swipe_orchestrator::SwipeOrchestrator;
-use super_swipe_type::{SwipeCandidate, SwipePoint};
+use super_swipe_type::{SwipePoint};
+use crate::subsystem::input::KeyboardFocus;
 
 const PREDICTION_SUGGESTION_COUNT: usize = 5;
 
@@ -37,18 +38,31 @@ pub struct SwipeTypingManager {
 
 impl SwipeTypingManager {
     pub fn select_alternate_prediction(&mut self, word: &String, app: &mut AppState, original_keyboard_mods: KeyModifier) {
-        Self::undo_paste(app, original_keyboard_mods);
+        Self::undo(app, original_keyboard_mods);
         self.select_word(word, app, original_keyboard_mods);
     }
 
     pub fn select_word(&mut self, word: &String, app: &mut AppState, original_keyboard_mods: KeyModifier) {
         self.last_swiped_word = Some(word.clone());
-        if let Ok(_) = self.copy_text_to_clipboard(word.as_ref()) {
-            Self::paste(app, original_keyboard_mods);
+        let text_to_paste = format!("{word} ");
+
+        match app.hid_provider.keyboard_focus {
+            KeyboardFocus::PhysicalScreen => {
+                if let Ok(_) = self.clipboard.set_text(text_to_paste) {
+                    Self::paste(app, original_keyboard_mods);
+                }
+            },
+            KeyboardFocus::WayVR => {
+                if let Some(wvr_server) = app.wvr_server.as_mut() {
+                    wvr_server.set_clipboard_text(text_to_paste);
+                    Self::paste(app, original_keyboard_mods);
+                }
+            },
         }
+
     }
 
-    fn undo_paste(app: &mut AppState, original_keyboard_mods: KeyModifier) {
+    fn undo(app: &mut AppState, original_keyboard_mods: KeyModifier) {
         app.hid_provider
             .set_modifiers_routed(app.wvr_server.as_mut(), CTRL);
         app.hid_provider
@@ -69,11 +83,6 @@ impl SwipeTypingManager {
         app.hid_provider
             .set_modifiers_routed(app.wvr_server.as_mut(), original_keyboard_mods);
     }
-
-    fn copy_text_to_clipboard(&mut self, text: &str) -> Result<(), arboard::Error> {
-        self.clipboard.set_text(format!("{text} "))
-    }
-
     pub fn new() -> anyhow::Result<(SwipeTypingManager, Receiver<Option<Vec<String>>>)> {
         let (candidate_sender, candidate_receiver) = sync_channel(1);
         let (task_sender, task_receiver) = channel::<PredictionTask>();
