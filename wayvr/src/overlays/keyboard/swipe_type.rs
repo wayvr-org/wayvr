@@ -212,7 +212,7 @@ impl SwipeTypingManager {
             };
 
             let point = within_key_pos_from_center * key_dimensions + key_pos;
-            let duration = Instant::now().duration_since(start_time);
+            let duration = Instant::now().duration_since(start_time).mul_f32(0.8); // multiply by .8 because library is trained on mobile swipes which happen on a smaller keyboard and are faster
             self.current_swipe
                 .push(SwipePoint::new(point.x.into(), point.y.into(), duration))
         }

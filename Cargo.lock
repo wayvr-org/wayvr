@@ -6101,9 +6101,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "super-swipe-type"
-version = "0.1.2"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32fd40ad969f38b55f6d1541d7c1a16226821b51a38362de7aa800f976632336"
+checksum = "22126517bdf94f41b3d0af625fdf69b5ff131b7dd19a59866d3c00a56072af88"
 dependencies = [
  "anyhow",
  "cached-path",
