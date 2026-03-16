@@ -35,7 +35,7 @@ use wgui::{
     event::{InternalStateChangeEvent, MouseButtonEvent, MouseButtonIndex},
 };
 use wgui::event::StyleSetRequest;
-use wgui::layout::{Layout, LayoutTask};
+use wgui::layout::{LayoutTask};
 use wgui::parser::Fetchable;
 use wgui::taffy::Display;
 use wlx_common::windowing::{OverlayWindowState, Positioning};

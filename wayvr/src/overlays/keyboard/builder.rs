@@ -28,7 +28,6 @@ use wgui::{
 use wgui::event::StyleSetRequest;
 use wgui::layout::LayoutTask;
 use wgui::taffy::Display;
-use crate::overlays::keyboard::swipe_type::SwipeTypingManager;
 use super::{KeyButtonData, KeyState, KeyboardState, handle_press, handle_release, layout::{self, KeyCapType}, handle_mouse_motion, init_swipe_type_manager};
 
 const PIXELS_PER_UNIT: f32 = 60.;
@@ -320,7 +319,7 @@ pub(super) fn create_keyboard_panel(
                     EventListenerKind::MouseEnter,
                     Box::new({
                         let k = key_state.clone();
-                        move |common, data, _app, state| {
+                        move |common, data, _app, _state| {
                             common.alterables.trigger_haptics();
                             on_enter_anim(
                                 k.clone(),
@@ -382,7 +381,7 @@ pub(super) fn create_keyboard_panel(
                         let k = key_state.clone();
                         let k_label = key_label.clone();
                         let k_cap_type = key_cap_type.clone();
-                        move |common, data, app, state| {
+                        move |common, data, _app, state| {
                             let within_key_pos = data.metadata.get_mouse_pos_normalized(&common.alterables.transform_stack);
                             let CallbackMetadata::MousePosition(position) = data.metadata else {
                                 panic!("CallbackMetadata should contain MousePosition!");
