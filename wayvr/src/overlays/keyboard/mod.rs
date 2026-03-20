@@ -135,7 +135,7 @@ pub(self) fn init_swipe_type_manager(state: &mut KeyboardState) {
             state.swipe_candidate_receiver = Some(receiver);
         },
         Err(e) => {
-            log::error!("Error occured while trying to load swipe engine: {:?}", e);
+            log::error!("Error occurred while trying to load swipe engine: {}", e);
         }
     };
 }

@@ -104,9 +104,9 @@ impl SwipeTypingManager {
                         match swipe_engine.predict(swipe, &last_word) {
                             Ok(candidates) => {
                                 let words: Vec<String> = candidates
-                                    .iter()
+                                    .into_iter()
                                     .take(PREDICTION_SUGGESTION_COUNT)
-                                    .map(|c| c.word.clone())
+                                    .map(|c| c.word)
                                     .collect();
 
                                 let _ = worker_candidate_sender.send(Some(words));
