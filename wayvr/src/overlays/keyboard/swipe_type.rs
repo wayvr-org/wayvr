@@ -213,7 +213,7 @@ impl SwipeTypingManager {
 
             let within_key_pos_from_center = Vec2 {
                 x: within_key_pos_normalized.x - 0.5,
-                y: 0.5 - within_key_pos_normalized.y,
+                y: within_key_pos_normalized.y - 0.5,
             };
             let key_dimensions = Vec2 {
                 x: QwertyKeyboardGrid::get_key_width() as f32,
