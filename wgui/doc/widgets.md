@@ -356,6 +356,8 @@ _Translated by key_
 
 `box_size`: **float** (default: 24)
 
+`color_checked`: #FFAABB | #FFAABBCC
+
 `value`: **string**
 
 _optional value that will be sent with internal events_
