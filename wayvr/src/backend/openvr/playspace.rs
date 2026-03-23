@@ -23,7 +23,6 @@ pub(super) struct PlayspaceMover {
     universe: ETrackingUniverseOrigin,
     drag: Option<MoverData<Vec3A>>,
     rotate: Option<MoverData<Quat>>,
-    reset: Option<usize>,
 }
 
 impl PlayspaceMover {
@@ -32,7 +31,6 @@ impl PlayspaceMover {
             universe: ETrackingUniverseOrigin::TrackingUniverseRawAndUncalibrated,
             drag: None,
             rotate: None,
-            reset: None,
         }
     }
 
@@ -181,20 +179,10 @@ impl PlayspaceMover {
             }
         }
 
-        if self.reset.is_none() {
-            for (i, pointer) in app.input_state.pointers.iter().enumerate() {
-                if pointer.now.space_reset {
-                    self.reset_offset(chaperone_mgr, &app.input_state);
-                    self.reset = Some(i);
-                    log::info!("Space reset");
-                    return;
-                }
-            }
-        } else {
-            let pointer = &app.input_state.pointers[self.reset.unwrap()];
-            if !pointer.now.space_reset {
-                self.reset = None;
-                log::debug!("End space reset");
+        for (_, pointer) in app.input_state.pointers.iter().enumerate() {
+            if pointer.now.space_reset && !pointer.before.space_reset {
+                self.reset_offset(chaperone_mgr, &app.input_state);
+                log::info!("Space reset");
                 return;
             }
         }
