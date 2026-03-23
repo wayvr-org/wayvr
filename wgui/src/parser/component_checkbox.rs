@@ -91,6 +91,7 @@ pub fn parse_component_checkbox(
 			radio_group,
 			value: component_value,
 			tooltip: tooltip.get_info(),
+			color_checked: None,
 		},
 	)?;
 
