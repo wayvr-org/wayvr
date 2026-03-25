@@ -1,4 +1,4 @@
-![WayVR splash screen header](https://github.com/wlx-team/wayvr/blob/guide/wayvr-readme-header.webp?raw=true)
+![WayVR splash screen header](https://github.com/wayvr-org/wayvr/blob/guide/wayvr-readme-header.webp?raw=true)
 
 # WayVR (previously WlxOverlay-S)
 
@@ -8,13 +8,13 @@ WayVR lets you access your desktop screens while in VR, and even launch apps dir
 
 In comparison to similar overlays, WayVR aims to run alongside VR games and experiences while having as little performance impact as possible. The UI appearance and rendering techniques are kept as simple and efficient as possible, while still allowing a high degree of customizability.
 
-![Screenshot of WayVR being used as an OpenXR home environment](https://github.com/wlx-team/wayvr/blob/guide/wayvr-readme-screenshot.webp?raw=true)
+![Screenshot of WayVR being used as an OpenXR home environment](https://github.com/wayvr-org/wayvr/blob/guide/wayvr-readme-screenshot.webp?raw=true)
 
 ## Join the Linux VR Community
 
 We are available on either **Discord** or **Matrix space**:
 
-[![LVRA Discord](https://img.shields.io/discord/1065291958328758352?style=for-the-badge&logo=discord)](https://discord.gg/EHAYe3tTYa) [![LVRA Matrix](https://img.shields.io/matrix/linux-vr-adventures:matrix.org?logo=matrix&style=for-the-badge)](https://matrix.to/#/#linux-vr-adventures:matrix.org)
+[![LVRA Discord](https://img.shields.io/discord/1065291958328758352?style=for-the-badge/&logo=discord)](https://discord.gg/EHAYe3tTYa) [![LVRA Matrix](https://img.shields.io/matrix/linux-vr-adventures:matrix.org?logo=matrix&style=for-the-badge)](https://matrix.to/#/#linux-vr-adventures:matrix.org)
 
 Questions/issues specific to WayVR will be handled in the `wayvr` chat room. Feel free to ask anything.
 
@@ -24,10 +24,10 @@ Questions/issues specific to WayVR will be handled in the `wayvr` chat room. Fee
 
 There are multiple ways to install WayVR:
 
-1. AppImage: Download from [Releases](https://github.com/wlx-team/wayvr/releases)
-1. AUR package: [wayvr](https://aur.archlinux.org/packages/wayvr) or [wayvr-git](https://aur.archlinux.org/packages/wayvr-git) 
+1. AppImage: Download from [Releases](https://github.com/wayvr-org/wayvr/releases)
+1. AUR package: [wayvr](https://aur.archlinux.org/packages/wayvr) or [wayvr-git](https://aur.archlinux.org/packages/wayvr-git)
 1. Nix package: [wayvr](https://search.nixos.org/packages?channel=unstable&show=wayvr&query=wayvr) or [unstable package from nixpkgs-xr](https://github.com/nix-community/nixpkgs-xr)
-1. [Building from source](https://github.com/wlx-team/wayvr/wiki/Building-from-Source).
+1. [Docs: Building from source](https://wayvr.org/docs/basics/building-from-source/).
 
 ### General Setup
 
@@ -40,7 +40,7 @@ There are multiple ways to install WayVR:
 
 For users specifically running **SteamVR via Steam Flatpak**, follow these steps:
 
-1. Grab the latest AppImage from [Releases](https://github.com/wlx-team/wayvr/releases).
+1. Grab the latest AppImage from [Releases](https://github.com/wayvr-org/wayvr/releases).
 1. `WayVR-*.AppImage --appimage-extract`
 1. `chmod +x squashfs-root/AppRun`
 1. Move the newly created `squashfs-root` folder to a location accessible by the Steam Flatpak.
@@ -64,7 +64,7 @@ In case screens were selected in the wrong order:
 **Envision users**: Go to the Plugins menu and select the WayVR plugin. This will download and run the AppImage version of the overlay.
 To run a standalone installation (for instance, from the AUR), create a bash script containing `wayvr --openxr --show` and then set this bash script as a custom Envision plugin.
 
-This will show a home environment with headset passthrough enabled by default or a [customizable background](https://github.com/wlx-team/wayvr/wiki/OpenXR-Skybox)!
+This will show a home environment with headset passthrough enabled by default or a [customizable background](https://wayvr.org/docs/various/openxr-skybox/)!
 
 **SteamVR users**: WayVR will register itself for auto-start, so there is no need to start it every time. Disclaimer: SteamVR will sometimes disregard this and not start WayVR anyway.
 
@@ -131,23 +131,23 @@ Typing
 - While using the ORANGE laser, all keystrokes will have SHIFT applied.
 - Purple laser is customizable via the settings, no modifier by default.
 
-**Modifier Keys are sticky**. They will remain pressed until eiter:
+**Modifier Keys are sticky**. They will remain pressed until either:
+
 - a non-modifier key is pressed
 - the modifier is toggled off by clicking again
 - the keyboard is hidden (including via show-hide)
 
 ### Default Bindings
 
-![Index Controller Bindings](https://github.com/wlx-team/wayvr/blob/guide/wlx-index.png)
+![Index Controller Bindings](https://github.com/wayvr-org/wayvr/blob/guide/wlx-index.png)
 
-![Touch Controller Bindings](https://github.com/wlx-team/wayvr/blob/guide/wlx-oculus.png)
-
+![Touch Controller Bindings](https://github.com/wayvr-org/wayvr/blob/guide/wlx-oculus.png)
 
 ### Changing Bindings
 
 SteamVR: Simply change the bindings from the SteamVR bindings section. If WayVR doesn't show up on the list, select any other title and then press back on the top left. (SteamVR is weird like that sometimes)
 
-OpenXR (Monado/WiVRn): See [Wiki: OpenXR Bindings](https://github.com/wlx-team/wayvr/wiki/OpenXR-Bindings)
+OpenXR (Monado/WiVRn): See [Docs: OpenXR Bindings](https://wayvr.org/docs/various/openxr-bindings/)
 
 If your controllers are not supported, please reach out. \
 We would like to work with you and include additional bindings.
@@ -155,9 +155,10 @@ We would like to work with you and include additional bindings.
 ## Customization
 
 See these relevant wiki pages:
-- For all available config options, check [Wiki: Configuration](https://github.com/wlx-team/wayvr/wiki/Configuration)
-- Looking to customize look & feel, or add functionality? See [Wiki: Customization](https://github.com/wlx-team/wayvr/wiki/Customization)
-- Looking to change the OpenXR background? See [Wiki: OpenXR Skybox](https://github.com/wlx-team/wayvr/wiki/OpenXR-Skybox)
+
+- For all available config options, check [Docs: Configuration](https://wayvr.org/docs/basics/configuration/)
+- Looking to customize look & feel, or add functionality? See [Docs: Customization](https://wayvr.org/docs/basics/customization/)
+- Looking to change the OpenXR background? See [Docs: OpenXR Skybox](https://wayvr.org/docs/various/openxr-skybox/)
 
 ## Troubleshooting
 
@@ -165,7 +166,7 @@ When an error is detected, we often print tips for fixing it into the log file.
 
 Logs will be at `/tmp/wayvr.log` for most distros.
 
-Check [here](https://github.com/wlx-team/wayvr/wiki/Troubleshooting) for tips.
+Check [here](https://wayvr.org/docs/various/troubleshooting/) for tips.
 
 ## Known Issues
 

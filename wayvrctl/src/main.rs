@@ -249,7 +249,7 @@ enum Subcommands {
         /// Name for the overlay
         #[arg(short, long, default_value = "")]
         name: String,
-        /// Enviroment variables, separated by comma
+        /// Environment variables, separated by comma
         #[arg(short, long, default_value = "")]
         env: String,
         /// Executable to run
