@@ -71,6 +71,7 @@ struct DebugGraph {
 }
 
 struct DebugSessionList {
+	#[allow(dead_code)]
 	buttons: Vec<Rc<ComponentButton>>,
 	#[allow(dead_code)]
 	data_vec: Vec<ParserData>,
@@ -112,6 +113,7 @@ struct SubtabDebugTimings {
 }
 
 #[allow(dead_code)]
+#[allow(clippy::large_enum_variant)]
 enum Subtab {
 	Empty,
 	GeneralSettings(SubtabGeneralSettings),
@@ -196,7 +198,7 @@ impl<T> Tab<T> for TabMonado<T> {
 				}
 			}
 			Subtab::DebugTimings(timings) => {
-				timings.update(&self.tasks, data, frontend);
+				timings.update(&self.tasks, data, frontend)?;
 			}
 		}
 
@@ -427,14 +429,14 @@ impl SubtabDebugTimings {
 		Ok(())
 	}
 
-	fn update<T>(&mut self, tasks: &Tasks<Task>, data: &mut T, frontend: &mut Frontend<T>) {
+	fn update<T>(&mut self, tasks: &Tasks<Task>, data: &mut T, frontend: &mut Frontend<T>) -> anyhow::Result<()> {
 		if !frontend.interface.monado_metrics_set_enabled(data, true) {
-			return;
+			return Ok(());
 		}
 
 		let frames = frontend.interface.monado_metrics_dump_session_frames(data);
 		if frames.is_empty() {
-			return;
+			return Ok(());
 		}
 
 		let col_green = Color::new(0.0, 1.0, 0.0, 1.0);
@@ -525,7 +527,7 @@ impl SubtabDebugTimings {
 						frame.session_id,
 						TimingsSession {
 							last_frame: frame,
-							resolved_name: None,
+							resolved_name: None, /* TODO! find client ID from session ID */
 						},
 					);
 					tasks.push(Task::DebugTimingsRefreshSessionList);
@@ -534,6 +536,8 @@ impl SubtabDebugTimings {
 		}
 
 		frontend.layout.mark_redraw();
+
+		Ok(())
 	}
 }
 
@@ -568,7 +572,10 @@ impl SubtabProcessList {
 				Rc::from("0")
 			},
 		);
-		par.insert("name".into(), client.name.clone().into());
+		par.insert(
+			"name".into(),
+			format!("{} (Client ID: {})", client.name, client.id).into(),
+		);
 		par.insert("flag_active".into(), yesno(client.is_active).into());
 		par.insert("flag_focused".into(), yesno(client.is_focused).into());
 		par.insert("flag_io_active".into(), yesno(client.is_io_active).into());
@@ -618,7 +625,7 @@ impl SubtabProcessList {
 	fn refresh<T>(&mut self, frontend: &mut Frontend<T>, data: &mut T, tasks: &Tasks<Task>) -> anyhow::Result<()> {
 		log::debug!("refreshing monado client list");
 
-		let clients = frontend.interface.monado_client_list(data)?;
+		let clients = frontend.interface.monado_client_list(data, true)?;
 
 		frontend.layout.remove_children(self.id_list_parent);
 		self.cells.clear();

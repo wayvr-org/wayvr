@@ -469,20 +469,27 @@ impl DashInterface<AppState> for DashInterfaceLive {
     fn monado_client_list(
         &mut self,
         app: &mut AppState,
+        filtered: bool,
     ) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
         let Some(monado) = &mut app.monado_state else {
             return Ok(Vec::new()); // no monado available
         };
 
-        let clients = monado_list_clients_filtered(&mut monado.ipc)?;
+        let clients = if filtered {
+            monado_list_clients_filtered(&mut monado.ipc)?
+        } else {
+            monado.ipc.clients()?.into_iter().collect()
+        };
 
         let mut res = Vec::<dash_interface::MonadoClient>::new();
 
         for mut client in clients {
+            let client_id = client.id();
             let name = client.name()?;
             let state = client.state()?;
 
             res.push(dash_interface::MonadoClient {
+                id: client_id as i64,
                 name,
                 is_primary: state.contains(libmonado::ClientState::ClientPrimaryApp),
                 is_active: state.contains(libmonado::ClientState::ClientSessionActive),
@@ -591,6 +598,7 @@ impl DashInterface<AppState> for DashInterfaceLive {
     fn monado_client_list(
         &mut self,
         _: &mut AppState,
+        _filtered: bool,
     ) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
         anyhow::bail!("Not supported in this build.")
     }

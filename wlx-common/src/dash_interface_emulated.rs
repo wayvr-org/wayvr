@@ -88,6 +88,7 @@ impl DashInterfaceEmulated {
 
 		let monado_clients = vec![
 			dash_interface::MonadoClient {
+				id: 1,
 				name: String::from("The Best VR Game 3000"),
 				is_active: true,
 				is_focused: true,
@@ -97,6 +98,7 @@ impl DashInterfaceEmulated {
 				is_visible: true,
 			},
 			dash_interface::MonadoClient {
+				id: 2,
 				name: String::from("Second app"),
 				is_active: true,
 				is_focused: false,
@@ -106,6 +108,7 @@ impl DashInterfaceEmulated {
 				is_visible: true,
 			},
 			dash_interface::MonadoClient {
+				id: 3,
 				name: String::from("Third app"),
 				is_active: true,
 				is_focused: false,
@@ -233,7 +236,11 @@ impl DashInterface<()> for DashInterfaceEmulated {
 
 	fn toggle_dashboard(&mut self, _data: &mut ()) {}
 
-	fn monado_client_list(&mut self, _data: &mut ()) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
+	fn monado_client_list(
+		&mut self,
+		_data: &mut (),
+		_filtered: bool,
+	) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
 		Ok(self.monado_clients.clone())
 	}
 
