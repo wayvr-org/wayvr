@@ -83,9 +83,7 @@ impl PlayspaceMover {
             let offset = (space_transform.transform_vector3a(app.input_state.hmd.translation)
                 - app.input_state.hmd.translation)
                 * -1.0;
-            let mut overlay_transform = Affine3A::from_rotation_y(-rel_y);
 
-            overlay_transform.translation = offset;
             space_transform.translation = offset;
 
             data.pose *= space_transform;

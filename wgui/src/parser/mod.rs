@@ -203,7 +203,6 @@ impl Fetchable for ParserData {
 		let casted = widget
 			.get_as::<T>()
 			.ok_or_else(|| anyhow::anyhow!("fetch_widget_as({id}): failed to cast"))?;
-
 		Ok(casted)
 	}
 }
@@ -219,11 +218,35 @@ pub struct ParserState {
 }
 
 impl ParserState {
-	/// This function is suitable in cases if you don't want to pollute main parser state with dynamic IDs
-	/// Use `instantiate_template` instead unless you want to handle `components` results yourself.
-	/// Make sure not to drop them if you want to have your listener handles valid
-	pub fn parse_template(
+	/// Parse named <template> tag and process it.
+	/// Preferred method of parsing templates. Same as `parse_template_only`,
+	/// but it keeps components data in this `ParserState` object for you.
+	/// The result can be safely dropped, all required event listeners and components
+	/// will be kept intact in this `ParserState`.
+	/// Resulting ParserData::components Vec will be left empty (they are moved into this `ParserState::data`)
+	pub fn realize_template(
 		&mut self,
+		doc_params: &ParseDocumentParams,
+		template_name: &str,
+		layout: &mut Layout,
+		widget_id: WidgetID,
+		template_parameters: HashMap<Rc<str>, Rc<str>>,
+	) -> anyhow::Result<ParserData> {
+		let mut parser_data =
+			self.parse_template_only(doc_params, template_name, layout, widget_id, template_parameters)?;
+		// Collect components contained in this freshly-parsed template
+		self.data.components.append(&mut parser_data.components);
+		Ok(parser_data)
+	}
+
+	/// Parse named <template> tag and process it.
+	/// Semi-internal - This function is suitable in cases if you don't want to pollute
+	/// the main parser state state with dynamic IDs (this won't propagate components!)
+	/// Use `realize_template` (or in some rare cases: `instantiate_template`) instead unless you want to handle `components` results yourself.
+	/// Make sure not to drop resulting ParserData if you want to have your listener handles valid
+	/// (they are contained in components). Use `realize_template` instead if you don't want to think about it.
+	pub fn parse_template_only(
+		&self,
 		doc_params: &ParseDocumentParams,
 		template_name: &str,
 		layout: &mut Layout,
@@ -254,7 +277,13 @@ impl ParserState {
 		Ok(ctx.data_local)
 	}
 
-	/// Instantinate template by saving all the results into the main `ParserState`
+	/// Parse named <template> tag and process it.
+	/// Instantiate template by saving all the results into the main `ParserState`.
+	/// Be aware you this function will save ALL parsed IDs and other metadata
+	/// into your main ParserState context (deep move).
+	/// You shouldn't instantiate the same template twice, to prevent ID name clash.
+	/// Consider using `parse_template_only` or `realize_template` instead if you want
+	/// to instantiate more than a single template of the same type.
 	pub fn instantiate_template(
 		&mut self,
 		doc_params: &ParseDocumentParams,
@@ -263,7 +292,7 @@ impl ParserState {
 		widget_id: WidgetID,
 		template_parameters: HashMap<Rc<str>, Rc<str>>,
 	) -> anyhow::Result<()> {
-		let mut data_local = self.parse_template(doc_params, template_name, layout, widget_id, template_parameters)?;
+		let mut data_local = self.parse_template_only(doc_params, template_name, layout, widget_id, template_parameters)?;
 
 		self.data.take_results_from(&mut data_local);
 		Ok(())

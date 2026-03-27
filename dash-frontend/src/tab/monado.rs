@@ -12,7 +12,7 @@ use wgui::{
 	drawing::Color,
 	globals::WguiGlobals,
 	layout::{Layout, WidgetID},
-	parser::{self, Fetchable, ParseDocumentParams, ParserData, ParserState},
+	parser::{self, Fetchable, ParseDocumentParams, ParserState},
 	task::Tasks,
 };
 use wlx_common::dash_interface::{self, MonadoDumpSessionFrame};
@@ -66,15 +66,11 @@ struct SubtabGeneralSettings {
 
 struct DebugGraph {
 	graph: Rc<ComponentBarGraph>,
-	#[allow(dead_code)]
-	data: ParserData,
 }
 
 struct DebugSessionList {
 	#[allow(dead_code)]
 	buttons: Vec<Rc<ComponentButton>>,
-	#[allow(dead_code)]
-	data_vec: Vec<ParserData>,
 }
 
 struct TimingsSession {
@@ -288,7 +284,6 @@ fn mount_sessions_list(
 	sessions: &SessionsMap,
 ) -> anyhow::Result<DebugSessionList> {
 	let mut buttons = Vec::new();
-	let mut data_vec = Vec::new();
 	let globals = layout.state.globals.clone();
 	layout.remove_children(id_parent);
 
@@ -304,7 +299,7 @@ fn mount_sessions_list(
 			)),
 		);
 
-		let data = state.parse_template(
+		let data = state.realize_template(
 			&doc_params_tab_debug_timings(&globals),
 			"SessionButton",
 			layout,
@@ -324,10 +319,9 @@ fn mount_sessions_list(
 		});
 
 		buttons.push(button);
-		data_vec.push(data);
 	}
 
-	Ok(DebugSessionList { buttons, data_vec })
+	Ok(DebugSessionList { buttons })
 }
 
 fn mount_graph(
@@ -343,7 +337,7 @@ fn mount_graph(
 	params.insert(Rc::from("limit_min"), Rc::from(limits.0.to_string()));
 	params.insert(Rc::from("limit_max"), Rc::from(limits.1.to_string()));
 
-	let data = state.parse_template(
+	let data = state.realize_template(
 		&doc_params_tab_debug_timings(&globals),
 		"DebugGraph",
 		layout,
@@ -352,7 +346,7 @@ fn mount_graph(
 	)?;
 
 	let graph = data.fetch_component_as::<ComponentBarGraph>("graph")?;
-	Ok(DebugGraph { graph, data })
+	Ok(DebugGraph { graph })
 }
 
 fn ns_to_ms(ns: i64) -> f32 {
@@ -585,7 +579,7 @@ impl SubtabProcessList {
 
 		let globals = layout.state.globals.clone();
 
-		let state_cell = self.state.parse_template(
+		let state_cell = self.state.realize_template(
 			&doc_params_tab_process_list(&globals),
 			"Cell",
 			layout,

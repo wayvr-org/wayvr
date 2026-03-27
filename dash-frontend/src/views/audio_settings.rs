@@ -750,7 +750,7 @@ impl View {
 
 		let data = self
 			.state
-			.parse_template(&doc_params(&self.globals), "Card", params.layout, self.id_devices, par)?;
+			.realize_template(&doc_params(&self.globals), "Card", params.layout, self.id_devices, par)?;
 
 		let btn_card = data.fetch_component_as::<ComponentButton>("btn_card")?;
 		btn_card.on_click({
@@ -764,7 +764,6 @@ impl View {
 			})
 		});
 
-		log::info!("mount card TODO: {}", params.card.name);
 		Ok(())
 	}
 
@@ -794,7 +793,7 @@ impl View {
 			},
 		);
 
-		let data = self.state.parse_template(
+		let data = self.state.realize_template(
 			&doc_params(&self.globals),
 			"DeviceSlider",
 			params.layout,
@@ -941,7 +940,7 @@ impl View {
 		layout.remove_children(self.id_devices);
 
 		{
-			let data = self.state.parse_template(
+			let data = self.state.realize_template(
 				&doc_params(&self.globals),
 				"SelectAudioProfileText",
 				layout,
