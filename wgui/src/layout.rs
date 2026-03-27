@@ -377,7 +377,7 @@ impl Layout {
 		self.registered_components_to_refresh.insert(*node_id, component.weak());
 	}
 
-	/// Convenience function to avoid repeated `WidgetID` → `WidgetState` lookups.
+	/// Convenience function to avoid repeated `WidgetID` → `WidgetState` look-ups.
 	pub fn add_event_listener<U1: 'static, U2: 'static>(
 		&self,
 		widget_id: WidgetID,

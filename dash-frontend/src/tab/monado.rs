@@ -117,7 +117,7 @@ impl<T> TabMonado<T> {
 		par.insert("flag_primary".into(), yesno(client.is_primary).into());
 		par.insert("flag_visible".into(), yesno(client.is_visible).into());
 
-		let state_cell = self.state.parse_template(
+		let state_cell = self.state.realize_template(
 			&doc_params(&self.globals),
 			"Cell",
 			&mut frontend.layout,
