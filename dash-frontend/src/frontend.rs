@@ -17,6 +17,7 @@ use wgui::{
 	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra, WguiWindowPlacement},
 };
 use wlx_common::{
+	async_executor::AsyncExecutor,
 	audio,
 	dash_interface::{BoxDashInterface, RecenterMode},
 	locale::WayVRLangProvider,
@@ -29,7 +30,6 @@ use crate::{
 	util::{
 		popup_manager::{MountPopupParams, PopupManager, PopupManagerParams},
 		toast_manager::ToastManager,
-		various::AsyncExecutor,
 	},
 	views,
 };
@@ -45,7 +45,7 @@ pub type FrontendTasks = Tasks<FrontendTask>;
 
 pub struct Frontend<T> {
 	pub layout: Layout,
-	globals: WguiGlobals,
+	pub globals: WguiGlobals,
 
 	pub interface: BoxDashInterface<T>,
 

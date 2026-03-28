@@ -17,6 +17,7 @@ use crate::{
 	stack::{ScissorStack, TransformStack},
 };
 
+pub mod custom_draw;
 pub mod div;
 pub mod image;
 pub mod label;
@@ -152,6 +153,7 @@ pub enum WidgetType {
 	Label,
 	Sprite,
 	Rectangle,
+	CustomDraw,
 }
 
 impl WidgetType {
@@ -161,6 +163,7 @@ impl WidgetType {
 			WidgetType::Label => "label",
 			WidgetType::Sprite => "sprite",
 			WidgetType::Rectangle => "rectangle",
+			WidgetType::CustomDraw => "custom_draw",
 		}
 	}
 }

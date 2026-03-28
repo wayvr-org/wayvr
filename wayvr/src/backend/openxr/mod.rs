@@ -35,6 +35,7 @@ mod blocker;
 mod helpers;
 mod input;
 mod lines;
+pub mod monado_state;
 mod overlay;
 mod playspace;
 mod skybox;
@@ -85,15 +86,18 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
 
     let mut delete_queue = vec![];
 
-    app.monado_init();
+    app.monado_state_init();
 
-    let mut playspace = app.monado.as_mut().and_then(|m| {
-        playspace::PlayspaceMover::new(m)
+    let mut playspace = app.monado_state.as_mut().and_then(|m| {
+        playspace::PlayspaceMover::new(&mut m.ipc)
             .map_err(|e| log::warn!("Will not use Monado playspace mover: {e}"))
             .ok()
     });
 
-    let mut blocker = app.monado.as_ref().map(blocker::InputBlocker::new);
+    let mut blocker = app
+        .monado_state
+        .as_ref()
+        .map(|m| blocker::InputBlocker::new(&m.ipc));
 
     let (session, mut frame_wait, mut frame_stream) = unsafe {
         let raw_session = helpers::create_overlay_session(
@@ -211,7 +215,7 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
             }
         }
 
-        if app.monado.is_some() && next_device_update <= Instant::now() {
+        if app.monado_state.is_some() && next_device_update <= Instant::now() {
             let changed = OpenXrInputSource::update_devices(&mut app);
             if changed {
                 overlays.devices_changed(&mut app)?;
@@ -370,7 +374,7 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
             {
                 log::trace!("{}: hidden, skip render", o.config.name);
                 continue;
-            };
+            }
 
             if !o.data.init {
                 log::trace!("{}: init", o.config.name);
@@ -402,6 +406,10 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
         lines.render(&app, &mut futures)?;
         futures.wait()?;
         // End rendering
+
+        if let Some(monado_state) = &mut app.monado_state {
+            monado_state.update();
+        }
 
         // Layer composition
         let mut layers = vec![];
@@ -499,8 +507,8 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
         watch.config.active_state.as_mut().unwrap().transform = watch_transform;
     } // main_loop
 
-    if let (Some(blocker), Some(monado)) = (blocker, app.monado.as_mut()) {
-        blocker.unblock(monado);
+    if let (Some(blocker), Some(monado)) = (blocker, app.monado_state.as_mut()) {
+        blocker.unblock(&mut monado.ipc);
     }
 
     overlays.persist_layout(&mut app);

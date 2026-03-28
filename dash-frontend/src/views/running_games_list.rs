@@ -127,7 +127,7 @@ impl View {
 		for game in games {
 			let game_name = View::extract_name_from_appid(&game.app_id, &self.installed_games);
 
-			let t = self.state.parse_template(
+			let t = self.state.realize_template(
 				&doc_params(layout.state.globals.clone()),
 				"RunningGameCell",
 				layout,

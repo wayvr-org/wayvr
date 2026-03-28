@@ -161,5 +161,6 @@
   "PROCESS": {
     "STOP": "停止",
     "FORCE_KILL": "强制关闭"
-  }
+  },
+  "DEBUG_INFO": "调试信息"
 }

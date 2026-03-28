@@ -161,5 +161,6 @@
   "PROCESS": {
     "STOP": "Stopp",
     "FORCE_KILL": "Erzwinge Beenden"
-  }
+  },
+  "DEBUG_INFO": "Debug-Informationen"
 }

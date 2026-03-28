@@ -161,5 +161,6 @@
   "PROCESS": {
     "STOP": "Interrompi",
     "FORCE_KILL": "Uccidi forzatamente"
-  }
+  },
+  "DEBUG_INFO": "Informazioni di debug"
 }

@@ -286,7 +286,7 @@ impl AppList {
 			let mut params = HashMap::<Rc<str>, Rc<str>>::new();
 			params.insert("text".into(), category_name.into());
 
-			parser_state.parse_template(
+			parser_state.realize_template(
 				doc_params,
 				"CategoryText",
 				&mut frontend.layout,
@@ -318,7 +318,7 @@ impl AppList {
 			);
 			params.insert("name".into(), entry.app_name.clone());
 
-			let data = parser_state.parse_template(
+			let data = parser_state.realize_template(
 				doc_params,
 				"AppEntry",
 				&mut frontend.layout,

@@ -469,20 +469,27 @@ impl DashInterface<AppState> for DashInterfaceLive {
     fn monado_client_list(
         &mut self,
         app: &mut AppState,
+        filtered: bool,
     ) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return Ok(Vec::new()); // no monado available
         };
 
-        let clients = monado_list_clients_filtered(monado)?;
+        let clients = if filtered {
+            monado_list_clients_filtered(&mut monado.ipc)?
+        } else {
+            monado.ipc.clients()?.into_iter().collect()
+        };
 
         let mut res = Vec::<dash_interface::MonadoClient>::new();
 
         for mut client in clients {
+            let client_id = client.id();
             let name = client.name()?;
             let state = client.state()?;
 
             res.push(dash_interface::MonadoClient {
+                id: client_id as i64,
                 name,
                 is_primary: state.contains(libmonado::ClientState::ClientPrimaryApp),
                 is_active: state.contains(libmonado::ClientState::ClientSessionActive),
@@ -498,35 +505,117 @@ impl DashInterface<AppState> for DashInterfaceLive {
 
     #[cfg(feature = "openxr")]
     fn monado_client_focus(&mut self, app: &mut AppState, name: &str) -> anyhow::Result<()> {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return Ok(()); // no monado avoilable
         };
 
-        monado_client_focus(monado, name)
+        monado_client_focus(&mut monado.ipc, name)
     }
 
     #[cfg(feature = "openxr")]
     fn monado_brightness_get(&mut self, app: &mut AppState) -> Option<f32> {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return None;
         };
 
-        monado_get_brightness(monado)
+        monado_get_brightness(&mut monado.ipc)
     }
 
     #[cfg(feature = "openxr")]
     fn monado_brightness_set(&mut self, app: &mut AppState, brightness: f32) -> Option<()> {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return None;
         };
 
-        monado_set_brightness(monado, brightness).ok()
+        monado_set_brightness(&mut monado.ipc, brightness).ok()
+    }
+
+    #[cfg(feature = "openxr")]
+    fn monado_metrics_set_enabled(&mut self, app: &mut AppState, enabled: bool) -> bool {
+        #[cfg(feature = "feat-monado-metrics")]
+        {
+            let Some(monado) = &mut app.monado_state else {
+                return false;
+            };
+
+            if let Err(e) = monado.set_metrics_enabled(enabled) {
+                log::error!("failed to enable metrics: {e:?}");
+                return false;
+            }
+            true
+        }
+        #[cfg(not(feature = "feat-monado-metrics"))]
+        #[allow(path_statements)]
+        {
+            app;
+            enabled;
+            false
+        }
+    }
+
+    #[cfg(feature = "openxr")]
+    #[allow(clippy::match_same_arms)]
+    fn monado_metrics_dump_session_frames(
+        &mut self,
+        app: &mut AppState,
+    ) -> Vec<dash_interface::MonadoDumpSessionFrame> {
+        #[cfg(feature = "feat-monado-metrics")]
+        {
+            let Some(monado) = &mut app.monado_state else {
+                return Vec::new();
+            };
+            let Some(metrics) = &mut monado.metrics else {
+                return Vec::new(); // metrics not enabled or not available
+            };
+
+            metrics
+                .dump_records()
+                .iter()
+                .filter_map(|record| {
+                    use crate::subsystem::monado_metrics::proto::record;
+                    let record = record.record?;
+                    match record {
+                        record::Record::SessionFrame(sframe) => {
+                            // map it to our struct
+                            Some(dash_interface::MonadoDumpSessionFrame {
+                                session_id: sframe.session_id,
+                                frame_id: sframe.frame_id,
+                                predicted_frame_time_ns: sframe.predicted_frame_time_ns,
+                                predicted_wake_up_time_ns: sframe.predicted_wake_up_time_ns,
+                                predicted_gpu_done_time_ns: sframe.predicted_gpu_done_time_ns,
+                                predicted_display_time_ns: sframe.predicted_display_time_ns,
+                                predicted_display_period_ns: sframe.predicted_display_period_ns,
+                                display_time_ns: sframe.display_time_ns,
+                                when_predicted_ns: sframe.when_predicted_ns,
+                                when_wait_woke_ns: sframe.when_wait_woke_ns,
+                                when_begin_ns: sframe.when_begin_ns,
+                                when_delivered_ns: sframe.when_delivered_ns,
+                                when_gpu_done_ns: sframe.when_gpu_done_ns,
+                                discarded: sframe.discarded,
+                            })
+                        }
+                        record::Record::Version(_) => None,
+                        record::Record::Used(_) => None,
+                        record::Record::SystemFrame(_) => None,
+                        record::Record::SystemGpuInfo(_) => None,
+                        record::Record::SystemPresentInfo(_) => None,
+                    }
+                })
+                .collect()
+        }
+        #[cfg(not(feature = "feat-monado-metrics"))]
+        #[allow(path_statements)]
+        {
+            app;
+            Vec::new()
+        }
     }
 
     #[cfg(not(feature = "openxr"))]
     fn monado_client_list(
         &mut self,
         _: &mut AppState,
+        _filtered: bool,
     ) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
         anyhow::bail!("Not supported in this build.")
     }
@@ -541,6 +630,20 @@ impl DashInterface<AppState> for DashInterfaceLive {
     #[cfg(not(feature = "openxr"))]
     fn monado_brightness_set(&mut self, _: &mut AppState, _: f32) -> Option<()> {
         None
+    }
+
+    #[cfg(not(feature = "openxr"))]
+    fn monado_metrics_set_enabled(&mut self, _: &mut AppState, _enabled: bool) -> bool {
+        // not supported in this build
+        false
+    }
+
+    #[cfg(not(feature = "openxr"))]
+    fn monado_metrics_dump_session_frames(
+        &mut self,
+        _: &mut AppState,
+    ) -> Vec<dash_interface::MonadoDumpSessionFrame> {
+        Vec::new() // not supported in this build
     }
 }
 
