@@ -178,6 +178,14 @@ impl PlayspaceMover {
                 }
             }
         }
+
+        for (_, pointer) in app.input_state.pointers.iter().enumerate() {
+            if pointer.now.space_reset && !pointer.before.space_reset {
+                self.reset_offset(chaperone_mgr, &app.input_state);
+                log::info!("Space reset");
+                return;
+            }
+        }
     }
 
     pub fn reset_offset(&mut self, chaperone_mgr: &mut ChaperoneSetupManager, input: &InputState) {
