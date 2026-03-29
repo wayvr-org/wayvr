@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 use std::process::{Child, Command};
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use glam::{Affine3A, Vec2, Vec3A, Vec3Swizzles};
 
@@ -91,46 +91,57 @@ impl InputState {
 
             if hand.now.click {
                 hand.last_click = Instant::now();
+
+                if !hand.before.click {
+                    hand.click_press_start = Some(Instant::now());
+                    hand.interaction.long_press_click_sent = false;
+                }
+            } else {
+                hand.click_press_start = None;
+                hand.interaction.long_press_click_sent = false;
             }
 
-            // Prevent the mode from changing during a click
-            if !hand.before.click {
+            let long_press_threshold = Duration::from_secs_f32(session.config.long_press_duration);
+            let is_long_press = hand
+                .click_press_start
+                .is_some_and(|start| start.elapsed() >= long_press_threshold);
+
+            // Prevent the mode from changing during a click (except for long press)
+            if !hand.before.click || is_long_press {
                 if hand.now.click_modifier_right {
                     hand.interaction.mode = PointerMode::Right;
-                    continue;
-                }
-
-                if hand.now.click_modifier_middle {
+                } else if is_long_press {
+                    hand.interaction.mode = PointerMode::Right;
+                } else if hand.now.click_modifier_middle {
                     hand.interaction.mode = PointerMode::Middle;
-                    continue;
-                }
+                } else if !hand.before.click {
+                    let hmd_up = self.hmd.transform_vector3a(Vec3A::Y);
+                    let dot = hmd_up.dot(hand.pose.transform_vector3a(Vec3A::X))
+                        * 2.0f32.mul_add(-(hand.idx as f32), 1.0);
 
-                let hmd_up = self.hmd.transform_vector3a(Vec3A::Y);
-                let dot = hmd_up.dot(hand.pose.transform_vector3a(Vec3A::X))
-                    * 2.0f32.mul_add(-(hand.idx as f32), 1.0);
+                    hand.interaction.mode = if dot < -0.85 {
+                        PointerMode::Right
+                    } else if dot > 0.7 {
+                        PointerMode::Middle
+                    } else {
+                        PointerMode::Left
+                    };
 
-                hand.interaction.mode = if dot < -0.85 {
-                    PointerMode::Right
-                } else if dot > 0.7 {
-                    PointerMode::Middle
-                } else {
-                    PointerMode::Left
-                };
-
-                let middle_click_orientation = false;
-                let right_click_orientation = false;
-                match hand.interaction.mode {
-                    PointerMode::Middle => {
-                        if !middle_click_orientation {
-                            hand.interaction.mode = PointerMode::Left;
+                    let middle_click_orientation = false;
+                    let right_click_orientation = false;
+                    match hand.interaction.mode {
+                        PointerMode::Middle => {
+                            if !middle_click_orientation {
+                                hand.interaction.mode = PointerMode::Left;
+                            }
                         }
-                    }
-                    PointerMode::Right => {
-                        if !right_click_orientation {
-                            hand.interaction.mode = PointerMode::Left;
+                        PointerMode::Right => {
+                            if !right_click_orientation {
+                                hand.interaction.mode = PointerMode::Left;
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
 
@@ -212,6 +223,9 @@ pub struct InteractionState {
     pub haptics: Option<f32>,
     pub should_block_input: bool,
     pub should_block_poses: bool,
+    pub click_sent: bool,
+    pub click_mode: PointerMode,
+    pub long_press_click_sent: bool,
 }
 
 impl Default for InteractionState {
@@ -225,6 +239,9 @@ impl Default for InteractionState {
             haptics: None,
             should_block_input: false,
             should_block_poses: false,
+            click_sent: false,
+            click_mode: PointerMode::Left,
+            long_press_click_sent: false,
         }
     }
 }
@@ -236,6 +253,7 @@ pub struct Pointer {
     pub now: PointerState,
     pub before: PointerState,
     pub last_click: Instant,
+    pub click_press_start: Option<Instant>,
     pub pending_haptics: Option<Haptics>,
     pub(super) interaction: InteractionState,
     pub tracked: bool,
@@ -252,6 +270,7 @@ impl Pointer {
             now: PointerState::default(),
             before: PointerState::default(),
             last_click: Instant::now(),
+            click_press_start: None,
             pending_haptics: None,
             interaction: InteractionState::default(),
             tracked: false,
@@ -318,7 +337,7 @@ pub struct GrabData {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum PointerMode {
     #[default]
     Left,
@@ -522,9 +541,23 @@ where
 
     handle_scroll(&hit, hovered, app);
 
-    // click / release
+    // click / release - normal behavior
     let pointer = &mut app.input_state.pointers[hit.pointer];
-    if pointer.now.click && !pointer.before.click {
+
+    // Check if we should send a long-press click immediately
+    let long_press_threshold = Duration::from_secs_f32(app.session.config.long_press_duration);
+    let is_long_press = pointer
+        .click_press_start
+        .is_some_and(|start| start.elapsed() >= long_press_threshold);
+
+    if is_long_press && pointer.now.click && !pointer.interaction.long_press_click_sent {
+        // Immediately send right-click (press + release)
+        pointer.interaction.long_press_click_sent = true;
+        let mut hit_right = hit;
+        hit_right.mode = PointerMode::Right;
+        hovered.config.backend.on_pointer(app, &hit_right, true);
+        hovered.config.backend.on_pointer(app, &hit_right, false);
+    } else if pointer.now.click && !pointer.before.click {
         pointer.interaction.clicked_id = Some(hit.overlay);
         update_focus(
             &mut app.hid_provider.keyboard_focus,
@@ -532,13 +565,15 @@ where
         );
         hovered.config.backend.on_pointer(app, &hit, true);
     } else if !pointer.now.click && pointer.before.click {
-        // send release event to overlay that was originally clicked
-        if let Some(clicked_id) = pointer.interaction.clicked_id.take() {
-            if let Some(clicked) = overlays.mut_by_id(clicked_id) {
-                clicked.config.backend.on_pointer(app, &hit, false);
+        // Only send release if we haven't already sent a long press click
+        if !pointer.interaction.long_press_click_sent {
+            if let Some(clicked_id) = pointer.interaction.clicked_id.take() {
+                if let Some(clicked) = overlays.mut_by_id(clicked_id) {
+                    clicked.config.backend.on_pointer(app, &hit, false);
+                }
+            } else {
+                hovered.config.backend.on_pointer(app, &hit, false);
             }
-        } else {
-            hovered.config.backend.on_pointer(app, &hit, false);
         }
     }
 
@@ -570,8 +605,8 @@ fn handle_no_hit<O>(
     // send release event to overlay that was originally clicked
     if !pointer.now.click
         && pointer.before.click
+        && !pointer.interaction.long_press_click_sent
         && let Some(clicked_id) = pointer.interaction.clicked_id.take()
-        && let Some(clicked) = overlays.mut_by_id(clicked_id)
     {
         let hit = PointerHit {
             pointer: pointer.idx,
@@ -579,7 +614,9 @@ fn handle_no_hit<O>(
             mode: pointer.interaction.mode,
             ..Default::default()
         };
-        clicked.config.backend.on_pointer(app, &hit, false);
+        if let Some(clicked) = overlays.mut_by_id(clicked_id) {
+            clicked.config.backend.on_pointer(app, &hit, false);
+        }
     }
 }
 
