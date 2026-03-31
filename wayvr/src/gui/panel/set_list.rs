@@ -18,10 +18,6 @@ pub struct SetList {
 }
 
 impl SetList {
-    pub fn num_sets(&self) -> usize {
-        self.set_buttons.len()
-    }
-
     pub fn on_notify(
         &mut self,
         layout: &mut Layout,
@@ -34,7 +30,7 @@ impl SetList {
         match event_data {
             OverlayEventData::ActiveSetChanged(current_set) => {
                 let mut com = CallbackDataCommon {
-                    alterables: alterables,
+                    alterables,
                     state: &layout.state,
                 };
                 if let Some(old_set) = self.current_set.take()
@@ -64,7 +60,7 @@ impl SetList {
                         parser_state.fetch_component_as::<ComponentButton>(&format!("set_{i}"))?;
                     if self.current_set == Some(i) {
                         let mut com = CallbackDataCommon {
-                            alterables: alterables,
+                            alterables,
                             state: &layout.state,
                         };
                         set_button.set_sticky_state(&mut com, true);

@@ -227,6 +227,7 @@ impl ComponentButton {
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 fn anim_hover(
 	common: &mut CallbackDataCommon,
 	rect: &mut WidgetRectangle,

@@ -304,7 +304,7 @@ pub fn create_dash_frontend(app: &mut AppState) -> anyhow::Result<OverlayWindowC
 pub struct DashInterfaceLive {}
 
 impl DashInterfaceLive {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {}
     }
 }
@@ -411,9 +411,10 @@ impl DashInterface<AppState> for DashInterfaceLive {
         app.tasks
             .enqueue(TaskType::Overlay(OverlayTask::ToggleOverlay(
                 OverlaySelector::Id(oid),
-                match visible {
-                    true => ToggleMode::EnsureOn,
-                    false => ToggleMode::EnsureOff,
+                if visible {
+                    ToggleMode::EnsureOn
+                } else {
+                    ToggleMode::EnsureOff
                 },
             )));
         Ok(())
@@ -499,7 +500,7 @@ impl DashInterface<AppState> for DashInterfaceLive {
     #[cfg(feature = "openxr")]
     fn monado_client_focus(&mut self, app: &mut AppState, name: &str) -> anyhow::Result<()> {
         let Some(monado) = &mut app.monado else {
-            return Ok(()); // no monado avoilable
+            return Ok(()); // no monado available
         };
 
         monado_client_focus(monado, name)

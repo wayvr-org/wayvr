@@ -1,11 +1,10 @@
-use std::{rc::Rc, time::Duration};
+use std::time::Duration;
 
 use glam::{Affine3A, Quat, Vec3, vec3};
 use wgui::{
     assets::AssetPath,
     components::button::ComponentButton,
     event::{CallbackDataCommon, EventAlterables, StyleSetRequest},
-    layout::WidgetID,
     parser::{Fetchable, ParseDocumentParams},
     taffy,
 };
@@ -27,23 +26,12 @@ use crate::{
 };
 
 pub const WATCH_NAME: &str = "watch";
-const MAX_TOOLBOX_BUTTONS: usize = 16;
-const MAX_DEVICES: usize = 12;
 
 pub const WATCH_POS: Vec3 = vec3(-0.03, -0.01, 0.125);
 pub const WATCH_ROT: Quat = Quat::from_xyzw(-0.707_106_6, 0.000_796_361_8, 0.707_106_6, 0.0);
 
-struct OverlayButton {
-    button: Rc<ComponentButton>,
-    label: WidgetID,
-    sprite: WidgetID,
-    condensed: bool,
-}
-
 #[derive(Default)]
 struct WatchState {
-    edit_mode_widgets: Vec<(WidgetID, bool)>,
-    edit_add_widget: WidgetID,
     device_list: DeviceList,
     overlay_list: OverlayList,
     set_list: SetList,

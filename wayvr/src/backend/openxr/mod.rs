@@ -370,7 +370,7 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
             {
                 log::trace!("{}: hidden, skip render", o.config.name);
                 continue;
-            };
+            }
 
             if !o.data.init {
                 log::trace!("{}: init", o.config.name);

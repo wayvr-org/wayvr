@@ -102,6 +102,7 @@ pub async fn wvr_process_terminate(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn wvr_process_launch(
     state: &mut WayVRClientState,
     exec: String,

@@ -25,8 +25,6 @@ use wlx_common::{
 
 use super::capture::{ScreenPipeline, WlxCaptureIn, WlxCaptureOut, receive_callback};
 
-const CURSOR_SIZE: f32 = 16. / 1440.;
-
 static START: LazyLock<Instant> = LazyLock::new(Instant::now);
 static NEXT_MOVE: AtomicU64 = AtomicU64::new(0);
 
@@ -404,7 +402,7 @@ impl OverlayBackend for ScreenBackend {
     }
 }
 
-fn mouse_transform_to_transform(mouse_transform: MouseTransform) -> Transform {
+const fn mouse_transform_to_transform(mouse_transform: MouseTransform) -> Transform {
     match mouse_transform {
         MouseTransform::Default => Transform::Undefined,
         MouseTransform::Normal => Transform::Normal,

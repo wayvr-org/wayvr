@@ -186,7 +186,6 @@ fn short_duration(btn: &ComponentButton, app: &AppState) -> bool {
     btn.get_time_since_last_pressed().as_secs_f32() < app.session.config.long_press_duration
 }
 
-#[allow(clippy::too_many_lines)]
 pub(super) fn setup_custom_button<S: 'static>(
     layout: &mut Layout,
     parser_state: &ParserState,
@@ -222,7 +221,8 @@ pub(super) fn setup_custom_button<S: 'static>(
                     // pass attribs with key `_context_{name}` to the context_menu template
                     let mut template_params = HashMap::new();
                     for AttribPair { attrib, value } in &attribs.pairs {
-                        const PREFIX: &'static str = "_context_";
+                        const PREFIX: &str = "_context_";
+                        #[allow(clippy::manual_strip)]
                         if attrib.starts_with(PREFIX) {
                             template_params.insert(attrib[PREFIX.len()..].into(), value.clone());
                         }
@@ -348,10 +348,10 @@ pub(super) fn setup_custom_button<S: 'static>(
                 }
                 "::OverlayReset" => {
                     let arg: Arc<str> = args.collect::<Vec<_>>().join(" ").into();
-                    if arg.len() < 1 {
+                    if arg.is_empty() {
                         log_cmd_missing_arg(parser_state, TAG, name, command);
                         return;
-                    };
+                    }
 
                     Box::new(move |_common, data, app, _| {
                         if !test_button(data) || !test_duration(&button, app) {
@@ -367,10 +367,10 @@ pub(super) fn setup_custom_button<S: 'static>(
                 }
                 "::OverlayToggle" => {
                     let arg: Arc<str> = args.collect::<Vec<_>>().join(" ").into();
-                    if arg.len() < 1 {
+                    if arg.is_empty() {
                         log_cmd_missing_arg(parser_state, TAG, name, command);
                         return;
-                    };
+                    }
 
                     Box::new(move |_common, data, app, _| {
                         if !test_button(data) || !test_duration(&button, app) {
@@ -387,10 +387,10 @@ pub(super) fn setup_custom_button<S: 'static>(
                 }
                 "::OverlayDrop" => {
                     let arg: Arc<str> = args.collect::<Vec<_>>().join(" ").into();
-                    if arg.len() < 1 {
+                    if arg.is_empty() {
                         log_cmd_missing_arg(parser_state, TAG, name, command);
                         return;
-                    };
+                    }
 
                     Box::new(move |_common, data, app, _| {
                         if !test_button(data) || !test_duration(&button, app) {
@@ -422,10 +422,10 @@ pub(super) fn setup_custom_button<S: 'static>(
                 }),
                 "::CustomOverlayReload" => {
                     let arg: Arc<str> = args.collect::<Vec<_>>().join(" ").into();
-                    if arg.len() < 1 {
+                    if arg.is_empty() {
                         log_cmd_missing_arg(parser_state, TAG, name, command);
                         return;
-                    };
+                    }
 
                     Box::new(move |_common, data, app, _| {
                         if !test_button(data) || !test_duration(&button, app) {
@@ -460,10 +460,10 @@ pub(super) fn setup_custom_button<S: 'static>(
                 }
                 "::WvrOverlayCloseWindow" => {
                     let arg: Arc<str> = args.collect::<Vec<_>>().join(" ").into();
-                    if arg.len() < 1 {
+                    if arg.is_empty() {
                         log_cmd_missing_arg(parser_state, TAG, name, command);
                         return;
-                    };
+                    }
                     Box::new(move |_common, data, app, _| {
                         if !test_button(data) || !test_duration(&button, app) {
                             return Ok(EventResult::Pass);
@@ -486,10 +486,10 @@ pub(super) fn setup_custom_button<S: 'static>(
                 }
                 "::WvrOverlayKillProcess" | "::WvrOverlayTermProcess" => {
                     let arg: Arc<str> = args.collect::<Vec<_>>().join(" ").into();
-                    if arg.len() < 1 {
+                    if arg.is_empty() {
                         log_cmd_missing_arg(parser_state, TAG, name, command);
                         return;
-                    };
+                    }
 
                     let signal = if command == "::WvrOverlayKillProcess" {
                         KillSignal::Kill
@@ -685,7 +685,6 @@ pub(super) fn setup_custom_button<S: 'static>(
                         button: button.clone(),
                         exec: args.fold(String::new(), |c, n| c + " " + n),
                         mut_state: RefCell::new(ShellButtonMutableState::default()),
-                        carry_over: RefCell::new(None),
                     });
 
                     layout.add_event_listener::<AppState, S>(
@@ -725,7 +724,6 @@ pub(super) fn setup_custom_button<S: 'static>(
                         if let Ok(osc_arg) = parse_osc_value(arg).inspect_err(|e| {
                             let msg = format!("Could not parse OSC value \"{arg}\": {e:?}");
                             log_cmd_invalid_arg(parser_state, TAG, name, command, &msg);
-                            return;
                         }) {
                             osc_args.push(osc_arg);
                         }
@@ -776,10 +774,10 @@ struct ShellButtonMutableState {
 }
 
 struct ShellButtonState {
+    #[allow(dead_code)] // preserve lifetime of this button component
     button: Rc<ComponentButton>,
     exec: String,
     mut_state: RefCell<ShellButtonMutableState>,
-    carry_over: RefCell<Option<String>>,
 }
 
 fn shell_on_action(state: &ShellButtonState) -> anyhow::Result<()> {

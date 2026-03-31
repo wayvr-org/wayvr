@@ -719,7 +719,7 @@ fn suggest_bindings(instance: &xr::Instance, hands: &[&OpenXrHandSource; 3]) {
             log::debug!(
                 "Bindings for {} bound successfully.",
                 &profile.profile[22..]
-            )
+            );
         }
     }
 }

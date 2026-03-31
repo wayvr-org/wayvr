@@ -22,9 +22,6 @@ const FILES: [&str; 1] = ["keyboard.yaml"];
 #[repr(usize)]
 pub enum ConfigType {
     Keyboard,
-    Watch,
-    Settings,
-    Anchor,
 }
 
 pub fn load_known_yaml<T>(config_type: ConfigType) -> T

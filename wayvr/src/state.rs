@@ -231,5 +231,6 @@ impl AppSession {
 
 pub struct ScreenMeta {
     pub name: Arc<str>,
+    #[allow(dead_code)]
     pub native_handle: u32,
 }

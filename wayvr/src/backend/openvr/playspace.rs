@@ -176,7 +176,7 @@ impl PlayspaceMover {
             }
         }
 
-        for (_, pointer) in app.input_state.pointers.iter().enumerate() {
+        for pointer in &app.input_state.pointers {
             if pointer.now.space_reset && !pointer.before.space_reset {
                 self.reset_offset(chaperone_mgr, &app.input_state);
                 log::info!("Space reset");

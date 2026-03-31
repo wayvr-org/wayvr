@@ -65,6 +65,7 @@ macro_rules! gen_id {
                 })
             }
 
+            #[allow(dead_code)]
             pub fn iter_mut(
                 &mut self,
             ) -> impl Iterator<Item = ($handle_name, &mut $instance_name)> {

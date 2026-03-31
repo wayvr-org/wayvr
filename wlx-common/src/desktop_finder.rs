@@ -66,6 +66,7 @@ pub struct DesktopFinder {
 }
 
 impl DesktopFinder {
+	#[allow(clippy::new_without_default)]
 	pub fn new() -> Self {
 		let xdg = xdg::BaseDirectories::new();
 

@@ -9,7 +9,7 @@ use crate::{
     },
     ipc::signal::WayVRSignal,
     state::AppState,
-    windowing::{OverlaySelector, manager::OverlayWindowManager},
+    windowing::manager::OverlayWindowManager,
 };
 
 fn process_tick_tasks(
@@ -53,12 +53,6 @@ where
             WayVRSignal::SwitchSet(set) => {
                 app.tasks
                     .enqueue(TaskType::Overlay(OverlayTask::SwitchSet(set)));
-            }
-            WayVRSignal::DropOverlay(overlay_id) => {
-                app.tasks
-                    .enqueue(TaskType::Overlay(OverlayTask::Drop(OverlaySelector::Id(
-                        overlay_id,
-                    ))));
             }
             WayVRSignal::CustomTask(custom_task) => {
                 app.tasks

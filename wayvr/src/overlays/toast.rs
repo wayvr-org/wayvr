@@ -20,8 +20,6 @@ use crate::{
     windowing::{OverlaySelector, Z_ORDER_TOAST, window::OverlayWindowConfig},
 };
 
-const FONT_SIZE: isize = 16;
-const PADDING: (f32, f32) = (25., 7.);
 const PIXELS_TO_METERS: f32 = 1. / 2000.;
 static TOAST_NAME: LazyLock<Arc<str>> = LazyLock::new(|| "toast".into());
 
@@ -210,6 +208,9 @@ fn new_toast(toast: Toast, app: &mut AppState) -> Option<OverlayWindowConfig> {
     })
 }
 
+// FIXME: Will these functions be used in the future? Can they be removed?
+
+#[allow(dead_code)]
 fn msg_err(app: &mut AppState, message: &str) {
     Toast::new(ToastTopic::Error, "TOAST.ERROR".into(), message.into())
         .with_timeout(3.)
@@ -218,6 +219,7 @@ fn msg_err(app: &mut AppState, message: &str) {
 
 // Display the same error in the terminal and as a toast in VR.
 // Formatted as "Failed to XYZ: Object is not defined"
+#[allow(dead_code)]
 pub fn error_toast<ErrorType>(app: &mut AppState, title: &str, err: ErrorType)
 where
     ErrorType: std::fmt::Display + std::fmt::Debug,
@@ -228,6 +230,7 @@ where
     msg_err(app, &format!("{title}: {err}"));
 }
 
+#[allow(dead_code)]
 pub fn error_toast_str(app: &mut AppState, message: &str) {
     log::error!("{message}");
     msg_err(app, message);

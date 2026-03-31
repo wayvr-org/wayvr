@@ -1,21 +1,22 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![allow(
-    dead_code,
-    clippy::suboptimal_flops,
-    clippy::default_trait_access,
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    clippy::cast_possible_wrap,
-    clippy::cast_lossless,
-    clippy::match_wildcard_for_single_variants,
-    clippy::doc_markdown,
-    clippy::struct_excessive_bools,
-    clippy::needless_pass_by_value,
-    clippy::needless_pass_by_ref_mut,
-    clippy::multiple_crate_versions,
     clippy::cargo_common_metadata,
-    clippy::option_if_let_else
+    clippy::cast_lossless,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::default_trait_access,
+    clippy::doc_markdown,
+    clippy::match_wildcard_for_single_variants,
+    clippy::multiple_crate_versions,
+    clippy::needless_pass_by_ref_mut,
+    clippy::needless_pass_by_value,
+    clippy::option_if_let_else,
+    clippy::struct_excessive_bools,
+    clippy::suboptimal_flops,
+    clippy::too_many_lines,
+    clippy::use_self
 )]
 mod app_misc;
 mod backend;
@@ -132,7 +133,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(XrBackend::OpenXR) => args.push("--openxr"),
             Some(XrBackend::OpenVR) => args.push("--openvr"),
             _ => {}
-        };
+        }
 
         let _ = Command::new(exe).args(args).spawn();
     }

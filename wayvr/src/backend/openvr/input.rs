@@ -162,7 +162,7 @@ impl OpenVrInputSource {
             // global input from overlays is enabled in SteamVR developer settings
             // (taken from https://github.com/ValveSoftware/openvr/issues/1236)
             nPriority: if should_block_input_left {
-                0x01000000
+                0x0100_0000
             } else {
                 0x0
             },
@@ -174,7 +174,7 @@ impl OpenVrInputSource {
             ulSecondaryActionSet: 0,
             unPadding: 0,
             nPriority: if should_block_input_right {
-                0x01000000
+                0x0100_0000
             } else {
                 0x0
             },

@@ -42,8 +42,8 @@ impl BackendAttribValue {
 	pub fn is_default(&self) -> bool {
 		match self {
 			Self::Stereo(val) => *val == StereoMode::default(),
-			Self::StereoFullFrame(val) => *val == false,
-			Self::StereoAdjustMouse(val) => *val == false,
+			Self::StereoFullFrame(val) => !*val,
+			Self::StereoAdjustMouse(val) => !*val,
 			Self::MouseTransform(val) => *val == MouseTransform::default(),
 			Self::Icon(_) => false,
 		}

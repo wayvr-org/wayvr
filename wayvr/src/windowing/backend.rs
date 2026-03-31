@@ -27,6 +27,7 @@ use crate::{
 pub struct FrameMeta {
     pub extent: [u32; 2],
     pub transform: Affine3A,
+    #[allow(dead_code)]
     pub format: Format,
     pub clear: WGfxClearMode,
     pub stereo: StereoMode,
@@ -70,10 +71,6 @@ impl RenderResources {
 
     pub fn cmd_buf_single(&mut self) -> &mut GfxCommandBuffer {
         self.cmd_bufs.first_mut().unwrap() // first must always be populated
-    }
-
-    pub fn is_stereo(&self) -> bool {
-        self.cmd_bufs.len() > 1
     }
 
     pub fn end(self) -> anyhow::Result<SmallVec<[RenderResult; 2]>> {

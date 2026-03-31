@@ -58,7 +58,7 @@ impl SamplePlayer {
 				Err(_) => assets.load_from_path(path)?.into(),
 			};
 
-			self.register_sample(sample_name, AudioSample::from_mp3(&*sound_bytes)?)?;
+			self.register_sample(sample_name, AudioSample::from_mp3(&sound_bytes)?)?;
 			Ok(())
 		};
 
@@ -146,7 +146,7 @@ impl AudioSample {
 	}
 
 	pub fn try_bytes_from_config(path: &str) -> anyhow::Result<Rc<[u8]>> {
-		let real_path = crate::config_io::get_config_root().join(&*path);
+		let real_path = crate::config_io::get_config_root().join(path);
 
 		let mut file = std::fs::File::open(&real_path)
 			.inspect_err(|e| log::debug!("Could not open file '{}': {e:?}", real_path.display()))?;

@@ -261,7 +261,7 @@ fn timer_on_tick(
     data: &mut event::CallbackData,
 ) {
     let duration = Local::now()
-        .signed_duration_since(&state.start)
+        .signed_duration_since(state.start)
         .num_seconds();
 
     let time = &state
@@ -271,7 +271,7 @@ fn timer_on_tick(
         .replace("%h", &format!("{:02}", ((duration / 60) / 60)));
 
     let label = data.obj.get_as_mut::<WidgetLabel>().unwrap();
-    label.set_text(common, Translation::from_raw_text(&time));
+    label.set_text(common, Translation::from_raw_text(time));
 }
 
 fn ipd_on_tick(

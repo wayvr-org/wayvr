@@ -180,7 +180,7 @@ impl Color {
 	}
 
 	#[must_use]
-	pub fn as_arr(&self) -> [f32; 4] {
+	pub const fn as_arr(&self) -> [f32; 4] {
 		[self.r, self.b, self.g, self.a]
 	}
 }
@@ -306,7 +306,7 @@ impl PushScissorStackResult {
 	}
 }
 
-/// Returns Some() if scissor has been pushed.
+/// Returns `Some()` if scissor has been pushed.
 pub fn push_scissor_stack(
 	transform_stack: &mut TransformStack,
 	scissor_stack: &mut ScissorStack,

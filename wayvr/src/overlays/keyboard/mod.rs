@@ -119,7 +119,7 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
     })
 }
 
-fn alt_modifier_to_key(m: AltModifier) -> KeyModifier {
+const fn alt_modifier_to_key(m: AltModifier) -> KeyModifier {
     match m {
         AltModifier::Shift => SHIFT,
         AltModifier::Ctrl => CTRL,

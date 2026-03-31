@@ -99,7 +99,7 @@ impl OverlayList {
 
                             if meta.visible {
                                 let mut com = CallbackDataCommon {
-                                    alterables: alterables,
+                                    alterables,
                                     state: &layout.state,
                                 };
                                 overlay_button.set_sticky_state(&mut com, true);
@@ -116,18 +116,13 @@ impl OverlayList {
 
                     params.insert("idx".into(), i.to_string().into());
                     params.insert("name".into(), meta.name.as_ref().into());
-                    parser_state.instantiate_template(
-                        &doc_params,
-                        template,
-                        layout,
-                        root,
-                        params,
-                    )?;
+                    parser_state
+                        .instantiate_template(doc_params, template, layout, root, params)?;
                     let overlay_button = parser_state
                         .fetch_component_as::<ComponentButton>(&format!("overlay_{i}"))?;
                     if meta.visible {
                         let mut com = CallbackDataCommon {
-                            alterables: alterables,
+                            alterables,
                             state: &layout.state,
                         };
                         overlay_button.set_sticky_state(&mut com, true);
@@ -138,7 +133,7 @@ impl OverlayList {
             }
             OverlayEventData::VisibleOverlaysChanged(overlays) => {
                 let mut com = CallbackDataCommon {
-                    alterables: alterables,
+                    alterables,
                     state: &layout.state,
                 };
                 let mut overlay_buttons = self.overlay_buttons.clone();

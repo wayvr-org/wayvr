@@ -65,6 +65,7 @@ type EditModeWrapPanel = GuiPanel<EditModeState>;
 
 #[derive(Default)]
 pub struct EditWrapperManager {
+    #[allow(dead_code)]
     edit_mode: bool,
     panel_pool: Vec<EditModeWrapPanel>,
 }
@@ -371,9 +372,9 @@ fn make_edit_panel(app: &mut AppState) -> anyhow::Result<EditModeWrapPanel> {
                             let sel = OverlaySelector::Id(*state.id.borrow());
                             app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
                                 sel,
-                                Box::new(move |_app, owc| {
+                                Box::new(move |app, owc| {
                                     let attrib = BackendAttribValue::StereoFullFrame(full_frame);
-                                    owc.backend.set_attrib(_app, attrib);
+                                    owc.backend.set_attrib(app, attrib);
                                 }),
                             )));
                             Ok(EventResult::Consumed)
@@ -534,7 +535,7 @@ fn reset_panel(
         panel.state.stereo.reset(&mut common, &stereo);
 
         // Set the checkbox label based on stereo mode
-        let translation = get_stereo_full_frame_translation(&stereo);
+        let translation = get_stereo_full_frame_translation(stereo);
         let c = panel
             .parser_state
             .fetch_component_as::<ComponentCheckbox>("stereo_full_frame_box")?;
@@ -636,23 +637,23 @@ const fn cb_assign_block_input(
 }
 
 fn cb_assign_stereo_full_frame(
-    _app: &mut AppState,
+    app: &mut AppState,
     owc: &mut OverlayWindowConfig,
     full_frame: bool,
 ) {
     owc.dirty = true;
     let attrib = BackendAttribValue::StereoFullFrame(full_frame);
-    owc.backend.set_attrib(_app, attrib);
+    owc.backend.set_attrib(app, attrib);
 }
 
 fn cb_assign_stereo_adjust_mouse(
-    _app: &mut AppState,
+    app: &mut AppState,
     owc: &mut OverlayWindowConfig,
     adjust_mouse: bool,
 ) {
     owc.dirty = true;
     let attrib = BackendAttribValue::StereoAdjustMouse(adjust_mouse);
-    owc.backend.set_attrib(_app, attrib);
+    owc.backend.set_attrib(app, attrib);
 }
 
 fn set_up_slider(

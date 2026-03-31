@@ -31,6 +31,7 @@ impl<V> WGfxPass<V>
 where
 	V: BufferContents + Vertex,
 {
+	#[allow(clippy::too_many_arguments)]
 	pub(super) fn new(
 		pipeline: &Arc<WGfxPipeline<V>>,
 		dimensions: [f32; 2],

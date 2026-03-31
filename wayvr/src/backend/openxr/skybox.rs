@@ -98,7 +98,7 @@ impl Skybox {
             sky: None,
             grid: None,
             grid_pose: translation_rotation_to_posef(Vec3A::ZERO, Quat::from_rotation_x(PI * -0.5)),
-            grid_color_scale_bias_khr: grid_color_scale_bias_khr,
+            grid_color_scale_bias_khr,
         })
     }
 
