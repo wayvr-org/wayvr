@@ -215,6 +215,10 @@ impl CallbackMetadata {
 		let mouse_pos_abs = self.get_mouse_pos_absolute()?;
 		Some(mouse_pos_abs - transform_stack.get().abs_pos)
 	}
+	pub fn get_mouse_pos_normalized(&self, transform_stack: &TransformStack) -> Option<Vec2> {
+		let pos_relative = self.get_mouse_pos_relative(transform_stack)?;
+		Some(pos_relative/transform_stack.parent().raw_dim)
+	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -2,7 +2,6 @@ use std::{collections::HashMap, str::FromStr, sync::LazyLock};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-
 use crate::{
     config::{ConfigType, load_known_yaml},
     subsystem::hid::{
@@ -230,7 +229,7 @@ pub(super) struct KeyData {
     pub(super) cap_type: KeyCapType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum KeyCapType {
     /// Label an SVG
     Special,

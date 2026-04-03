@@ -63,6 +63,8 @@
 		"KEYBOARD_MIDDLE_CLICK": "Keyboard middle click",
 		"KEYBOARD_MIDDLE_CLICK_HELP": "Modifier to use when typing\nwith purple laser",
 		"KEYBOARD_SOUND_ENABLED": "Keyboard sounds",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED": "Keyboard swipe to type",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP": "Only works for English! Results will be drastically worse on non qwerty keyboards.",
 		"LANGUAGE": "Language",
 		"LEFT_HANDED_MOUSE": "Left-handed mouse",
 		"LEFT_HANDED_MOUSE_HELP": "Use this if mouse buttons are swapped",

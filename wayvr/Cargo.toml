@@ -90,6 +90,9 @@ xcb = { version = "1.6.0", features = [
   "as-raw-xcb-connection",
 ], optional = true }
 xkbcommon = { version = "0.8.0" }  # 0.9.0 breaks keymap import on some distros
+codes-iso-639 = "0.1.5"
+arboard = { version="3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
+super-swipe-type = "0.2.2"
 
 [build-dependencies]
 regex.workspace = true
