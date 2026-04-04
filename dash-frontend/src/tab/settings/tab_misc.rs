@@ -1,15 +1,20 @@
 use crate::tab::settings::{
-	SettingType,
-	macros::{MacroParams, options_category, options_checkbox, options_dropdown},
+	SettingType, SettingsMountParams, SettingsTab,
+	macros::{options_category, options_checkbox, options_dropdown},
 };
-use wgui::layout::WidgetID;
 
-pub fn mount(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<()> {
-	let c = options_category(mp, parent, "APP_SETTINGS.MISC", "dashboard/blocks.svg")?;
-	options_dropdown::<wlx_common::config::CaptureMethod>(mp, c, &SettingType::CaptureMethod)?;
-	options_checkbox(mp, c, SettingType::XwaylandByDefault)?;
-	options_checkbox(mp, c, SettingType::UprightScreenFix)?;
-	options_checkbox(mp, c, SettingType::DoubleCursorFix)?;
-	options_checkbox(mp, c, SettingType::ScreenRenderDown)?;
-	Ok(())
+pub struct State {}
+
+impl SettingsTab for State {}
+
+impl State {
+	pub fn mount(par: SettingsMountParams) -> anyhow::Result<State> {
+		let c = options_category(par.mp, par.parent_id, "APP_SETTINGS.MISC", "dashboard/blocks.svg")?;
+		options_dropdown::<wlx_common::config::CaptureMethod>(par.mp, c, &SettingType::CaptureMethod)?;
+		options_checkbox(par.mp, c, SettingType::XwaylandByDefault)?;
+		options_checkbox(par.mp, c, SettingType::UprightScreenFix)?;
+		options_checkbox(par.mp, c, SettingType::DoubleCursorFix)?;
+		options_checkbox(par.mp, c, SettingType::ScreenRenderDown)?;
+		Ok(State {})
+	}
 }

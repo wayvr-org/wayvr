@@ -546,31 +546,36 @@ impl<T> TabSettings<T> {
 			idx: 9001,
 		};
 
+		let settings_mount_params = SettingsMountParams {
+			mp: &mut mp,
+			globals: &globals,
+			parent_id: root,
+		};
+
 		match name {
 			TabNameEnum::LookAndFeel => {
-				tab_look_and_feel::mount(&mut mp, root)?;
+				self.current_tab = Some(Box::new(tab_look_and_feel::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Features => {
-				tab_features::mount(&mut mp, root)?;
+				self.current_tab = Some(Box::new(tab_features::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Controls => {
-				tab_controls::mount(&mut mp, root)?;
+				self.current_tab = Some(Box::new(tab_controls::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Misc => {
-				tab_misc::mount(&mut mp, root)?;
+				self.current_tab = Some(Box::new(tab_misc::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::AutostartApps => {
-				tab_autostart_apps::mount(&mut mp, root, &mut self.app_button_ids)?;
+				self.current_tab = Some(Box::new(tab_autostart_apps::State::mount(
+					settings_mount_params,
+					&mut self.app_button_ids,
+				)?));
 			}
 			TabNameEnum::Troubleshooting => {
-				tab_troubleshooting::mount(&mut mp, root)?;
+				self.current_tab = Some(Box::new(tab_troubleshooting::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Skybox => {
-				self.current_tab = Some(Box::new(tab_skybox::State::mount(SettingsMountParams {
-					mp: &mut mp,
-					globals: &globals,
-					parent_id: root,
-				})?));
+				self.current_tab = Some(Box::new(tab_skybox::State::mount(settings_mount_params)?));
 			}
 		}
 
