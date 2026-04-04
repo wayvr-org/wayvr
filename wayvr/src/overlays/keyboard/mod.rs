@@ -461,7 +461,9 @@ fn handle_mouse_motion(
     within_key_pos: &Option<Vec2>,
     device: usize
 ) {
-    if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *key_cap_type == KeyCapType::Letter {
+    if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut()
+        && matches!(*key_cap_type, KeyCapType::Letter | KeyCapType::LetterAltGr)
+    {
         if !swipe_manager.is_current_swipe_empty() {
             match &key.button_state {
                 KeyButtonData::Key { vk, pressed } => {
@@ -493,7 +495,9 @@ fn handle_press(
 ) {
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
-            if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *key_cap_type == KeyCapType::Letter {
+            if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut()
+                && matches!(*key_cap_type, KeyCapType::Letter | KeyCapType::LetterAltGr)
+            {
                 if let Some(pos) = within_key_pos {
                     if let Some(label) = key_label.first() {
                         swipe_manager.add_swipe(pos, label.chars().next().unwrap_or_default(), device);
@@ -545,7 +549,9 @@ fn handle_press(
 fn handle_release(app: &mut AppState, key: &KeyState, k_cap_type: &KeyCapType, keyboard: &mut KeyboardState) -> bool {
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
-            if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() && *k_cap_type == KeyCapType::Letter {
+            if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut()
+                && matches!(*k_cap_type, KeyCapType::Letter | KeyCapType::LetterAltGr)
+            {
                 if swipe_manager.did_swipe_leave_first_key() {
                     match swipe_manager.predict() {
                         Ok(()) => {},

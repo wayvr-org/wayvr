@@ -280,6 +280,7 @@ fn logging_init(args: &mut Args) {
                 .from_env_lossy()
                 .add_directive("symphonia_core::probe=warn".parse().unwrap())
                 .add_directive("symphonia_bundle_mp3=warn".parse().unwrap())
+                .add_directive("ort=warn".parse().unwrap())
                 .add_directive("zbus=warn".parse().unwrap())
                 .add_directive("usvg=error".parse().unwrap())
                 .add_directive("resvg=error".parse().unwrap())
