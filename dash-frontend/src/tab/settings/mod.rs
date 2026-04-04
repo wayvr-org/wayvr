@@ -20,7 +20,9 @@ use wgui::{
 	},
 	windowing::context_menu::{self, Blueprint, ContextMenu, TickResult},
 };
-use wlx_common::{config::GeneralConfig, config_io::ConfigRoot, dash_interface::RecenterMode};
+use wlx_common::{
+	async_executor::AsyncExecutor, config::GeneralConfig, config_io::ConfigRoot, dash_interface::RecenterMode,
+};
 
 use crate::{
 	frontend::{Frontend, FrontendTask},
@@ -78,11 +80,30 @@ enum Task {
 	SetTab(TabNameEnum),
 }
 
+struct SettingsMountParams<'a> {
+	mp: &'a mut MacroParams<'a>,
+	globals: &'a WguiGlobals,
+	parent_id: WidgetID,
+}
+
+struct SettingsUpdateParams<'a> {
+	layout: &'a mut Layout,
+	executor: &'a AsyncExecutor,
+}
+
+trait SettingsTab {
+	fn update(&mut self, _par: SettingsUpdateParams) -> anyhow::Result<()> {
+		Ok(())
+	}
+}
+
 pub struct TabSettings<T> {
 	pub state: ParserState,
 
 	app_button_ids: Vec<Rc<str>>,
 	context_menu: ContextMenu,
+
+	current_tab: Option<Box<dyn SettingsTab>>,
 
 	tasks: Tasks<Task>,
 	marker: PhantomData<T>,
@@ -94,6 +115,13 @@ impl<T> Tab<T> for TabSettings<T> {
 	}
 
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, data: &mut T) -> anyhow::Result<()> {
+		if let Some(tab) = &mut self.current_tab {
+			tab.update(SettingsUpdateParams {
+				layout: &mut frontend.layout,
+				executor: &frontend.executor,
+			})?;
+		}
+
 		let mut changed = false;
 		for task in self.tasks.drain() {
 			match task {
@@ -507,6 +535,7 @@ impl<T> TabSettings<T> {
 		let root = self.state.get_widget_id("settings_root")?;
 		frontend.layout.remove_children(root);
 		let globals = frontend.layout.state.globals.clone();
+		self.current_tab = None;
 
 		let mut mp = MacroParams {
 			layout: &mut frontend.layout,
@@ -537,7 +566,11 @@ impl<T> TabSettings<T> {
 				tab_troubleshooting::mount(&mut mp, root)?;
 			}
 			TabNameEnum::Skybox => {
-				tab_skybox::mount(&mut mp, root)?;
+				self.current_tab = Some(Box::new(tab_skybox::State::mount(SettingsMountParams {
+					mp: &mut mp,
+					globals: &globals,
+					parent_id: root,
+				})?));
 			}
 		}
 
@@ -572,6 +605,7 @@ impl<T> TabSettings<T> {
 			state: parser_state,
 			marker: PhantomData,
 			context_menu: ContextMenu::default(),
+			current_tab: None,
 		})
 	}
 }

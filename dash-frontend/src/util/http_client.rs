@@ -18,6 +18,16 @@ pub struct HttpClientResponse {
 	pub data: Vec<u8>,
 }
 
+impl HttpClientResponse {
+	pub fn as_json<T>(self) -> anyhow::Result<T>
+	where
+		T: for<'a> serde::Deserialize<'a>,
+	{
+		let utf8 = str::from_utf8(&self.data)?;
+		Ok(serde_json::from_str::<T>(utf8)?)
+	}
+}
+
 pub async fn get(executor: &AsyncExecutor, url: &str) -> anyhow::Result<HttpClientResponse> {
 	log::info!("fetching URL \"{}\"", url);
 

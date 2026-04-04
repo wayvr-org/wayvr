@@ -1,12 +1,34 @@
-use crate::tab::settings::{
-	SettingType,
-	macros::{MacroParams, options_category, options_checkbox},
+use crate::{
+	tab::settings::{
+		SettingType, SettingsMountParams, SettingsTab,
+		macros::{options_category, options_checkbox},
+	},
+	views::skymap_list,
 };
-use wgui::layout::WidgetID;
 
-pub fn mount(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<()> {
-	let c = options_category(mp, parent, "APP_SETTINGS.SKYBOX", "dashboard/globe.svg")?;
-	options_checkbox(mp, c, SettingType::UseSkybox)?;
-	options_checkbox(mp, c, SettingType::OpaqueBackground)?;
-	Ok(())
+pub struct State {
+	skymap_list: skymap_list::View,
+}
+
+impl SettingsTab for State {
+	fn update(&mut self, par: super::SettingsUpdateParams) -> anyhow::Result<()> {
+		self.skymap_list.update(par.layout, par.executor)?;
+		Ok(())
+	}
+}
+
+impl State {
+	pub fn mount(par: SettingsMountParams) -> anyhow::Result<Self> {
+		let c = options_category(par.mp, par.parent_id, "APP_SETTINGS.SKYBOX", "dashboard/globe.svg")?;
+		options_checkbox(par.mp, c, SettingType::UseSkybox)?;
+		options_checkbox(par.mp, c, SettingType::OpaqueBackground)?;
+
+		let skymap_list = skymap_list::View::new(skymap_list::Params {
+			globals: par.globals.clone(),
+			layout: par.mp.layout,
+			parent_id: c,
+		})?;
+
+		Ok(Self { skymap_list })
+	}
 }
