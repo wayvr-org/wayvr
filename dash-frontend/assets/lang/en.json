@@ -99,6 +99,7 @@
 		"SCREEN_RENDER_DOWN_HELP": "Helps with aliasing on high-res screens",
 		"SCROLL_SPEED": "Scroll speed",
 		"SETS_ON_WATCH": "Sets on watch",
+		"SKYBOX": "Skybox",
 		"SPACE_DRAG_MULTIPLIER": "Space drag multiplier",
 		"SPACE_DRAG_UNLOCKED": "Allow space drag on all axes",
 		"SPACE_ROTATE_UNLOCKED": "Allow space rotate on all axes",

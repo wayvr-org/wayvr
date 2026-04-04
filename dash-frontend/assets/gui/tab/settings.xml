@@ -48,6 +48,7 @@
     <div gap="4">
       <Tabs id="tabs">
         <Tab name="look_and_feel" translation="APP_SETTINGS.LOOK_AND_FEEL" sprite_src_builtin="dashboard/palette.svg" />
+        <Tab name="skybox" translation="APP_SETTINGS.SKYBOX" sprite_src_builtin="dashboard/globe.svg" />
         <Tab name="features" translation="APP_SETTINGS.FEATURES" sprite_src_builtin="dashboard/options.svg" />
         <Tab name="controls" translation="APP_SETTINGS.CONTROLS" sprite_src_builtin="dashboard/controller.svg" />
         <Tab name="misc" translation="APP_SETTINGS.MISC" sprite_src_builtin="dashboard/blocks.svg" />

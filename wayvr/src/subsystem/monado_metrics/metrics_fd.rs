@@ -8,6 +8,7 @@ use crate::subsystem::monado_metrics::proto;
 
 pub struct MonadoMetricsFd {
     stream_reader: UnixStream,
+    #[allow(dead_code)]
     stream_writer: UnixStream,
 
     records: VecDeque<proto::Record>,

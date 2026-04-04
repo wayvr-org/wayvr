@@ -33,6 +33,7 @@ mod tab_controls;
 mod tab_features;
 mod tab_look_and_feel;
 mod tab_misc;
+mod tab_skybox;
 mod tab_troubleshooting;
 
 #[derive(Clone)]
@@ -43,6 +44,7 @@ enum TabNameEnum {
 	Misc,
 	AutostartApps,
 	Troubleshooting,
+	Skybox,
 }
 
 impl TabNameEnum {
@@ -54,6 +56,7 @@ impl TabNameEnum {
 			"misc" => Some(TabNameEnum::Misc),
 			"autostart_apps" => Some(TabNameEnum::AutostartApps),
 			"troubleshooting" => Some(TabNameEnum::Troubleshooting),
+			"skybox" => Some(TabNameEnum::Skybox),
 			_ => None,
 		}
 	}
@@ -532,6 +535,9 @@ impl<T> TabSettings<T> {
 			}
 			TabNameEnum::Troubleshooting => {
 				tab_troubleshooting::mount(&mut mp, root)?;
+			}
+			TabNameEnum::Skybox => {
+				tab_skybox::mount(&mut mp, root)?;
 			}
 		}
 
