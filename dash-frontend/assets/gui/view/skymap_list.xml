@@ -1,0 +1,11 @@
+<layout>
+  <elements>
+    <div flex_direction="column">
+      <div id="list_parent" gap="8" flex_direction="row" flex_wrap="wrap" justify_content="center" />
+    </div>
+    <div flex_direction="row" gap="4">
+      <Button id="btn_refresh" tooltip="REFRESH" width="32" height="32" sprite_src_builtin="dashboard/refresh.svg" />
+      <Button id="btn_download_skymaps" height="32" translation="APP_SETTINGS.DOWNLOAD_SKYMAPS" sprite_src_builtin="dashboard/download.svg"/>
+    </div>
+  </elements>
+</layout>
