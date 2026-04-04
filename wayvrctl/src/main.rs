@@ -163,7 +163,7 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
         } => {
             wlx_device_haptics(state, device, intensity, duration, frequency).await;
         }
-        Subcommands::ShowHide {} => {
+        Subcommands::ShowHide => {
             wlx_show_hide(state).await;
         }
         Subcommands::PanelModify {
@@ -192,7 +192,7 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
             wlx_panel_modify(state, overlay, element, command).await;
         }
         Subcommands::SwitchSet { set_or_0: set } => {
-            let set = if set <= 0 { None } else { Some((set - 1) as _) };
+            let set = if set == 0 { None } else { Some((set - 1) as _) };
             wlx_switch_set(state, set).await;
         }
     }
@@ -249,7 +249,7 @@ enum Subcommands {
         /// Name for the overlay
         #[arg(short, long, default_value = "")]
         name: String,
-        /// Enviroment variables, separated by comma
+        /// Environment variables, separated by comma
         #[arg(short, long, default_value = "")]
         env: String,
         /// Executable to run
@@ -301,6 +301,7 @@ enum PosModeEnum {
 }
 
 #[derive(clap::Parser, Debug)]
+#[allow(clippy::enum_variant_names)]
 enum SubcommandPanelModify {
     /// Set the text of a <label> or <Button>
     SetText {

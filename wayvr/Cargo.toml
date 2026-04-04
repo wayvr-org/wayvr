@@ -9,11 +9,11 @@ repository = "https://github.com/wlx-team/wayvr"
 keywords = [
   "linux",
   "openvr",
-  "openxr",
-  "x11",
-  "wayland",
   "openvr-overlay",
+  "openxr",
   "openxr-overlay",
+  "wayland",
+  "x11",
 ]
 categories = ["games"]
 
@@ -32,20 +32,19 @@ glam = { workspace = true, features = ["mint", "serde"] }
 idmap = { workspace = true, features = ["serde"] }
 idmap-derive.workspace = true
 log.workspace = true
-rust-embed.workspace = true
 regex.workspace = true
-slotmap.workspace = true
+rust-embed.workspace = true
 serde = { workspace = true, features = ["rc"] }
 serde_json.workspace = true
+slotmap.workspace = true
 strum.workspace = true
 vulkano.workspace = true
 vulkano-shaders.workspace = true
 xdg.workspace = true
 
-ash = "^0.38.0" # must match vulkano
+ash = "^0.38.0"  # must match vulkano
 bytes = { version = "1.11.1" }
-chrono = { version = "0.4.42", features = [ "unstable-locales"]}
-pure-rust-locales = "0.8.2"
+chrono = { version = "0.4.42", features = ["unstable-locales"] }
 chrono-tz = "0.10.4"
 config = "0.15.19"
 dbus = { version = "0.9.9" }
@@ -58,14 +57,16 @@ interprocess = { version = "2.2.3" }
 json = { version = "0.12.4", optional = true }
 json5 = "1.3.0"
 libc = "0.2.178"
-libmonado = { version = "1.6.0", optional = true }
+libmonado = { git = "https://github.com/oo8dev/libmonado-rs.git", rev = "fc39940a64dea2df080a0d2c974c7d651006241f", optional = true }
 log-panics = { version = "2.1.0", features = ["with-backtrace"] }
 mint = "0.5.9"
 openxr = { version = "0.21.0", features = ["linked", "mint"], optional = true }
-ovr_overlay = { features = [
+ovr_overlay = { git = "https://github.com/galister/ovr_overlay_oyasumi", rev = "e477bd2a9e04293ea68c1e7529ef2cb131f32acc", features = [
   "ovr_input",
   "ovr_system",
-], git = "https://github.com/galister/ovr_overlay_oyasumi", rev = "e477bd2a9e04293ea68c1e7529ef2cb131f32acc", optional = true }
+], optional = true }
+prost = { version = "0.14.3", optional = true }
+pure-rust-locales = "0.8.2"
 rosc = { version = "0.11.4", optional = true }
 serde_json5 = "0.2.1"
 serde_yaml = "0.9.34"
@@ -74,36 +75,36 @@ smallvec = "1.15.1"
 smithay = { version = "0.7.0", default-features = false, features = [
   "backend_vulkan",
   "desktop",
-  "xwayland",
   "wayland_frontend",
+  "xwayland",
 ] }
+smol = { workspace = true }
 sysinfo = { version = "0.37" }
 thiserror = "2.0"
-tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 tracing = "0.1.43"
-uuid = { version = "1.19.0", features = ["v4", "fast-rng"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+uuid = { version = "1.19.0", features = ["fast-rng", "v4"] }
 wayland-client = { workspace = true }
 winit = { version = "0.30.12", optional = true }
-xcb = { version = "1.6.0", optional = true, features = [
+xcb = { version = "1.6.0", features = [
   "as-raw-xcb-connection",
-] }
-xkbcommon = { version = "0.8.0" } # 0.9.0 breaks keymap import on some distros
-codes-iso-639 = "0.1.5"
+], optional = true }
+xkbcommon = { version = "0.8.0" }  # 0.9.0 breaks keymap import on some distros
 arboard = { version="3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 super-swipe-type = "0.2.2"
-
 
 [build-dependencies]
 regex.workspace = true
 
 [features]
-default = ["openvr", "openxr", "osc", "x11", "wayland"]
-openvr = ["dep:ovr_overlay", "dep:json"]
-openxr = ["dep:openxr", "dep:libmonado"]
+default = ["openvr", "openxr", "osc", "wayland", "x11"]
+as-raw-xcb-connection = []
+feat-monado-metrics = []
+openvr = ["dep:json", "dep:ovr_overlay"]
+openxr = ["dep:libmonado", "dep:openxr", "dep:prost"]
 osc = ["dep:rosc"]
-x11 = ["dep:xcb", "wlx-capture/xshm", "xkbcommon/x11"]
-wayland = ["pipewire", "wlx-capture/wlr", "xkbcommon/wayland"]
 pipewire = ["wlx-capture/pipewire"]
 uidev = ["dep:winit"]
+wayland = ["pipewire", "wlx-capture/wlr", "xkbcommon/wayland"]
+x11 = ["dep:xcb", "wlx-capture/xshm", "xkbcommon/x11"]
 xcb = ["dep:xcb"]
-as-raw-xcb-connection = []

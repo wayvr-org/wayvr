@@ -28,7 +28,9 @@ pub enum BackendError {
     #[error("OpenXR Error: {0:?}")]
     OpenXrError(#[from] ::openxr::sys::Result),
     #[error("Shutdown")]
+    #[allow(dead_code)]
     Shutdown,
+    #[allow(dead_code)]
     #[error("Restart")]
     Restart,
     #[error("Fatal: {0:?}")]

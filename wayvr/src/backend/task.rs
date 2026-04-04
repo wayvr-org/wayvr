@@ -49,6 +49,7 @@ pub enum InputTask {
 }
 
 #[cfg(feature = "openvr")]
+#[allow(dead_code)]
 pub enum OpenVrTask {
     ColorGain(ColorChannel, f32),
 }
@@ -66,6 +67,7 @@ pub enum PlayspaceTask {
 
 #[derive(Debug, Clone)]
 #[allow(clippy::enum_variant_names)]
+#[allow(dead_code)]
 pub enum ModifyPanelCommand {
     SetText(String),
     SetColor(String),
@@ -110,6 +112,7 @@ pub enum OverlayTask {
     Drop(OverlaySelector),
 }
 
+#[allow(dead_code)]
 pub enum TaskType {
     Input(InputTask),
     Overlay(OverlayTask),

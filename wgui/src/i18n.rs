@@ -174,7 +174,7 @@ fn find_translation<'a>(translation: &str, mut val: &'a serde_json::Value) -> Op
 impl I18n {
 	pub fn new(asset_provider: &mut dyn AssetProvider, lang_provider: &dyn LangProvider) -> anyhow::Result<Self> {
 		let locale = Locale::from_env(lang_provider);
-		log::info!("Guessed system language: {locale}");
+		log::info!("Guessed system language: {locale} (matched: {})", locale.get_matched());
 
 		let data_english = asset_provider.load_from_path("lang/en.json")?;
 		let path = format!("lang/{}.json", locale.get_matched());

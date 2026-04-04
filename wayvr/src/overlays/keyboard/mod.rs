@@ -143,7 +143,6 @@ pub(self) fn hide_swipe_type_manager(panel: &mut GuiPanel<KeyboardState>) {
     let predictions_root = panel.parser_state
         .get_widget_id("swipe_predictions_root")
         .unwrap_or_default();
-
     if !predictions_root.is_null() {
         panel.layout.tasks.push(LayoutTask::SetWidgetStyle(
             predictions_root,
@@ -151,7 +150,7 @@ pub(self) fn hide_swipe_type_manager(panel: &mut GuiPanel<KeyboardState>) {
         ));
     }
 }
-fn alt_modifier_to_key(m: AltModifier) -> KeyModifier {
+const fn alt_modifier_to_key(m: AltModifier) -> KeyModifier {
     match m {
         AltModifier::Shift => SHIFT,
         AltModifier::Ctrl => CTRL,

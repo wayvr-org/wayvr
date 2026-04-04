@@ -161,5 +161,6 @@
   "PROCESS": {
     "STOP": "Zatrzymaj",
     "FORCE_KILL": "Wymuś zakończenie"
-  }
+  },
+  "DEBUG_INFO": "Informacje debugowania"
 }

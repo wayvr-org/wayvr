@@ -22,7 +22,7 @@ use smithay::wayland::selection::{
     wlr_data_control as selection_wlr,
 };
 use smithay::wayland::shell::kde::decoration::{KdeDecorationHandler, KdeDecorationState};
-use smithay::wayland::shell::xdg::decoration::{XdgDecorationHandler, XdgDecorationState};
+use smithay::wayland::shell::xdg::decoration::XdgDecorationHandler;
 use smithay::wayland::shm::{ShmHandler, ShmState, with_buffer_contents};
 use smithay::wayland::single_pixel_buffer::get_single_pixel_buffer;
 use smithay::{
@@ -69,7 +69,6 @@ pub struct Application {
     pub primary_selection_state: PrimarySelectionState,
     pub ext_data_control_state: selection_ext::DataControlState,
     pub wlr_data_control_state: selection_wlr::DataControlState,
-    pub xdg_decoration_state: XdgDecorationState,
     pub kde_decoration_state: KdeDecorationState,
     pub wayvr_tasks: SyncEventQueue<WayVRTask>,
     pub redraw_requests: HashSet<wayland_server::backend::ObjectId>,
@@ -78,10 +77,6 @@ pub struct Application {
 }
 
 impl Application {
-    pub fn check_redraw(&mut self, surface: &WlSurface) -> bool {
-        self.redraw_requests.remove(&surface.id())
-    }
-
     pub fn cleanup(&mut self) {
         self.image_importer.cleanup();
     }

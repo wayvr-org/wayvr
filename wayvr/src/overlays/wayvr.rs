@@ -545,7 +545,7 @@ impl OverlayBackend for WvrWindowBackend {
                 return;
             };
 
-            let mut hit2 = hit.clone();
+            let mut hit2 = *hit;
             hit2.uv.y *= meta.extent[1] as f32 / (meta.extent[1] - self.inner_extent[1]) as f32;
             self.panel_hovered = true;
             return self.panel.on_pointer(app, &hit2, pressed);

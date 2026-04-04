@@ -48,6 +48,7 @@ macro_rules! gen_id {
 		//ThingVec
 		#[allow(dead_code)]
 		impl $container_name {
+			#[allow(clippy::new_without_default)]
 			pub fn new() -> Self {
 				Self {
 					vec: Vec::new(),

@@ -22,7 +22,7 @@ pub fn new_stereo_tab_handler(
         Box::new(move |common, state| {
             let stereo = *state;
 
-            let translation = get_stereo_full_frame_translation(&stereo);
+            let translation = get_stereo_full_frame_translation(stereo);
             checkbox.set_text(common, Translation::from_translation_key(translation));
 
             Box::new(move |app, owc| {
@@ -59,7 +59,7 @@ impl SpriteTabKey for StereoMode {
     }
 }
 
-pub fn get_stereo_full_frame_translation(stereo: &StereoMode) -> &'static str {
+pub const fn get_stereo_full_frame_translation(stereo: StereoMode) -> &'static str {
     match stereo {
         StereoMode::LeftRight | StereoMode::RightLeft => "EDIT_MODE.STEREO_3D_MODE.FULL_FRAME_SBS",
         StereoMode::TopBottom => "EDIT_MODE.STEREO_3D_MODE.FULL_FRAME_TAB",

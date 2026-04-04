@@ -208,8 +208,6 @@ pub struct InteractionState {
     pub grabbed: Option<GrabData>,
     pub clicked_id: Option<OverlayID>,
     pub hovered_id: Option<OverlayID>,
-    pub next_push: Instant,
-    pub haptics: Option<f32>,
     pub should_block_input: bool,
     pub should_block_poses: bool,
 }
@@ -221,8 +219,6 @@ impl Default for InteractionState {
             grabbed: None,
             clicked_id: None,
             hovered_id: None,
-            next_push: Instant::now(),
-            haptics: None,
             should_block_input: false,
             should_block_poses: false,
         }
@@ -292,7 +288,6 @@ pub struct PointerHit {
     pub mode: PointerMode,
     pub primary: bool,
     pub uv: Vec2,
-    pub dist: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -699,7 +694,6 @@ where
             mode,
             primary: false,
             uv,
-            dist: hit.dist,
         };
 
         let result = overlay.config.backend.on_hover(app, &pointer_hit);

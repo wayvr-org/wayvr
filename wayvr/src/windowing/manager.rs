@@ -195,7 +195,7 @@ where
                     ToggleMode::EnsureOn if o.config.is_active() => return Ok(()),
                     ToggleMode::EnsureOff if !o.config.is_active() => return Ok(()),
                     _ => {}
-                };
+                }
 
                 let parent_set = if o.config.global {
                     &mut self.global_set
@@ -515,7 +515,7 @@ impl<T> OverlayWindowManager<T> {
         }
 
         // global overlays
-        for (name, ows) in app.session.config.global_set.clone().into_iter() {
+        for (name, ows) in app.session.config.global_set.clone() {
             let mut ows = ows.clone();
 
             // fix angle_fade missing on watch if loading older state
@@ -523,7 +523,7 @@ impl<T> OverlayWindowManager<T> {
                 ows.angle_fade = true;
             }
 
-            if let Some(oid) = self.lookup(&*name)
+            if let Some(oid) = self.lookup(&name)
                 && let Some(o) = self.mut_by_id(oid)
             {
                 o.config.global = true;
@@ -685,6 +685,7 @@ impl<T> OverlayWindowManager<T> {
         self.overlays.iter()
     }
 
+    #[allow(dead_code)]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (OverlayID, &'_ mut OverlayWindowData<T>)> {
         self.overlays.iter_mut()
     }
@@ -851,6 +852,7 @@ impl<T> OverlayWindowManager<T> {
             .inspect_err(|e| log::error!("VisibleOverlaysChanged: {e:?}"));
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn overlays_changed(&mut self, app: &mut AppState) -> anyhow::Result<()> {
         let mut meta = Vec::with_capacity(self.overlays.len());
         for (id, data) in &self.overlays {
@@ -886,6 +888,7 @@ impl<T> OverlayWindowManager<T> {
         Ok(())
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn visible_overlays_changed(&mut self, app: &mut AppState) -> anyhow::Result<()> {
         let mut vis = Vec::with_capacity(self.overlays.len());
 
@@ -923,6 +926,7 @@ impl<T> OverlayWindowManager<T> {
         }
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     pub fn devices_changed(&mut self, app: &mut AppState) -> anyhow::Result<()> {
         if let Some(watch) = self.mut_by_id(self.watch_id) {
             let _ = watch

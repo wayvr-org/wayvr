@@ -1,15 +1,9 @@
-use std::{collections::HashMap, marker::PhantomData, rc::Rc, str::FromStr};
-
 use glam::Vec2;
-use strum::{AsRefStr, EnumProperty, EnumString, VariantArray};
+use std::{marker::PhantomData, rc::Rc, str::FromStr};
+use strum::{AsRefStr, EnumProperty, EnumString};
 use wgui::{
 	assets::AssetPath,
-	components::{
-		button::{ButtonClickEvent, ComponentButton},
-		checkbox::ComponentCheckbox,
-		slider::ComponentSlider,
-		tabs::ComponentTabs,
-	},
+	components::tabs::ComponentTabs,
 	drawing,
 	event::{CallbackDataCommon, EventAlterables},
 	globals::WguiGlobals,
@@ -30,8 +24,16 @@ use wlx_common::{config::GeneralConfig, config_io::ConfigRoot, dash_interface::R
 
 use crate::{
 	frontend::{Frontend, FrontendTask},
-	tab::{Tab, TabType},
+	tab::{Tab, TabType, settings::macros::MacroParams},
 };
+
+mod macros;
+mod tab_autostart_apps;
+mod tab_controls;
+mod tab_features;
+mod tab_look_and_feel;
+mod tab_misc;
+mod tab_troubleshooting;
 
 #[derive(Clone)]
 enum TabNameEnum {
@@ -57,6 +59,7 @@ impl TabNameEnum {
 	}
 }
 
+#[derive(Clone)]
 enum Task {
 	UpdateBool(SettingType, bool),
 	UpdateFloat(SettingType, f32),
@@ -488,287 +491,6 @@ fn mount_requires_restart(layout: &mut Layout, parent: WidgetID) -> anyhow::Resu
 	Ok(())
 }
 
-macro_rules! category {
-	($pe:expr, $root:expr, $translation:expr, $icon:expr) => {{
-		let id = $pe.idx.to_string();
-		$pe.idx += 1;
-
-		let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-		params.insert(Rc::from("translation"), Rc::from($translation));
-		params.insert(Rc::from("icon"), Rc::from($icon));
-		params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-
-		$pe
-			.parser_state
-			.instantiate_template($pe.doc_params, "SettingsGroupBox", $pe.layout, $root, params)?;
-
-		$pe.parser_state.get_widget_id(&id)
-	}};
-}
-
-macro_rules! checkbox {
-	($mp:expr, $root:expr, $setting:expr) => {
-		let id = $mp.idx.to_string();
-		$mp.idx += 1;
-
-		let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-		params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-
-		match $setting.get_translation() {
-			Ok(translation) => params.insert(Rc::from("translation"), translation.into()),
-			Err(raw_text) => params.insert(Rc::from("text"), raw_text.into()),
-		};
-
-		if let Some(tooltip) = $setting.get_tooltip() {
-			params.insert(Rc::from("tooltip"), Rc::from(tooltip));
-		}
-
-		let checked = if *$setting.mut_bool($mp.config) { "1" } else { "0" };
-		params.insert(Rc::from("checked"), Rc::from(checked));
-
-		let id_cell = horiz_cell($mp.layout, $root)?;
-
-		$mp
-			.parser_state
-			.instantiate_template($mp.doc_params, "CheckBoxSetting", $mp.layout, id_cell, params)?;
-
-		if $setting.requires_restart() {
-			mount_requires_restart($mp.layout, id_cell)?;
-		}
-
-		let checkbox = $mp.parser_state.fetch_component_as::<ComponentCheckbox>(&id)?;
-		checkbox.on_toggle(Box::new({
-			let tasks = $mp.tasks.clone();
-			move |_common, e| {
-				tasks.push(Task::UpdateBool($setting, e.checked));
-				Ok(())
-			}
-		}));
-	};
-}
-
-macro_rules! slider_f32 {
-	($mp:expr, $root:expr, $setting:expr, $min:expr, $max:expr, $step:expr) => {
-		let id = $mp.idx.to_string();
-		$mp.idx += 1;
-
-		let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-		params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-
-		match $setting.get_translation() {
-			Ok(translation) => params.insert(Rc::from("translation"), translation.into()),
-			Err(raw_text) => params.insert(Rc::from("text"), raw_text.into()),
-		};
-
-		if let Some(tooltip) = $setting.get_tooltip() {
-			params.insert(Rc::from("tooltip"), Rc::from(tooltip));
-		}
-
-		let value = $setting.mut_f32($mp.config).to_string();
-		params.insert(Rc::from("value"), Rc::from(value));
-		params.insert(Rc::from("min"), Rc::from($min.to_string()));
-		params.insert(Rc::from("max"), Rc::from($max.to_string()));
-		params.insert(Rc::from("step"), Rc::from($step.to_string()));
-
-		let id_cell = horiz_cell($mp.layout, $root)?;
-
-		$mp
-			.parser_state
-			.instantiate_template($mp.doc_params, "SliderSetting", $mp.layout, id_cell, params)?;
-
-		if $setting.requires_restart() {
-			mount_requires_restart($mp.layout, id_cell)?;
-		}
-
-		let slider = $mp.parser_state.fetch_component_as::<ComponentSlider>(&id)?;
-		slider.on_value_changed(Box::new({
-			let tasks = $mp.tasks.clone();
-			move |_common, e| {
-				tasks.push(Task::UpdateFloat($setting, e.value));
-				Ok(())
-			}
-		}));
-	};
-}
-
-macro_rules! slider_i32 {
-	($mp:expr, $root:expr, $setting:expr, $min:expr, $max:expr, $step:expr) => {
-		let id = $mp.idx.to_string();
-		$mp.idx += 1;
-
-		let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-		params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-
-		match $setting.get_translation() {
-			Ok(translation) => params.insert(Rc::from("translation"), translation.into()),
-			Err(raw_text) => params.insert(Rc::from("text"), raw_text.into()),
-		};
-
-		if let Some(tooltip) = $setting.get_tooltip() {
-			params.insert(Rc::from("tooltip"), Rc::from(tooltip));
-		}
-
-		let id_cell = horiz_cell($mp.layout, $root)?;
-
-		let value = $setting.mut_i32($mp.config).to_string();
-		params.insert(Rc::from("value"), Rc::from(value));
-		params.insert(Rc::from("min"), Rc::from($min.to_string()));
-		params.insert(Rc::from("max"), Rc::from($max.to_string()));
-		params.insert(Rc::from("step"), Rc::from($step.to_string()));
-
-		$mp
-			.parser_state
-			.instantiate_template($mp.doc_params, "SliderSetting", $mp.layout, id_cell, params)?;
-
-		if $setting.requires_restart() {
-			mount_requires_restart($mp.layout, id_cell)?;
-		}
-
-		let slider = $mp.parser_state.fetch_component_as::<ComponentSlider>(&id)?;
-		slider.on_value_changed(Box::new({
-			let tasks = $mp.tasks.clone();
-			move |_common, e| {
-				tasks.push(Task::UpdateInt($setting, e.value as i32));
-				Ok(())
-			}
-		}));
-	};
-}
-
-macro_rules! dropdown {
-	($mp:expr /* `MacroParams` struct */, $root:expr, $setting:expr, $options:expr) => {
-		let id = $mp.idx.to_string();
-		$mp.idx += 1;
-
-		let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-		params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-
-		match $setting.get_translation() {
-			Ok(translation) => params.insert(Rc::from("translation"), translation.into()),
-			Err(raw_text) => params.insert(Rc::from("text"), raw_text.into()),
-		};
-
-		if let Some(tooltip) = $setting.get_tooltip() {
-			params.insert(Rc::from("tooltip"), Rc::from(tooltip));
-		}
-
-		let id_cell = horiz_cell($mp.layout, $root)?;
-
-		$mp
-			.parser_state
-			.instantiate_template($mp.doc_params, "DropdownButton", $mp.layout, id_cell, params)?;
-
-		if $setting.requires_restart() {
-			mount_requires_restart($mp.layout, id_cell)?;
-		}
-
-		let setting_str = $setting.as_ref();
-		let title = $setting.get_enum_title($mp.config);
-
-		{
-			let mut label = $mp
-				.parser_state
-				.fetch_widget_as::<WidgetLabel>(&$mp.layout.state, &format!("{id}_value"))?;
-			label.set_text_simple(&mut $mp.layout.state.globals.get(), title);
-		}
-
-		let btn = $mp.parser_state.fetch_component_as::<ComponentButton>(&id)?;
-		btn.on_click(Rc::new({
-			let tasks = $mp.tasks.clone();
-			move |_common, e: ButtonClickEvent| {
-				tasks.push(Task::OpenContextMenu(
-					e.mouse_pos_absolute.unwrap_or_default(),
-					$options
-						.iter()
-						.filter_map(|item| {
-							if item.get_bool("Hidden").unwrap_or(false) {
-								return None;
-							}
-
-							let value = item.as_ref();
-							let title = SettingType::get_enum_title_inner(*item);
-							let tooltip = SettingType::get_enum_tooltip_inner(*item);
-
-							let text = &title.text;
-							let translated = if title.translated { "1" } else { "0" };
-
-							Some(context_menu::Cell {
-								action_name: Some(format!("{setting_str};{id};{value};{text};{translated}").into()),
-								title,
-								tooltip,
-								attribs: vec![],
-							})
-						})
-						.collect(),
-				));
-				Ok(())
-			}
-		}));
-	};
-}
-
-macro_rules! danger_button {
-	($mp:expr, $root:expr, $translation:expr, $icon:expr, $task:expr) => {
-		let id = $mp.idx.to_string();
-		$mp.idx += 1;
-
-		let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-		params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-		params.insert(Rc::from("translation"), Rc::from($translation));
-		params.insert(Rc::from("icon"), Rc::from($icon));
-
-		$mp
-			.parser_state
-			.instantiate_template($mp.doc_params, "DangerButton", $mp.layout, $root, params)?;
-
-		let btn = $mp.parser_state.fetch_component_as::<ComponentButton>(&id)?;
-		btn.on_click(Rc::new({
-			let tasks = $mp.tasks.clone();
-			move |_common, _e| {
-				tasks.push($task);
-				Ok(())
-			}
-		}));
-	};
-}
-
-macro_rules! autostart_app {
-	($mp:expr, $root:expr, $text:expr, $ids:expr) => {
-		let id = $mp.idx.to_string();
-		$mp.idx += 1;
-
-		let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-		params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-		params.insert(Rc::from("text"), Rc::from($text.as_str()));
-
-		$mp
-			.parser_state
-			.instantiate_template($mp.doc_params, "AutostartApp", $mp.layout, $root, params)?;
-
-		let btn = $mp.parser_state.fetch_component_as::<ComponentButton>(&id)?;
-		let id: Rc<str> = Rc::from(id);
-
-		$ids.push(id.clone());
-
-		btn.on_click(Rc::new({
-			let tasks = $mp.tasks.clone();
-			move |_common, _e| {
-				tasks.push(Task::RemoveAutostartApp(id.clone()));
-				Ok(())
-			}
-		}));
-	};
-}
-
-struct MacroParams<'a> {
-	layout: &'a mut Layout,
-	parser_state: &'a mut ParserState,
-	doc_params: &'a ParseDocumentParams<'a>,
-	config: &'a mut GeneralConfig,
-	tasks: Tasks<Task>,
-	idx: usize,
-}
-
 fn doc_params(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
@@ -794,120 +516,22 @@ impl<T> TabSettings<T> {
 
 		match name {
 			TabNameEnum::LookAndFeel => {
-				let c = category!(mp, root, "APP_SETTINGS.LOOK_AND_FEEL", "dashboard/palette.svg")?;
-				dropdown!(mp, c, SettingType::Language, wlx_common::locale::Language::VARIANTS);
-				checkbox!(mp, c, SettingType::OpaqueBackground);
-				checkbox!(mp, c, SettingType::HideUsername);
-				checkbox!(mp, c, SettingType::HideGrabHelp);
-				slider_f32!(mp, c, SettingType::UiAnimationSpeed, 0.5, 5.0, 0.1); // min, max, step
-				slider_f32!(mp, c, SettingType::UiGradientIntensity, 0.0, 1.0, 0.05); // min, max, step
-				slider_f32!(mp, c, SettingType::UiRoundMultiplier, 0.5, 5.0, 0.1);
-				checkbox!(mp, c, SettingType::SetsOnWatch);
-				checkbox!(mp, c, SettingType::UseSkybox);
-				slider_f32!(mp, c, SettingType::GridOpacity, 0.0, 1.0, 0.05); // min, max, step
-				checkbox!(mp, c, SettingType::UsePassthrough);
-				checkbox!(mp, c, SettingType::Clock12h);
+				tab_look_and_feel::mount(&mut mp, root)?;
 			}
 			TabNameEnum::Features => {
-				let c = category!(mp, root, "APP_SETTINGS.FEATURES", "dashboard/options.svg")?;
-				checkbox!(mp, c, SettingType::NotificationsEnabled);
-				checkbox!(mp, c, SettingType::NotificationsSoundEnabled);
-				checkbox!(mp, c, SettingType::KeyboardSoundEnabled);
-				checkbox!(mp, c, SettingType::KeyboardSwipeToTypeEnabled);
-				checkbox!(mp, c, SettingType::SpaceDragUnlocked);
-				checkbox!(mp, c, SettingType::SpaceRotateUnlocked);
-				slider_f32!(mp, c, SettingType::SpaceDragMultiplier, -10.0, 10.0, 0.5);
-				checkbox!(mp, c, SettingType::BlockGameInput);
-				checkbox!(mp, c, SettingType::BlockGameInputIgnoreWatch);
-				checkbox!(mp, c, SettingType::BlockPosesOnKbdInteraction);
+				tab_features::mount(&mut mp, root)?;
 			}
 			TabNameEnum::Controls => {
-				let c = category!(mp, root, "APP_SETTINGS.CONTROLS", "dashboard/controller.svg")?;
-				dropdown!(
-					mp,
-					c,
-					SettingType::KeyboardMiddleClick,
-					wlx_common::config::AltModifier::VARIANTS
-				);
-				dropdown!(
-					mp,
-					c,
-					SettingType::HandsfreePointer,
-					wlx_common::config::HandsfreePointer::VARIANTS
-				);
-				checkbox!(mp, c, SettingType::FocusFollowsMouseMode);
-				checkbox!(mp, c, SettingType::LeftHandedMouse);
-				checkbox!(mp, c, SettingType::AllowSliding);
-				checkbox!(mp, c, SettingType::InvertScrollDirectionX);
-				checkbox!(mp, c, SettingType::InvertScrollDirectionY);
-				slider_f32!(mp, c, SettingType::ScrollSpeed, 0.1, 5.0, 0.1);
-				slider_f32!(mp, c, SettingType::LongPressDuration, 0.1, 2.0, 0.1);
-				slider_f32!(mp, c, SettingType::PointerLerpFactor, 0.1, 1.0, 0.1);
-				slider_f32!(mp, c, SettingType::XrClickSensitivity, 0.1, 1.0, 0.1);
-				slider_f32!(mp, c, SettingType::XrClickSensitivityRelease, 0.1, 1.0, 0.1);
-				slider_i32!(mp, c, SettingType::ClickFreezeTimeMs, 0, 500, 50);
+				tab_controls::mount(&mut mp, root)?;
 			}
 			TabNameEnum::Misc => {
-				let c = category!(mp, root, "APP_SETTINGS.MISC", "dashboard/blocks.svg")?;
-				dropdown!(
-					mp,
-					c,
-					SettingType::CaptureMethod,
-					wlx_common::config::CaptureMethod::VARIANTS
-				);
-				checkbox!(mp, c, SettingType::XwaylandByDefault);
-				checkbox!(mp, c, SettingType::UprightScreenFix);
-				checkbox!(mp, c, SettingType::DoubleCursorFix);
-				checkbox!(mp, c, SettingType::ScreenRenderDown);
+				tab_misc::mount(&mut mp, root)?;
 			}
 			TabNameEnum::AutostartApps => {
-				self.app_button_ids = vec![];
-
-				if !mp.config.autostart_apps.is_empty() {
-					let c = category!(mp, root, "APP_SETTINGS.AUTOSTART_APPS", "dashboard/apps.svg")?;
-
-					for app in &mp.config.autostart_apps {
-						autostart_app!(mp, c, app.name, self.app_button_ids);
-					}
-				}
+				tab_autostart_apps::mount(&mut mp, root, &mut self.app_button_ids)?;
 			}
 			TabNameEnum::Troubleshooting => {
-				let c = category!(mp, root, "APP_SETTINGS.TROUBLESHOOTING", "dashboard/cpu.svg")?;
-				danger_button!(
-					mp,
-					c,
-					"APP_SETTINGS.RESET_PLAYSPACE",
-					"dashboard/recenter.svg",
-					Task::ResetPlayspace
-				);
-				danger_button!(
-					mp,
-					c,
-					"APP_SETTINGS.CLEAR_PIPEWIRE_TOKENS",
-					"dashboard/display.svg",
-					Task::ClearPipewireTokens
-				);
-				danger_button!(
-					mp,
-					c,
-					"APP_SETTINGS.CLEAR_SAVED_STATE",
-					"dashboard/binary.svg",
-					Task::ClearSavedState
-				);
-				danger_button!(
-					mp,
-					c,
-					"APP_SETTINGS.DELETE_ALL_CONFIGS",
-					"dashboard/circle.svg",
-					Task::DeleteAllConfigs
-				);
-				danger_button!(
-					mp,
-					c,
-					"APP_SETTINGS.RESTART_SOFTWARE",
-					"dashboard/refresh.svg",
-					Task::RestartSoftware
-				);
+				tab_troubleshooting::mount(&mut mp, root)?;
 			}
 		}
 

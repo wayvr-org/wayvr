@@ -94,7 +94,7 @@ impl DbusConnector {
         summary: &str,
         body: &str,
         urgency: u8,
-        timeout: i32,
+        timeout_ms: i32,
         replaces_id: u32,
         transient: bool,
     ) -> anyhow::Result<u32> {
@@ -118,7 +118,7 @@ impl DbusConnector {
             body,
             vec![],
             hints,
-            timeout,
+            timeout_ms,
         )?;
         Ok(retval)
     }

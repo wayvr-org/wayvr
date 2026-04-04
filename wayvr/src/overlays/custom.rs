@@ -33,7 +33,7 @@ pub fn create_custom(app: &mut AppState, name: Arc<str>) -> Option<OverlayWindow
             .ok()?;
 
     if let Some(icon) = panel.parser_state.data.var_map.get("_panel_icon") {
-        let icon = expand_env_vars(&icon);
+        let icon = expand_env_vars(icon);
         panel
             .extra_attribs
             .insert(BackendAttrib::Icon, BackendAttribValue::Icon(icon.into()));

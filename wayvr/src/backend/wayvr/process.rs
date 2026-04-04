@@ -27,6 +27,7 @@ pub struct ExternalProcess {
 }
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum Process {
     Managed(WayVRProcess),     // Process spawned by WayVR
     External(ExternalProcess), // External process not directly controlled by us
@@ -58,11 +59,12 @@ impl Process {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_name(&self) -> String {
         match self {
             Self::Managed(p) => p
                 .get_name()
-                .or_else(|| p.exec_path.split('/').last().map(String::from))
+                .or_else(|| p.exec_path.split('/').next_back().map(String::from))
                 .unwrap_or_else(|| String::from("unknown")),
             Self::External(p) => p.get_name().unwrap_or_else(|| String::from("unknown")),
         }

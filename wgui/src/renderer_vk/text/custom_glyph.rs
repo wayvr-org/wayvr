@@ -2,6 +2,7 @@ use std::{
 	collections::HashMap,
 	f32,
 	hash::{DefaultHasher, Hasher},
+	path::Path,
 	sync::{
 		Arc, Weak,
 		atomic::{AtomicUsize, Ordering},
@@ -54,7 +55,7 @@ impl CustomGlyphCache {
 		self
 			.inner
 			.get(&hashed_asset)
-			.and_then(|a| a.upgrade())
+			.and_then(CustomGlyphDataWeak::upgrade)
 			.inspect(|_| log::debug!("Glyph cache hit on: '{path}'"))
 			.ok_or(hashed_asset)
 	}
@@ -100,11 +101,10 @@ struct CustomGlyphDataWeak {
 
 impl CustomGlyphDataWeak {
 	fn upgrade(&self) -> Option<CustomGlyphData> {
-		if let Some(content) = self.content.upgrade() {
-			Some(CustomGlyphData { id: self.id, content })
-		} else {
-			None
-		}
+		self
+			.content
+			.upgrade()
+			.map(|content| CustomGlyphData { id: self.id, content })
 	}
 }
 
@@ -142,11 +142,15 @@ impl CustomGlyphData {
 		}
 	}
 
-	pub fn from_assets(globals: &WguiGlobals, path: AssetPath) -> anyhow::Result<Self> {
-		let path_str = path.get_str();
-		let data = globals.get_asset(path)?;
+	pub fn from_assets(globals: &WguiGlobals, asset_path: AssetPath) -> anyhow::Result<Self> {
+		let path_str = asset_path.get_str();
+		let data = globals.get_asset(asset_path)?;
+		let path = Path::new(path_str);
+		let is_svg = path
+			.extension()
+			.is_some_and(|ext| ext.eq_ignore_ascii_case("svg") || ext.eq_ignore_ascii_case("svgz"));
 
-		if path_str.ends_with(".svg") || path_str.ends_with(".svgz") {
+		if is_svg {
 			Self::from_bytes_svg(globals, path_str, &data)
 		} else {
 			Self::from_bytes_raster(globals, path_str, &data)
@@ -156,7 +160,7 @@ impl CustomGlyphData {
 	pub fn from_bytes_raster(globals: &WguiGlobals, path: &str, data: &[u8]) -> anyhow::Result<Self> {
 		let globals_borrow = &mut globals.get();
 		match globals_borrow.custom_glyph_cache.get(path, data) {
-			Ok(data) => return Ok(data),
+			Ok(data) => Ok(data),
 			Err(hashed_asset) => {
 				let data = Self::new(CustomGlyphContent::from_bin_raster(data)?);
 				globals_borrow.custom_glyph_cache.insert(hashed_asset, &data);
@@ -168,7 +172,7 @@ impl CustomGlyphData {
 	pub fn from_bytes_svg(globals: &WguiGlobals, path: &str, data: &[u8]) -> anyhow::Result<Self> {
 		let globals_borrow = &mut globals.get();
 		match globals_borrow.custom_glyph_cache.get(path, data) {
-			Ok(data) => return Ok(data),
+			Ok(data) => Ok(data),
 			Err(hashed_asset) => {
 				let data = Self::new(CustomGlyphContent::from_bin_svg(data)?);
 				log::trace!("Caching {path} with content_id {}", data.id);

@@ -6,7 +6,7 @@
 
 ## [Built-in components](#components)
 
-[Button](#button-component), [Slider](#slider-component), [CheckBox](#checkbox-component), [Tabs](#tabs-component) ([Tab](#tab-component)), [EditBox](#editbox-component)
+[Button](#button-component), [Slider](#slider-component), [CheckBox](#checkbox-component), [Tabs](#tabs-component) ([Tab](#tab-component)), [EditBox](#editbox-component), [BarGraph](#bargraph-component)
 
 ## [Examples](#examples)
 
@@ -356,6 +356,8 @@ _Translated by key_
 
 `box_size`: **float** (default: 24)
 
+`color_checked`: #FFAABB | #FFAABBCC
+
 `value`: **string**
 
 _optional value that will be sent with internal events_
@@ -445,6 +447,30 @@ _Image path (see [sprite](#sprite-widget)) for src descriptions_
 `text`: **string**
 
 _Initial text content_
+
+## BarGraph component
+
+### `<BarGraph>`
+
+### A bar graph widget
+
+#### Parameters
+
+`limit_min`: **float**
+
+_Minimum limit value_
+
+`limit_max`: **float**
+
+_Maximum limit value_
+
+`unit`: **string** (default: "")
+
+_Unit type, for example "%" or "ms"_
+
+`capacity`: **int** (default: 50)
+
+_Value count_
 
 ---
 

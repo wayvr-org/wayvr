@@ -5,7 +5,6 @@ use crate::{
 	util::{
 		cached_fetcher::{self, CoverArt},
 		steam_utils::{self, AppID, AppManifest},
-		various::AsyncExecutor,
 	},
 	views::game_cover,
 };
@@ -19,6 +18,7 @@ use wgui::{
 	task::Tasks,
 	widget::{ConstructEssentials, label::WidgetLabel},
 };
+use wlx_common::async_executor::AsyncExecutor;
 
 #[derive(Clone)]
 enum Task {

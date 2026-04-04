@@ -83,9 +83,6 @@ impl PlayspaceMover {
             let offset = (space_transform.transform_vector3a(app.input_state.hmd.translation)
                 - app.input_state.hmd.translation)
                 * -1.0;
-            let mut overlay_transform = Affine3A::from_rotation_y(-rel_y);
-
-            overlay_transform.translation = offset;
             space_transform.translation = offset;
 
             data.pose *= space_transform;
@@ -176,6 +173,14 @@ impl PlayspaceMover {
                     log::info!("Start space drag");
                     return;
                 }
+            }
+        }
+
+        for pointer in &app.input_state.pointers {
+            if pointer.now.space_reset && !pointer.before.space_reset {
+                self.reset_offset(chaperone_mgr, &app.input_state);
+                log::info!("Space reset");
+                return;
             }
         }
     }

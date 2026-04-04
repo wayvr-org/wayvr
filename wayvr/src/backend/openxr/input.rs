@@ -272,7 +272,7 @@ impl OpenXrInputSource {
     }
 
     pub fn update_devices(app: &mut AppState) -> bool {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return false; // monado not available
         };
 
@@ -297,7 +297,7 @@ impl OpenXrInputSource {
         let mut seen = Vec::<u32>::with_capacity(32);
 
         for (mnd_role, wlx_role) in roles {
-            let device = monado.device_from_role(mnd_role);
+            let device = monado.ipc.device_from_role(mnd_role);
             if let Ok(mut device) = device
                 && !seen.contains(&device.index)
             {
@@ -305,7 +305,7 @@ impl OpenXrInputSource {
                 Self::update_device_battery_status(&mut device, wlx_role, &mut app.input_state);
             }
         }
-        if let Ok(devices) = monado.devices() {
+        if let Ok(devices) = monado.ipc.devices() {
             for mut device in devices {
                 if !seen.contains(&device.index) {
                     let role = if device.name_id >= 4 && device.name_id <= 8 {
@@ -719,7 +719,7 @@ fn suggest_bindings(instance: &xr::Instance, hands: &[&OpenXrHandSource; 3]) {
             log::debug!(
                 "Bindings for {} bound successfully.",
                 &profile.profile[22..]
-            )
+            );
         }
     }
 }

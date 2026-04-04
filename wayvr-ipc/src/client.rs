@@ -223,13 +223,12 @@ impl WayVRClient {
 				);
 			}
 
-			if let PacketServer::WvrStateChanged(_) = &packet {
-				if let Some(on_signal) = &mut client.on_signal {
-					if (*on_signal)(&packet) {
-						// Signal consumed
-						return Ok(());
-					}
-				}
+			if let PacketServer::WvrStateChanged(_) = &packet
+				&& let Some(on_signal) = &mut client.on_signal
+				&& (*on_signal)(&packet)
+			{
+				// Signal consumed
+				return Ok(());
 			}
 
 			// queue packet to read if it contains a serial response
@@ -415,7 +414,10 @@ impl WayVRClient {
 		Ok(())
 	}
 
-	pub async fn fn_wlx_switch_set(client: WayVRClientMutex, set: Option<usize>) -> anyhow::Result<()> {
+	pub async fn fn_wlx_switch_set(
+		client: WayVRClientMutex,
+		set: Option<usize>,
+	) -> anyhow::Result<()> {
 		send_only!(client, &PacketClient::WlxSwitchSet(set));
 		Ok(())
 	}

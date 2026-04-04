@@ -63,6 +63,8 @@ pub struct DashInterfaceEmulated {
 	general_config: GeneralConfig,
 	monado_clients: Vec<dash_interface::MonadoClient>,
 	brightness: f32,
+	debug_frame_id: u64,
+	debug_counter: u64,
 }
 
 impl DashInterfaceEmulated {
@@ -86,6 +88,7 @@ impl DashInterfaceEmulated {
 
 		let monado_clients = vec![
 			dash_interface::MonadoClient {
+				id: 1,
 				name: String::from("The Best VR Game 3000"),
 				is_active: true,
 				is_focused: true,
@@ -95,6 +98,7 @@ impl DashInterfaceEmulated {
 				is_visible: true,
 			},
 			dash_interface::MonadoClient {
+				id: 2,
 				name: String::from("Second app"),
 				is_active: true,
 				is_focused: false,
@@ -104,6 +108,7 @@ impl DashInterfaceEmulated {
 				is_visible: true,
 			},
 			dash_interface::MonadoClient {
+				id: 3,
 				name: String::from("Third app"),
 				is_active: true,
 				is_focused: false,
@@ -121,6 +126,8 @@ impl DashInterfaceEmulated {
 			general_config,
 			monado_clients,
 			brightness: 1.0,
+			debug_counter: 0,
+			debug_frame_id: 0,
 		}
 	}
 }
@@ -229,7 +236,11 @@ impl DashInterface<()> for DashInterfaceEmulated {
 
 	fn toggle_dashboard(&mut self, _data: &mut ()) {}
 
-	fn monado_client_list(&mut self, _data: &mut ()) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
+	fn monado_client_list(
+		&mut self,
+		_data: &mut (),
+		_filtered: bool,
+	) -> anyhow::Result<Vec<dash_interface::MonadoClient>> {
 		Ok(self.monado_clients.clone())
 	}
 
@@ -255,5 +266,33 @@ impl DashInterface<()> for DashInterfaceEmulated {
 	fn monado_brightness_set(&mut self, _: &mut (), brightness: f32) -> Option<()> {
 		self.brightness = brightness;
 		Some(())
+	}
+
+	fn monado_metrics_set_enabled(&mut self, _: &mut (), _enabled: bool) -> bool {
+		true
+	}
+
+	fn monado_metrics_dump_session_frames(&mut self, _: &mut ()) -> Vec<dash_interface::MonadoDumpSessionFrame> {
+		// simulate """""typical""""" wired hmd timing graphs
+		self.debug_frame_id += 1;
+		self.debug_counter ^= self.debug_frame_id * 383;
+		self.debug_counter ^= 0xdeadbeefbaddcafe;
+		self.debug_counter >>= 1;
+		vec![dash_interface::MonadoDumpSessionFrame {
+			session_id: 123,
+			frame_id: self.debug_frame_id as _,
+			predicted_frame_time_ns: (((self.debug_frame_id) % 15) * 1000 * 1000) as _,
+			predicted_wake_up_time_ns: (((self.debug_frame_id * 2) % 16) * 1000 * 1000) as _,
+			predicted_gpu_done_time_ns: (((self.debug_frame_id * 3) % 17) * 1000 * 1000) as _,
+			predicted_display_time_ns: (((self.debug_frame_id * 4) % 14) * 1000 * 1000) as _,
+			predicted_display_period_ns: (((self.debug_frame_id * 5) % 13) * 1000 * 1000) as _,
+			display_time_ns: (((self.debug_frame_id * 7) % 12) * 1000 * 1000) as _,
+			when_predicted_ns: (((self.debug_frame_id * 53) % 11) * 1000 * 1000) as _,
+			when_wait_woke_ns: (((self.debug_frame_id * 23) % 10) * 1000 * 1000) as _,
+			when_begin_ns: (((self.debug_frame_id * 13) % 9) * 1000 * 1000) as _,
+			when_delivered_ns: (((self.debug_frame_id * 11) % 8) * 1000 * 1000) as _,
+			when_gpu_done_ns: (((self.debug_frame_id * 12) % 7) * 1000 * 1000) as _,
+			discarded: self.debug_frame_id.is_multiple_of(5),
+		}]
 	}
 }

@@ -11,7 +11,6 @@ use wgui::{
         button::ComponentButton, checkbox::ComponentCheckbox, radio_group::ComponentRadioGroup,
         slider::ComponentSlider,
     },
-    drawing,
     event::{
         CallbackDataCommon, Event as WguiEvent, EventAlterables, EventCallback, EventListenerID,
         EventListenerKind, InternalStateChangeEvent, MouseButtonEvent, MouseButtonIndex,
@@ -54,8 +53,6 @@ pub mod overlay_list;
 pub mod set_list;
 
 const DEFAULT_MAX_SIZE: f32 = 2048.0;
-
-const COLOR_ERR: drawing::Color = drawing::Color::new(1., 0., 1., 1.);
 
 pub type OnNotifyFunc<S> =
     Box<dyn Fn(&mut GuiPanel<S>, &mut AppState, OverlayEventData) -> anyhow::Result<()>>;
@@ -449,7 +446,7 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
         self.interaction_transform
     }
     fn get_attrib(&self, attrib: BackendAttrib) -> Option<BackendAttribValue> {
-        self.extra_attribs.get(&attrib).cloned()
+        self.extra_attribs.get(attrib).cloned()
     }
     fn set_attrib(&mut self, _app: &mut AppState, _value: BackendAttribValue) -> bool {
         false
@@ -459,22 +456,22 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
 fn log_missing_attrib(parser_state: &ParserState, tag_name: &str, attrib: &str) {
     log::warn!(
         "{:?}: <{tag_name}> is missing \"{attrib}\"",
-        parser_state.path.get_path_buf()
-    )
+        parser_state.path.get_path_buf().display()
+    );
 }
 
 fn log_invalid_attrib(parser_state: &ParserState, tag_name: &str, attrib: &str, value: &str) {
     log::warn!(
         "{:?}: <{tag_name}> value for \"{attrib}\" is invalid: {value}",
-        parser_state.path.get_path_buf()
-    )
+        parser_state.path.get_path_buf().display()
+    );
 }
 
 fn log_cmd_missing_arg(parser_state: &ParserState, tag_name: &str, attrib: &str, command: &str) {
     log::warn!(
         "{:?}: <{tag_name}> \"{attrib}\": \"{command}\" has missing arguments",
-        parser_state.path.get_path_buf()
-    )
+        parser_state.path.get_path_buf().display()
+    );
 }
 
 fn log_cmd_invalid_arg(
@@ -486,8 +483,8 @@ fn log_cmd_invalid_arg(
 ) {
     log::warn!(
         "{:?}: <{tag_name}> \"{attrib}\": \"{command}\" has invalid argument: {arg}",
-        parser_state.path.get_path_buf()
-    )
+        parser_state.path.get_path_buf().display()
+    );
 }
 
 pub fn apply_custom_command<T>(
@@ -600,7 +597,7 @@ pub fn apply_custom_command<T>(
                 .parser_state
                 .fetch_component_as::<ComponentRadioGroup>(element)
             {
-                radio.set_value(&mut com, &value_str)?;
+                radio.set_value(&mut com, value_str)?;
             }
         }
         ModifyPanelCommand::GetValue => todo!(),

@@ -9,6 +9,7 @@ use wgui::{
     drawing, font_config::WguiFontConfig, gfx::WGfx, globals::WguiGlobals, parser::parse_color_hex,
     renderer_vk::context::SharedContext as WSharedContext,
 };
+use wlx_common::async_executor::AsyncExecutor;
 use wlx_common::locale::WayVRLangProvider;
 use wlx_common::{
     audio,
@@ -18,7 +19,10 @@ use wlx_common::{
     overlays::{ToastDisplayMethod, ToastTopic},
 };
 
+#[cfg(feature = "openxr")]
+use crate::backend;
 use crate::backend::wayvr::WvrServerState;
+
 #[cfg(feature = "osc")]
 use crate::subsystem::osc::OscSender;
 
@@ -34,6 +38,7 @@ use crate::{
 pub struct AppState {
     pub session: AppSession,
     pub tasks: TaskContainer,
+    pub executor: AsyncExecutor,
 
     pub gfx: Arc<WGfx>,
     pub gfx_extras: WGfxExtras,
@@ -67,7 +72,7 @@ pub struct AppState {
     pub wvr_server: Option<WvrServerState>,
 
     #[cfg(feature = "openxr")]
-    pub monado: Option<libmonado::Monado>,
+    pub monado_state: Option<backend::openxr::monado_state::MonadoState>,
 }
 
 #[allow(unused_mut)]
@@ -98,7 +103,7 @@ impl AppState {
         let mut audio_sample_player = audio::SamplePlayer::new();
         audio_sample_player.register_sample(
             "key_click",
-            audio::AudioSample::from_mp3(&*audio::AudioSample::bytes_from_config_or_default(
+            audio::AudioSample::from_mp3(&audio::AudioSample::bytes_from_config_or_default(
                 "sound/key_click.mp3",
                 include_bytes!("res/key_click.mp3"),
             ))?,
@@ -106,9 +111,17 @@ impl AppState {
 
         audio_sample_player.register_sample(
             "toast",
-            audio::AudioSample::from_mp3(&*audio::AudioSample::bytes_from_config_or_default(
+            audio::AudioSample::from_mp3(&audio::AudioSample::bytes_from_config_or_default(
                 "sound/toast.mp3",
                 include_bytes!("res/toast.mp3"),
+            ))?,
+        )?;
+
+        audio_sample_player.register_sample(
+            "fix_floor",
+            audio::AudioSample::from_mp3(&audio::AudioSample::bytes_from_config_or_default(
+                "sound/fix_floor.mp3",
+                include_bytes!("res/fix_floor.mp3"),
             ))?,
         )?;
 
@@ -144,9 +157,12 @@ impl AppState {
 
         let lang_provider = WayVRLangProvider::from_config(&session.config);
 
+        let executor = Rc::new(smol::LocalExecutor::new());
+
         Ok(Self {
             session,
             tasks,
+            executor,
             gfx,
             gfx_extras,
             hid_provider,
@@ -176,17 +192,25 @@ impl AppState {
             wvr_server,
 
             #[cfg(feature = "openxr")]
-            monado: None,
+            monado_state: None,
         })
     }
 
     #[cfg(feature = "openxr")]
-    pub fn monado_init(&mut self) {
+    pub fn monado_state_init(&mut self) {
+        use crate::backend::openxr::monado_state::MonadoState;
+
         log::debug!("Connecting to Monado IPC");
-        self.monado = None; // stop connection first
-        self.monado = libmonado::Monado::auto_connect()
-            .map_err(|e| log::warn!("Will not use libmonado: {e}"))
-            .ok();
+        self.monado_state = None; // stop connection first
+
+        match MonadoState::new() {
+            Ok(m) => {
+                self.monado_state = Some(m);
+            }
+            Err(e) => {
+                log::error!("Will not use libmonado: {e:?}");
+            }
+        }
     }
 }
 
@@ -223,5 +247,6 @@ impl AppSession {
 
 pub struct ScreenMeta {
     pub name: Arc<str>,
+    #[allow(dead_code)]
     pub native_handle: u32,
 }

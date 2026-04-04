@@ -161,5 +161,6 @@
   "PROCESS": {
     "STOP": "Detener",
     "FORCE_KILL": "Forzar cierre"
-  }
+  },
+  "DEBUG_INFO": "Información de depuración"
 }

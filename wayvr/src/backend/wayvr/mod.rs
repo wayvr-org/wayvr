@@ -28,10 +28,7 @@ use smithay::{
         },
         shell::{
             kde::decoration::KdeDecorationState,
-            xdg::{
-                SurfaceCachedState, ToplevelSurface, XdgShellState, XdgToplevelSurfaceData,
-                decoration::XdgDecorationState,
-            },
+            xdg::{SurfaceCachedState, ToplevelSurface, XdgShellState, XdgToplevelSurfaceData},
         },
         shm::ShmState,
     },
@@ -43,7 +40,6 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use time::get_millis;
 use vulkano::image::view::ImageView;
 use wayvr_ipc::{packet_client::PositionMode, packet_server};
 use wgui::gfx::WGfx;
@@ -68,8 +64,6 @@ use crate::{
     windowing::{OverlayID, OverlaySelector},
 };
 
-const STR_INVALID_HANDLE_DISP: &str = "Invalid display handle";
-
 #[derive(Debug, Clone)]
 pub struct WaylandEnv {
     pub display_num: u32,
@@ -90,6 +84,7 @@ pub struct ProcessWayVREnv {
 
 #[derive(Clone)]
 pub struct ExternalProcessRequest {
+    #[allow(dead_code)]
     pub env: ProcessWayVREnv,
     pub client: wayland_server::Client,
     pub pid: u32,
@@ -105,23 +100,7 @@ pub enum WayVRTask {
     CloseWindowRequest(window::WindowHandle),
 }
 
-pub enum BlitMethod {
-    Dmabuf,
-    Software,
-}
-
-impl BlitMethod {
-    pub fn from_string(str: &str) -> Option<Self> {
-        match str {
-            "dmabuf" => Some(Self::Dmabuf),
-            "software" => Some(Self::Software),
-            _ => None,
-        }
-    }
-}
-
 pub struct WvrServerState {
-    time_start: u64,
     pub manager: client::WayVRCompositor,
     pub wm: window::WindowManager,
     pub processes: process::ProcessVec,
@@ -153,6 +132,9 @@ impl WvrServerState {
         gfx_extras: &WGfxExtras,
         signals: SyncEventQueue<WayVRSignal>,
     ) -> anyhow::Result<Self> {
+        const fn filter_allow_any(_: &wayland_server::Client) -> bool {
+            true
+        }
         log::info!("Initializing WayVR server");
         let display: wayland_server::Display<Application> = wayland_server::Display::new()?;
         let dh = display.handle();
@@ -164,9 +146,6 @@ impl WvrServerState {
         let primary_selection_state = PrimarySelectionState::new::<Application>(&dh);
         let mut seat = seat_state.new_wl_seat(&dh, "wayvr");
 
-        fn filter_allow_any(_: &wayland_server::Client) -> bool {
-            true
-        }
         let ext_data_control_state = selection_ext::DataControlState::new::<Application, _>(
             &dh,
             Some(&primary_selection_state),
@@ -178,7 +157,6 @@ impl WvrServerState {
             filter_allow_any,
         );
 
-        let xdg_decoration_state = XdgDecorationState::new::<Application>(&dh);
         let kde_decoration_state =
             KdeDecorationState::new::<Application>(&dh, kde_decoration::Mode::Server);
 
@@ -255,7 +233,6 @@ impl WvrServerState {
             primary_selection_state,
             wlr_data_control_state,
             ext_data_control_state,
-            xdg_decoration_state,
             kde_decoration_state,
             wayvr_tasks: tasks.clone(),
             redraw_requests: HashSet::new(),
@@ -263,10 +240,7 @@ impl WvrServerState {
             popup_manager: PopupManager::default(),
         };
 
-        let time_start = get_millis();
-
         Ok(Self {
-            time_start,
             manager: client::WayVRCompositor::new(state, display, seat_keyboard, seat_pointer, seat)?,
             processes: ProcessVec::new(),
             wm: window::WindowManager::new(),
@@ -341,8 +315,8 @@ impl WvrServerState {
 
                         let (min_size, max_size) = with_states(toplevel.wl_surface(), |state| {
                             let mut guard = state.cached_state.get::<SurfaceCachedState>();
-                            let mut min_size = guard.current().min_size;
-                            let mut max_size = guard.current().max_size;
+                            let (mut min_size, mut max_size) =
+                                { (guard.current().min_size, guard.current().max_size) };
 
                             if min_size.is_empty() {
                                 min_size = Size::new(1, 1);
@@ -365,7 +339,7 @@ impl WvrServerState {
                                         size.clamp(min_size, max_size),
                                         p.pos_mode,
                                         Some(p.app_name.clone()),
-                                        p.icon.as_ref().cloned(),
+                                        p.icon.clone(),
                                         p.exec_path.ends_with("cage"),
                                     )
                                 }
@@ -396,14 +370,13 @@ impl WvrServerState {
                             let mut needs_title = true;
                             let (xdg_title, app_id): (Option<String>, Option<String>) =
                                 with_states(toplevel.wl_surface(), |states| {
-                                    states
-                                        .data_map
-                                        .get::<XdgToplevelSurfaceData>()
-                                        .map(|t| {
+                                    states.data_map.get::<XdgToplevelSurfaceData>().map_or(
+                                        (None, None),
+                                        |t| {
                                             let t = t.lock().unwrap();
                                             (t.title.clone(), t.app_id.clone())
-                                        })
-                                        .unwrap_or((None, None))
+                                        },
+                                    )
                                 });
                             if let Some(xdg_title) = xdg_title {
                                 needs_title = false;
@@ -429,7 +402,7 @@ impl WvrServerState {
                         // Fall back to identicon
                         let icon = match icon {
                             Some(icon) => icon,
-                            None => DesktopFinder::create_icon(&*title)?.into(),
+                            None => DesktopFinder::create_icon(&title)?.into(),
                         };
 
                         app.tasks.enqueue(TaskType::Overlay(OverlayTask::Create(
@@ -573,7 +546,7 @@ impl WvrServerState {
                 continue;
             }
 
-            if let Some(oid) = self.window_to_overlay.get(&hnd).cloned() {
+            if let Some(oid) = self.window_to_overlay.get(&hnd).copied() {
                 tasks.enqueue(TaskType::Overlay(OverlayTask::Drop(OverlaySelector::Id(
                     oid,
                 ))));
@@ -591,7 +564,7 @@ impl WvrServerState {
     }
 
     pub fn get_overlay_id(&self, window: window::WindowHandle) -> Option<OverlayID> {
-        self.window_to_overlay.get(&window).cloned()
+        self.window_to_overlay.get(&window).copied()
     }
 
     pub fn send_mouse_move(&mut self, handle: window::WindowHandle, x: u32, y: u32) {
@@ -656,32 +629,12 @@ impl WvrServerState {
         self.cur_modifiers = modifiers;
     }
 
-    // Check if process with given arguments already exists
-    pub fn process_query(
-        &self,
-        exec_path: &str,
-        args: &[&str],
-        _env: &[(&str, &str)],
-    ) -> Option<process::ProcessHandle> {
-        for (idx, cell) in self.processes.vec.iter().enumerate() {
-            if let Some(cell) = &cell
-                && let process::Process::Managed(process) = &cell.obj
-            {
-                if process.exec_path != exec_path || process.args != args {
-                    continue;
-                }
-                return Some(process::ProcessVec::get_handle(cell, idx));
-            }
-        }
-
-        None
-    }
-
     pub fn add_external_process(&mut self, pid: u32) -> process::ProcessHandle {
         self.processes
             .add(process::Process::External(process::ExternalProcess { pid }))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn_process(
         &mut self,
         app_name: &str,
@@ -759,16 +712,12 @@ fn generate_auth_key() -> String {
     uuid.to_string()
 }
 
-pub struct SpawnProcessResult {
-    pub auth_key: String,
-    pub child: std::process::Child,
-}
-
 struct SurfaceBufWithImageContainer {
     inner: RefCell<SurfaceBufWithImage>,
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct SurfaceBufWithImage {
     pub image: Arc<ImageView>,
     pub transform: Transform,

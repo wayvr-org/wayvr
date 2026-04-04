@@ -1,9 +1,13 @@
 use std::fmt::Debug;
 
 pub trait LogErr {
+	#[must_use]
 	fn log_err(self, additional: &str) -> Self;
+	#[must_use]
 	fn log_err_with<D: Debug>(self, additional: &D) -> Self;
+	#[must_use]
 	fn log_warn(self, additional: &str) -> Self;
+	#[must_use]
 	fn log_warn_with<D: Debug>(self, additional: &D) -> Self;
 }
 

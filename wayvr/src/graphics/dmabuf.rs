@@ -352,14 +352,10 @@ pub fn export_dmabuf_image(
     Ok(ExportedDmabufImage {
         view: ImageView::new_default(image)?,
         fd,
-        modifier: DrmModifier::from(modifier),
+        modifier,
         offset: layout.offset as _,
         stride: layout.row_pitch as _,
     })
-}
-
-fn align_to(value: u64, alignment: u64) -> u64 {
-    ((value + alignment - 1) / alignment) * alignment
 }
 
 pub(super) fn get_drm_formats(device: Arc<Device>) -> Vec<DrmFormat> {

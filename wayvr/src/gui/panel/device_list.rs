@@ -16,6 +16,7 @@ use crate::{
 pub struct DeviceList;
 
 impl DeviceList {
+    #[allow(clippy::unused_self)]
     pub fn on_notify(
         &mut self,
         app: &AppState,
@@ -25,6 +26,7 @@ impl DeviceList {
         doc_params: &ParseDocumentParams,
     ) -> anyhow::Result<bool> {
         let mut elements_changed = false;
+        #[allow(clippy::single_match)]
         match event_data {
             OverlayEventData::DevicesChanged => {
                 let devices_root = parser_state
@@ -48,7 +50,7 @@ impl DeviceList {
 
                     params.insert("idx".into(), i.to_string().into());
                     parser_state.instantiate_template(
-                        &doc_params,
+                        doc_params,
                         template,
                         layout,
                         devices_root,

@@ -123,29 +123,26 @@ impl ImageRenderer {
 	}
 
 	fn upload_image(
-		gfx: Arc<WGfx>,
+		gfx: &Arc<WGfx>,
 		res: [u32; 2],
 		img: &ImageVertexWithContent,
 	) -> anyhow::Result<Option<Arc<ImageView>>> {
-		let raster = match RasterizedCustomGlyph::try_from(&RasterizeCustomGlyphRequest {
+		let Some(raster) = RasterizedCustomGlyph::try_from(&RasterizeCustomGlyphRequest {
 			data: img.content.clone(),
 			width: res[0] as _,
 			height: res[1] as _,
 			x_bin: SubpixelBin::Zero,
 			y_bin: SubpixelBin::Zero,
 			scale: 1.0, // unused
-		}) {
-			Some(x) => x,
-			None => {
-				log::error!("Unable to rasterize custom image");
-				return Ok(None);
-			}
+		}) else {
+			log::error!("Unable to rasterize custom image");
+			return Ok(None);
 		};
 		let mut cmd_buf = gfx.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
 		let image = cmd_buf.upload_image(
-			raster.width as _,
-			raster.height as _,
+			raster.width.into(),
+			raster.height.into(),
 			Format::R8G8B8A8_UNORM,
 			&raster.data,
 		)?;
@@ -166,59 +163,56 @@ impl ImageRenderer {
 		let res = viewport.resolution();
 		self.model_buffer.upload(gfx)?;
 
-		for img in self.image_verts.iter() {
-			let pass = match self.cached_passes.get_mut(&img.content_key) {
-				Some(x) => {
-					if x.content_id != img.content.id || x.res != res {
-						// image changed
-						let Some(image_view) = Self::upload_image(self.pipeline.gfx.clone(), res, img)? else {
-							continue;
-						};
-
-						x.inner
-							.update_sampler(2, image_view, self.pipeline.gfx.texture_filter)?;
-					}
-
-					x
-				}
-				None => {
-					let vert_buffer = self.pipeline.gfx.empty_buffer(
-						BufferUsage::VERTEX_BUFFER | BufferUsage::TRANSFER_DST,
-						(std::mem::size_of::<ImageVertex>()) as _,
-					)?;
-
-					let Some(image_view) = Self::upload_image(self.pipeline.gfx.clone(), res, img)? else {
+		for img in &self.image_verts {
+			let pass = if let Some(x) = self.cached_passes.get_mut(&img.content_key) {
+				if x.content_id != img.content.id || x.res != res {
+					// image changed
+					let Some(image_view) = Self::upload_image(&self.pipeline.gfx, res, img)? else {
 						continue;
 					};
 
-					let set0 = viewport.get_image_descriptor(&self.pipeline);
-					let set1 = self.model_buffer.get_image_descriptor(&self.pipeline);
-					let set2 = self
-						.pipeline
-						.inner
-						.uniform_sampler(2, image_view, self.pipeline.gfx.texture_filter)?;
-
-					let pass = self.pipeline.inner.create_pass(
-						[res[0] as _, res[1] as _],
-						[0.0, 0.0],
-						vert_buffer.clone(),
-						0..4,
-						0..1,
-						vec![set0, set1, set2],
-						vk_scissor,
-					)?;
-
-					self.cached_passes.insert(
-						img.content_key,
-						CachedPass {
-							content_id: img.content.id,
-							vert_buffer,
-							inner: pass,
-							res,
-						},
-					);
-					self.cached_passes.get_mut(&img.content_key).unwrap()
+					x.inner
+						.update_sampler(2, image_view, self.pipeline.gfx.texture_filter)?;
 				}
+
+				x
+			} else {
+				let vert_buffer = self.pipeline.gfx.empty_buffer(
+					BufferUsage::VERTEX_BUFFER | BufferUsage::TRANSFER_DST,
+					(std::mem::size_of::<ImageVertex>()) as _,
+				)?;
+
+				let Some(image_view) = Self::upload_image(&self.pipeline.gfx, res, img)? else {
+					continue;
+				};
+
+				let set0 = viewport.get_image_descriptor(&self.pipeline);
+				let set1 = self.model_buffer.get_image_descriptor(&self.pipeline);
+				let set2 = self
+					.pipeline
+					.inner
+					.uniform_sampler(2, image_view, self.pipeline.gfx.texture_filter)?;
+
+				let pass = self.pipeline.inner.create_pass(
+					[res[0] as _, res[1] as _],
+					[0.0, 0.0],
+					vert_buffer.clone(),
+					0..4,
+					0..1,
+					vec![set0, set1, set2],
+					vk_scissor,
+				)?;
+
+				self.cached_passes.insert(
+					img.content_key,
+					CachedPass {
+						content_id: img.content.id,
+						vert_buffer,
+						inner: pass,
+						res,
+					},
+				);
+				self.cached_passes.get_mut(&img.content_key).unwrap()
 			};
 
 			pass.vert_buffer.write()?[0..1].clone_from_slice(&[img.vert]);

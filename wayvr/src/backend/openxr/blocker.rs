@@ -24,7 +24,7 @@ impl InputBlocker {
     }
 
     pub fn update(&mut self, app: &mut AppState) {
-        let Some(monado) = &mut app.monado else {
+        let Some(monado) = &mut app.monado_state else {
             return; // monado not available
         };
 
@@ -50,7 +50,7 @@ impl InputBlocker {
             } else {
                 trace!("Unblocking input");
             }
-            self.block_inputs(monado, should_block_inputs, should_block_poses);
+            self.block_inputs(&mut monado.ipc, should_block_inputs, should_block_poses);
         }
 
         self.inputs_blocked_last_frame = should_block_inputs;

@@ -14,7 +14,6 @@ pub trait SpriteTabKey {
 }
 
 struct SpriteTabButtonState<S> {
-    name: &'static str,
     sprite: CustomGlyphData,
     component: Rc<ComponentButton>,
     state: S,
@@ -69,7 +68,6 @@ where
             buttons.insert(
                 *name,
                 Rc::new(SpriteTabButtonState {
-                    name,
                     sprite,
                     component,
                     state,

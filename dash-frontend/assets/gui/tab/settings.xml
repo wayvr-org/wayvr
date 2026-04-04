@@ -54,7 +54,9 @@
         <Tab name="autostart_apps" translation="APP_SETTINGS.AUTOSTART_APPS" sprite_src_builtin="dashboard/apps.svg" />
         <Tab name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="dashboard/cpu.svg" />
       </Tabs>
-      <div flex_wrap="wrap" justify_content="stretch" gap="4" id="settings_root" width="100%" />
+      <div flex_wrap="wrap" justify_content="stretch" gap="4" id="settings_root" width="100%">
+        <!-- filled-in at runtime -->
+      </div>
     </div>
   </elements>
 </layout>

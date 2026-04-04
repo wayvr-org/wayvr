@@ -15,6 +15,7 @@ use wayvr_ipc::{
     packet_server::{self, PacketServer, WlxInputStatePointer},
 };
 
+#[allow(dead_code)] // not used for now, wayvr accepts any client
 pub struct AuthInfo {
     pub client_name: String,
     pub protocol_version: u32, // client protocol version
@@ -75,6 +76,7 @@ fn read_payload(conn: &mut local_socket::Stream, size: u32) -> Option<Payload> {
 
 pub struct TickParams<'a> {
     pub wvr_server: &'a mut WvrServerState,
+    #[allow(dead_code)]
     pub tasks: &'a mut Vec<wayvr::TickTask>,
     pub signals: &'a SyncEventQueue<WayVRSignal>,
     pub input_state: &'a InputState,

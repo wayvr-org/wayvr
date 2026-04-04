@@ -28,24 +28,20 @@ use {ash::vk, std::os::raw::c_void};
 
 use vulkano::{
     self, VulkanObject,
-    buffer::{Buffer, BufferContents, IndexBuffer, Subbuffer},
+    buffer::{Buffer, BufferContents, Subbuffer},
     device::{
         DeviceCreateInfo, DeviceExtensions, DeviceFeatures, Queue, QueueCreateInfo, QueueFlags,
         physical::{PhysicalDevice, PhysicalDeviceType},
     },
     format::Format,
     instance::{Instance, InstanceCreateInfo, InstanceExtensions},
-    pipeline::graphics::{
-        color_blend::{AttachmentBlend, BlendFactor, BlendOp},
-        vertex_input::Vertex,
-    },
+    pipeline::graphics::vertex_input::Vertex,
     shader::ShaderModule,
 };
 
 use dmabuf::get_drm_formats;
 
 pub type Vert2Buf = Subbuffer<[Vert2Uv]>;
-pub type IndexBuf = IndexBuffer;
 
 #[repr(C)]
 #[derive(BufferContents, Vertex, Copy, Clone, Debug)]
@@ -55,17 +51,6 @@ pub struct Vert2Uv {
     #[format(R32G32_SFLOAT)]
     pub in_uv: [f32; 2],
 }
-
-pub const INDICES: [u16; 6] = [2, 1, 0, 1, 2, 3];
-
-pub const BLEND_ALPHA: AttachmentBlend = AttachmentBlend {
-    src_color_blend_factor: BlendFactor::SrcAlpha,
-    dst_color_blend_factor: BlendFactor::OneMinusSrcAlpha,
-    color_blend_op: BlendOp::Add,
-    src_alpha_blend_factor: BlendFactor::One,
-    dst_alpha_blend_factor: BlendFactor::One,
-    alpha_blend_op: BlendOp::Max,
-};
 
 pub struct WGfxExtras {
     pub shaders: HashMap<&'static str, Arc<ShaderModule>>,
@@ -711,6 +696,7 @@ impl GpuFutures {
 
 pub trait ExtentExt {
     fn extent_f32(&self) -> [f32; 2];
+    #[allow(dead_code)]
     fn extent_vec2(&self) -> Vec2;
     fn extent_u32arr(&self) -> [u32; 2];
 }

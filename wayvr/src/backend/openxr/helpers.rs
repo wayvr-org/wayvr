@@ -5,10 +5,10 @@ use xr::OverlaySessionCreateFlagsEXTX;
 
 macro_rules! next_chain_insert {
     ($layer:expr, $payload:expr) => {{
-        let payload_ptr = $payload.as_mut() as *mut _ as *mut xr::sys::BaseInStructure;
+        let payload_ptr = std::ptr::from_mut($payload.as_mut()).cast::<xr::sys::BaseInStructure>();
         let new_elem = payload_ptr.as_mut().unwrap();
         let mut raw = $layer.into_raw();
-        new_elem.next = raw.next as _;
+        new_elem.next = raw.next.cast();
         raw.next = payload_ptr as *const _;
         raw
     }};
@@ -70,7 +70,7 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
         log::warn!("Missing XR_KHR_composition_layer_color_scale_bias extension.");
     }
 
-    let xr_mndx_system_buttons = "XR_MNDX_system_buttons".as_bytes().to_vec();
+    let xr_mndx_system_buttons = b"XR_MNDX_system_buttons".to_vec();
     if available_extensions.other.contains(&xr_mndx_system_buttons) {
         enabled_extensions.other.push(xr_mndx_system_buttons);
     }
