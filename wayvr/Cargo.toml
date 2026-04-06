@@ -83,7 +83,7 @@ sysinfo = { version = "0.37" }
 thiserror = "2.0"
 tracing = "0.1.43"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-uuid = { version = "1.19.0", features = ["fast-rng", "v4"] }
+uuid = { workspace = true }
 wayland-client = { workspace = true }
 winit = { version = "0.30.12", optional = true }
 xcb = { version = "1.6.0", features = [

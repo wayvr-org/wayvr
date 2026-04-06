@@ -5,7 +5,7 @@ use slotmap::Key;
 
 use crate::{
 	drawing::{self, PrimitiveExtent},
-	event::CallbackDataCommon,
+	event::{CallbackDataCommon, EventAlterables},
 	globals::Globals,
 	layout::WidgetID,
 	renderer_vk::text::{
@@ -49,13 +49,13 @@ impl WidgetSprite {
 		self.params.color
 	}
 
-	pub fn set_content(&mut self, common: &mut CallbackDataCommon, content: Option<CustomGlyphData>) {
+	pub fn set_content(&mut self, alterables: &mut EventAlterables, content: Option<CustomGlyphData>) {
 		if self.params.glyph_data == content {
 			return;
 		}
 
 		self.params.glyph_data = content;
-		common.mark_widget_dirty(self.id);
+		alterables.mark_dirty_and_redraw(self.id);
 	}
 
 	pub fn get_content(&self) -> Option<CustomGlyphData> {

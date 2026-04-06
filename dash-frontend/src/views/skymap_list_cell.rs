@@ -1,9 +1,11 @@
 use wgui::{
 	assets::AssetPath,
+	event::EventAlterables,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState},
-	widget::label::WidgetLabel,
+	renderer_vk::text::custom_glyph::CustomGlyphData,
+	widget::{image::WidgetImage, label::WidgetLabel},
 };
 
 use crate::util::{networking, wgui_simple};
@@ -17,6 +19,8 @@ pub struct Params<'a> {
 pub struct View {
 	#[allow(dead_code)]
 	parser_state: ParserState,
+	id_loading: WidgetID,
+	id_image_preview: WidgetID,
 }
 
 impl View {
@@ -45,12 +49,28 @@ impl View {
 			);
 		}
 
-		wgui_simple::create_loading(wgui_simple::CreateLoadingParams {
+		let id_loading = wgui_simple::create_loading(wgui_simple::CreateLoadingParams {
 			layout: par.layout,
 			parent_id: id_image_preview,
 			with_text: false,
 		})?;
 
-		Ok(Self { parser_state })
+		Ok(Self {
+			parser_state,
+			id_loading,
+			id_image_preview,
+		})
+	}
+
+	pub fn set_image(&mut self, layout: &mut Layout, content: Option<CustomGlyphData>) -> anyhow::Result<()> {
+		layout.remove_widget(self.id_loading);
+		let mut alt = EventAlterables::default();
+		{
+			let mut image_preview = layout.state.widgets.cast_as::<WidgetImage>(self.id_image_preview)?;
+			image_preview.set_content(&mut alt, content);
+		}
+		layout.process_alterables(alt)?;
+
+		Ok(())
 	}
 }
