@@ -527,9 +527,9 @@ pub fn apply_custom_command<T>(
                 .context("Could not load content from supplied path.")?;
 
                 if let Some(mut sprite) = pair.widget.get_as::<WidgetSprite>() {
-                    sprite.set_content(&mut com, Some(data));
+                    sprite.set_content(com.alterables, Some(data));
                 } else if let Some(mut image) = pair.widget.get_as::<WidgetImage>() {
-                    image.set_content(&mut com, Some(data));
+                    image.set_content(com.alterables, Some(data));
                 } else {
                     anyhow::bail!("No <sprite> or <image> with such id.");
                 }

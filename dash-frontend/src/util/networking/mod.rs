@@ -1,3 +1,5 @@
+pub mod http_client;
+pub mod image_fetch;
 pub mod skymap_catalog;
 
 // pub const WAYVR_ROOT_URL: &'static str = "https://wayvr.org";

@@ -2,9 +2,16 @@
 use serde::Deserialize;
 use wlx_common::async_executor::AsyncExecutor;
 
-use crate::util::{http_client, networking};
+use crate::util::networking::{self, WAYVR_SKYMAPS_ROOT, http_client};
 
-pub type SkymapUuid = String;
+pub type SkymapUuid = uuid::Uuid;
+
+pub enum SkymapResolution {
+	Res2k,
+	Res4k,
+	Res8k,
+	Res16k,
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct SkymapCatalogEntryFiles {
@@ -13,6 +20,30 @@ pub struct SkymapCatalogEntryFiles {
 	pub size_4k: Option<String>,  // "my_skymap_4k.png"
 	pub size_2k: String,          // we should have *at least* this
 	pub preview: String,
+}
+
+impl SkymapCatalogEntryFiles {
+	pub fn get_url_preview(&self) -> String {
+		format!("{}/files/{}", WAYVR_SKYMAPS_ROOT, self.preview)
+	}
+
+	pub fn get_filename_from_res(&self, res: SkymapResolution) -> Option<&String> {
+		match res {
+			SkymapResolution::Res2k => Some(&self.size_2k),
+			SkymapResolution::Res4k => self.size_4k.as_ref(),
+			SkymapResolution::Res8k => self.size_8k.as_ref(),
+			SkymapResolution::Res16k => self.size_16k.as_ref(),
+		}
+	}
+
+	// example result: "https://wayvr.org/skymaps/files/my_skymap_8k.png"
+	pub fn get_url_from_res(&self, res: SkymapResolution) -> Option<String> {
+		let Some(filename) = self.get_filename_from_res(res) else {
+			return None;
+		};
+
+		Some(format!("{}/files/{}", WAYVR_SKYMAPS_ROOT, filename))
+	}
 }
 
 #[derive(Clone, Debug, Deserialize)]

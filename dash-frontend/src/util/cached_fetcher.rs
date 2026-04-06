@@ -1,8 +1,7 @@
+use crate::util::{networking::http_client, steam_utils::AppID};
 use anyhow::Context;
 use serde::Deserialize;
 use wlx_common::{async_executor::AsyncExecutor, cache_dir};
-
-use crate::util::{http_client, steam_utils::AppID};
 
 pub struct CoverArt {
 	// can be empty in case if data couldn't be fetched (use a fallback image then)

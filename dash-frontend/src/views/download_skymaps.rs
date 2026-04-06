@@ -4,6 +4,7 @@ use wgui::{
 	i18n::Translation,
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, ParseDocumentParams},
+	renderer_vk::text::custom_glyph::CustomGlyphData,
 	task::Tasks,
 };
 use wlx_common::async_executor::AsyncExecutor;
@@ -11,7 +12,10 @@ use wlx_common::async_executor::AsyncExecutor;
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
 	util::{
-		networking::{self},
+		networking::{
+			self,
+			skymap_catalog::{SkymapCatalogEntry, SkymapUuid},
+		},
 		popup_manager::{MountPopupOnceParams, PopupHolder},
 		wgui_simple,
 	},
@@ -28,6 +32,12 @@ pub struct Params<'a> {
 
 enum Task {
 	SetSkymapCatalog(anyhow::Result<networking::skymap_catalog::SkymapCatalog>),
+	SetSkymapPreview((SkymapUuid, Option<CustomGlyphData>)),
+}
+
+struct MountedCell {
+	skymap_uuid: SkymapUuid,
+	view: views::skymap_list_cell::View,
 }
 
 pub struct View {
@@ -36,7 +46,8 @@ pub struct View {
 	id_loading: WidgetID,
 	globals: WguiGlobals,
 	tasks: Tasks<Task>,
-	mounted_cells: Vec<views::skymap_list_cell::View>,
+	mounted_cells: Vec<MountedCell>,
+	executor: AsyncExecutor,
 }
 
 impl View {
@@ -61,7 +72,20 @@ impl View {
 			tasks,
 			globals: par.globals.clone(),
 			mounted_cells: Vec::new(),
+			executor: par.executor.clone(),
 		})
+	}
+
+	async fn request_skymap_preview(
+		globals: WguiGlobals,
+		executor: AsyncExecutor,
+		entry: SkymapCatalogEntry,
+		tasks: Tasks<Task>,
+	) {
+		let glyph_data = networking::image_fetch::fetch_to_glyph_data(&globals, &executor, &entry.files.get_url_preview())
+			.await
+			.ok();
+		tasks.push(Task::SetSkymapPreview((entry.uuid, glyph_data)));
 	}
 
 	fn mount_catalog(
@@ -80,12 +104,23 @@ impl View {
 		let id_list = parser_state.fetch_widget(&layout.state, "list")?.id;
 
 		for entry in catalog.entries {
-			let view_cell = views::skymap_list_cell::View::new(views::skymap_list_cell::Params {
-				id_parent: id_list,
-				layout,
-				entry,
-			})?;
-			self.mounted_cells.push(view_cell);
+			let task = View::request_skymap_preview(
+				self.globals.clone(),
+				self.executor.clone(),
+				entry.clone(),
+				self.tasks.clone(),
+			);
+
+			self.mounted_cells.push(MountedCell {
+				skymap_uuid: entry.uuid.clone(),
+				view: views::skymap_list_cell::View::new(views::skymap_list_cell::Params {
+					id_parent: id_list,
+					layout,
+					entry,
+				})?,
+			});
+
+			self.executor.spawn(task).detach();
 		}
 
 		Ok(())
@@ -105,6 +140,15 @@ impl View {
 							self.id_parent,
 							format!("Failed to fetch skymap catalog: {:?}", e),
 						)?,
+					}
+				}
+				Task::SetSkymapPreview((skymap_uuid, glyph_data)) => {
+					if let Some(cell) = &mut self
+						.mounted_cells
+						.iter_mut()
+						.find(|cell| cell.skymap_uuid == skymap_uuid)
+					{
+						cell.view.set_image(layout, glyph_data)?;
 					}
 				}
 			}

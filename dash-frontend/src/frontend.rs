@@ -393,7 +393,7 @@ impl<T: 'static> Frontend<T> {
 				.widgets
 				.cast_as::<WidgetSprite>(self.widgets.id_sprite_titlebar_icon)?;
 			sprite.set_content(
-				&mut common,
+				common.alterables,
 				Some(CustomGlyphData::from_assets(&self.globals, AssetPath::BuiltIn(icon))?),
 			);
 		}

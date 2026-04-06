@@ -1,6 +1,6 @@
 <layout>
   <elements>
-    <div id="list" gap="8" flex_wrap="wrap">
+    <div id="list" gap="8" flex_wrap="wrap" align_self="baseline">
       <!-- filled-in at runtime -->
     </div>
   </elements>

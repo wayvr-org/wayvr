@@ -4,7 +4,7 @@ use slotmap::Key;
 
 use crate::{
 	drawing::{self, ImagePrimitive, PrimitiveExtent},
-	event::CallbackDataCommon,
+	event::EventAlterables,
 	globals::Globals,
 	layout::WidgetID,
 	renderer_vk::text::custom_glyph::CustomGlyphData,
@@ -44,13 +44,13 @@ impl WidgetImage {
 		)
 	}
 
-	pub fn set_content(&mut self, common: &mut CallbackDataCommon, content: Option<CustomGlyphData>) {
+	pub fn set_content(&mut self, alterables: &mut EventAlterables, content: Option<CustomGlyphData>) {
 		if self.params.glyph_data == content {
 			return;
 		}
 
 		self.params.glyph_data = content;
-		common.mark_widget_dirty(self.id);
+		alterables.mark_dirty_and_redraw(self.id);
 	}
 
 	pub fn get_content(&self) -> Option<CustomGlyphData> {
