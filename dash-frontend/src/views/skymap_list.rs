@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use wgui::{
 	assets::AssetPath,
 	components::button::ComponentButton,
@@ -9,12 +11,16 @@ use wgui::{
 };
 use wlx_common::{async_executor::AsyncExecutor, config_io};
 
-use crate::util::{networking, wgui_simple};
+use crate::{
+	frontend::FrontendTasks,
+	util::{popup_manager::PopupHolder, wgui_simple},
+	views,
+};
 
 #[derive(Clone)]
 enum Task {
 	DownloadSkymaps,
-	SetSkymapCatalog(Result<networking::skymap_catalog::SkymapCatalog, String>),
+	ClosePopupDownloadSkymaps,
 	Refresh,
 }
 
@@ -22,6 +28,11 @@ pub struct Params<'a> {
 	pub globals: WguiGlobals,
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
+	pub frontend_tasks: &'a FrontendTasks,
+}
+
+pub struct State {
+	popup_download_skymaps: Option<PopupHolder<views::download_skymaps::View>>,
 }
 
 pub struct View {
@@ -29,6 +40,9 @@ pub struct View {
 	parser_state: ParserState,
 	tasks: Tasks<Task>,
 	list_parent: WidgetID,
+	frontend_tasks: FrontendTasks,
+	globals: WguiGlobals,
+	state: Rc<RefCell<State>>,
 }
 
 impl View {
@@ -55,14 +69,28 @@ impl View {
 			Task::Refresh,
 		);
 
+		let state = Rc::new(RefCell::new(State {
+			popup_download_skymaps: None,
+		}));
+
 		Ok(Self {
 			parser_state,
 			tasks,
 			list_parent,
+			frontend_tasks: params.frontend_tasks.clone(),
+			state,
+			globals: params.globals.clone(),
 		})
 	}
 
 	pub fn update(&mut self, layout: &mut Layout, executor: &AsyncExecutor) -> anyhow::Result<()> {
+		{
+			let mut state = self.state.borrow_mut();
+			if let Some(popup) = &mut state.popup_download_skymaps {
+				popup.1.update(layout)?;
+			}
+		}
+
 		loop {
 			let tasks = self.tasks.drain();
 			if tasks.is_empty() {
@@ -76,8 +104,8 @@ impl View {
 					Task::Refresh => {
 						self.refresh(layout)?;
 					}
-					Task::SetSkymapCatalog(skymap_catalog) => {
-						log::info!("{:?}", skymap_catalog);
+					Task::ClosePopupDownloadSkymaps => {
+						(*self.state.borrow_mut()).popup_download_skymaps = None;
 					}
 				}
 			}
@@ -86,14 +114,19 @@ impl View {
 		Ok(())
 	}
 
-	async fn skymap_catalog_request_wrapper(tasks: Tasks<Task>, executor: AsyncExecutor) {
-		let res = networking::skymap_catalog::request_catalog(&executor).await;
-		tasks.push(Task::SetSkymapCatalog(res.map_err(|e| format!("{}", e))));
-	}
-
 	fn download_skymaps(&mut self, executor: &AsyncExecutor) -> anyhow::Result<()> {
-		let fut = View::skymap_catalog_request_wrapper(self.tasks.clone(), executor.clone());
-		executor.spawn(fut).detach();
+		views::download_skymaps::mount_popup(
+			self.frontend_tasks.clone(),
+			executor.clone(),
+			self.globals.clone(),
+			self.tasks.make_callback_box(Task::ClosePopupDownloadSkymaps),
+			Box::new({
+				let state = self.state.clone();
+				move |popup| {
+					state.borrow_mut().popup_download_skymaps = Some(popup);
+				}
+			}),
+		);
 		Ok(())
 	}
 

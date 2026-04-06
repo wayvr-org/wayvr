@@ -30,6 +30,7 @@ use wlx_common::async_executor::AsyncExecutor;
 use crate::util::{
 	cached_fetcher::{self, CoverArt},
 	steam_utils::{self, AppID},
+	wgui_simple,
 };
 
 pub struct ViewCommon {
@@ -48,6 +49,7 @@ pub struct Params<'a, 'b> {
 pub struct View {
 	pub button: Rc<ComponentButton>,
 	id_image_parent: WidgetID,
+	id_loading: WidgetID,
 	app_name: String,
 	app_id: AppID,
 }
@@ -143,6 +145,8 @@ impl View {
 		layout: &mut Layout,
 		cover_art: &CoverArt,
 	) -> anyhow::Result<()> {
+		layout.remove_widget(self.id_loading);
+
 		if cover_art.compressed_image_data.is_empty() {
 			// mount placeholder
 			let img = view_common.get_placeholder_image()?.clone();
@@ -271,6 +275,12 @@ impl View {
 			rect_gradient_style(taffy::AlignSelf::End, 0.05),
 		)?;
 
+		let id_loading = wgui_simple::create_loading(wgui_simple::CreateLoadingParams {
+			layout: params.ess.layout,
+			parent_id: image_parent.id,
+			with_text: false,
+		})?;
+
 		// request cover image data from the internet or disk cache
 		params
 			.executor
@@ -286,6 +296,7 @@ impl View {
 			id_image_parent: image_parent.id,
 			app_name: params.manifest.name.clone(),
 			app_id: params.manifest.app_id.clone(),
+			id_loading,
 		})
 	}
 }

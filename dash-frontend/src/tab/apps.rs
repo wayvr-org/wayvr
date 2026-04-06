@@ -9,7 +9,6 @@ use wgui::{
 	assets::AssetPath,
 	components::button::{ButtonClickCallback, ComponentButton},
 	globals::WguiGlobals,
-	i18n::Translation,
 	layout::{WidgetID, WidgetPair},
 	parser::{Fetchable, ParseDocumentParams, ParserState},
 	task::Tasks,
@@ -17,18 +16,19 @@ use wgui::{
 use wlx_common::desktop_finder::DesktopEntry;
 
 use crate::{
-	frontend::{Frontend, FrontendTask, FrontendTasks},
+	frontend::{Frontend, FrontendTasks},
 	tab::{Tab, TabType},
-	util::popup_manager::{MountPopupParams, PopupHandle},
-	views::{self, app_launcher},
+	util::popup_manager::PopupHolder,
+	views::{self},
 };
 
+#[derive(Clone)]
 enum Task {
 	CloseLauncher,
 }
 
 struct State {
-	view_launcher: Option<(PopupHandle, views::app_launcher::View)>,
+	view_launcher: Option<PopupHolder<views::app_launcher::View>>,
 }
 
 pub struct TabApps<T> {
@@ -82,37 +82,16 @@ fn on_app_click(
 	tasks: Tasks<Task>,
 ) -> ButtonClickCallback {
 	Rc::new(move |_common, _evt| {
-		frontend_tasks.push(FrontendTask::MountPopup(MountPopupParams {
-			title: Translation::from_raw_text(&entry.app_name),
-			on_content: {
-				// this is awful
+		views::app_launcher::mount_popup(
+			frontend_tasks.clone(),
+			globals.clone(),
+			entry.clone(),
+			tasks.make_callback_box(Task::CloseLauncher),
+			Box::new({
 				let state = state.clone();
-				let entry = entry.clone();
-				let globals = globals.clone();
-				let frontend_tasks = frontend_tasks.clone();
-				let tasks = tasks.clone();
-
-				Rc::new(move |data| {
-					let on_launched = {
-						let tasks = tasks.clone();
-						Box::new(move || tasks.push(Task::CloseLauncher))
-					};
-
-					let view = app_launcher::View::new(app_launcher::Params {
-						entry: entry.clone(),
-						globals: &globals,
-						layout: data.layout,
-						parent_id: data.id_content,
-						frontend_tasks: &frontend_tasks,
-						config: data.config,
-						on_launched,
-					})?;
-
-					state.borrow_mut().view_launcher = Some((data.handle, view));
-					Ok(())
-				})
-			},
-		}));
+				move |popup| state.borrow_mut().view_launcher = Some(popup)
+			}),
+		);
 		Ok(())
 	})
 }

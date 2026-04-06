@@ -41,9 +41,16 @@ impl<TaskType: Clone + 'static> Tasks<TaskType> {
 		});
 	}
 
-	pub fn make_callback(&self, task: TaskType) -> Rc<dyn Fn()> {
+	pub fn make_callback_rc(&self, task: TaskType) -> Rc<dyn Fn()> {
 		let this = self.clone();
 		Rc::new(move || {
+			this.push(task.clone());
+		})
+	}
+
+	pub fn make_callback_box(&self, task: TaskType) -> Box<dyn Fn()> {
+		let this = self.clone();
+		Box::new(move || {
 			this.push(task.clone());
 		})
 	}

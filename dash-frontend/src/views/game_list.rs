@@ -16,13 +16,13 @@ use wgui::{
 use wlx_common::async_executor::AsyncExecutor;
 
 use crate::{
-	frontend::{FrontendTask, FrontendTasks},
+	frontend::FrontendTasks,
 	util::{
 		cached_fetcher::CoverArt,
-		popup_manager::{MountPopupParams, PopupHandle},
+		popup_manager::PopupHolder,
 		steam_utils::{self, AppID, SteamUtils},
 	},
-	views::{self, game_cover, game_launcher},
+	views::{self, game_cover},
 };
 
 #[derive(Clone)]
@@ -51,7 +51,7 @@ pub struct GameCoverCell {
 }
 
 struct State {
-	view_launcher: Option<(PopupHandle, views::game_launcher::View)>,
+	view_launcher: Option<PopupHolder<views::game_launcher::View>>,
 }
 
 pub struct View {
@@ -283,36 +283,17 @@ impl View {
 	}
 
 	fn action_app_manifest_clicked(&mut self, manifest: steam_utils::AppManifest) -> anyhow::Result<()> {
-		self.frontend_tasks.push(FrontendTask::MountPopup(MountPopupParams {
-			title: Translation::from_raw_text(&manifest.name),
-			on_content: {
+		views::game_launcher::mount_popup(
+			self.frontend_tasks.clone(),
+			self.executor.clone(),
+			self.globals.clone(),
+			manifest,
+			self.tasks.make_callback_box(Task::CloseLauncher),
+			Box::new({
 				let state = self.state.clone();
-				let tasks = self.tasks.clone();
-				let executor = self.executor.clone();
-				let globals = self.globals.clone();
-				let frontend_tasks = self.frontend_tasks.clone();
-
-				Rc::new(move |data| {
-					let on_launched = {
-						let tasks = tasks.clone();
-						Box::new(move || tasks.push(Task::CloseLauncher))
-					};
-
-					let view = game_launcher::View::new(game_launcher::Params {
-						manifest: manifest.clone(),
-						executor: executor.clone(),
-						globals: &globals,
-						layout: data.layout,
-						parent_id: data.id_content,
-						frontend_tasks: &frontend_tasks,
-						on_launched,
-					})?;
-
-					state.borrow_mut().view_launcher = Some((data.handle, view));
-					Ok(())
-				})
-			},
-		}));
+				move |popup| state.borrow_mut().view_launcher = Some(popup)
+			}),
+		);
 
 		Ok(())
 	}

@@ -43,6 +43,8 @@ pub struct PopupHandle {
 	state: Rc<RefCell<MountedPopupState>>,
 }
 
+pub type PopupHolder<ViewType> = (PopupHandle, ViewType);
+
 impl PopupHandle {
 	pub fn close(&self) {
 		self.state.borrow_mut().mounted_popup = None; // Drop will be called
@@ -65,6 +67,23 @@ pub struct PopupContentFuncData<'a> {
 pub struct MountPopupParams {
 	pub title: Translation,
 	pub on_content: Rc<dyn Fn(PopupContentFuncData) -> anyhow::Result<()>>,
+}
+
+// we need to implement Clone here, but the underlying function can be called only once.
+// on_content will be cleared after the first call
+#[derive(Clone)]
+pub struct MountPopupOnceParams {
+	title: Translation,
+	on_content: Rc<RefCell<Option<Box<dyn FnOnce(PopupContentFuncData) -> anyhow::Result<()>>>>>,
+}
+
+impl MountPopupOnceParams {
+	pub fn new(title: Translation, on_content: Box<dyn FnOnce(PopupContentFuncData) -> anyhow::Result<()>>) -> Self {
+		Self {
+			title,
+			on_content: Rc::new(RefCell::new(Some(on_content))),
+		}
+	}
 }
 
 impl Drop for MountedPopup {
@@ -116,16 +135,13 @@ impl PopupManager {
 		state.refresh_stack(alterables);
 	}
 
-	/// Mount a new popup on top of the existing popup stack.
-	/// Only the topmost popup is visible.
-	pub fn mount_popup(
-		&mut self,
-		globals: WguiGlobals,
+	fn mount_popup_prepare(
+		&self,
+		globals: &WguiGlobals,
 		layout: &mut Layout,
-		frontend_tasks: FrontendTasks,
-		params: MountPopupParams,
-		config: &GeneralConfig,
-	) -> anyhow::Result<()> {
+		frontend_tasks: &FrontendTasks,
+		popup_title: &Translation,
+	) -> anyhow::Result<(PopupHandle, WidgetID /* content widget ID */)> {
 		let doc_params = &ParseDocumentParams {
 			globals: globals.clone(),
 			path: AssetPath::BuiltIn("gui/view/popup_window.xml"),
@@ -138,7 +154,7 @@ impl PopupManager {
 
 		{
 			let mut label_title = state.fetch_widget_as::<WidgetLabel>(&layout.state, "popup_title")?;
-			label_title.set_text_simple(&mut globals.get(), params.title);
+			label_title.set_text_simple(&mut globals.get(), popup_title.clone());
 		}
 
 		let but_back = state.fetch_component_as::<ComponentButton>("but_back")?;
@@ -172,6 +188,48 @@ impl PopupManager {
 		});
 
 		frontend_tasks.push(FrontendTask::RefreshPopupManager);
+		Ok((popup_handle, id_content))
+	}
+
+	/// Mount a new popup on top of the existing popup stack (non-cloneable version).
+	/// Only the topmost popup is visible.
+	pub fn mount_popup_once(
+		&mut self,
+		globals: &WguiGlobals,
+		layout: &mut Layout,
+		frontend_tasks: &FrontendTasks,
+		params: MountPopupOnceParams,
+		config: &GeneralConfig,
+	) -> anyhow::Result<()> {
+		let mut func = params.on_content.borrow_mut();
+		let Some(on_content_func) = func.take() else {
+			anyhow::bail!("mount_popup_once called more than once");
+		};
+
+		let (popup_handle, id_content) = self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title)?;
+
+		// mount user-set popup content
+		on_content_func(PopupContentFuncData {
+			layout,
+			handle: popup_handle.clone(),
+			id_content,
+			config,
+		})?;
+
+		Ok(())
+	}
+
+	/// Mount a new popup on top of the existing popup stack.
+	/// Only the topmost popup is visible.
+	pub fn mount_popup(
+		&mut self,
+		globals: &WguiGlobals,
+		layout: &mut Layout,
+		frontend_tasks: &FrontendTasks,
+		params: MountPopupParams,
+		config: &GeneralConfig,
+	) -> anyhow::Result<()> {
+		let (popup_handle, id_content) = self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title)?;
 
 		// mount user-set popup content
 		(*params.on_content)(PopupContentFuncData {

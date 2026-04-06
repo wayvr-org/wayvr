@@ -133,16 +133,16 @@ impl Animations {
 
 			anim.pos_prev = anim.pos;
 			anim.pos = pos;
-			anim.call(state, alterables, 1.0);
 
 			if anim.last_tick {
+				anim.call(state, alterables, 1.0);
 				alterables.needs_redraw = true;
+			} else {
+				anim.ticks_remaining -= 1;
 			}
-
-			anim.ticks_remaining -= 1;
 		}
 
-		self.running_animations.retain(|anim| anim.ticks_remaining > 0);
+		self.running_animations.retain(|anim| !anim.last_tick);
 	}
 
 	pub fn process(&mut self, state: &LayoutState, alterables: &mut EventAlterables, alpha: f32) {

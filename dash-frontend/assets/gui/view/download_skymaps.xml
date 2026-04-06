@@ -1,0 +1,7 @@
+<layout>
+  <elements>
+    <div id="list" gap="8" flex_wrap="wrap">
+      <!-- filled-in at runtime -->
+    </div>
+  </elements>
+</layout>

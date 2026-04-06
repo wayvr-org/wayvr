@@ -25,7 +25,7 @@ use wlx_common::{
 };
 
 use crate::{
-	frontend::{Frontend, FrontendTask},
+	frontend::{Frontend, FrontendTask, FrontendTasks},
 	tab::{Tab, TabType, settings::macros::MacroParams},
 };
 
@@ -83,6 +83,7 @@ enum Task {
 struct SettingsMountParams<'a> {
 	mp: &'a mut MacroParams<'a>,
 	globals: &'a WguiGlobals,
+	frontend_tasks: &'a FrontendTasks,
 	parent_id: WidgetID,
 }
 
@@ -107,6 +108,7 @@ pub struct TabSettings<T> {
 
 	tasks: Tasks<Task>,
 	marker: PhantomData<T>,
+	frontend_tasks: FrontendTasks,
 }
 
 impl<T> Tab<T> for TabSettings<T> {
@@ -550,6 +552,7 @@ impl<T> TabSettings<T> {
 			mp: &mut mp,
 			globals: &globals,
 			parent_id: root,
+			frontend_tasks: &self.frontend_tasks,
 		};
 
 		match name {
@@ -611,6 +614,7 @@ impl<T> TabSettings<T> {
 			marker: PhantomData,
 			context_menu: ContextMenu::default(),
 			current_tab: None,
+			frontend_tasks: frontend.tasks.clone(),
 		})
 	}
 }

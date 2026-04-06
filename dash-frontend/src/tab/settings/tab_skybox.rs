@@ -27,6 +27,7 @@ impl State {
 			globals: par.globals.clone(),
 			layout: par.mp.layout,
 			parent_id: c,
+			frontend_tasks: par.frontend_tasks,
 		})?;
 
 		Ok(Self { skymap_list })

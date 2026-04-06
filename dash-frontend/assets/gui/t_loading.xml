@@ -1,0 +1,16 @@
+<layout>
+  <template name="LoadingWithText">
+    <div id="root" width="100%" height="100%" align_items="center" justify_content="center">
+      <div flex_direction="row" gap="8" align_items="center" >
+        <sprite id="sprite_loading" src_builtin="dashboard/loading.svg" width="32" height="32"/>
+        <label translation="LOADING" weight="bold"/>
+      </div>
+    </div>
+  </template>
+
+  <template name="LoadingWithoutText">
+    <div id="root" width="100%" height="100%" align_items="center" justify_content="center">
+      <sprite id="sprite_loading" src_builtin="dashboard/loading.svg" width="32" height="32"/>
+    </div>
+  </template>
+</layout>

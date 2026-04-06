@@ -4,6 +4,7 @@ use crate::{
 	frontend::{FrontendTask, FrontendTasks, SoundType},
 	util::{
 		cached_fetcher::{self, CoverArt},
+		popup_manager::{MountPopupOnceParams, PopupHolder},
 		steam_utils::{self, AppID, AppManifest},
 	},
 	views::game_cover,
@@ -192,4 +193,33 @@ impl View {
 
 		(*self.on_launched)();
 	}
+}
+
+pub fn mount_popup(
+	frontend_tasks: FrontendTasks,
+	executor: AsyncExecutor,
+	globals: WguiGlobals,
+	manifest: AppManifest,
+	on_close_request: Box<dyn Fn()>,
+	set_holder: Box<dyn FnOnce(PopupHolder<View>)>,
+) {
+	frontend_tasks
+		.clone()
+		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
+			Translation::from_raw_text(&manifest.name),
+			Box::new(move |data| {
+				let view = View::new(Params {
+					manifest: manifest.clone(),
+					executor: executor.clone(),
+					globals: &globals,
+					layout: data.layout,
+					parent_id: data.id_content,
+					frontend_tasks: &frontend_tasks,
+					on_launched: on_close_request,
+				})?;
+
+				set_holder((data.handle, view));
+				Ok(())
+			}),
+		)));
 }

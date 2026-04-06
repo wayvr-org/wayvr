@@ -14,7 +14,10 @@ use wgui::{
 };
 use wlx_common::{config::GeneralConfig, dash_interface::BoxDashInterface, desktop_finder::DesktopEntry};
 
-use crate::frontend::{FrontendTask, FrontendTasks, SoundType};
+use crate::{
+	frontend::{FrontendTask, FrontendTasks, SoundType},
+	util::popup_manager::{MountPopupOnceParams, PopupHolder},
+};
 
 #[derive(Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
 enum PosMode {
@@ -419,4 +422,32 @@ impl View {
 
 		[width as u32, height as u32]
 	}
+}
+
+pub fn mount_popup(
+	frontend_tasks: FrontendTasks,
+	globals: WguiGlobals,
+	entry: DesktopEntry,
+	on_close_request: Box<dyn Fn()>,
+	set_holder: Box<dyn FnOnce(PopupHolder<View>)>,
+) {
+	frontend_tasks
+		.clone()
+		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
+			Translation::from_raw_text(&entry.app_name),
+			Box::new(move |data| {
+				let view = View::new(Params {
+					entry: entry.clone(),
+					globals: &globals,
+					layout: data.layout,
+					parent_id: data.id_content,
+					frontend_tasks: &frontend_tasks,
+					config: data.config,
+					on_launched: on_close_request,
+				})?;
+
+				set_holder((data.handle, view));
+				Ok(())
+			}),
+		)));
 }
