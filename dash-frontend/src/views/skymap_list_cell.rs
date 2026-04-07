@@ -1,5 +1,6 @@
 use wgui::{
 	assets::AssetPath,
+	components::button::{ButtonClickCallback, ComponentButton},
 	event::EventAlterables,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
@@ -14,6 +15,7 @@ pub struct Params<'a> {
 	pub id_parent: WidgetID,
 	pub layout: &'a mut Layout,
 	pub entry: networking::skymap_catalog::SkymapCatalogEntry,
+	pub on_click: ButtonClickCallback,
 }
 
 pub struct View {
@@ -21,6 +23,7 @@ pub struct View {
 	parser_state: ParserState,
 	id_loading: WidgetID,
 	id_image_preview: WidgetID,
+	image: Option<CustomGlyphData>,
 }
 
 impl View {
@@ -37,6 +40,10 @@ impl View {
 		let data = parser_state.realize_template(&doc_params, "Cell", par.layout, par.id_parent, Default::default())?;
 
 		let id_image_preview = data.get_widget_id("image_preview")?;
+
+		data
+			.fetch_component_as::<ComponentButton>("button")?
+			.on_click(par.on_click);
 
 		{
 			let mut label_title = data.fetch_widget_as::<WidgetLabel>(&par.layout.state, "label_title")?;
@@ -59,6 +66,7 @@ impl View {
 			parser_state,
 			id_loading,
 			id_image_preview,
+			image: None,
 		})
 	}
 
@@ -67,10 +75,14 @@ impl View {
 		let mut alt = EventAlterables::default();
 		{
 			let mut image_preview = layout.state.widgets.cast_as::<WidgetImage>(self.id_image_preview)?;
-			image_preview.set_content(&mut alt, content);
+			image_preview.set_content(&mut alt, content.clone());
 		}
 		layout.process_alterables(alt)?;
-
+		self.image = content;
 		Ok(())
+	}
+
+	pub fn get_image(&self) -> Option<CustomGlyphData> {
+		return self.image.clone();
 	}
 }

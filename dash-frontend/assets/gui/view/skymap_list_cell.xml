@@ -2,12 +2,14 @@
 
   <!--
   ids:
+    "button"
     "image_preview"
     "label_title"
     "label_desc"
   -->
   <template name="Cell">
     <Button
+      id="button"
       padding="8"
       round="8"
       flex_direction="column"

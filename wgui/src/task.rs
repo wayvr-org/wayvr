@@ -1,4 +1,4 @@
-use crate::components::button::ComponentButton;
+use crate::components::button::{ButtonClickCallback, ComponentButton};
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
 pub struct Tasks<TaskType>(Rc<RefCell<VecDeque<TaskType>>>);
@@ -30,15 +30,18 @@ impl<TaskType: 'static> Default for Tasks<TaskType> {
 	}
 }
 
+// copyable tasks only!
 impl<TaskType: Clone + 'static> Tasks<TaskType> {
+	pub fn get_button_click_callback(&self, task: TaskType) -> ButtonClickCallback {
+		let this = self.clone();
+		Rc::new(move |_, _| {
+			this.push(task.clone());
+			Ok(())
+		})
+	}
+
 	pub fn handle_button(&self, button: &Rc<ComponentButton>, task: TaskType) {
-		button.on_click({
-			let this = self.clone();
-			Rc::new(move |_, _| {
-				this.push(task.clone());
-				Ok(())
-			})
-		});
+		button.on_click(self.get_button_click_callback(task));
 	}
 
 	pub fn make_callback_rc(&self, task: TaskType) -> Rc<dyn Fn()> {
