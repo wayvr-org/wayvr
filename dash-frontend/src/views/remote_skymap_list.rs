@@ -95,7 +95,7 @@ impl View {
 	) -> anyhow::Result<()> {
 		let doc_params = &ParseDocumentParams {
 			globals: self.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/download_skymaps.xml"),
+			path: AssetPath::BuiltIn("gui/view/remote_skymap_list.xml"),
 			extra: Default::default(),
 		};
 
