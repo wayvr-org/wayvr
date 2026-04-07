@@ -32,7 +32,7 @@ pub struct Params<'a> {
 }
 
 pub struct State {
-	popup_download_skymaps: Option<PopupHolder<views::download_skymaps::View>>,
+	popup_remote_skymap_list: Option<PopupHolder<views::remote_skymap_list::View>>,
 }
 
 pub struct View {
@@ -70,7 +70,7 @@ impl View {
 		);
 
 		let state = Rc::new(RefCell::new(State {
-			popup_download_skymaps: None,
+			popup_remote_skymap_list: None,
 		}));
 
 		Ok(Self {
@@ -86,7 +86,7 @@ impl View {
 	pub fn update(&mut self, layout: &mut Layout, executor: &AsyncExecutor) -> anyhow::Result<()> {
 		{
 			let mut state = self.state.borrow_mut();
-			if let Some(popup) = &mut state.popup_download_skymaps {
+			if let Some(popup) = &mut state.popup_remote_skymap_list {
 				popup.1.update(layout)?;
 			}
 		}
@@ -105,7 +105,7 @@ impl View {
 						self.refresh(layout)?;
 					}
 					Task::ClosePopupDownloadSkymaps => {
-						(*self.state.borrow_mut()).popup_download_skymaps = None;
+						(*self.state.borrow_mut()).popup_remote_skymap_list = None;
 					}
 				}
 			}
@@ -115,7 +115,7 @@ impl View {
 	}
 
 	fn download_skymaps(&mut self, executor: &AsyncExecutor) -> anyhow::Result<()> {
-		views::download_skymaps::mount_popup(
+		views::remote_skymap_list::mount_popup(
 			self.frontend_tasks.clone(),
 			executor.clone(),
 			self.globals.clone(),
@@ -123,7 +123,7 @@ impl View {
 			Box::new({
 				let state = self.state.clone();
 				move |popup| {
-					state.borrow_mut().popup_download_skymaps = Some(popup);
+					state.borrow_mut().popup_remote_skymap_list = Some(popup);
 				}
 			}),
 		);
