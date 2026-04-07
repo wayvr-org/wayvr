@@ -163,6 +163,9 @@ pub struct Layout {
 	sounds_to_play_once: Vec<WguiSoundType>,
 	focused_component: Option<ComponentWeak>,
 
+	// Global EventAlterables queue, always processed in update() call at the end
+	pub alterables: EventAlterables,
+
 	pub widgets_to_tick: Vec<WidgetID>,
 
 	// *Main root*
@@ -218,31 +221,11 @@ fn add_child_internal(
 	))
 }
 
-pub struct LayoutCommon<'a> {
-	alterables: EventAlterables,
-	pub layout: &'a mut Layout,
-}
-
-impl LayoutCommon<'_> {
-	pub const fn common(&mut self) -> CallbackDataCommon<'_> {
+impl Layout {
+	pub fn common(&mut self) -> CallbackDataCommon<'_> {
 		CallbackDataCommon {
 			alterables: &mut self.alterables,
-			state: &self.layout.state,
-		}
-	}
-
-	pub fn finish(self) -> anyhow::Result<()> {
-		self.layout.process_alterables(self.alterables)?;
-		Ok(())
-	}
-}
-
-impl Layout {
-	// helper function
-	pub fn start_common(&mut self) -> LayoutCommon<'_> {
-		LayoutCommon {
-			alterables: EventAlterables::default(),
-			layout: self,
+			state: &self.state,
 		}
 	}
 
@@ -596,6 +579,7 @@ impl Layout {
 			tasks: LayoutTasks::new(),
 			sounds_to_play_once: Vec::new(),
 			focused_component: None,
+			alterables: Default::default(),
 		})
 	}
 
@@ -683,10 +667,12 @@ impl Layout {
 	}
 
 	pub fn update(&mut self, params: &mut LayoutUpdateParams) -> anyhow::Result<LayoutUpdateResult> {
-		let mut alterables = EventAlterables::default();
+		// get all queued alterables and process them
+		let alterables = std::mem::take(&mut self.alterables);
+
 		self
 			.animations
-			.process(&self.state, &mut alterables, params.timestep_alpha);
+			.process(&self.state, &mut self.alterables, params.timestep_alpha);
 		self.process_alterables(alterables)?;
 		self.try_recompute_layout(params.size)?;
 
@@ -720,9 +706,7 @@ impl Layout {
 					}
 				}
 				LayoutTask::Dispatch(func) => {
-					let mut c = self.start_common();
-					func(&mut c.common())?;
-					c.finish()?;
+					func(&mut self.common())?;
 				}
 				LayoutTask::SetWidgetStyle(widget_id, style_request) => {
 					self.set_style_request(widget_id, &style_request);
@@ -740,29 +724,26 @@ impl Layout {
 	}
 
 	pub fn set_focus(&mut self, to_focus: Option<&Component>) -> anyhow::Result<()> {
-		let mut c = self.start_common();
-
-		if let Some(focused) = &c.layout.focused_component
+		if let Some(focused) = &self.focused_component
 			&& let Some(focused) = focused.upgrade()
 		{
 			// Unfocus
 			focused.on_focus_change(&mut FocusChangeData {
-				common: &mut c.common(),
+				common: &mut self.common(),
 				focused: false,
 			});
-			c.layout.focused_component = None;
+			self.focused_component = None;
 		}
 
 		if let Some(to_focus) = to_focus {
 			to_focus.0.on_focus_change(&mut FocusChangeData {
-				common: &mut c.common(),
+				common: &mut self.common(),
 				focused: true,
 			});
 
-			c.layout.focused_component = Some(to_focus.weak());
+			self.focused_component = Some(to_focus.weak());
 		}
 
-		c.finish()?;
 		Ok(())
 	}
 

@@ -280,10 +280,8 @@ impl<T: 'static> Frontend<T> {
 	}
 
 	fn update_time(&mut self, data: &mut T) -> anyhow::Result<()> {
-		let mut c = self.layout.start_common();
-		let mut common = c.common();
-
 		{
+			let mut common = self.layout.common();
 			let mut label = common
 				.state
 				.widgets
@@ -304,7 +302,6 @@ impl<T: 'static> Frontend<T> {
 			label.set_text(&mut common, Translation::from_raw_text(&text));
 		}
 
-		c.finish()?;
 		Ok(())
 	}
 
@@ -327,9 +324,7 @@ impl<T: 'static> Frontend<T> {
 	}
 
 	fn refresh_popup_manager(&mut self) -> anyhow::Result<()> {
-		let mut c = self.layout.start_common();
-		self.popup_manager.refresh(c.common().alterables);
-		c.finish()?;
+		self.popup_manager.refresh(&mut self.layout.alterables);
 		Ok(())
 	}
 
@@ -376,8 +371,7 @@ impl<T: 'static> Frontend<T> {
 	}
 
 	fn set_tab_title(&mut self, translation: &str, icon: &str) -> anyhow::Result<()> {
-		let mut c = self.layout.start_common();
-		let mut common = c.common();
+		let mut common = self.layout.common();
 
 		{
 			let mut label = common
@@ -398,7 +392,6 @@ impl<T: 'static> Frontend<T> {
 			);
 		}
 
-		c.finish()?;
 		Ok(())
 	}
 

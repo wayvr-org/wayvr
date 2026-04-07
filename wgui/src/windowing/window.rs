@@ -271,20 +271,19 @@ impl WguiWindow {
 			content.id
 		};
 
-		let mut c = params.layout.start_common();
 		if let Some(width) = params.extra.fixed_width {
-			c.common()
+			params
+				.layout
 				.alterables
 				.set_style(content_id, StyleSetRequest::Width(length(width)));
 		}
 
 		if let Some(height) = params.extra.fixed_height {
-			c.common()
+			params
+				.layout
 				.alterables
 				.set_style(content_id, StyleSetRequest::Height(length(height)));
 		}
-
-		c.finish()?;
 
 		Ok(())
 	}

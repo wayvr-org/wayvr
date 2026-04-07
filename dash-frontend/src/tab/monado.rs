@@ -281,9 +281,7 @@ impl SubtabGeneralSettings {
 		// get brightness
 		let slider_brightness = state.fetch_component_as::<ComponentSlider>("slider_brightness")?;
 		if let Some(brightness) = frontend.interface.monado_brightness_get(data) {
-			let mut c = frontend.layout.start_common();
-			slider_brightness.set_value(&mut c.common(), brightness * 100.0);
-			c.finish()?;
+			slider_brightness.set_value(&mut frontend.layout.common(), brightness * 100.0);
 
 			slider_brightness.on_value_changed({
 				let tasks = tasks.clone();

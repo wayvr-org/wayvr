@@ -25,7 +25,7 @@ use wgui::{
     animation::{Animation, AnimationEasing},
     assets::AssetPath,
     drawing::{self, Color},
-    event::{self, CallbackMetadata, EventAlterables, EventListenerKind},
+    event::{self, CallbackMetadata, EventListenerKind},
     layout::LayoutUpdateParams,
     log::LogErr,
     parser::{Fetchable, ParseDocumentParams},
@@ -444,13 +444,10 @@ pub(super) fn create_keyboard_panel(
     panel.on_notify = Some(Box::new({
         let name = "kbd";
         move |panel, app, event_data| {
-            let mut alterables = EventAlterables::default();
-
             let mut elems_changed = panel.state.overlay_list.on_notify(
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &mut alterables,
                 &doc_params,
             )?;
 
@@ -458,7 +455,6 @@ pub(super) fn create_keyboard_panel(
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &mut alterables,
                 &doc_params,
             )?;
 
@@ -536,7 +532,6 @@ pub(super) fn create_keyboard_panel(
                 panel.process_custom_elems(app);
             }
 
-            panel.layout.process_alterables(alterables)?;
             Ok(())
         }
     }));

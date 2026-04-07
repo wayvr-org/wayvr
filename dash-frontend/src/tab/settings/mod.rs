@@ -5,7 +5,6 @@ use wgui::{
 	assets::AssetPath,
 	components::tabs::ComponentTabs,
 	drawing,
-	event::{CallbackDataCommon, EventAlterables},
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
@@ -212,15 +211,10 @@ impl<T> Tab<T> for TabSettings<T> {
 				let mut s = name.splitn(5, ';');
 				(s.next(), s.next(), s.next(), s.next(), s.next())
 			} {
+			let mut common = frontend.layout.common();
 			let mut label = self
 				.state
-				.fetch_widget_as::<WidgetLabel>(&frontend.layout.state, &format!("{id}_value"))?;
-
-			let mut alterables = EventAlterables::default();
-			let mut common = CallbackDataCommon {
-				alterables: &mut alterables,
-				state: &frontend.layout.state,
-			};
+				.fetch_widget_as::<WidgetLabel>(&common.state, &format!("{id}_value"))?;
 
 			let translation = Translation {
 				text: text.into(),

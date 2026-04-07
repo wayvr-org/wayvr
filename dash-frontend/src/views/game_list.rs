@@ -233,16 +233,14 @@ impl View {
 		}
 
 		// set page text
-		let mut c = layout.start_common();
 		{
-			let mut common = c.common();
-			let mut widget = common.state.widgets.cast_as::<WidgetLabel>(self.id_label_page)?;
+			let mut c = layout.common();
+			let mut widget = c.state.widgets.cast_as::<WidgetLabel>(self.id_label_page)?;
 			widget.set_text(
-				&mut common,
+				&mut c,
 				Translation::from_raw_text_string(format!("{}/{}", self.cur_page + 1, self.page_count)),
 			);
 		}
-		c.finish()?;
 
 		fill_game_list(
 			&mut ConstructEssentials {

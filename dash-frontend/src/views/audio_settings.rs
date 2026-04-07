@@ -653,9 +653,6 @@ impl View {
 	}
 
 	fn update_button_highlights(&self, layout: &mut Layout) -> anyhow::Result<()> {
-		let mut c = layout.start_common();
-		let mut common = c.common();
-
 		let num: u8 = match &self.mode {
 			CurrentMode::Sinks => 0,
 			CurrentMode::Sources => 1,
@@ -663,20 +660,21 @@ impl View {
 			CurrentMode::CardProfileSelector(_) => 255,
 		};
 
+		let mut com = layout.common();
+
 		let mut perform = |btn_num: u8, btn: &Rc<ComponentButton>| {
 			let color = if num == btn_num {
-				common.state.theme.accent_color
+				com.state.theme.accent_color
 			} else {
-				common.state.theme.button_color
+				com.state.theme.button_color
 			};
-			btn.set_color(&mut common, color);
+			btn.set_color(&mut com, color);
 		};
 
 		perform(0, &self.btn_sinks);
 		perform(1, &self.btn_sources);
 		perform(2, &self.btn_cards);
 
-		c.finish()?;
 		Ok(())
 	}
 
@@ -801,9 +799,7 @@ impl View {
 			par,
 		)?;
 
-		let mut c = params.layout.start_common();
-		let mut common = c.common();
-
+		let mut common = params.layout.common();
 		let checkbox = data.fetch_component_as::<ComponentCheckbox>("checkbox")?;
 		let btn_mute = data.fetch_component_as::<ComponentButton>("btn_mute")?;
 		let slider = data.fetch_component_as::<ComponentSlider>("slider")?;
@@ -837,8 +833,6 @@ impl View {
 				Ok(())
 			})
 		});
-
-		c.finish()?;
 
 		Ok(())
 	}

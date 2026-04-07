@@ -4,7 +4,7 @@ use glam::{Affine3A, Quat, Vec3, vec3};
 use wgui::{
     assets::AssetPath,
     components::button::ComponentButton,
-    event::{CallbackDataCommon, EventAlterables, StyleSetRequest},
+    event::StyleSetRequest,
     parser::{Fetchable, ParseDocumentParams},
     taffy,
 };
@@ -48,9 +48,7 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     let mut panel =
         GuiPanel::new_from_template(app, watch_xml, state, NewGuiPanelParams::default())?;
 
-    let mut alterables = EventAlterables::default();
-    sets_or_overlays(&panel, app, &mut alterables);
-    panel.layout.process_alterables(alterables)?;
+    sets_or_overlays(&mut panel, app);
 
     let doc_params = ParseDocumentParams {
         globals: panel.layout.state.globals.clone(),
@@ -61,13 +59,10 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     panel.on_notify = Some(Box::new({
         let name = WATCH_NAME;
         move |panel, app, event_data| {
-            let mut alterables = EventAlterables::default();
-
             let mut elems_changed = panel.state.overlay_list.on_notify(
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &mut alterables,
                 &doc_params,
             )?;
 
@@ -75,7 +70,6 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &mut alterables,
                 &doc_params,
             )?;
 
@@ -93,16 +87,12 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
                         .parser_state
                         .fetch_component_as::<ComponentButton>("btn_edit_mode")
                     {
-                        let mut com = CallbackDataCommon {
-                            alterables: &mut alterables,
-                            state: &panel.layout.state,
-                        };
-                        btn_edit_mode.set_sticky_state(&mut com, edit_mode);
+                        btn_edit_mode.set_sticky_state(&mut panel.layout.common(), edit_mode);
                     }
                 }
                 OverlayEventData::SettingsChanged => {
                     panel.layout.mark_redraw();
-                    sets_or_overlays(panel, app, &mut alterables);
+                    sets_or_overlays(panel, app);
 
                     if app.session.config.clock_12h != panel.state.clock_12h {
                         panel.state.clock_12h = app.session.config.clock_12h;
@@ -135,7 +125,6 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
                 panel.process_custom_elems(app);
             }
 
-            panel.layout.process_alterables(alterables)?;
             Ok(())
         }
     }));
@@ -173,11 +162,7 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     })
 }
 
-fn sets_or_overlays(
-    panel: &GuiPanel<WatchState>,
-    app: &mut AppState,
-    alterables: &mut EventAlterables,
-) {
+fn sets_or_overlays(panel: &mut GuiPanel<WatchState>, app: &mut AppState) {
     let display = if app.session.config.sets_on_watch {
         [taffy::Display::None, taffy::Display::Flex]
     } else {
@@ -196,6 +181,9 @@ fn sets_or_overlays(
     ];
 
     for i in 0..2 {
-        alterables.set_style(widget[i], StyleSetRequest::Display(display[i]));
+        panel
+            .layout
+            .alterables
+            .set_style(widget[i], StyleSetRequest::Display(display[i]));
     }
 }

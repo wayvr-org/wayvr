@@ -140,16 +140,15 @@ impl View {
 		layout: &mut Layout,
 		mut details: cached_fetcher::AppDetailsJSONData,
 	) -> anyhow::Result<()> {
-		let mut c = layout.start_common();
-
 		{
-			let label_author = self.state.fetch_widget(&c.layout.state, "label_author")?.widget;
-			let label_description = self.state.fetch_widget(&c.layout.state, "label_description")?.widget;
+			let mut c = layout.common();
+			let label_author = self.state.fetch_widget(&c.state, "label_author")?.widget;
+			let label_description = self.state.fetch_widget(&c.state, "label_description")?.widget;
 
 			if let Some(developer) = details.developers.pop() {
 				label_author
 					.cast::<WidgetLabel>()?
-					.set_text(&mut c.common(), Translation::from_raw_text_string(developer));
+					.set_text(&mut c, Translation::from_raw_text_string(developer));
 			}
 
 			let desc = if let Some(desc) = &details.short_description {
@@ -163,11 +162,10 @@ impl View {
 			if let Some(desc) = desc {
 				label_description
 					.cast::<WidgetLabel>()?
-					.set_text(&mut c.common(), Translation::from_raw_text(desc));
+					.set_text(&mut c, Translation::from_raw_text(desc));
 			}
 		}
 
-		c.finish()?;
 		Ok(())
 	}
 

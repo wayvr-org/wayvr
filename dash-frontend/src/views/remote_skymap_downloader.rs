@@ -10,7 +10,6 @@ use crate::{
 use wgui::{
 	assets::AssetPath,
 	components::button::ComponentButton,
-	event::EventAlterables,
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
@@ -80,13 +79,9 @@ impl View {
 		let str_creation_date = par.globals.i18n().translate("CREATION_DATE");
 		let str_modification_date = par.globals.i18n().translate("MODIFICATION_DATE");
 
-		{
-			let mut alterables = EventAlterables::default();
-			let image = parser_state.fetch_widget(&par.layout.state, "image")?.widget;
-			let mut image = image.cast::<WidgetImage>()?;
-			image.set_content(&mut alterables, par.preview_image);
-			par.layout.process_alterables(alterables)?;
-		}
+		let image = parser_state.fetch_widget(&par.layout.state, "image")?.widget;
+		let mut image = image.cast::<WidgetImage>()?;
+		image.set_content(&mut par.layout.alterables, par.preview_image);
 
 		// Set author label
 		parser_state

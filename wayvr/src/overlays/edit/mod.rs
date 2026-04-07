@@ -10,7 +10,7 @@ use glam::vec2;
 use slotmap::Key;
 use wgui::{
     components::{button::ComponentButton, checkbox::ComponentCheckbox, slider::ComponentSlider},
-    event::{CallbackDataCommon, EventAlterables, EventCallback},
+    event::EventCallback,
     i18n::Translation,
     parser::Fetchable,
     widget::EventResult,
@@ -466,98 +466,82 @@ fn reset_panel(
     *panel.state.id.borrow_mut() = id;
     let state = owc.active_state.as_mut().unwrap();
 
-    let mut alterables = EventAlterables::default();
-    let mut common = CallbackDataCommon {
-        alterables: &mut alterables,
-        state: &panel.layout.state,
-    };
+    let mut com = panel.layout.common();
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentButton>("top_grab")?;
-    c.set_sticky_state(&mut common, !state.grabbable);
+    c.set_sticky_state(&mut com, !state.grabbable);
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentSlider>("lerp_slider")?;
-    c.set_value(&mut common, state.positioning.get_lerp().unwrap_or(1.0));
+    c.set_value(&mut com, state.positioning.get_lerp().unwrap_or(1.0));
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentSlider>("alpha_slider")?;
-    c.set_value(&mut common, state.alpha);
+    c.set_value(&mut com, state.alpha);
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentSlider>("curve_slider")?;
-    c.set_value(&mut common, state.curvature.unwrap_or(0.0));
+    c.set_value(&mut com, state.curvature.unwrap_or(0.0));
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentCheckbox>("additive_box")?;
-    c.set_checked(&mut common, state.additive);
+    c.set_checked(&mut com, state.additive);
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentCheckbox>("align_box")?;
-    c.set_checked(&mut common, state.positioning.get_align().unwrap_or(false));
+    c.set_checked(&mut com, state.positioning.get_align().unwrap_or(false));
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentCheckbox>("global_box")?;
-    c.set_checked(&mut common, owc.global);
+    c.set_checked(&mut com, owc.global);
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentCheckbox>("angle_fade_box")?;
-    c.set_checked(&mut common, state.angle_fade);
+    c.set_checked(&mut com, state.angle_fade);
 
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentCheckbox>("block_input_box")?;
-    c.set_checked(&mut common, state.block_input);
+    c.set_checked(&mut com, state.block_input);
 
-    panel
-        .state
-        .pos
-        .reset(&mut common, &state.positioning.into());
-    panel.state.lock.reset(&mut common, state.interactable);
-    panel.state.tabs.reset(&mut common);
+    panel.state.pos.reset(&mut com, &state.positioning.into());
+    panel.state.lock.reset(&mut com, state.interactable);
+    panel.state.tabs.reset(&mut com);
 
     if let Some(stereo) = attrib_value!(
         owc.backend.get_attrib(BackendAttrib::Stereo),
         BackendAttribValue::Stereo
     ) {
-        panel
-            .state
-            .tabs
-            .set_tab_visible(&mut common, "stereo", true);
-        panel.state.stereo.reset(&mut common, &stereo);
+        panel.state.tabs.set_tab_visible(&mut com, "stereo", true);
+        panel.state.stereo.reset(&mut com, &stereo);
 
         // Set the checkbox label based on stereo mode
         let translation = get_stereo_full_frame_translation(stereo);
         let c = panel
             .parser_state
             .fetch_component_as::<ComponentCheckbox>("stereo_full_frame_box")?;
-        c.set_text(&mut common, Translation::from_translation_key(translation));
+        c.set_text(&mut com, Translation::from_translation_key(translation));
     } else {
-        panel
-            .state
-            .tabs
-            .set_tab_visible(&mut common, "stereo", false);
+        panel.state.tabs.set_tab_visible(&mut com, "stereo", false);
     }
 
     if let Some(mouse) = attrib_value!(
         owc.backend.get_attrib(BackendAttrib::MouseTransform),
         BackendAttribValue::MouseTransform
     ) {
-        panel.state.tabs.set_tab_visible(&mut common, "mouse", true);
-        panel.state.mouse.reset(&mut common, &mouse);
+        panel.state.tabs.set_tab_visible(&mut com, "mouse", true);
+        panel.state.mouse.reset(&mut com, &mouse);
     } else {
-        panel
-            .state
-            .tabs
-            .set_tab_visible(&mut common, "mouse", false);
+        panel.state.tabs.set_tab_visible(&mut com, "mouse", false);
     }
 
     if let Some(full_frame) = attrib_value!(
@@ -567,7 +551,7 @@ fn reset_panel(
         let c = panel
             .parser_state
             .fetch_component_as::<ComponentCheckbox>("stereo_full_frame_box")?;
-        c.set_checked(&mut common, full_frame);
+        c.set_checked(&mut com, full_frame);
     }
 
     if let Some(adjust_mouse) = attrib_value!(
@@ -577,10 +561,8 @@ fn reset_panel(
         let c = panel
             .parser_state
             .fetch_component_as::<ComponentCheckbox>("stereo_adjust_mouse_box")?;
-        c.set_checked(&mut common, adjust_mouse);
+        c.set_checked(&mut com, adjust_mouse);
     }
-
-    panel.layout.process_alterables(alterables)?;
 
     Ok(())
 }
