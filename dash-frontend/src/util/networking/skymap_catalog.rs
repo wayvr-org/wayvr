@@ -6,19 +6,28 @@ use crate::util::networking::{self, WAYVR_SKYMAPS_ROOT, http_client};
 
 pub type SkymapUuid = uuid::Uuid;
 
+#[derive(Copy, Clone)]
 pub enum SkymapResolution {
 	Res2k,
 	Res4k,
 	Res8k,
-	Res16k,
+}
+
+impl SkymapResolution {
+	pub const fn get_display_str(&self) -> &'static str {
+		match self {
+			SkymapResolution::Res2k => "2K (6 MiB VRAM)",
+			SkymapResolution::Res4k => "4K (24 MiB VRAM)",
+			SkymapResolution::Res8k => "8K (96 MiB VRAM)",
+		}
+	}
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct SkymapCatalogEntryFiles {
-	pub size_16k: Option<String>, // "my_skymap_16k.png"
-	pub size_8k: Option<String>,  // "my_skymap_8k.png"
-	pub size_4k: Option<String>,  // "my_skymap_4k.png"
-	pub size_2k: String,          // we should have *at least* this
+	pub size_8k: Option<String>, // "my_skymap_8k.png"
+	pub size_4k: Option<String>, // "my_skymap_4k.png"
+	pub size_2k: String,         // we should have *at least* this
 	pub preview: String,
 }
 
@@ -32,7 +41,6 @@ impl SkymapCatalogEntryFiles {
 			SkymapResolution::Res2k => Some(&self.size_2k),
 			SkymapResolution::Res4k => self.size_4k.as_ref(),
 			SkymapResolution::Res8k => self.size_8k.as_ref(),
-			SkymapResolution::Res16k => self.size_16k.as_ref(),
 		}
 	}
 

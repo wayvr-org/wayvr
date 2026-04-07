@@ -1,0 +1,35 @@
+<layout>
+
+  <!--
+  parameters:
+    "text"
+  
+  ids:
+    "button"
+  -->
+  <template name="ResolutionButton">
+    <Button id="button" sprite_src_builtin="dashboard/download.svg" text="${text}"/>
+  </template>
+
+  <include src="../t_separator.xml"/>
+
+  <elements>
+    <div gap="8" flex_direction="column" min_width="100%" overflow_y="scroll">
+      <label id="label_author" weight="bold"/>
+      <label id="label_description" wrap="1"/>
+      <Separator/>
+      <div gap="24" justify_content="center">
+        <label id="label_creation_date"/>
+        <label id="label_modification_date"/>
+        <label id="label_version"/>
+      </div>
+      <div gap="8" flex_direction="column" align_items="center">
+        <image id="image" width="500" height="250" round="8" border="2" border_color="~color_accent"/>
+    
+        <div id="resolution_buttons" gap="8" flex_direction="row">
+          <!-- filled-in at runtime -->
+        </div>
+      </div>
+    </div>
+  </elements>
+</layout>
