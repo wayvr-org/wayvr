@@ -1,16 +1,16 @@
 use crate::state::AppState;
-use crate::subsystem::hid::{KeyModifier, VirtualKey, CTRL};
-use anyhow::{bail};
+use crate::subsystem::hid::{CTRL, KeyModifier, VirtualKey};
+use crate::subsystem::input::KeyboardFocus;
+use anyhow::bail;
 use arboard::Clipboard;
 use glam::Vec2;
 use std::mem;
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender, channel, Sender};
+use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
 use std::thread::{self, JoinHandle};
 use std::time::Instant;
+use super_swipe_type::SwipePoint;
 use super_swipe_type::keyboard_manager::QwertyKeyboardGrid;
 use super_swipe_type::swipe_orchestrator::SwipeOrchestrator;
-use super_swipe_type::{SwipePoint};
-use crate::subsystem::input::KeyboardFocus;
 
 const PREDICTION_SUGGESTION_COUNT: usize = 5;
 
@@ -37,12 +37,22 @@ pub struct SwipeTypingManager {
 }
 
 impl SwipeTypingManager {
-    pub fn select_alternate_prediction(&mut self, word: &String, app: &mut AppState, original_keyboard_mods: KeyModifier) {
+    pub fn select_alternate_prediction(
+        &mut self,
+        word: &String,
+        app: &mut AppState,
+        original_keyboard_mods: KeyModifier,
+    ) {
         Self::undo(app, original_keyboard_mods);
         self.select_word(word, app, original_keyboard_mods);
     }
 
-    pub fn select_word(&mut self, word: &String, app: &mut AppState, original_keyboard_mods: KeyModifier) {
+    pub fn select_word(
+        &mut self,
+        word: &String,
+        app: &mut AppState,
+        original_keyboard_mods: KeyModifier,
+    ) {
         self.last_swiped_word = Some(word.clone());
         let text_to_paste = format!("{word} ");
 
@@ -51,15 +61,14 @@ impl SwipeTypingManager {
                 if let Ok(_) = self.clipboard.set_text(text_to_paste) {
                     Self::paste(app, original_keyboard_mods);
                 }
-            },
+            }
             KeyboardFocus::WayVR => {
                 if let Some(wvr_server) = app.wvr_server.as_mut() {
                     wvr_server.set_clipboard_text(text_to_paste);
                     Self::paste(app, original_keyboard_mods);
                 }
-            },
+            }
         }
-
     }
 
     fn undo(app: &mut AppState, original_keyboard_mods: KeyModifier) {
@@ -148,11 +157,10 @@ impl SwipeTypingManager {
         let last_word = self.last_swiped_word.clone();
         self.reset_swipe();
 
-        self.prediction_task_sender
-            .send(PredictionTask::Predict {
-                swipe: current_swipe,
-                last_word,
-            })?;
+        self.prediction_task_sender.send(PredictionTask::Predict {
+            swipe: current_swipe,
+            last_word,
+        })?;
 
         Ok(())
     }
@@ -188,7 +196,11 @@ impl SwipeTypingManager {
     }
 
     pub fn add_swipe(&mut self, within_key_pos_normalized: &Vec2, key_label: char, device: usize) {
-        if let Some(pos) = self.keyboard_gird.key_positions.get(&key_label.to_ascii_lowercase()) {
+        if let Some(pos) = self
+            .keyboard_gird
+            .key_positions
+            .get(&key_label.to_ascii_lowercase())
+        {
             if let Some(current_device) = self.current_swipe_device {
                 if current_device != device {
                     return;

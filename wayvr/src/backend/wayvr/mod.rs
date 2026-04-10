@@ -241,7 +241,13 @@ impl WvrServerState {
         };
 
         Ok(Self {
-            manager: client::WayVRCompositor::new(state, display, seat_keyboard, seat_pointer, seat)?,
+            manager: client::WayVRCompositor::new(
+                state,
+                display,
+                seat_keyboard,
+                seat_pointer,
+                seat,
+            )?,
             processes: ProcessVec::new(),
             wm: window::WindowManager::new(),
             ticks: 0,

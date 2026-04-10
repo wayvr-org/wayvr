@@ -1,23 +1,23 @@
 use std::{io::Read, os::unix::net::UnixStream, path::PathBuf, sync::Arc};
 
 use anyhow::Context;
+use smithay::input::Seat;
+use smithay::wayland::selection::data_device::set_data_device_selection;
 use smithay::{
     backend::input::Keycode,
     input::{keyboard::KeyboardHandle, pointer::PointerHandle},
     reexports::wayland_server,
     utils::SerialCounter,
 };
-use smithay::input::Seat;
-use smithay::wayland::selection::data_device::set_data_device_selection;
 use xkbcommon::xkb;
 
-use crate::backend::wayvr::{ExternalProcessRequest, WayVRTask};
-use crate::backend::wayvr::comp::Application;
 use super::{
     ProcessWayVREnv,
     comp::{self, ClientState},
     process,
 };
+use crate::backend::wayvr::comp::Application;
+use crate::backend::wayvr::{ExternalProcessRequest, WayVRTask};
 
 pub struct WayVRClient {
     pub client: wayland_server::Client,
@@ -209,7 +209,10 @@ impl WayVRCompositor {
         set_data_device_selection::<Application>(
             &self.state.display_handle,
             &self.seat,
-            vec!["text/plain;charset=utf-8".to_string(), "text/plain".to_string()],
+            vec![
+                "text/plain;charset=utf-8".to_string(),
+                "text/plain".to_string(),
+            ],
             text.as_bytes().into(),
         );
     }
