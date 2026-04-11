@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use wgui::{
 	assets::AssetPath,
@@ -29,7 +29,6 @@ use crate::{
 enum Task {
 	AppManifestClicked(steam_utils::AppManifest),
 	SetCoverArt(AppID, Rc<CoverArt>),
-	CloseLauncher,
 	LoadManifests,
 	FillPage(u32),
 	PrevPage,
@@ -50,10 +49,6 @@ pub struct GameCoverCell {
 	view_cover: game_cover::View,
 }
 
-struct State {
-	view_launcher: Option<PopupHolder<views::game_launcher::View>>,
-}
-
 pub struct View {
 	#[allow(dead_code)]
 	parser_state: ParserState,
@@ -63,12 +58,12 @@ pub struct View {
 	id_list_parent: WidgetID,
 	game_cover_view_common: game_cover::ViewCommon,
 	executor: AsyncExecutor,
-	state: Rc<RefCell<State>>,
 	mounted_game_covers: HashMap<AppID, GameCoverCell>,
 	all_manifests: Vec<steam_utils::AppManifest>,
 	cur_page: u32,
 	page_count: u32,
 	id_label_page: WidgetID,
+	view_launcher: PopupHolder<views::game_launcher::View>,
 }
 
 impl View {
@@ -105,12 +100,12 @@ impl View {
 			id_list_parent: list_parent.id,
 			mounted_game_covers: HashMap::new(),
 			game_cover_view_common: game_cover::ViewCommon::new(params.globals.clone()),
-			state: Rc::new(RefCell::new(State { view_launcher: None })),
 			executor: params.executor,
 			all_manifests: Vec::new(),
 			cur_page: 0,
 			page_count: 0,
 			id_label_page,
+			view_launcher: Default::default(),
 		})
 	}
 
@@ -131,17 +126,13 @@ impl View {
 					Task::FillPage(page_idx) => self.fill_page(layout, executor, page_idx)?,
 					Task::AppManifestClicked(manifest) => self.action_app_manifest_clicked(manifest)?,
 					Task::SetCoverArt(app_id, cover_art) => self.set_cover_art(layout, app_id, cover_art),
-					Task::CloseLauncher => self.state.borrow_mut().view_launcher = None,
 					Task::PrevPage => self.page_prev(),
 					Task::NextPage => self.page_next(),
 				}
 			}
 		}
 
-		let mut state = self.state.borrow_mut();
-		if let Some((_, view)) = &mut state.view_launcher {
-			view.update(layout)?;
-		}
+		self.view_launcher.with_view_res(|view| view.update(layout))?;
 
 		Ok(())
 	}
@@ -286,11 +277,7 @@ impl View {
 			self.executor.clone(),
 			self.globals.clone(),
 			manifest,
-			self.tasks.make_callback_box(Task::CloseLauncher),
-			Box::new({
-				let state = self.state.clone();
-				move |popup| state.borrow_mut().view_launcher = Some(popup)
-			}),
+			self.view_launcher.clone(),
 		);
 
 		Ok(())

@@ -424,13 +424,7 @@ impl View {
 	}
 }
 
-pub fn mount_popup(
-	frontend_tasks: FrontendTasks,
-	globals: WguiGlobals,
-	entry: DesktopEntry,
-	on_close_request: Box<dyn Fn()>,
-	set_holder: Box<dyn FnOnce(PopupHolder<View>)>,
-) {
+pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, entry: DesktopEntry, popup: PopupHolder<View>) {
 	frontend_tasks
 		.clone()
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
@@ -443,10 +437,10 @@ pub fn mount_popup(
 					parent_id: data.id_content,
 					frontend_tasks: &frontend_tasks,
 					config: data.config,
-					on_launched: on_close_request,
+					on_launched: popup.get_close_callback(),
 				})?;
 
-				set_holder((data.handle, view));
+				popup.set_view(data.handle, view);
 				Ok(())
 			}),
 		)));

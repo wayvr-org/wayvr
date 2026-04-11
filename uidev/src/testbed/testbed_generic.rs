@@ -46,7 +46,6 @@ pub struct TestbedGeneric {
 	pub parser_state: ParserState,
 	tasks: Tasks<TestbedTask>,
 
-	globals: WguiGlobals,
 	data: Rc<RefCell<Data>>,
 }
 
@@ -183,7 +182,6 @@ impl TestbedGeneric {
 			layout,
 			parser_state,
 			tasks: Default::default(),
-			globals: globals.clone(),
 			data: Rc::new(RefCell::new(Data {
 				popup_window: WguiWindow::default(),
 				context_menu: context_menu::ContextMenu::default(),

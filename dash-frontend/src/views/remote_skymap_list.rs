@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use wgui::{
 	assets::AssetPath,
@@ -38,16 +38,11 @@ enum Task {
 	SetSkymapCatalog(Rc<anyhow::Result<networking::skymap_catalog::SkymapCatalog>>),
 	SetSkymapPreview((SkymapUuid, Option<CustomGlyphData>)),
 	ShowRemoteSkymapDownloader(SkymapUuid),
-	CloseRemoteSkymapDownloader,
 }
 
 struct MountedCell {
 	skymap_uuid: SkymapUuid,
 	view: views::skymap_list_cell::View,
-}
-
-pub struct State {
-	popup_remote_skymap_downloader: Option<PopupHolder<views::remote_skymap_downloader::View>>,
 }
 
 pub struct View {
@@ -60,7 +55,7 @@ pub struct View {
 	executor: AsyncExecutor,
 	frontend_tasks: FrontendTasks,
 	catalog: Option<networking::skymap_catalog::SkymapCatalog>,
-	state: Rc<RefCell<State>>,
+	popup_remote_skymap_downloader: PopupHolder<views::remote_skymap_downloader::View>,
 }
 
 impl View {
@@ -88,9 +83,7 @@ impl View {
 			executor: par.executor.clone(),
 			frontend_tasks: par.frontend_tasks,
 			catalog: None,
-			state: Rc::new(RefCell::new(State {
-				popup_remote_skymap_downloader: None,
-			})),
+			popup_remote_skymap_downloader: Default::default(),
 		})
 	}
 
@@ -171,11 +164,7 @@ impl View {
 			self.globals.clone(),
 			entry.clone(),
 			preview_image,
-			self.tasks.make_callback_box(Task::CloseRemoteSkymapDownloader),
-			Box::new({
-				let state = self.state.clone();
-				move |popup| state.borrow_mut().popup_remote_skymap_downloader = Some(popup)
-			}),
+			self.popup_remote_skymap_downloader.clone(),
 		);
 
 		Ok(())
@@ -189,12 +178,9 @@ impl View {
 	}
 
 	pub fn update(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
-		{
-			let mut state = self.state.borrow_mut();
-			if let Some(view) = &mut state.popup_remote_skymap_downloader {
-				view.1.update(layout)?;
-			}
-		}
+		self
+			.popup_remote_skymap_downloader
+			.with_view_res(|view| view.update(layout))?;
 
 		for task in self.tasks.drain() {
 			match task {
@@ -224,9 +210,6 @@ impl View {
 					let preview_image = self.get_image_preview(skymap_uuid);
 					self.show_remote_skymap_downloader(skymap_uuid, preview_image)?;
 				}
-				Task::CloseRemoteSkymapDownloader => {
-					self.state.borrow_mut().popup_remote_skymap_downloader = None;
-				}
 			}
 		}
 		Ok(())
@@ -237,8 +220,7 @@ pub fn mount_popup(
 	frontend_tasks: FrontendTasks,
 	executor: AsyncExecutor,
 	globals: WguiGlobals,
-	on_close_request: Box<dyn Fn()>,
-	set_holder: Box<dyn FnOnce(PopupHolder<View>)>,
+	popup: PopupHolder<View>,
 ) {
 	frontend_tasks
 		.clone()
@@ -250,11 +232,11 @@ pub fn mount_popup(
 					layout: data.layout,
 					executor: &executor,
 					parent_id: data.id_content,
-					on_close_request,
+					on_close_request: popup.get_close_callback(),
 					frontend_tasks,
 				})?;
 
-				set_holder((data.handle, view));
+				popup.set_view(data.handle, view);
 				Ok(())
 			}),
 		)));

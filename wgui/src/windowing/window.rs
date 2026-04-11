@@ -9,7 +9,6 @@ use crate::{
 	components::button::ComponentButton,
 	drawing,
 	event::{EventListenerKind, StyleSetRequest},
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, LayoutTask, LayoutTasks, WidgetPair},
 	parser::{self, Fetchable, ParserState},

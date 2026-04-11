@@ -169,8 +169,7 @@ pub fn mount_popup(
 	globals: WguiGlobals,
 	entry: networking::skymap_catalog::SkymapCatalogEntry,
 	preview_image: Option<CustomGlyphData>,
-	on_close_request: Box<dyn Fn()>,
-	set_holder: Box<dyn FnOnce(PopupHolder<View>)>,
+	popup: PopupHolder<View>,
 ) {
 	frontend_tasks
 		.clone()
@@ -183,11 +182,11 @@ pub fn mount_popup(
 					executor: &executor,
 					parent_id: data.id_content,
 					entry,
-					on_close_request,
+					on_close_request: popup.get_close_callback(),
 					preview_image,
 				})?;
 
-				set_holder((data.handle, view));
+				popup.set_view(data.handle, view);
 				Ok(())
 			}),
 		)));

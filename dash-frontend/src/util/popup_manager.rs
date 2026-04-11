@@ -34,16 +34,105 @@ pub struct MountedPopup {
 	frontend_tasks: FrontendTasks,
 }
 
+#[derive(Default)]
 struct MountedPopupState {
 	mounted_popup: Option<MountedPopup>,
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct PopupHandle {
 	state: Rc<RefCell<MountedPopupState>>,
 }
 
-pub type PopupHolder<ViewType> = (PopupHandle, ViewType);
+struct PopupHolderState<ViewType> {
+	popup_handle: PopupHandle,
+	view: Option<ViewType>,
+}
+
+// we can't use #[derive(Default)] due to the fact that ViewType can't be Default.
+impl<ViewType> Default for PopupHolderState<ViewType> {
+	fn default() -> Self {
+		Self {
+			popup_handle: Default::default(),
+			view: Default::default(),
+		}
+	}
+}
+
+pub struct PopupHolder<ViewType> {
+	state: Rc<RefCell<PopupHolderState<ViewType>>>,
+}
+
+impl<ViewType> Default for PopupHolder<ViewType> {
+	fn default() -> Self {
+		Self {
+			state: Rc::new(RefCell::new(PopupHolderState::default())),
+		}
+	}
+}
+
+// we can't derive(Clone) due to the fact that ViewType is non-cloneable
+impl<ViewType> Clone for PopupHolder<ViewType> {
+	fn clone(&self) -> Self {
+		Self {
+			state: self.state.clone(),
+		}
+	}
+}
+
+impl<ViewType> PopupHolder<ViewType> {
+	pub fn close(&self) {
+		let mut state = self.state.borrow_mut();
+		state.view = None;
+		state.popup_handle.close();
+	}
+
+	pub fn set_view(&self, handle: PopupHandle, view: ViewType) {
+		let mut state = self.state.borrow_mut();
+		state.view = Some(view);
+		state.popup_handle = handle;
+	}
+
+	// Get underlying ViewType object in a closure and return its value
+	// example usage:
+	//
+	// ```rs
+	// holder.with_view(|view| {
+	//   view.foo();
+	// })
+	// ```
+	//
+	pub fn with_view<F, R>(&self, f: F) -> Option<R>
+	where
+		F: FnOnce(&mut ViewType) -> R,
+	{
+		let mut state = self.state.borrow_mut();
+		if let Some(view) = state.view.as_mut() {
+			Some(f(view))
+		} else {
+			None
+		}
+	}
+
+	// Same as with_view, but the closure expects a simple anyhow::Result<()> type
+	pub fn with_view_res<F>(&self, f: F) -> anyhow::Result<()>
+	where
+		F: FnOnce(&mut ViewType) -> anyhow::Result<()>,
+	{
+		if let Some(res) = self.with_view(f) {
+			return res;
+		}
+		Ok(())
+	}
+
+	pub fn get_close_callback(&self) -> Box<dyn Fn()>
+	where
+		ViewType: 'static,
+	{
+		let this = self.clone();
+		Box::new(move || this.close())
+	}
+}
 
 impl PopupHandle {
 	pub fn close(&self) {

@@ -198,8 +198,7 @@ pub fn mount_popup(
 	executor: AsyncExecutor,
 	globals: WguiGlobals,
 	manifest: AppManifest,
-	on_close_request: Box<dyn Fn()>,
-	set_holder: Box<dyn FnOnce(PopupHolder<View>)>,
+	popup: PopupHolder<View>,
 ) {
 	frontend_tasks
 		.clone()
@@ -213,10 +212,10 @@ pub fn mount_popup(
 					layout: data.layout,
 					parent_id: data.id_content,
 					frontend_tasks: &frontend_tasks,
-					on_launched: on_close_request,
+					on_launched: popup.get_close_callback(),
 				})?;
 
-				set_holder((data.handle, view));
+				popup.set_view(data.handle, view);
 				Ok(())
 			}),
 		)));

@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use wgui::{
 	assets::AssetPath,
 	components::button::ComponentButton,
@@ -20,7 +18,6 @@ use crate::{
 #[derive(Clone)]
 enum Task {
 	DownloadSkymaps,
-	ClosePopupDownloadSkymaps,
 	Refresh,
 }
 
@@ -31,10 +28,6 @@ pub struct Params<'a> {
 	pub frontend_tasks: &'a FrontendTasks,
 }
 
-pub struct State {
-	popup_remote_skymap_list: Option<PopupHolder<views::remote_skymap_list::View>>,
-}
-
 pub struct View {
 	#[allow(dead_code)]
 	parser_state: ParserState,
@@ -42,7 +35,7 @@ pub struct View {
 	list_parent: WidgetID,
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
-	state: Rc<RefCell<State>>,
+	popup_remote_skymap_list: PopupHolder<views::remote_skymap_list::View>,
 }
 
 impl View {
@@ -69,27 +62,20 @@ impl View {
 			Task::Refresh,
 		);
 
-		let state = Rc::new(RefCell::new(State {
-			popup_remote_skymap_list: None,
-		}));
-
 		Ok(Self {
 			parser_state,
 			tasks,
 			list_parent,
 			frontend_tasks: params.frontend_tasks.clone(),
-			state,
 			globals: params.globals.clone(),
+			popup_remote_skymap_list: Default::default(),
 		})
 	}
 
 	pub fn update(&mut self, layout: &mut Layout, executor: &AsyncExecutor) -> anyhow::Result<()> {
-		{
-			let mut state = self.state.borrow_mut();
-			if let Some(popup) = &mut state.popup_remote_skymap_list {
-				popup.1.update(layout)?;
-			}
-		}
+		self
+			.popup_remote_skymap_list
+			.with_view_res(|view| view.update(layout))?;
 
 		loop {
 			let tasks = self.tasks.drain();
@@ -104,9 +90,6 @@ impl View {
 					Task::Refresh => {
 						self.refresh(layout)?;
 					}
-					Task::ClosePopupDownloadSkymaps => {
-						(*self.state.borrow_mut()).popup_remote_skymap_list = None;
-					}
 				}
 			}
 		}
@@ -119,13 +102,7 @@ impl View {
 			self.frontend_tasks.clone(),
 			executor.clone(),
 			self.globals.clone(),
-			self.tasks.make_callback_box(Task::ClosePopupDownloadSkymaps),
-			Box::new({
-				let state = self.state.clone();
-				move |popup| {
-					state.borrow_mut().popup_remote_skymap_list = Some(popup);
-				}
-			}),
+			self.popup_remote_skymap_list.clone(),
 		);
 		Ok(())
 	}

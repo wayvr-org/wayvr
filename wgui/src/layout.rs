@@ -321,13 +321,8 @@ impl Layout {
 		self.needs_redraw = true;
 	}
 
-	fn process_pending_components(&mut self, alterables: &mut EventAlterables) {
+	fn process_pending_components(&mut self) {
 		for comp in std::mem::take(&mut self.components_to_refresh_once) {
-			let mut common = CallbackDataCommon {
-				state: &self.state,
-				alterables,
-			};
-
 			comp.0.refresh(&mut RefreshData { layout: self });
 		}
 	}
@@ -684,7 +679,7 @@ impl Layout {
 	pub fn tick(&mut self) -> anyhow::Result<()> {
 		let mut alterables = EventAlterables::default();
 		self.animations.tick(&self.state, &mut alterables);
-		self.process_pending_components(&mut alterables);
+		self.process_pending_components();
 		self.process_pending_widget_ticks(&mut alterables);
 		self.process_alterables(alterables)?;
 		Ok(())

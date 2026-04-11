@@ -7,10 +7,9 @@ use crate::{
 	},
 	drawing::{self},
 	event::CallbackDataCommon,
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID, WidgetPair},
-	parser::{self, Fetchable, ParseDocumentParams, ParserState},
+	parser::{self, Fetchable, ParseDocumentParams},
 	widget::{ConstructEssentials, rectangle::WidgetRectangle, util::WLength},
 	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra},
 };
