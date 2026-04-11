@@ -123,21 +123,16 @@ impl ComponentTrait for ComponentButton {
 	fn refresh(&self, data: &mut RefreshData) {
 		let mut state = self.state.borrow_mut();
 
-		// FIXME: refactor this after merging feat-skybox-catalog branch
-		let mut lc = data.layout.start_common();
-
 		if state.active_tooltip.is_some() {
-			let common = lc.common();
-			if let Some(node_id) = common.state.nodes.get(self.base.get_id()) {
-				if !widget::is_node_visible(&common.state.tree, *node_id) {
+			let l_state = &data.layout.state;
+			if let Some(node_id) = l_state.nodes.get(self.base.get_id()) {
+				if !widget::is_node_visible(&l_state.tree, *node_id) {
 					state.active_tooltip = None; // destroy the tooltip, this button is now hidden
 				}
 			} else {
 				debug_assert!(false);
 			}
 		}
-
-		let _ = lc.finish();
 	}
 }
 

@@ -91,18 +91,12 @@ impl ComponentTrait for ComponentColorSelector {
 			}
 		}
 
-		// FIXME: refactor this after merging feat-skybox-catalog branch
-		let mut lc = data.layout.start_common();
-		let mut common = lc.common();
-
 		self.data.button.set_text(
-			&mut common,
+			&mut data.layout.common(),
 			Translation::from_raw_text_string(format!("{}", state.color.to_hex_rgb())),
 		);
 
-		self.data.button.set_color(&mut common, state.color);
-
-		let _ = lc.finish();
+		self.data.button.set_color(&mut data.layout.common(), state.color);
 	}
 }
 
@@ -169,12 +163,10 @@ impl ComponentColorSelector {
 		let slider_b = parser_state.fetch_component_as::<ComponentSlider>("slider_b")?;
 
 		{
-			let mut lc = layout.start_common();
-			let common = &mut lc.common();
-
-			slider_r.set_value(common, state.color.r * 255.0);
-			slider_g.set_value(common, state.color.g * 255.0);
-			slider_b.set_value(common, state.color.b * 255.0);
+			let mut common = layout.common();
+			slider_r.set_value(&mut common, state.color.r * 255.0);
+			slider_g.set_value(&mut common, state.color.g * 255.0);
+			slider_b.set_value(&mut common, state.color.b * 255.0);
 		}
 
 		slider_r.on_value_changed(self.gen_slider_callback(ColorIndex::Red));

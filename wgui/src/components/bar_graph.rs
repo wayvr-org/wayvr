@@ -70,11 +70,7 @@ impl ComponentTrait for ComponentBarGraph {
 
 	fn refresh(&self, data: &mut RefreshData) {
 		let state = self.state.borrow();
-
-		// FIXME: refactor this after merging feat-skybox-catalog branch
-		let mut lc = data.layout.start_common();
-		self.update_limits_text(&state, &mut lc.common());
-		let _ = lc.finish();
+		self.update_limits_text(&state, &mut data.layout.common());
 	}
 }
 

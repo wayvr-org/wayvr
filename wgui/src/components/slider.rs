@@ -111,13 +111,10 @@ pub struct ComponentSlider {
 
 impl ComponentTrait for ComponentSlider {
 	fn refresh(&self, data: &mut RefreshData) {
-		// FIXME: refactor this after merging feat-skybox-catalog branch
-		let mut lc = data.layout.start_common();
-		let mut common = lc.common();
+		let mut common = data.layout.common();
 		let mut state = self.state.borrow_mut();
 		let value = state.values.value;
 		state.set_value(&mut common, &self.data, value);
-		let _ = lc.finish();
 	}
 
 	fn base(&self) -> &ComponentBase {

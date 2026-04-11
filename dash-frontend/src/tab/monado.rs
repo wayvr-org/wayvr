@@ -302,8 +302,7 @@ impl SubtabGeneralSettings {
 		let slider_keying_value_range = state.fetch_component_as::<ComponentSlider>("slider_keying_value_range")?;
 
 		{
-			let mut lc = frontend.layout.start_common();
-			let mut common = lc.common();
+			let mut common = frontend.layout.common();
 
 			// set initial values
 			let (rgb, range_h, range_s, range_v) = config.chroma_key_params.get_rgb_and_hsv_ranges();
@@ -338,8 +337,6 @@ impl SubtabGeneralSettings {
 			slider_keying_saturation_range.on_value_changed(get_slider_callback(&tasks));
 			slider_keying_value_range.on_value_changed(get_slider_callback(&tasks));
 			cs_keying.on_changed(get_color_selector_callback(&tasks));
-
-			lc.finish()?;
 		}
 
 		Ok(Self {

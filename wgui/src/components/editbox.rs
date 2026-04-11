@@ -147,15 +147,9 @@ impl ComponentTrait for ComponentEditBox {
 	}
 
 	fn refresh(&self, data: &mut RefreshData) {
-		// FIXME: refactor this after merging feat-skybox-catalog branch
-		let mut lc = data.layout.start_common();
-		let mut common = lc.common();
-
 		let mut state = self.state.borrow_mut();
-		let res = refresh_all(&mut common, &self.data, &mut state);
+		let res = refresh_all(&mut data.layout.common(), &self.data, &mut state);
 		debug_assert!(res.is_some());
-
-		let _ = lc.finish();
 	}
 
 	fn on_focus_change(&self, data: &mut FocusChangeData) {
