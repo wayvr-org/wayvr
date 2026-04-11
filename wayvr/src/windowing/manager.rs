@@ -1,17 +1,20 @@
 use std::{
     collections::{HashMap, VecDeque},
     rc::Rc,
+    sync::Arc,
     sync::atomic::Ordering,
 };
 
 use anyhow::Context;
-use glam::{Affine3A, Vec3, Vec3A};
+use glam::{Affine3A, Quat, Vec3, Vec3A};
 use slotmap::{Key, SecondaryMap, SlotMap};
+use wgui::animation::AnimationEasing;
 use wgui::log::LogErr;
 use wlx_common::{
     astr_containers::{AStrMap, AStrMapExt},
     config::SerializedWindowSet,
     overlays::{BackendAttrib, BackendAttribValue, ToastTopic},
+    timestep::get_micros,
 };
 
 use crate::{
@@ -26,7 +29,7 @@ use crate::{
         keyboard::create_keyboard,
         screen::create_screens,
         toast::Toast,
-        watch::{WATCH_NAME, create_watch},
+        watch::create_watch,
     },
     state::AppState,
     windowing::{
@@ -38,7 +41,30 @@ use crate::{
     },
 };
 
+use wlx_common::windowing::OverlayWindowState;
+
 pub const MAX_OVERLAY_SETS: usize = 6;
+
+struct FocusAnimation {
+    oid: OverlayID,
+    from: OverlayWindowState,
+    to: OverlayWindowState,
+    start_us: u64,
+    duration_us: u64,
+    easing: AnimationEasing,
+}
+
+#[derive(Clone)]
+struct FocusedScreenState {
+    name: Arc<str>,
+    oid: OverlayID,
+    saved_state: OverlayWindowState,
+    saved_crop_rect: [f32; 4],
+    focus_anchor: Affine3A,
+    target_x: f32,
+    target_y: f32,
+    crop_rect: [f32; 4],
+}
 
 pub struct OverlayWindowManager<T> {
     wrappers: EditWrapperManager,
@@ -56,6 +82,8 @@ pub struct OverlayWindowManager<T> {
     edit_mode: bool,
     dropped_overlays: VecDeque<OverlayWindowData<T>>,
     initialized: bool,
+    focused_screen: Option<FocusedScreenState>,
+    focus_animation: Option<FocusAnimation>,
 }
 
 impl<T> OverlayWindowManager<T>
@@ -71,11 +99,13 @@ where
             sets: vec![OverlayWindowSet::default()],
             global_set: OverlayWindowSet::default(),
             anchor_local: Affine3A::from_translation(Vec3::NEG_Z),
-            watch_id: OverlayID::null(),    // set down below
-            keyboard_id: OverlayID::null(), // set down below
+            watch_id: OverlayID::null(),
+            keyboard_id: OverlayID::null(),
             edit_mode: false,
             dropped_overlays: VecDeque::with_capacity(8),
             initialized: false,
+            focused_screen: None,
+            focus_animation: None,
         };
 
         let mut wayland = false;
@@ -382,6 +412,9 @@ where
                     )?;
                 }
             }
+            OverlayTask::ScreenFocusToggle(screen_focus) => {
+                self.handle_screen_focus_toggle(app, screen_focus)?;
+            }
         }
         Ok(())
     }
@@ -394,6 +427,53 @@ const SAVED_ATTRIBS: [BackendAttrib; 3] = [
 ];
 
 impl<T> OverlayWindowManager<T> {
+    pub fn animate_focus_transitions(&mut self, app: &mut AppState) {
+        if let Some(anim) = self.focus_animation.as_ref() {
+            let raw = if anim.duration_us == 0 {
+                1.0
+            } else {
+                ((get_micros().saturating_sub(anim.start_us)) as f32 / anim.duration_us as f32)
+                    .clamp(0.0, 1.0)
+            };
+            let pos = anim.easing.interpolate(raw);
+            let is_done = raw >= 1.0;
+            let oid = anim.oid;
+            let state = interpolate_overlay_state(&anim.from, &anim.to, pos);
+
+            if let Some(overlay) = self.mut_by_id(oid) {
+                overlay.config.active_state = Some(state);
+                overlay.config.dirty = true;
+            }
+
+            if is_done {
+                self.focus_animation = None;
+            }
+            return;
+        }
+
+        if let Some(focused) = self.focused_screen.clone() {
+            if let Some(overlay) = self.mut_by_id(focused.oid) {
+                let aspect_ratio = overlay
+                    .frame_meta()
+                    .map(|meta| meta.extent[0] as f32 / meta.extent[1] as f32)
+                    .unwrap_or(1.0)
+                    .max(0.01);
+                let refreshed_focus_state = build_focused_screen_state(
+                    &focused.saved_state,
+                    app,
+                    focused.focus_anchor,
+                    aspect_ratio,
+                    focused.target_x,
+                    focused.target_y,
+                    focused.crop_rect,
+                );
+                let assisted_state = apply_focus_look_assist(&refreshed_focus_state, app);
+                overlay.config.active_state = Some(assisted_state);
+                overlay.config.dirty = true;
+            }
+        }
+    }
+
     pub fn pop_dropped(&mut self) -> Option<OverlayWindowData<T>> {
         self.dropped_overlays.pop_front()
     }
@@ -516,12 +596,7 @@ impl<T> OverlayWindowManager<T> {
 
         // global overlays
         for (name, ows) in app.session.config.global_set.clone() {
-            let mut ows = ows.clone();
-
-            // fix angle_fade missing on watch if loading older state
-            if name.as_ref() == WATCH_NAME {
-                ows.angle_fade = true;
-            }
+            let ows = ows.clone();
 
             if let Some(oid) = self.lookup(&name)
                 && let Some(o) = self.mut_by_id(oid)
@@ -936,5 +1011,332 @@ impl<T> OverlayWindowManager<T> {
         }
 
         Ok(())
+    }
+
+    fn handle_screen_focus_toggle(
+        &mut self,
+        app: &mut AppState,
+        screen_focus: crate::backend::task::ScreenFocusTask,
+    ) -> anyhow::Result<()> {
+        let screen_name: Arc<str> = screen_focus.screen_name.into();
+        let mut carry_saved_state: Option<OverlayWindowState> = None;
+        let mut carry_saved_crop_rect: Option<[f32; 4]> = None;
+        let mut carry_current_state: Option<OverlayWindowState> = None;
+
+        if let Some(focused_screen) = self.focused_screen.take() {
+            let focused_name = focused_screen.name;
+            let focused_oid = focused_screen.oid;
+            let saved_state = focused_screen.saved_state;
+            let saved_crop_rect = focused_screen.saved_crop_rect;
+            let current_state = self
+                .mut_by_id(focused_oid)
+                .and_then(|overlay| overlay.config.active_state.clone())
+                .unwrap_or_else(|| saved_state.clone());
+
+            if screen_focus.refresh_only && focused_name == screen_name {
+                carry_saved_state = Some(saved_state);
+                carry_saved_crop_rect = Some(saved_crop_rect);
+                carry_current_state = Some(current_state);
+            } else {
+                if let Some(overlay) = self.mut_by_id(focused_oid) {
+                    overlay
+                        .config
+                        .backend
+                        .set_attrib(app, BackendAttribValue::CropRect(saved_crop_rect));
+                    overlay.config.active_state = Some(saved_state.clone());
+                    overlay.config.dirty = true;
+                }
+
+                self.focus_animation = Some(FocusAnimation {
+                    oid: focused_oid,
+                    from: current_state,
+                    to: saved_state.clone(),
+                    start_us: get_micros(),
+                    duration_us: 260_000,
+                    easing: AnimationEasing::OutCubic,
+                });
+
+                if focused_name == screen_name {
+                    log::info!("Screen focus: restored previous state for {}", screen_name);
+                    return Ok(());
+                }
+            }
+        }
+
+        if screen_focus.refresh_only && carry_saved_state.is_none() {
+            return Ok(());
+        }
+
+        let Some(target_oid) = self.lookup(&screen_name) else {
+            log::warn!("Screen focus: no overlay found for screen {}", screen_name);
+            return Ok(());
+        };
+
+        let Some(overlay) = self.mut_by_id(target_oid) else {
+            log::warn!("Screen focus: overlay {:?} not found", target_oid);
+            return Ok(());
+        };
+
+        if !matches!(overlay.config.category, OverlayCategory::Screen) {
+            log::warn!("Screen focus: overlay {} is not a screen", screen_name);
+            return Ok(());
+        }
+
+        let saved_state = carry_saved_state.unwrap_or_else(|| {
+            overlay
+                .config
+                .active_state
+                .clone()
+                .unwrap_or_else(OverlayWindowState::default)
+        });
+        let saved_crop_rect = carry_saved_crop_rect.unwrap_or_else(|| {
+            overlay
+                .config
+                .backend
+                .get_attrib(BackendAttrib::CropRect)
+                .and_then(|value| match value {
+                    BackendAttribValue::CropRect(crop_rect) => Some(crop_rect),
+                    _ => None,
+                })
+                .unwrap_or([0.0, 0.0, 1.0, 1.0])
+        });
+
+        let frame_meta = overlay.frame_meta();
+        let aspect_ratio = frame_meta
+            .map(|meta| meta.extent[0] as f32 / meta.extent[1] as f32)
+            .unwrap_or(1.0)
+            .max(0.01);
+
+        let current_state = carry_current_state.unwrap_or_else(|| {
+            overlay
+                .config
+                .active_state
+                .clone()
+                .unwrap_or_else(|| saved_state.clone())
+        });
+
+        let crop_rect = screen_focus.crop_rect.unwrap_or([0.0, 0.0, 1.0, 1.0]);
+        overlay
+            .config
+            .backend
+            .set_attrib(app, BackendAttribValue::CropRect(crop_rect));
+
+        let focus_anchor = snap_upright(app.input_state.hmd, Vec3A::Y);
+        let focused_state = build_focused_screen_state(
+            &saved_state,
+            app,
+            focus_anchor,
+            aspect_ratio,
+            screen_focus.target_x,
+            screen_focus.target_y,
+            crop_rect,
+        );
+
+        overlay.config.active_state = Some(focused_state.clone());
+        overlay.config.dirty = true;
+
+        self.focused_screen = Some(FocusedScreenState {
+            name: screen_name.clone(),
+            oid: target_oid,
+            saved_state,
+            saved_crop_rect,
+            focus_anchor,
+            target_x: screen_focus.target_x,
+            target_y: screen_focus.target_y,
+            crop_rect,
+        });
+        self.focus_animation = Some(FocusAnimation {
+            oid: target_oid,
+            from: current_state,
+            to: focused_state,
+            start_us: get_micros(),
+            duration_us: 320_000,
+            easing: AnimationEasing::OutBack,
+        });
+
+        log::info!(
+            "Screen focus: focused screen {} on overlay {:?}",
+            screen_name,
+            target_oid
+        );
+        Ok(())
+    }
+}
+
+fn interpolate_overlay_state(
+    from: &OverlayWindowState,
+    to: &OverlayWindowState,
+    t: f32,
+) -> OverlayWindowState {
+    let (from_scale, from_rot, from_trans) = from.transform.to_scale_rotation_translation();
+    let (to_scale, to_rot, to_trans) = to.transform.to_scale_rotation_translation();
+
+    let mut state = to.clone();
+    state.transform = Affine3A::from_scale_rotation_translation(
+        from_scale.lerp(to_scale, t),
+        from_rot.slerp(to_rot, t),
+        from_trans.lerp(to_trans, t),
+    );
+    state.alpha = from.alpha + (to.alpha - from.alpha) * t;
+    state
+}
+
+fn build_focused_screen_state(
+    saved_state: &OverlayWindowState,
+    app: &AppState,
+    focus_anchor: Affine3A,
+    aspect_ratio: f32,
+    target_x: f32,
+    target_y: f32,
+    crop_rect: [f32; 4],
+) -> OverlayWindowState {
+    use wlx_common::windowing::Positioning;
+
+    let focus_scale = saved_state.transform.matrix3.y_axis.length().max(0.01)
+        * app.session.config.focused_screen_scale.max(0.01);
+    let mut focus_transform = focus_anchor
+        * Affine3A::from_scale_rotation_translation(
+            Vec3::splat(focus_scale),
+            Quat::IDENTITY,
+            Vec3::new(
+                0.0,
+                0.0,
+                -app.session.config.focused_screen_distance.max(0.05),
+            ),
+        );
+
+    let (_, focus_rotation, _) = focus_transform.to_scale_rotation_translation();
+    let width = focus_scale;
+    let height = focus_scale / aspect_ratio.max(0.01);
+    let offset_strength = if crop_rect != [0.0, 0.0, 1.0, 1.0] {
+        0.0
+    } else {
+        0.35
+    };
+    let local_x = (0.5 - target_x) * width * offset_strength;
+    let local_y = (target_y - 0.5) * height * offset_strength;
+    let offset_world = Vec3A::from(focus_rotation.mul_vec3(Vec3::new(local_x, local_y, 0.0)));
+    focus_transform.translation += offset_world;
+    let mut focused_state = saved_state.clone();
+    let curve_x = resolve_focused_screen_curvature(
+        saved_state.curvature,
+        app.session.config.focused_screen_curve_x,
+    );
+    focused_state.transform = focus_transform;
+    focused_state.positioning = Positioning::Static;
+    focused_state.interactable = true;
+    focused_state.grabbable = true;
+    focused_state.curvature = Some(curve_x);
+    focused_state
+}
+
+fn resolve_focused_screen_curvature(saved_curvature: Option<f32>, configured_curve_x: f32) -> f32 {
+    saved_curvature
+        .unwrap_or(0.15)
+        .max(configured_curve_x.max(0.0))
+}
+
+fn apply_focus_look_assist(base: &OverlayWindowState, app: &AppState) -> OverlayWindowState {
+    let mut state = base.clone();
+    let (scale, rotation, translation) = base.transform.to_scale_rotation_translation();
+
+    let hmd_forward = app
+        .input_state
+        .hmd
+        .transform_vector3a(Vec3A::NEG_Z)
+        .normalize();
+    let local_forward = rotation.inverse().mul_vec3a(hmd_forward);
+
+    let aspect_ratio = (scale.x / scale.y).max(0.01);
+    let width = scale.x;
+    let height = width / aspect_ratio;
+
+    let (assist_offset, assist_rotation) = resolve_focus_look_assist(
+        local_forward,
+        width,
+        height,
+        app.session.config.focused_screen_assist_x.max(0.0),
+        app.session.config.focused_screen_assist_y.max(0.0),
+        app.session.config.focused_screen_rotate_assist_x.max(0.0),
+        app.session.config.focused_screen_rotate_assist_y.max(0.0),
+    );
+    let assist_world = rotation.mul_vec3(assist_offset);
+
+    state.transform = Affine3A::from_scale_rotation_translation(
+        scale,
+        rotation * assist_rotation,
+        translation + assist_world,
+    );
+    state
+}
+
+fn resolve_focus_look_assist(
+    local_forward: Vec3A,
+    width: f32,
+    height: f32,
+    translate_assist_x: f32,
+    translate_assist_y: f32,
+    rotate_assist_x: f32,
+    rotate_assist_y: f32,
+) -> (Vec3, Quat) {
+    let clamped_x = (-local_forward.x).clamp(-0.55, 0.55);
+    let clamped_y = (-local_forward.y).clamp(-0.5, 0.5);
+
+    let assist_offset = Vec3::new(
+        clamped_x * width * translate_assist_x,
+        clamped_y * height * translate_assist_y,
+        0.0,
+    );
+
+    let assist_rotation = Quat::from_rotation_y(clamped_x * rotate_assist_x)
+        * Quat::from_rotation_x(-clamped_y * rotate_assist_y);
+
+    (assist_offset, assist_rotation)
+}
+
+#[cfg(test)]
+mod tests {
+    use glam::{Quat, Vec3, Vec3A};
+
+    use super::{resolve_focus_look_assist, resolve_focused_screen_curvature};
+
+    #[test]
+    fn focused_screen_curvature_uses_saved_or_configured_curve() {
+        let curve_x = resolve_focused_screen_curvature(Some(0.2), 0.3);
+        assert!((curve_x - 0.3).abs() < f32::EPSILON);
+
+        let curve_x = resolve_focused_screen_curvature(None, 0.32);
+        assert!((curve_x - 0.32).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn focus_look_assist_is_neutral_when_forward_is_centered() {
+        let (offset, rotation) =
+            resolve_focus_look_assist(Vec3A::new(0.0, 0.0, -1.0), 1.2, 0.8, 0.13, 0.18, 0.13, 0.12);
+
+        assert!(offset.length() < f32::EPSILON);
+        assert!(rotation.abs_diff_eq(Quat::IDENTITY, f32::EPSILON));
+    }
+
+    #[test]
+    fn focus_look_assist_adds_yaw_pitch_without_roll() {
+        let (offset, rotation) = resolve_focus_look_assist(
+            Vec3A::new(-0.4, 0.3, -1.0),
+            1.0,
+            0.75,
+            0.13,
+            0.18,
+            0.2,
+            0.15,
+        );
+
+        assert!(offset.x > 0.0);
+        assert!(offset.y < 0.0);
+
+        let rotated_right = rotation.mul_vec3(Vec3::X);
+        assert!(rotated_right.y.abs() < 1e-5);
+
+        let rotated_up = rotation.mul_vec3(Vec3::Y);
+        assert!(rotated_up.z > 0.0);
     }
 }
