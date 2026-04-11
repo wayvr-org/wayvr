@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+active_window=$(hyprctl -j activewindow)
+
+if [ -z "$active_window" ] || [ "$active_window" = "{}" ]; then
+    echo "No active window found"
+    exit 1
+fi
+
+monitor_id=$(echo "$active_window" | jq -r '.monitor')
+
+if [ -z "$monitor_id" ] || [ "$monitor_id" = "null" ]; then
+    echo "Could not get active monitor id"
+    exit 1
+fi
+
+monitor_name=$(hyprctl -j monitors | jq -r --argjson monitor_id "$monitor_id" '.[] | select(.id == $monitor_id) | .name' | head -n 1)
+
+if [ -z "$monitor_name" ] || [ "$monitor_name" = "null" ]; then
+    echo "Could not resolve monitor name for id $monitor_id"
+    exit 1
+fi
+
+exec wayvrctl screen-focus-toggle "$monitor_name"
