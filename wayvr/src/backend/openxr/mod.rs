@@ -317,6 +317,7 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
                 .submit(&mut app);
         }
 
+        overlays.animate_focus_transitions(&mut app);
         overlays.values_mut().for_each(|o| o.config.tick(&mut app));
 
         current_lines.clear();

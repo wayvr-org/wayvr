@@ -85,6 +85,15 @@ pub struct ModifyPanelTask {
     pub command: ModifyPanelCommand,
 }
 
+#[derive(Debug, Clone)]
+pub struct ScreenFocusTask {
+    pub screen_name: String,
+    pub target_x: f32,
+    pub target_y: f32,
+    pub crop_rect: Option<[f32; 4]>,
+    pub refresh_only: bool,
+}
+
 pub enum ToggleMode {
     EnsureOn,
     EnsureOff,
@@ -110,6 +119,7 @@ pub enum OverlayTask {
     Create(OverlaySelector, Box<CreateOverlayTask>),
     ModifyPanel(ModifyPanelTask),
     Drop(OverlaySelector),
+    ScreenFocusToggle(ScreenFocusTask),
 }
 
 #[allow(dead_code)]

@@ -5,4 +5,5 @@ pub enum WayVRSignal {
     SwitchSet(Option<usize>),
     ShowHide,
     CustomTask(crate::backend::task::ModifyPanelTask),
+    ScreenFocusToggle(crate::backend::task::ScreenFocusTask),
 }

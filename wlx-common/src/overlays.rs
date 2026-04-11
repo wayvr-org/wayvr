@@ -25,6 +25,7 @@ pub enum BackendAttrib {
 	StereoFullFrame,
 	StereoAdjustMouse,
 	MouseTransform,
+	CropRect,
 	Icon,
 }
 
@@ -34,6 +35,7 @@ pub enum BackendAttribValue {
 	StereoFullFrame(bool),
 	StereoAdjustMouse(bool),
 	MouseTransform(MouseTransform),
+	CropRect([f32; 4]),
 	#[serde(skip_serializing, skip_deserializing)]
 	Icon(Arc<str>),
 }
@@ -45,6 +47,7 @@ impl BackendAttribValue {
 			Self::StereoFullFrame(val) => !*val,
 			Self::StereoAdjustMouse(val) => !*val,
 			Self::MouseTransform(val) => *val == MouseTransform::default(),
+			Self::CropRect(val) => *val == [0.0, 0.0, 1.0, 1.0],
 			Self::Icon(_) => false,
 		}
 	}

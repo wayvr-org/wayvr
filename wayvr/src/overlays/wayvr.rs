@@ -352,6 +352,7 @@ impl OverlayBackend for WvrWindowBackend {
                             app,
                             [inner_extent[0] as _, inner_extent[1] as _],
                             [BORDER_SIZE as _, (BAR_SIZE + BORDER_SIZE) as _],
+                            [inner_extent[0] as _, inner_extent[1] as _],
                         )?;
                         self.apply_extent(app, &meta)?;
                         self.inner_extent = inner_extent;
@@ -359,9 +360,11 @@ impl OverlayBackend for WvrWindowBackend {
                 } else {
                     let pipeline = ScreenPipeline::new(
                         &meta,
+                        inner_extent,
                         app,
                         self.stereo.unwrap_or(StereoMode::None),
                         [BORDER_SIZE as _, (BAR_SIZE + BORDER_SIZE) as _],
+                        [0.0, 0.0, 1.0, 1.0],
                     )?;
                     self.apply_extent(app, &meta)?;
                     self.pipeline = Some(pipeline);

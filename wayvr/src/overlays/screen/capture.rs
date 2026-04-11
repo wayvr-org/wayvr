@@ -54,18 +54,23 @@ pub struct ScreenPipeline {
     pass: SmallVec<[BufPass; 2]>,
     pipeline: Arc<WGfxPipeline<Vert2Uv>>,
     extentf: [f32; 2],
+    source_extentf: [f32; 2],
     offsetf: [f32; 2],
+    crop_rect: [f32; 4],
     stereo: StereoMode,
 }
 
 impl ScreenPipeline {
     pub fn new(
         meta: &FrameMeta,
+        source_extent: [u32; 2],
         app: &mut AppState,
         stereo: StereoMode,
         offsetf: [f32; 2],
+        crop_rect: [f32; 4],
     ) -> anyhow::Result<Self> {
         let extentf = [meta.extent[0] as f32, meta.extent[1] as f32];
+        let source_extentf = [source_extent[0] as f32, source_extent[1] as f32];
 
         let pipeline = app.gfx.create_pipeline(
             app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
@@ -80,7 +85,9 @@ impl ScreenPipeline {
             mouse: Self::create_mouse_pass(app, pipeline.clone(), extentf, offsetf)?,
             pipeline,
             extentf,
+            source_extentf,
             offsetf,
+            crop_rect,
             stereo,
         };
         me.ensure_stereo(stereo);
@@ -110,8 +117,10 @@ impl ScreenPipeline {
             self.pass.pop();
         }
 
+        let stereo = self.stereo;
+        let crop_rect = self.crop_rect;
         for (eye, current) in self.pass.iter_mut().enumerate() {
-            let verts = stereo_mode_to_verts(self.stereo, eye);
+            let verts = cropped_stereo_mode_to_verts(stereo, crop_rect, eye);
             current.buf_vert.write()?.copy_from_slice(&verts);
         }
         Ok(())
@@ -122,12 +131,24 @@ impl ScreenPipeline {
         app: &mut AppState,
         extentf: [f32; 2],
         offsetf: [f32; 2],
+        source_extentf: [f32; 2],
     ) -> anyhow::Result<()> {
         self.extentf = extentf;
+        self.source_extentf = source_extentf;
         self.offsetf = offsetf;
         self.pass.clear();
 
         self.mouse = Self::create_mouse_pass(app, self.pipeline.clone(), extentf, offsetf)?;
+        Ok(())
+    }
+
+    pub fn set_crop_rect(&mut self, crop_rect: [f32; 4]) -> anyhow::Result<()> {
+        self.crop_rect = crop_rect;
+        let stereo = self.stereo;
+        for (eye, current) in self.pass.iter_mut().enumerate() {
+            let verts = cropped_stereo_mode_to_verts(stereo, crop_rect, eye);
+            current.buf_vert.write()?.copy_from_slice(&verts);
+        }
         Ok(())
     }
 
@@ -220,15 +241,26 @@ impl ScreenPipeline {
             cmd_buf.run_ref(&current.pass)?;
 
             if let Some(mouse) = mouse.as_ref() {
-                let size = CURSOR_SIZE * self.extentf[1];
+                let [crop_x, crop_y, crop_w, crop_h] = self.crop_rect;
+                if mouse.x < crop_x
+                    || mouse.x > crop_x + crop_w
+                    || mouse.y < crop_y
+                    || mouse.y > crop_y + crop_h
+                {
+                    continue;
+                }
+
+                let local_mouse_x = (mouse.x - crop_x) / crop_w;
+                let local_mouse_y = (mouse.y - crop_y) / crop_h;
+                let size = CURSOR_SIZE * self.source_extentf[1] / crop_h.max(0.01);
                 let half_size = size * 0.5;
 
                 upload_quad_vertices(
                     &mut self.mouse.buf_vert,
                     self.extentf[0],
                     self.extentf[1],
-                    mouse.x.mul_add(self.extentf[0], -half_size),
-                    mouse.y.mul_add(self.extentf[1], -half_size),
+                    local_mouse_x.mul_add(self.extentf[0], -half_size),
+                    local_mouse_y.mul_add(self.extentf[1], -half_size),
                     size,
                     size,
                 )?;
@@ -239,6 +271,21 @@ impl ScreenPipeline {
 
         Ok(())
     }
+}
+
+fn cropped_stereo_mode_to_verts(
+    stereo: StereoMode,
+    crop_rect: [f32; 4],
+    array_index: usize,
+) -> [Vert2Uv; 4] {
+    let [crop_x, crop_y, crop_w, crop_h] = crop_rect;
+    stereo_mode_to_verts(stereo, array_index).map(|vert| Vert2Uv {
+        in_pos: vert.in_pos,
+        in_uv: [
+            crop_x + vert.in_uv[0] * crop_w,
+            crop_y + vert.in_uv[1] * crop_h,
+        ],
+    })
 }
 
 fn stereo_mode_to_verts(stereo: StereoMode, array_index: usize) -> [Vert2Uv; 4] {

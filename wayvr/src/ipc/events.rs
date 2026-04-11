@@ -58,6 +58,12 @@ where
                 app.tasks
                     .enqueue(TaskType::Overlay(OverlayTask::ModifyPanel(custom_task)));
             }
+            WayVRSignal::ScreenFocusToggle(screen_focus) => {
+                app.tasks
+                    .enqueue(TaskType::Overlay(OverlayTask::ScreenFocusToggle(
+                        screen_focus,
+                    )));
+            }
         }
     }
 

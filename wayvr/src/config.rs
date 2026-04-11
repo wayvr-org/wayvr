@@ -131,6 +131,13 @@ pub struct AutoSettings {
     pub use_passthrough: bool,
     pub screen_render_down: bool,
     pub pointer_lerp_factor: f32,
+    pub focused_screen_assist_x: f32,
+    pub focused_screen_assist_y: f32,
+    pub focused_screen_rotate_assist_x: f32,
+    pub focused_screen_rotate_assist_y: f32,
+    pub focused_screen_curve_x: f32,
+    pub focused_screen_distance: f32,
+    pub focused_screen_scale: f32,
     pub space_drag_unlocked: bool,
     pub space_rotate_unlocked: bool,
     pub clock_12h: bool,
@@ -149,7 +156,7 @@ pub struct AutoSettings {
 fn get_settings_path() -> PathBuf {
     config_io::ConfigRoot::Generic
         .get_conf_d_path()
-        .join("zz-saved-config.json5")
+        .join("zz-saved-config.yaml")
 }
 
 pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
@@ -183,6 +190,13 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         use_passthrough: config.use_passthrough,
         screen_render_down: config.screen_render_down,
         pointer_lerp_factor: config.pointer_lerp_factor,
+        focused_screen_assist_x: config.focused_screen_assist_x,
+        focused_screen_assist_y: config.focused_screen_assist_y,
+        focused_screen_rotate_assist_x: config.focused_screen_rotate_assist_x,
+        focused_screen_rotate_assist_y: config.focused_screen_rotate_assist_y,
+        focused_screen_curve_x: config.focused_screen_curve_x,
+        focused_screen_distance: config.focused_screen_distance,
+        focused_screen_scale: config.focused_screen_scale,
         space_drag_unlocked: config.space_drag_unlocked,
         space_rotate_unlocked: config.space_rotate_unlocked,
         clock_12h: config.clock_12h,
@@ -198,8 +212,8 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         language: config.language,
     };
 
-    let json = serde_json::to_string_pretty(&conf).unwrap(); // want panic
-    std::fs::write(get_settings_path(), json)?;
+    let yaml = serde_yaml::to_string(&conf).unwrap(); // want panic
+    std::fs::write(get_settings_path(), yaml)?;
 
     log::info!("Saved settings.");
     Ok(())
