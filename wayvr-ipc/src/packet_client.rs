@@ -55,11 +55,21 @@ pub struct WlxModifyPanelParams {
 	pub command: WlxModifyPanelCommand,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WlxScreenFocusToggleParams {
+	pub screen_name: String,
+	pub target_x: f32,
+	pub target_y: f32,
+	pub crop_rect: Option<[f32; 4]>,
+	pub refresh_only: bool,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PacketClient {
 	Handshake(Handshake),
 	WvrWindowList(Serial),
 	WvrWindowSetVisible(packet_server::WvrWindowHandle, bool),
+	WlxScreenFocusToggle(WlxScreenFocusToggleParams),
 	WvrProcessGet(Serial, packet_server::WvrProcessHandle),
 	WvrProcessLaunch(Serial, WvrProcessLaunchParams),
 	WvrProcessList(Serial),

@@ -204,3 +204,27 @@ pub async fn wlx_input_state(state: &mut WayVRClientState) {
         .context("failed to get input state"),
     )
 }
+
+pub async fn wlx_screen_focus_toggle(
+    state: &mut WayVRClientState,
+    screen_name: String,
+    target_x: f32,
+    target_y: f32,
+    crop_rect: Option<[f32; 4]>,
+    refresh_only: bool,
+) {
+    handle_empty_result(
+        WayVRClient::fn_wlx_screen_focus_toggle(
+            state.wayvr_client.clone(),
+            packet_client::WlxScreenFocusToggleParams {
+                screen_name,
+                target_x,
+                target_y,
+                crop_rect,
+                refresh_only,
+            },
+        )
+        .await
+        .context("failed to toggle screen focus"),
+    )
+}

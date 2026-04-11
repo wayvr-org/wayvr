@@ -14,9 +14,9 @@ use wayvr_ipc::{
 };
 
 use crate::helper::{
-    WayVRClientState, wlx_device_haptics, wlx_input_state, wlx_panel_modify, wlx_show_hide,
-    wlx_switch_set, wvr_process_get, wvr_process_launch, wvr_process_list, wvr_process_terminate,
-    wvr_window_list, wvr_window_set_visible,
+    WayVRClientState, wlx_device_haptics, wlx_input_state, wlx_panel_modify,
+    wlx_screen_focus_toggle, wlx_show_hide, wlx_switch_set, wvr_process_get, wvr_process_launch,
+    wvr_process_list, wvr_process_terminate, wvr_window_list, wvr_window_set_visible,
 };
 
 mod helper;
@@ -195,6 +195,34 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
             let set = if set == 0 { None } else { Some((set - 1) as _) };
             wlx_switch_set(state, set).await;
         }
+        Subcommands::ScreenFocusToggle { screen_name } => {
+            wlx_screen_focus_toggle(state, screen_name, 0.5, 0.5, None, false).await;
+        }
+        Subcommands::ScreenFocusAt {
+            screen_name,
+            target_x,
+            target_y,
+            crop_x,
+            crop_y,
+            crop_w,
+            crop_h,
+            refresh_only,
+        } => {
+            let crop_rect = crop_x
+                .zip(crop_y)
+                .zip(crop_w)
+                .zip(crop_h)
+                .map(|(((x, y), w), h)| [x, y, w, h]);
+            wlx_screen_focus_toggle(
+                state,
+                screen_name,
+                target_x,
+                target_y,
+                crop_rect,
+                refresh_only,
+            )
+            .await;
+        }
     }
     Ok(())
 }
@@ -290,6 +318,24 @@ enum Subcommands {
     SwitchSet {
         /// Set number to switch to, 0 to hide all sets
         set_or_0: usize,
+    },
+    ScreenFocusToggle {
+        screen_name: String,
+    },
+    ScreenFocusAt {
+        screen_name: String,
+        target_x: f32,
+        target_y: f32,
+        #[arg(long)]
+        crop_x: Option<f32>,
+        #[arg(long)]
+        crop_y: Option<f32>,
+        #[arg(long)]
+        crop_w: Option<f32>,
+        #[arg(long)]
+        crop_h: Option<f32>,
+        #[arg(long)]
+        refresh_only: bool,
     },
 }
 

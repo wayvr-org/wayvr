@@ -429,6 +429,14 @@ impl WayVRClient {
 		send_only!(client, &PacketClient::WlxModifyPanel(params));
 		Ok(())
 	}
+
+	pub async fn fn_wlx_screen_focus_toggle(
+		client: WayVRClientMutex,
+		params: packet_client::WlxScreenFocusToggleParams,
+	) -> anyhow::Result<()> {
+		send_only!(client, &PacketClient::WlxScreenFocusToggle(params));
+		Ok(())
+	}
 }
 
 impl Drop for WayVRClient {
