@@ -216,7 +216,7 @@ pub fn mount_popup(
 				})?;
 
 				popup.set_view(data.handle, view);
-				Ok(())
+				Ok(popup.get_close_callback())
 			}),
 		)));
 }
