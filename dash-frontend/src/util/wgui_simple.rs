@@ -1,4 +1,4 @@
-use glam::Mat4;
+use glam::{Mat4, Vec2};
 use wgui::{
 	animation::{Animation, AnimationEasing},
 	assets::AssetPath,
@@ -7,10 +7,15 @@ use wgui::{
 	layout::{Layout, LayoutTask, WidgetID},
 	parser::{Fetchable, ParseDocumentParams},
 	renderer_vk::{
-		text::{FontWeight, TextStyle},
+		text::{FontWeight, TextStyle, custom_glyph::CustomGlyphData},
 		util::centered_matrix,
 	},
-	widget::label::{WidgetLabel, WidgetLabelParams},
+	taffy::{self, prelude::length},
+	widget::{
+		self,
+		label::{WidgetLabel, WidgetLabelParams},
+		sprite::{WidgetSprite, WidgetSpriteParams},
+	},
 };
 
 pub fn create_label(layout: &mut Layout, parent: WidgetID, content: Translation) -> anyhow::Result<()> {
@@ -47,6 +52,31 @@ pub fn create_label_error(layout: &mut Layout, parent: WidgetID, content: String
 	layout.add_child(parent, label, Default::default())?;
 
 	Ok(())
+}
+
+pub fn create_icon(layout: &mut Layout, id_parent: WidgetID, size: Vec2, path: AssetPath) -> anyhow::Result<WidgetID> {
+	let widget_sprite = WidgetSprite::create(WidgetSpriteParams {
+		color: None,
+		glyph_data: Some(CustomGlyphData::from_assets(&layout.state.globals, path)?),
+	});
+
+	let size = taffy::Size {
+		width: length(size.x),
+		height: length(size.y),
+	};
+
+	let (widget, _) = layout.add_child(
+		id_parent,
+		widget_sprite,
+		taffy::Style {
+			min_size: size.clone(),
+			max_size: size.clone(),
+			size: size.clone(),
+			..Default::default()
+		},
+	)?;
+
+	Ok(widget.id)
 }
 
 pub struct CreateLoadingParams<'a> {

@@ -8,7 +8,7 @@ pub async fn fetch_to_glyph_data(
 	executor: &AsyncExecutor,
 	url: &str,
 ) -> anyhow::Result<CustomGlyphData> {
-	let res = http_client::get(executor, url).await?;
+	let res = http_client::get_simple(executor, url).await?;
 	let glyph_data = CustomGlyphData::from_bytes_raster(globals, url, &res.data)?;
 	Ok(glyph_data)
 }

@@ -86,6 +86,11 @@ impl WidgetMap {
 		self.0.get(handle)
 	}
 
+	// same as get(), but with error message
+	pub fn fetch(&self, handle: WidgetID) -> anyhow::Result<Widget> {
+		self.get(handle).cloned().context("Failed to fetch widget")
+	}
+
 	pub fn insert(&mut self, obj: Widget) -> WidgetID {
 		self
 			.0

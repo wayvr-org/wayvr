@@ -1,4 +1,7 @@
-#![allow(dead_code)] // TODO: Remove later
+#![allow(dead_code)]
+use std::path::PathBuf;
+
+// TODO: Remove later
 use serde::Deserialize;
 use wlx_common::async_executor::AsyncExecutor;
 
@@ -36,12 +39,18 @@ impl SkymapCatalogEntryFiles {
 		format!("{}/files/{}", WAYVR_SKYMAPS_ROOT, self.preview)
 	}
 
-	pub fn get_filename_from_res(&self, res: SkymapResolution) -> Option<&String> {
+	pub fn get_filename_from_res(&self, res: SkymapResolution) -> Option<String> {
 		match res {
 			SkymapResolution::Res2k => Some(&self.size_2k),
 			SkymapResolution::Res4k => self.size_4k.as_ref(),
 			SkymapResolution::Res8k => self.size_8k.as_ref(),
 		}
+		.map(|raw_filename| {
+			// sanitize filename, do not allow "../" just in case
+			PathBuf::from(raw_filename)
+				.file_name()
+				.map(|s| String::from(s.to_string_lossy()))
+		})?
 	}
 
 	// example result: "https://wayvr.org/skymaps/files/my_skymap_8k.png"
@@ -89,7 +98,7 @@ impl SkymapCatalog {
 pub async fn request_catalog(executor: &AsyncExecutor) -> anyhow::Result<SkymapCatalog> {
 	log::info!("Fetching skymap list");
 
-	let res = http_client::get(executor, &format!("{}/catalog.json", networking::WAYVR_SKYMAPS_ROOT)).await?;
+	let res = http_client::get_simple(executor, &format!("{}/catalog.json", networking::WAYVR_SKYMAPS_ROOT)).await?;
 	let catalog = res.as_json::<SkymapCatalog>()?;
 	catalog.validate()?;
 

@@ -1,8 +1,13 @@
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
-	util::popup_manager::{MountPopupOnceParams, PopupHolder},
+	util::{
+		networking::http_client::{self, ProgressFuncData},
+		popup_manager::{MountPopupOnceParams, PopupHolder},
+		wgui_simple,
+	},
 	views::{ViewTrait, ViewUpdateParams},
 };
+use glam::Vec2;
 use std::path::PathBuf;
 use wgui::{
 	assets::AssetPath,
@@ -26,7 +31,12 @@ pub struct Params<'a> {
 }
 
 #[derive(Clone)]
-enum Task {}
+enum Task {
+	StartDownload(/*url*/ String),
+	SetStatusText(String),
+	ShowIconSuccess,
+	ShowIconError,
+}
 
 pub struct View {
 	id_parent: WidgetID,
@@ -36,12 +46,47 @@ pub struct View {
 
 	#[allow(dead_code)]
 	parser_state: ParserState,
+
+	id_label_status: WidgetID,
+	id_loading_parent: WidgetID,
 }
 
 impl ViewTrait for View {
-	fn update(&mut self, _par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
 		for task in self.tasks.drain() {
-			match task {}
+			match task {
+				Task::StartDownload(url) => {
+					self
+						.executor
+						.spawn(View::download(self.tasks.clone(), self.executor.clone(), url))
+						.detach();
+				}
+				Task::SetStatusText(text) => {
+					let widgets = &mut par.layout.state.widgets;
+					widgets
+						.fetch(self.id_label_status)?
+						.cast::<WidgetLabel>()?
+						.set_text(&mut par.layout.common(), Translation::from_raw_text_string(text));
+				}
+				Task::ShowIconSuccess => {
+					par.layout.remove_children(self.id_loading_parent);
+					wgui_simple::create_icon(
+						par.layout,
+						self.id_loading_parent,
+						Vec2::splat(32.0),
+						AssetPath::BuiltIn("dashboard/check.svg"),
+					)?;
+				}
+				Task::ShowIconError => {
+					par.layout.remove_children(self.id_loading_parent);
+					wgui_simple::create_icon(
+						par.layout,
+						self.id_loading_parent,
+						Vec2::splat(32.0),
+						AssetPath::BuiltIn("dashboard/error.svg"),
+					)?;
+				}
+			}
 		}
 		Ok(())
 	}
@@ -57,7 +102,15 @@ impl View {
 			extra: Default::default(),
 		};
 
-		let mut parser_state = wgui::parser::parse_from_assets(&doc_params, par.layout, par.parent_id)?;
+		let parser_state = wgui::parser::parse_from_assets(&doc_params, par.layout, par.parent_id)?;
+		let id_label_status = parser_state.get_widget_id("label_status")?;
+		let id_loading_parent = parser_state.get_widget_id("loading_parent")?;
+
+		wgui_simple::create_loading(wgui_simple::CreateLoadingParams {
+			parent_id: id_loading_parent,
+			layout: par.layout,
+			with_text: false,
+		})?;
 
 		let str_target_path = par.globals.i18n().translate("TARGET_PATH");
 
@@ -71,13 +124,49 @@ impl View {
 			);
 		}
 
+		tasks.push(Task::StartDownload(par.url.clone()));
+
 		Ok(Self {
 			id_parent: par.parent_id,
 			tasks,
 			globals: par.globals.clone(),
 			executor: par.executor.clone(),
 			parser_state,
+			id_label_status,
+			id_loading_parent,
 		})
+	}
+
+	async fn download(tasks: Tasks<Task>, executor: AsyncExecutor, url: String) {
+		tasks.push(Task::SetStatusText(String::from("Connecting to the server...")));
+
+		let res = http_client::get(http_client::GetParams {
+			executor: &executor,
+			url: &url,
+			on_progress: Some(Box::new({
+				let tasks = tasks.clone();
+				move |data: ProgressFuncData| {
+					tasks.push(Task::SetStatusText(format!(
+						"{}/{} KiB ({}%)",
+						data.bytes_downloaded / 1024,
+						data.file_size / 1024,
+						(data.bytes_downloaded as f32 / data.file_size as f32 * 100.0).round()
+					)))
+				}
+			})),
+		})
+		.await;
+
+		match res {
+			Ok(_response) => {
+				tasks.push(Task::SetStatusText(String::from("Download finished")));
+				tasks.push(Task::ShowIconSuccess);
+			}
+			Err(e) => {
+				tasks.push(Task::ShowIconError);
+				tasks.push(Task::SetStatusText(format!("Download failed: {:?}", e)))
+			}
+		}
 	}
 }
 

@@ -19,7 +19,7 @@ use wgui::{
 	task::Tasks,
 	widget::{image::WidgetImage, label::WidgetLabel},
 };
-use wlx_common::async_executor::AsyncExecutor;
+use wlx_common::{async_executor::AsyncExecutor, config_io};
 
 pub struct Params<'a> {
 	pub globals: &'a WguiGlobals,
@@ -72,10 +72,12 @@ impl ViewTrait for View {
 		for task in self.tasks.drain() {
 			match task {
 				Task::ResolutionClicked(skymap_resolution) => {
-					self.run_download(&mut par.layout, skymap_resolution)?;
+					self.run_download(skymap_resolution)?;
 				}
 			}
 		}
+
+		self.popup_download.update(par)?;
 		Ok(())
 	}
 }
@@ -130,7 +132,7 @@ impl View {
 			.fetch_widget_as::<WidgetLabel>(&par.layout.state, "label_creation_date")?
 			.set_text_simple(
 				&mut par.globals.get(),
-				Translation::from_raw_text_string(format!("{}: {}", str_creation_date, par.entry.created_at,)),
+				Translation::from_raw_text_string(format!("{}: {}", str_creation_date, par.entry.created_at)),
 			);
 
 		// Set modification date label
@@ -138,7 +140,7 @@ impl View {
 			.fetch_widget_as::<WidgetLabel>(&par.layout.state, "label_modification_date")?
 			.set_text_simple(
 				&mut par.globals.get(),
-				Translation::from_raw_text_string(format!("{}: {}", str_modification_date, par.entry.created_at,)),
+				Translation::from_raw_text_string(format!("{}: {}", str_modification_date, par.entry.created_at)),
 			);
 
 		let files = &par.entry.files;
@@ -173,18 +175,24 @@ impl View {
 		})
 	}
 
-	fn run_download(&mut self, layout: &mut Layout, resolution: SkymapResolution) -> anyhow::Result<()> {
-		let target_path = PathBuf::from(format!(""));
+	fn run_download(&mut self, resolution: SkymapResolution) -> anyhow::Result<()> {
 		let Some(url) = self.entry.files.get_url_from_res(resolution) else {
 			return Ok(());
 		};
+
+		let Some(filename) = self.entry.files.get_filename_from_res(resolution) else {
+			return Ok(());
+		};
+
+		let mut path = config_io::get_skymaps_root();
+		path = path.join(filename);
 
 		views::download_file::mount_popup(
 			self.frontend_tasks.clone(),
 			self.executor.clone(),
 			self.globals.clone(),
 			self.popup_download.clone(),
-			target_path,
+			path,
 			url,
 		);
 		Ok(())

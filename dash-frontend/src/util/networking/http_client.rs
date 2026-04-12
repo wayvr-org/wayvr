@@ -11,6 +11,7 @@ use http_body_util::{BodyStream, Empty};
 use hyper::Request;
 use smol::{net::TcpStream, prelude::*};
 use std::convert::TryInto;
+use std::fmt::Debug;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use wlx_common::async_executor::AsyncExecutor;
@@ -28,10 +29,23 @@ impl HttpClientResponse {
 	}
 }
 
-pub async fn get(executor: &AsyncExecutor, url: &str) -> anyhow::Result<HttpClientResponse> {
-	log::info!("fetching URL \"{}\"", url);
+pub struct ProgressFuncData {
+	pub bytes_downloaded: u64,
+	pub file_size: u64,
+}
 
-	let url: hyper::Uri = url.try_into()?;
+pub type ProgressFunc = Box<dyn Fn(ProgressFuncData)>;
+
+pub struct GetParams<'a> {
+	pub executor: &'a AsyncExecutor,
+	pub url: &'a str,
+	pub on_progress: Option<ProgressFunc>,
+}
+
+pub async fn get(params: GetParams<'_>) -> anyhow::Result<HttpClientResponse> {
+	log::info!("fetching URL \"{}\"", params.url);
+
+	let url: hyper::Uri = params.url.try_into()?;
 	let req = Request::builder()
 		.header(
 			hyper::header::HOST,
@@ -40,23 +54,56 @@ pub async fn get(executor: &AsyncExecutor, url: &str) -> anyhow::Result<HttpClie
 		.uri(url)
 		.body(Empty::new())?;
 
-	let resp = fetch(executor, req).await?;
+	let resp = fetch(params.executor, req).await?;
 
 	if !resp.status().is_success() {
 		// non-200 HTTP response
 		anyhow::bail!("non-200 HTTP response: {}", resp.status().as_str());
 	}
 
-	let body = BodyStream::new(resp.into_body())
+	let mut bytes_downloaded: u64 = 0;
+	let mut file_size: u64 = 1;
+
+	let (parts, body) = resp.into_parts();
+
+	// that's a pretty interesting way to get file size :]
+	if let Some(val) = parts.headers.get("Content-Length") {
+		if let Ok(str) = val.to_str() {
+			if let Ok(s) = str.parse() {
+				file_size = s;
+			}
+		}
+	}
+
+	let mut on_progress = params.on_progress;
+
+	let data = BodyStream::new(body)
 		.try_fold(Vec::new(), |mut body, chunk| {
 			if let Some(chunk) = chunk.data_ref() {
+				bytes_downloaded += chunk.len() as u64;
 				body.extend_from_slice(chunk);
+
+				if let Some(on_progress) = &mut on_progress {
+					on_progress(ProgressFuncData {
+						bytes_downloaded,
+						file_size,
+					})
+				}
 			}
 			Ok(body)
 		})
 		.await?;
 
-	Ok(HttpClientResponse { data: body })
+	Ok(HttpClientResponse { data })
+}
+
+pub async fn get_simple(executor: &AsyncExecutor, url: &str) -> anyhow::Result<HttpClientResponse> {
+	get(GetParams {
+		executor,
+		url,
+		on_progress: None,
+	})
+	.await
 }
 
 async fn fetch(
