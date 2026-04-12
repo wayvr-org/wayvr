@@ -28,7 +28,7 @@ use crate::{
 	assets,
 	tab::{Tab, TabType, apps::TabApps, games::TabGames, home::TabHome, monado::TabMonado, settings::TabSettings},
 	util::{
-		popup_manager::{MountPopupOnceParams, MountPopupParams, PopupManager, PopupManagerParams},
+		popup_manager::{MountPopupOnceParams, PopupManager, PopupManagerParams},
 		toast_manager::ToastManager,
 	},
 	views,
@@ -101,7 +101,6 @@ pub enum FrontendTask {
 	SetTab(TabType),
 	RefreshClock,
 	RefreshBackground,
-	MountPopup(MountPopupParams),
 	MountPopupOnce(MountPopupOnceParams),
 	RefreshPopupManager,
 	ShowAudioSettings,
@@ -305,15 +304,6 @@ impl<T: 'static> Frontend<T> {
 		Ok(())
 	}
 
-	fn mount_popup(&mut self, params: MountPopupParams, data: &mut T) -> anyhow::Result<()> {
-		let config = self.interface.general_config(data);
-
-		self
-			.popup_manager
-			.mount_popup(&self.globals, &mut self.layout, &self.tasks, params, config)?;
-		Ok(())
-	}
-
 	fn mount_popup_once(&mut self, params: MountPopupOnceParams, data: &mut T) -> anyhow::Result<()> {
 		let config = self.interface.general_config(data);
 
@@ -357,7 +347,6 @@ impl<T: 'static> Frontend<T> {
 			FrontendTask::SetTab(tab_type) => self.set_tab(params.data, tab_type)?,
 			FrontendTask::RefreshClock => self.update_time(params.data)?,
 			FrontendTask::RefreshBackground => self.update_background(params.data)?,
-			FrontendTask::MountPopup(popup_params) => self.mount_popup(popup_params, params.data)?,
 			FrontendTask::MountPopupOnce(popup_params) => self.mount_popup_once(popup_params, params.data)?,
 			FrontendTask::RefreshPopupManager => self.refresh_popup_manager()?,
 			FrontendTask::ShowAudioSettings => self.action_show_audio_settings()?,

@@ -37,6 +37,7 @@ pub struct MountedPopup {
 #[derive(Default)]
 struct MountedPopupState {
 	mounted_popup: Option<MountedPopup>,
+	closed_callback: Option<PopupClosedCallback>,
 }
 
 #[derive(Default, Clone)]
@@ -71,6 +72,13 @@ impl<ViewType> Default for PopupHolder<ViewType> {
 	}
 }
 
+impl<ViewType> PopupHolderState<ViewType> {
+	fn close(&mut self) {
+		self.view = None;
+		self.popup_handle.close();
+	}
+}
+
 // we can't derive(Clone) due to the fact that ViewType is non-cloneable
 impl<ViewType> Clone for PopupHolder<ViewType> {
 	fn clone(&self) -> Self {
@@ -82,9 +90,7 @@ impl<ViewType> Clone for PopupHolder<ViewType> {
 
 impl<ViewType> PopupHolder<ViewType> {
 	pub fn close(&self) {
-		let mut state = self.state.borrow_mut();
-		state.view = None;
-		state.popup_handle.close();
+		self.state.borrow_mut().close();
 	}
 
 	pub fn set_view(&self, handle: PopupHandle, view: ViewType) {
@@ -129,8 +135,12 @@ impl<ViewType> PopupHolder<ViewType> {
 	where
 		ViewType: 'static,
 	{
-		let this = self.clone();
-		Box::new(move || this.close())
+		let weak_state = Rc::downgrade(&self.state);
+		Box::new(move || {
+			if let Some(state) = weak_state.upgrade() {
+				state.borrow_mut().close();
+			}
+		})
 	}
 }
 
@@ -152,22 +162,21 @@ pub struct PopupContentFuncData<'a> {
 	pub id_content: WidgetID,
 }
 
-#[derive(Clone)]
-pub struct MountPopupParams {
-	pub title: Translation,
-	pub on_content: Rc<dyn Fn(PopupContentFuncData) -> anyhow::Result<()>>,
-}
+type PopupClosedCallback = Box<dyn FnOnce()>;
 
 // we need to implement Clone here, but the underlying function can be called only once.
 // on_content will be cleared after the first call
 #[derive(Clone)]
 pub struct MountPopupOnceParams {
 	title: Translation,
-	on_content: Rc<RefCell<Option<Box<dyn FnOnce(PopupContentFuncData) -> anyhow::Result<()>>>>>,
+	on_content: Rc<RefCell<Option<Box<dyn FnOnce(PopupContentFuncData) -> anyhow::Result<PopupClosedCallback>>>>>,
 }
 
 impl MountPopupOnceParams {
-	pub fn new(title: Translation, on_content: Box<dyn FnOnce(PopupContentFuncData) -> anyhow::Result<()>>) -> Self {
+	pub fn new(
+		title: Translation,
+		on_content: Box<dyn FnOnce(PopupContentFuncData) -> anyhow::Result<PopupClosedCallback>>,
+	) -> Self {
 		Self {
 			title,
 			on_content: Rc::new(RefCell::new(Some(on_content))),
@@ -186,10 +195,16 @@ impl State {
 	fn refresh_stack(&mut self, alterables: &mut EventAlterables) {
 		// show only the topmost popup
 		self.popup_stack.retain(|weak| {
-			let Some(popup) = weak.upgrade() else {
-				return false;
+			let retain = {
+				let Some(popup) = weak.upgrade() else {
+					return false;
+				};
+				popup.borrow_mut().mounted_popup.is_some()
 			};
-			popup.borrow_mut().mounted_popup.is_some()
+			if !retain {
+				log::debug!("removing popup from popup_stack");
+			}
+			retain
 		});
 
 		for (idx, popup) in self.popup_stack.iter().enumerate() {
@@ -257,6 +272,7 @@ impl PopupManager {
 
 		let mounted_popup_state = MountedPopupState {
 			mounted_popup: Some(mounted_popup),
+			closed_callback: None,
 		};
 
 		let popup_handle = PopupHandle {
@@ -264,13 +280,21 @@ impl PopupManager {
 		};
 
 		let mut state = self.state.borrow_mut();
+		log::debug!("pushing popup to popup_stack");
 		state.popup_stack.push(Rc::downgrade(&popup_handle.state));
 
 		but_back.on_click({
 			let popup_handle = Rc::downgrade(&popup_handle.state);
 			Rc::new(move |_common, _evt| {
 				if let Some(popup_handle) = popup_handle.upgrade() {
-					popup_handle.borrow_mut().mounted_popup = None; // will call Drop
+					if let Some(closed_callback) = {
+						let mut state = popup_handle.borrow_mut();
+						state.mounted_popup = None; // will call Drop
+						state.closed_callback.take()
+					} {
+						log::debug!("closed_callback called");
+						closed_callback();
+					}
 				}
 				Ok(())
 			})
@@ -280,7 +304,7 @@ impl PopupManager {
 		Ok((popup_handle, id_content))
 	}
 
-	/// Mount a new popup on top of the existing popup stack (non-cloneable version).
+	/// Mount a new popup on top of the existing popup stack.
 	/// Only the topmost popup is visible.
 	pub fn mount_popup_once(
 		&mut self,
@@ -298,35 +322,14 @@ impl PopupManager {
 		let (popup_handle, id_content) = self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title)?;
 
 		// mount user-set popup content
-		on_content_func(PopupContentFuncData {
+		let closed_callback = on_content_func(PopupContentFuncData {
 			layout,
 			handle: popup_handle.clone(),
 			id_content,
 			config,
 		})?;
 
-		Ok(())
-	}
-
-	/// Mount a new popup on top of the existing popup stack.
-	/// Only the topmost popup is visible.
-	pub fn mount_popup(
-		&mut self,
-		globals: &WguiGlobals,
-		layout: &mut Layout,
-		frontend_tasks: &FrontendTasks,
-		params: MountPopupParams,
-		config: &GeneralConfig,
-	) -> anyhow::Result<()> {
-		let (popup_handle, id_content) = self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title)?;
-
-		// mount user-set popup content
-		(*params.on_content)(PopupContentFuncData {
-			layout,
-			handle: popup_handle.clone(),
-			id_content,
-			config,
-		})?;
+		popup_handle.state.borrow_mut().closed_callback = Some(closed_callback);
 
 		Ok(())
 	}
