@@ -461,7 +461,7 @@ fn handle_mouse_motion(
     {
         if !swipe_manager.is_current_swipe_empty() {
             match &key.button_state {
-                KeyButtonData::Key { vk, pressed } => {
+                KeyButtonData::Key { vk: _, pressed: _ } => {
                     if let Some(pos) = within_key_pos {
                         // check because mouse motion can trigger despite hover being false
                         if pos.x >= 0.0 && pos.x <= 1.0 && pos.y >= 0.0 && pos.y <= 1.0 {

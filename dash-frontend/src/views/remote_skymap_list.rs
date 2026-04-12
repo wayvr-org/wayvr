@@ -21,7 +21,7 @@ use crate::{
 		popup_manager::{MountPopupOnceParams, PopupHolder},
 		wgui_simple,
 	},
-	views,
+	views::{self, ViewTrait, ViewUpdateParams},
 };
 
 pub struct Params<'a> {
@@ -29,7 +29,7 @@ pub struct Params<'a> {
 	pub layout: &'a mut Layout,
 	pub executor: &'a AsyncExecutor,
 	pub parent_id: WidgetID,
-	pub on_close_request: Box<dyn Fn()>,
+	pub on_close_request: Box<dyn FnOnce()>,
 	pub frontend_tasks: FrontendTasks,
 }
 
@@ -56,6 +56,44 @@ pub struct View {
 	frontend_tasks: FrontendTasks,
 	catalog: Option<networking::skymap_catalog::SkymapCatalog>,
 	popup_remote_skymap_downloader: PopupHolder<views::remote_skymap_downloader::View>,
+}
+
+impl ViewTrait for View {
+	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		self.popup_remote_skymap_downloader.update(par)?;
+
+		for task in self.tasks.drain() {
+			match task {
+				Task::SetSkymapCatalog(skymap_catalog) => {
+					par.layout.remove_widget(self.id_loading);
+					match &*skymap_catalog {
+						Ok(skymap_catalog) => {
+							self.mount_catalog(par.layout, skymap_catalog)?;
+						}
+						Err(e) => wgui_simple::create_label_error(
+							par.layout,
+							self.id_parent,
+							format!("Failed to fetch skymap catalog: {:?}", e),
+						)?,
+					}
+				}
+				Task::SetSkymapPreview((skymap_uuid, glyph_data)) => {
+					if let Some(cell) = &mut self
+						.mounted_cells
+						.iter_mut()
+						.find(|cell| cell.skymap_uuid == skymap_uuid)
+					{
+						cell.view.set_image(par.layout, glyph_data)?;
+					}
+				}
+				Task::ShowRemoteSkymapDownloader(skymap_uuid) => {
+					let preview_image = self.get_image_preview(skymap_uuid);
+					self.show_remote_skymap_downloader(skymap_uuid, preview_image)?;
+				}
+			}
+		}
+		Ok(())
+	}
 }
 
 impl View {
@@ -176,44 +214,6 @@ impl View {
 		}
 		None
 	}
-
-	pub fn update(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
-		self
-			.popup_remote_skymap_downloader
-			.with_view_res(|view| view.update(layout))?;
-
-		for task in self.tasks.drain() {
-			match task {
-				Task::SetSkymapCatalog(skymap_catalog) => {
-					layout.remove_widget(self.id_loading);
-					match &*skymap_catalog {
-						Ok(skymap_catalog) => {
-							self.mount_catalog(layout, skymap_catalog)?;
-						}
-						Err(e) => wgui_simple::create_label_error(
-							layout,
-							self.id_parent,
-							format!("Failed to fetch skymap catalog: {:?}", e),
-						)?,
-					}
-				}
-				Task::SetSkymapPreview((skymap_uuid, glyph_data)) => {
-					if let Some(cell) = &mut self
-						.mounted_cells
-						.iter_mut()
-						.find(|cell| cell.skymap_uuid == skymap_uuid)
-					{
-						cell.view.set_image(layout, glyph_data)?;
-					}
-				}
-				Task::ShowRemoteSkymapDownloader(skymap_uuid) => {
-					let preview_image = self.get_image_preview(skymap_uuid);
-					self.show_remote_skymap_downloader(skymap_uuid, preview_image)?;
-				}
-			}
-		}
-		Ok(())
-	}
 }
 
 pub fn mount_popup(
@@ -227,17 +227,18 @@ pub fn mount_popup(
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
 			Translation::from_translation_key("APP_SETTINGS.DOWNLOAD_SKYMAPS"),
 			Box::new(move |data| {
+				let on_close_request = popup.get_close_callback(data.layout);
 				let view = View::new(Params {
 					globals: &globals,
 					layout: data.layout,
 					executor: &executor,
 					parent_id: data.id_content,
-					on_close_request: popup.get_close_callback(),
+					on_close_request,
 					frontend_tasks,
 				})?;
 
 				popup.set_view(data.handle, view);
-				Ok(popup.get_close_callback())
+				Ok(popup.get_close_callback(data.layout))
 			}),
 		)));
 }

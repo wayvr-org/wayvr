@@ -16,7 +16,10 @@ use wgui::{
 };
 use wlx_common::config::GeneralConfig;
 
-use crate::frontend::{FrontendTask, FrontendTasks};
+use crate::{
+	frontend::{FrontendTask, FrontendTasks},
+	views::{ViewTrait, ViewUpdateParams},
+};
 
 pub struct PopupManagerParams {
 	pub parent_id: WidgetID,
@@ -45,13 +48,19 @@ pub struct PopupHandle {
 	state: Rc<RefCell<MountedPopupState>>,
 }
 
-struct PopupHolderState<ViewType> {
+struct PopupHolderState<ViewType>
+where
+	ViewType: ViewTrait,
+{
 	popup_handle: PopupHandle,
 	view: Option<ViewType>,
 }
 
 // we can't use #[derive(Default)] due to the fact that ViewType can't be Default.
-impl<ViewType> Default for PopupHolderState<ViewType> {
+impl<ViewType> Default for PopupHolderState<ViewType>
+where
+	ViewType: ViewTrait,
+{
 	fn default() -> Self {
 		Self {
 			popup_handle: Default::default(),
@@ -60,11 +69,17 @@ impl<ViewType> Default for PopupHolderState<ViewType> {
 	}
 }
 
-pub struct PopupHolder<ViewType> {
+pub struct PopupHolder<ViewType>
+where
+	ViewType: ViewTrait,
+{
 	state: Rc<RefCell<PopupHolderState<ViewType>>>,
 }
 
-impl<ViewType> Default for PopupHolder<ViewType> {
+impl<ViewType> Default for PopupHolder<ViewType>
+where
+	ViewType: ViewTrait,
+{
 	fn default() -> Self {
 		Self {
 			state: Rc::new(RefCell::new(PopupHolderState::default())),
@@ -72,7 +87,10 @@ impl<ViewType> Default for PopupHolder<ViewType> {
 	}
 }
 
-impl<ViewType> PopupHolderState<ViewType> {
+impl<ViewType> PopupHolderState<ViewType>
+where
+	ViewType: ViewTrait,
+{
 	fn close(&mut self) {
 		self.view = None;
 		self.popup_handle.close();
@@ -80,7 +98,10 @@ impl<ViewType> PopupHolderState<ViewType> {
 }
 
 // we can't derive(Clone) due to the fact that ViewType is non-cloneable
-impl<ViewType> Clone for PopupHolder<ViewType> {
+impl<ViewType> Clone for PopupHolder<ViewType>
+where
+	ViewType: ViewTrait,
+{
 	fn clone(&self) -> Self {
 		Self {
 			state: self.state.clone(),
@@ -88,9 +109,17 @@ impl<ViewType> Clone for PopupHolder<ViewType> {
 	}
 }
 
-impl<ViewType> PopupHolder<ViewType> {
-	pub fn close(&self) {
-		self.state.borrow_mut().close();
+impl<ViewType> PopupHolder<ViewType>
+where
+	ViewType: ViewTrait,
+{
+	pub fn update(&self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		let mut state = self.state.borrow_mut();
+		let Some(view) = &mut state.view else {
+			return Ok(());
+		};
+
+		view.update(par)
 	}
 
 	pub fn set_view(&self, handle: PopupHandle, view: ViewType) {
@@ -131,15 +160,20 @@ impl<ViewType> PopupHolder<ViewType> {
 		Ok(())
 	}
 
-	pub fn get_close_callback(&self) -> Box<dyn Fn()>
+	pub fn get_close_callback(&self, layout: &Layout) -> Box<dyn FnOnce()>
 	where
 		ViewType: 'static,
 	{
+		let layout_tasks = layout.tasks.clone();
 		let weak_state = Rc::downgrade(&self.state);
 		Box::new(move || {
-			if let Some(state) = weak_state.upgrade() {
-				state.borrow_mut().close();
-			}
+			// we can't borrow State here yet, dispatch it.
+			layout_tasks.push(LayoutTask::Dispatch(Box::new(move |_common| {
+				if let Some(state) = weak_state.upgrade() {
+					state.borrow_mut().close();
+				}
+				Ok(())
+			})));
 		})
 	}
 }

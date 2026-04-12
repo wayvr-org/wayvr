@@ -1,0 +1,11 @@
+<layout>
+  <elements>
+    <div align_items="center" justify_content="center">
+      <div flex_direction="column" gap="8">
+        <label translation="DOWNLOADING_FILE" size="14"/>
+        <label id="label_target_path" />
+        <label id="label_progress"/>
+      </div>
+    </div>
+  </elements>
+</layout>

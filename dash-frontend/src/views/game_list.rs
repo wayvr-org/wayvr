@@ -22,7 +22,7 @@ use crate::{
 		popup_manager::PopupHolder,
 		steam_utils::{self, AppID, SteamUtils},
 	},
-	views::{self, game_cover},
+	views::{self, ViewTrait, ViewUpdateParams, game_cover},
 };
 
 #[derive(Clone)]
@@ -41,6 +41,7 @@ pub struct Params<'a> {
 	pub frontend_tasks: FrontendTasks,
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
+	pub steam_utils: &'a SteamUtils,
 }
 
 const MAX_GAMES_PER_PAGE: u32 = 30;
@@ -64,6 +65,31 @@ pub struct View {
 	page_count: u32,
 	id_label_page: WidgetID,
 	view_launcher: PopupHolder<views::game_launcher::View>,
+	steam_utils: SteamUtils,
+}
+
+impl ViewTrait for View {
+	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		loop {
+			let tasks = self.tasks.drain();
+			if tasks.is_empty() {
+				break;
+			}
+			for task in tasks {
+				match task {
+					Task::LoadManifests => self.load_manifests(),
+					Task::FillPage(page_idx) => self.fill_page(&mut par.layout, &mut par.executor, page_idx)?,
+					Task::AppManifestClicked(manifest) => self.action_app_manifest_clicked(manifest)?,
+					Task::SetCoverArt(app_id, cover_art) => self.set_cover_art(&mut par.layout, app_id, cover_art),
+					Task::PrevPage => self.page_prev(),
+					Task::NextPage => self.page_next(),
+				}
+			}
+		}
+
+		self.view_launcher.update(par)?;
+		Ok(())
+	}
 }
 
 impl View {
@@ -106,35 +132,8 @@ impl View {
 			page_count: 0,
 			id_label_page,
 			view_launcher: Default::default(),
+			steam_utils: params.steam_utils.clone(),
 		})
-	}
-
-	pub fn update(
-		&mut self,
-		layout: &mut Layout,
-		steam_utils: &mut SteamUtils,
-		executor: &AsyncExecutor,
-	) -> anyhow::Result<()> {
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-			for task in tasks {
-				match task {
-					Task::LoadManifests => self.load_manifests(steam_utils),
-					Task::FillPage(page_idx) => self.fill_page(layout, executor, page_idx)?,
-					Task::AppManifestClicked(manifest) => self.action_app_manifest_clicked(manifest)?,
-					Task::SetCoverArt(app_id, cover_art) => self.set_cover_art(layout, app_id, cover_art),
-					Task::PrevPage => self.page_prev(),
-					Task::NextPage => self.page_next(),
-				}
-			}
-		}
-
-		self.view_launcher.with_view_res(|view| view.update(layout))?;
-
-		Ok(())
 	}
 }
 
@@ -178,8 +177,11 @@ fn fill_game_list(
 }
 
 impl View {
-	fn load_manifests(&mut self, steam_utils: &mut SteamUtils) {
-		match steam_utils.list_installed_games(steam_utils::GameSortMethod::PlayDateDesc) {
+	fn load_manifests(&mut self) {
+		match self
+			.steam_utils
+			.list_installed_games(steam_utils::GameSortMethod::PlayDateDesc)
+		{
 			Ok(manifests) => {
 				self.page_count = (manifests.len() as u32 + MAX_GAMES_PER_PAGE) / MAX_GAMES_PER_PAGE;
 				self.all_manifests = manifests;

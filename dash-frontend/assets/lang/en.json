@@ -142,6 +142,8 @@
 	"CREATION_DATE": "Creation date",
 	"DEBUG_INFO": "Debug info",
 	"DISPLAY_BRIGHTNESS": "Display brightness",
+	"DOWNLOADER": "Downloader",
+	"DOWNLOADING_FILE": "Downloading file...",
 	"FAILED_TO_LAUNCH_APPLICATION": "Failed to launch a application:",
 	"GAME_LAUNCHED": "Game launched",
 	"GAME_LIST": {
@@ -170,6 +172,7 @@
 	"REMOVE": "Remove",
 	"SETTINGS": "Settings",
 	"SHOW": "Show",
+	"TARGET_PATH": "Target path",
 	"TERMINATE_PROCESS": "Terminate process",
 	"VERSION": "Version",
 	"WIDTH": "Width"
