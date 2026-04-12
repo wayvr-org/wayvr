@@ -19,13 +19,12 @@ use wgui::{
 	},
 	windowing::context_menu::{self, Blueprint, ContextMenu, TickResult},
 };
-use wlx_common::{
-	async_executor::AsyncExecutor, config::GeneralConfig, config_io::ConfigRoot, dash_interface::RecenterMode,
-};
+use wlx_common::{config::GeneralConfig, config_io::ConfigRoot, dash_interface::RecenterMode};
 
 use crate::{
 	frontend::{Frontend, FrontendTask, FrontendTasks},
 	tab::{Tab, TabType, settings::macros::MacroParams},
+	views::ViewUpdateParams,
 };
 
 mod macros;
@@ -86,13 +85,8 @@ struct SettingsMountParams<'a> {
 	parent_id: WidgetID,
 }
 
-struct SettingsUpdateParams<'a> {
-	layout: &'a mut Layout,
-	executor: &'a AsyncExecutor,
-}
-
 trait SettingsTab {
-	fn update(&mut self, _par: SettingsUpdateParams) -> anyhow::Result<()> {
+	fn update(&mut self, _par: &mut ViewUpdateParams) -> anyhow::Result<()> {
 		Ok(())
 	}
 }
@@ -117,7 +111,7 @@ impl<T> Tab<T> for TabSettings<T> {
 
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, data: &mut T) -> anyhow::Result<()> {
 		if let Some(tab) = &mut self.current_tab {
-			tab.update(SettingsUpdateParams {
+			tab.update(&mut ViewUpdateParams {
 				layout: &mut frontend.layout,
 				executor: &frontend.executor,
 			})?;

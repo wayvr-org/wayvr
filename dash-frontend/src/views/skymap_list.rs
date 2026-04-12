@@ -12,7 +12,7 @@ use wlx_common::{async_executor::AsyncExecutor, config_io};
 use crate::{
 	frontend::FrontendTasks,
 	util::{popup_manager::PopupHolder, wgui_simple},
-	views,
+	views::{self, ViewTrait, ViewUpdateParams},
 };
 
 #[derive(Clone)]
@@ -36,6 +36,31 @@ pub struct View {
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
 	popup_remote_skymap_list: PopupHolder<views::remote_skymap_list::View>,
+}
+
+impl ViewTrait for View {
+	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		self.popup_remote_skymap_list.update(par)?;
+
+		loop {
+			let tasks = self.tasks.drain();
+			if tasks.is_empty() {
+				break;
+			}
+			for task in tasks {
+				match task {
+					Task::DownloadSkymaps => {
+						self.download_skymaps(&par.executor)?;
+					}
+					Task::Refresh => {
+						self.refresh(&mut par.layout)?;
+					}
+				}
+			}
+		}
+
+		Ok(())
+	}
 }
 
 impl View {
@@ -70,31 +95,6 @@ impl View {
 			globals: params.globals.clone(),
 			popup_remote_skymap_list: Default::default(),
 		})
-	}
-
-	pub fn update(&mut self, layout: &mut Layout, executor: &AsyncExecutor) -> anyhow::Result<()> {
-		self
-			.popup_remote_skymap_list
-			.with_view_res(|view| view.update(layout))?;
-
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-			for task in tasks {
-				match task {
-					Task::DownloadSkymaps => {
-						self.download_skymaps(executor)?;
-					}
-					Task::Refresh => {
-						self.refresh(layout)?;
-					}
-				}
-			}
-		}
-
-		Ok(())
 	}
 
 	fn download_skymaps(&mut self, executor: &AsyncExecutor) -> anyhow::Result<()> {

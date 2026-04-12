@@ -17,6 +17,7 @@ use wlx_common::{config::GeneralConfig, dash_interface::BoxDashInterface, deskto
 use crate::{
 	frontend::{FrontendTask, FrontendTasks, SoundType},
 	util::popup_manager::{MountPopupOnceParams, PopupHolder},
+	views::{ViewTrait, ViewUpdateParams},
 };
 
 #[derive(Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
@@ -69,7 +70,7 @@ struct LaunchParams<'a, T> {
 	interface: &'a mut BoxDashInterface<T>,
 	auto_start: bool,
 	data: &'a mut T,
-	on_launched: &'a dyn Fn(),
+	on_launched: Option<Box<dyn FnOnce()>>,
 }
 
 pub struct View {
@@ -94,7 +95,7 @@ pub struct View {
 
 	auto_start: bool,
 
-	on_launched: Box<dyn Fn()>,
+	on_launched: Option<Box<dyn FnOnce()>>,
 }
 
 pub struct Params<'a> {
@@ -104,7 +105,13 @@ pub struct Params<'a> {
 	pub parent_id: WidgetID,
 	pub config: &'a GeneralConfig,
 	pub frontend_tasks: &'a FrontendTasks,
-	pub on_launched: Box<dyn Fn()>,
+	pub on_launched: Box<dyn FnOnce()>,
+}
+
+impl ViewTrait for View {
+	fn update(&mut self, _par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		Ok(())
+	}
 }
 
 impl View {
@@ -283,7 +290,7 @@ impl View {
 			entry: params.entry,
 			frontend_tasks: params.frontend_tasks.clone(),
 			globals: params.globals.clone(),
-			on_launched: params.on_launched,
+			on_launched: Some(params.on_launched),
 		})
 	}
 
@@ -319,7 +326,7 @@ impl View {
 			auto_start: self.auto_start,
 			interface,
 			data,
-			on_launched: &self.on_launched,
+			on_launched: self.on_launched.take(),
 		});
 	}
 
@@ -337,7 +344,7 @@ impl View {
 		))));
 	}
 
-	fn launch<T>(params: LaunchParams<T>) -> anyhow::Result<()> {
+	fn launch<T>(mut params: LaunchParams<T>) -> anyhow::Result<()> {
 		let mut env = Vec::<String>::new();
 
 		if params.compositor_mode == CompositorMode::Native {
@@ -393,7 +400,9 @@ impl View {
 
 		params.frontend_tasks.push(FrontendTask::PlaySound(SoundType::Launch));
 
-		(*params.on_launched)();
+		if let Some(on_launched) = params.on_launched.take() {
+			on_launched();
+		}
 
 		// we're done!
 		Ok(())
@@ -430,6 +439,7 @@ pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, entry: D
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
 			Translation::from_raw_text(&entry.app_name),
 			Box::new(move |data| {
+				let on_launched = popup.get_close_callback(data.layout);
 				let view = View::new(Params {
 					entry: entry.clone(),
 					globals: &globals,
@@ -437,11 +447,11 @@ pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, entry: D
 					parent_id: data.id_content,
 					frontend_tasks: &frontend_tasks,
 					config: data.config,
-					on_launched: popup.get_close_callback(),
+					on_launched,
 				})?;
 
 				popup.set_view(data.handle, view);
-				Ok(popup.get_close_callback())
+				Ok(popup.get_close_callback(data.layout))
 			}),
 		)));
 }

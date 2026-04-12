@@ -3,7 +3,7 @@ use crate::{
 		SettingType, SettingsMountParams, SettingsTab,
 		macros::{options_category, options_checkbox},
 	},
-	views::skymap_list,
+	views::{ViewTrait, ViewUpdateParams, skymap_list},
 };
 
 pub struct State {
@@ -11,8 +11,8 @@ pub struct State {
 }
 
 impl SettingsTab for State {
-	fn update(&mut self, par: super::SettingsUpdateParams) -> anyhow::Result<()> {
-		self.skymap_list.update(par.layout, par.executor)?;
+	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		self.skymap_list.update(par)?;
 		Ok(())
 	}
 }

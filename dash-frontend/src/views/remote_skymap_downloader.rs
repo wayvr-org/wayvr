@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, path::PathBuf, rc::Rc};
 
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
@@ -6,6 +6,7 @@ use crate::{
 		networking::{self, skymap_catalog::SkymapResolution},
 		popup_manager::{MountPopupOnceParams, PopupHolder},
 	},
+	views::{self, ViewTrait, ViewUpdateParams},
 };
 use wgui::{
 	assets::AssetPath,
@@ -24,9 +25,10 @@ pub struct Params<'a> {
 	pub globals: &'a WguiGlobals,
 	pub layout: &'a mut Layout,
 	pub executor: &'a AsyncExecutor,
+	pub frontend_tasks: FrontendTasks,
 	pub parent_id: WidgetID,
 	pub entry: networking::skymap_catalog::SkymapCatalogEntry,
-	pub on_close_request: Box<dyn Fn()>,
+	pub on_close_request: Box<dyn FnOnce()>,
 	pub preview_image: Option<CustomGlyphData>,
 }
 
@@ -38,12 +40,15 @@ enum Task {
 pub struct View {
 	id_parent: WidgetID,
 	entry: networking::skymap_catalog::SkymapCatalogEntry,
+	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
 	tasks: Tasks<Task>,
 	executor: AsyncExecutor,
 
 	#[allow(dead_code)]
 	parser_state: ParserState,
+
+	popup_download: PopupHolder<views::download_file::View>,
 }
 
 fn mount_resolution_button(
@@ -60,6 +65,19 @@ fn mount_resolution_button(
 	let button = data.fetch_component_as::<ComponentButton>("button")?;
 	tasks.handle_button(&button, Task::ResolutionClicked(res));
 	Ok(())
+}
+
+impl ViewTrait for View {
+	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		for task in self.tasks.drain() {
+			match task {
+				Task::ResolutionClicked(skymap_resolution) => {
+					self.run_download(&mut par.layout, skymap_resolution)?;
+				}
+			}
+		}
+		Ok(())
+	}
 }
 
 impl View {
@@ -150,15 +168,25 @@ impl View {
 			executor: par.executor.clone(),
 			entry: par.entry,
 			parser_state,
+			frontend_tasks: par.frontend_tasks,
+			popup_download: Default::default(),
 		})
 	}
 
-	pub fn update(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
-		for task in self.tasks.drain() {
-			match task {
-				Task::ResolutionClicked(skymap_resolution) => todo!(),
-			}
-		}
+	fn run_download(&mut self, layout: &mut Layout, resolution: SkymapResolution) -> anyhow::Result<()> {
+		let target_path = PathBuf::from(format!(""));
+		let Some(url) = self.entry.files.get_url_from_res(resolution) else {
+			return Ok(());
+		};
+
+		views::download_file::mount_popup(
+			self.frontend_tasks.clone(),
+			self.executor.clone(),
+			self.globals.clone(),
+			self.popup_download.clone(),
+			target_path,
+			url,
+		);
 		Ok(())
 	}
 }
@@ -176,18 +204,20 @@ pub fn mount_popup(
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
 			Translation::from_raw_text(&entry.name),
 			Box::new(move |data| {
+				let on_close_request = popup.get_close_callback(data.layout);
 				let view = View::new(Params {
 					globals: &globals,
 					layout: data.layout,
 					executor: &executor,
 					parent_id: data.id_content,
 					entry,
-					on_close_request: popup.get_close_callback(),
+					on_close_request,
 					preview_image,
+					frontend_tasks: frontend_tasks.clone(),
 				})?;
 
 				popup.set_view(data.handle, view);
-				Ok(popup.get_close_callback())
+				Ok(popup.get_close_callback(data.layout))
 			}),
 		)));
 }
