@@ -11,7 +11,6 @@ use http_body_util::{BodyStream, Empty};
 use hyper::Request;
 use smol::{net::TcpStream, prelude::*};
 use std::convert::TryInto;
-use std::fmt::Debug;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use wlx_common::async_executor::AsyncExecutor;

@@ -221,7 +221,7 @@ pub fn mount_popup(
 					on_launched,
 				})?;
 
-				popup.set_view(data.handle, view);
+				popup.set_view(data.handle, view, None);
 				Ok(popup.get_close_callback(data.layout))
 			}),
 		)));

@@ -48,38 +48,28 @@ pub struct PopupHandle {
 	state: Rc<RefCell<MountedPopupState>>,
 }
 
-struct PopupHolderState<ViewType>
-where
-	ViewType: ViewTrait,
-{
+struct PopupHolderState<ViewType: ViewTrait> {
 	popup_handle: PopupHandle,
 	view: Option<ViewType>,
+	on_view_close: Option<Box<dyn FnOnce()>>,
 }
 
 // we can't use #[derive(Default)] due to the fact that ViewType can't be Default.
-impl<ViewType> Default for PopupHolderState<ViewType>
-where
-	ViewType: ViewTrait,
-{
+impl<ViewType: ViewTrait> Default for PopupHolderState<ViewType> {
 	fn default() -> Self {
 		Self {
 			popup_handle: Default::default(),
-			view: Default::default(),
+			view: None,
+			on_view_close: None,
 		}
 	}
 }
 
-pub struct PopupHolder<ViewType>
-where
-	ViewType: ViewTrait,
-{
+pub struct PopupHolder<ViewType: ViewTrait> {
 	state: Rc<RefCell<PopupHolderState<ViewType>>>,
 }
 
-impl<ViewType> Default for PopupHolder<ViewType>
-where
-	ViewType: ViewTrait,
-{
+impl<ViewType: ViewTrait> Default for PopupHolder<ViewType> {
 	fn default() -> Self {
 		Self {
 			state: Rc::new(RefCell::new(PopupHolderState::default())),
@@ -87,21 +77,26 @@ where
 	}
 }
 
-impl<ViewType> PopupHolderState<ViewType>
-where
-	ViewType: ViewTrait,
-{
+impl<ViewType: ViewTrait> PopupHolderState<ViewType> {
 	fn close(&mut self) {
-		self.view = None;
+		if self.view.is_some() {
+			self.view = None;
+			if let Some(on_close) = self.on_view_close.take() {
+				on_close();
+			}
+		}
 		self.popup_handle.close();
 	}
 }
 
+impl<ViewType: ViewTrait> Drop for PopupHolderState<ViewType> {
+	fn drop(&mut self) {
+		self.close();
+	}
+}
+
 // we can't derive(Clone) due to the fact that ViewType is non-cloneable
-impl<ViewType> Clone for PopupHolder<ViewType>
-where
-	ViewType: ViewTrait,
-{
+impl<ViewType: ViewTrait> Clone for PopupHolder<ViewType> {
 	fn clone(&self) -> Self {
 		Self {
 			state: self.state.clone(),
@@ -109,10 +104,7 @@ where
 	}
 }
 
-impl<ViewType> PopupHolder<ViewType>
-where
-	ViewType: ViewTrait,
-{
+impl<ViewType: ViewTrait> PopupHolder<ViewType> {
 	pub fn update(&self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
 		let mut state = self.state.borrow_mut();
 		let Some(view) = &mut state.view else {
@@ -122,10 +114,11 @@ where
 		view.update(par)
 	}
 
-	pub fn set_view(&self, handle: PopupHandle, view: ViewType) {
+	pub fn set_view(&self, handle: PopupHandle, view: ViewType, on_view_close: Option<Box<dyn FnOnce()>>) {
 		let mut state = self.state.borrow_mut();
 		state.view = Some(view);
 		state.popup_handle = handle;
+		state.on_view_close = on_view_close;
 	}
 
 	// Get underlying ViewType object in a closure and return its value

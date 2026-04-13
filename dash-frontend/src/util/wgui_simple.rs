@@ -12,7 +12,6 @@ use wgui::{
 	},
 	taffy::{self, prelude::length},
 	widget::{
-		self,
 		label::{WidgetLabel, WidgetLabelParams},
 		sprite::{WidgetSprite, WidgetSpriteParams},
 	},

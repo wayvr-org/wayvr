@@ -11,6 +11,7 @@ use glam::Vec2;
 use std::path::PathBuf;
 use wgui::{
 	assets::AssetPath,
+	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
@@ -32,10 +33,11 @@ pub struct Params<'a> {
 
 #[derive(Clone)]
 enum Task {
-	StartDownload(/*url*/ String),
+	StartDownload(/*url*/ String, /*target path*/ PathBuf),
 	SetStatusText(String),
 	ShowIconSuccess,
 	ShowIconError,
+	Close,
 }
 
 pub struct View {
@@ -49,16 +51,26 @@ pub struct View {
 
 	id_label_status: WidgetID,
 	id_loading_parent: WidgetID,
+	id_content: WidgetID,
+	on_close_request: Option<Box<dyn FnOnce()>>,
+}
+
+fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams {
+	ParseDocumentParams {
+		globals: globals.clone(),
+		path: AssetPath::BuiltIn("gui/view/download_file.xml"),
+		extra: Default::default(),
+	}
 }
 
 impl ViewTrait for View {
 	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
 		for task in self.tasks.drain() {
 			match task {
-				Task::StartDownload(url) => {
+				Task::StartDownload(url, path) => {
 					self
 						.executor
-						.spawn(View::download(self.tasks.clone(), self.executor.clone(), url))
+						.spawn(View::download(self.tasks.clone(), self.executor.clone(), url, path))
 						.detach();
 				}
 				Task::SetStatusText(text) => {
@@ -76,6 +88,19 @@ impl ViewTrait for View {
 						Vec2::splat(32.0),
 						AssetPath::BuiltIn("dashboard/check.svg"),
 					)?;
+
+					// "Close window" button
+					self
+						.parser_state
+						.realize_template(
+							&doc_params(&self.globals),
+							"btn_close",
+							par.layout,
+							self.id_content,
+							Default::default(),
+						)?
+						.fetch_component_as::<ComponentButton>("btn")?
+						.on_click(self.tasks.get_button_click_callback(Task::Close));
 				}
 				Task::ShowIconError => {
 					par.layout.remove_children(self.id_loading_parent);
@@ -86,9 +111,28 @@ impl ViewTrait for View {
 						AssetPath::BuiltIn("dashboard/error.svg"),
 					)?;
 				}
+				Task::Close => {
+					if let Some(on_close) = self.on_close_request.take() {
+						on_close();
+					}
+				}
 			}
 		}
 		Ok(())
+	}
+}
+
+fn handle_async_result<T, E>(error_reason: &'static str, tasks: &Tasks<Task>, result: anyhow::Result<T, E>) -> Option<T>
+where
+	E: std::fmt::Debug,
+{
+	match result {
+		Ok(res) => Some(res),
+		Err(e) => {
+			tasks.push(Task::ShowIconError);
+			tasks.push(Task::SetStatusText(format!("{}: {:?}", error_reason, e)));
+			None
+		}
 	}
 }
 
@@ -96,14 +140,9 @@ impl View {
 	pub fn new(par: Params) -> anyhow::Result<Self> {
 		let tasks = Tasks::<Task>::new();
 
-		let doc_params = ParseDocumentParams {
-			globals: par.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/download_file.xml"),
-			extra: Default::default(),
-		};
-
-		let parser_state = wgui::parser::parse_from_assets(&doc_params, par.layout, par.parent_id)?;
+		let parser_state = wgui::parser::parse_from_assets(&doc_params(&par.globals), par.layout, par.parent_id)?;
 		let id_label_status = parser_state.get_widget_id("label_status")?;
+		let id_content = parser_state.get_widget_id("content")?;
 		let id_loading_parent = parser_state.get_widget_id("loading_parent")?;
 
 		wgui_simple::create_loading(wgui_simple::CreateLoadingParams {
@@ -124,7 +163,7 @@ impl View {
 			);
 		}
 
-		tasks.push(Task::StartDownload(par.url.clone()));
+		tasks.push(Task::StartDownload(par.url, par.target_path));
 
 		Ok(Self {
 			id_parent: par.parent_id,
@@ -134,39 +173,57 @@ impl View {
 			parser_state,
 			id_label_status,
 			id_loading_parent,
+			id_content,
+			on_close_request: Some(par.on_close_request),
 		})
 	}
 
-	async fn download(tasks: Tasks<Task>, executor: AsyncExecutor, url: String) {
+	async fn download(tasks: Tasks<Task>, executor: AsyncExecutor, url: String, target_path: PathBuf) -> Option<()> {
 		tasks.push(Task::SetStatusText(String::from("Connecting to the server...")));
 
-		let res = http_client::get(http_client::GetParams {
-			executor: &executor,
-			url: &url,
-			on_progress: Some(Box::new({
-				let tasks = tasks.clone();
-				move |data: ProgressFuncData| {
-					tasks.push(Task::SetStatusText(format!(
-						"{}/{} KiB ({}%)",
-						data.bytes_downloaded / 1024,
-						data.file_size / 1024,
-						(data.bytes_downloaded as f32 / data.file_size as f32 * 100.0).round()
-					)))
-				}
-			})),
-		})
-		.await;
+		// start downloading from the server with progress reporting
+		let res = handle_async_result(
+			"Download failed",
+			&tasks,
+			http_client::get(http_client::GetParams {
+				executor: &executor,
+				url: &url,
+				on_progress: Some(Box::new({
+					let tasks = tasks.clone();
+					move |data: ProgressFuncData| {
+						tasks.push(Task::SetStatusText(format!(
+							"{}/{} KiB ({}%)",
+							data.bytes_downloaded / 1024,
+							data.file_size / 1024,
+							(data.bytes_downloaded as f32 / data.file_size as f32 * 100.0).round()
+						)))
+					}
+				})),
+			})
+			.await,
+		)?;
 
-		match res {
-			Ok(_response) => {
-				tasks.push(Task::SetStatusText(String::from("Download finished")));
-				tasks.push(Task::ShowIconSuccess);
-			}
-			Err(e) => {
-				tasks.push(Task::ShowIconError);
-				tasks.push(Task::SetStatusText(format!("Download failed: {:?}", e)))
-			}
+		tasks.push(Task::SetStatusText(String::from("Writing to file...")));
+
+		// create skymaps directory if it doesn't exist yet
+		if let Some(parent) = target_path.parent() {
+			handle_async_result(
+				"Directory creation failed",
+				&tasks,
+				smol::fs::create_dir_all(parent).await,
+			)?;
 		}
+
+		handle_async_result(
+			"File write failed",
+			&tasks,
+			smol::fs::write(target_path, res.data).await,
+		)?;
+
+		tasks.push(Task::SetStatusText(String::from("Download finished")));
+		tasks.push(Task::ShowIconSuccess);
+
+		None
 	}
 }
 
@@ -177,6 +234,7 @@ pub fn mount_popup(
 	popup: PopupHolder<View>,
 	target_path: PathBuf,
 	url: String,
+	on_view_close: Box<dyn FnOnce()>,
 ) {
 	frontend_tasks
 		.clone()
@@ -194,7 +252,7 @@ pub fn mount_popup(
 					url,
 				})?;
 
-				popup.set_view(data.handle, view);
+				popup.set_view(data.handle, view, Some(on_view_close));
 				Ok(popup.get_close_callback(data.layout))
 			}),
 		)));

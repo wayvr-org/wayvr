@@ -3,12 +3,13 @@
   <!--
   parameters:
     "text"
+    "sprite"
   
   ids:
     "button"
   -->
   <template name="ResolutionButton">
-    <Button id="button" sprite_src_builtin="dashboard/download.svg" text="${text}"/>
+    <Button id="button" sprite_src_builtin="${sprite}" text="${text}"/>
   </template>
 
   <include src="../t_separator.xml"/>
