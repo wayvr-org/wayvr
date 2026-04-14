@@ -19,17 +19,17 @@ pub enum SkymapResolution {
 impl SkymapResolution {
 	pub const fn get_display_str(&self) -> &'static str {
 		match self {
-			SkymapResolution::Res2k => "2K (6 MiB VRAM)",
-			SkymapResolution::Res4k => "4K (24 MiB VRAM)",
-			SkymapResolution::Res8k => "8K (96 MiB VRAM)",
+			SkymapResolution::Res2k => "2K (2 MiB VRAM)",
+			SkymapResolution::Res4k => "4K (8 MiB VRAM)",
+			SkymapResolution::Res8k => "8K (33 MiB VRAM)",
 		}
 	}
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SkymapCatalogEntryFiles {
-	pub size_8k: Option<String>, // "my_skymap_8k.png"
-	pub size_4k: Option<String>, // "my_skymap_4k.png"
+	pub size_8k: Option<String>, // "my_skymap_8k.dds"
+	pub size_4k: Option<String>, // "my_skymap_4k.dds"
 	pub size_2k: String,         // we should have *at least* this
 	pub preview: String,
 }
@@ -53,7 +53,7 @@ impl SkymapCatalogEntryFiles {
 		})?
 	}
 
-	// example result: "https://wayvr.org/skymaps/files/my_skymap_8k.png"
+	// example result: "https://wayvr.org/skymaps/files/my_skymap_8k.dds"
 	pub fn get_url_from_res(&self, res: SkymapResolution) -> Option<String> {
 		let Some(filename) = self.get_filename_from_res(res) else {
 			return None;
