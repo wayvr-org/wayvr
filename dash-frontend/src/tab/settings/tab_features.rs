@@ -9,7 +9,7 @@ impl SettingsTab for State {}
 
 impl State {
 	pub fn mount(par: SettingsMountParams) -> anyhow::Result<State> {
-		let c = options_category(par.mp, par.parent_id, "APP_SETTINGS.FEATURES", "dashboard/options.svg")?;
+		let c = options_category(par.mp, par.id_parent, "APP_SETTINGS.FEATURES", "dashboard/options.svg")?;
 		options_checkbox(par.mp, c, SettingType::NotificationsEnabled)?;
 		options_checkbox(par.mp, c, SettingType::NotificationsSoundEnabled)?;
 		options_checkbox(par.mp, c, SettingType::KeyboardSoundEnabled)?;

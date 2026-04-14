@@ -24,6 +24,14 @@ impl SkymapResolution {
 			SkymapResolution::Res8k => "8K (33 MiB VRAM)",
 		}
 	}
+
+	pub const fn get_display_str_simple(&self) -> &'static str {
+		match self {
+			SkymapResolution::Res2k => "2K",
+			SkymapResolution::Res4k => "4K",
+			SkymapResolution::Res8k => "8K",
+		}
+	}
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

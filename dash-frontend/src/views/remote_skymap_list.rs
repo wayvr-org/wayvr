@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use uuid::Uuid;
 use wgui::{
 	assets::AssetPath,
 	globals::WguiGlobals,
@@ -16,7 +17,7 @@ use crate::{
 	util::{
 		networking::{
 			self,
-			skymap_catalog::{SkymapCatalogEntry, SkymapUuid},
+			skymap_catalog::{SkymapCatalog, SkymapCatalogEntry, SkymapUuid},
 		},
 		popup_manager::{MountPopupOnceParams, PopupHolder},
 		wgui_simple,
@@ -46,6 +47,7 @@ enum Task {
 		),
 	),
 	ShowRemoteSkymapDownloader(SkymapUuid),
+	RefreshCells,
 }
 
 struct MountedCell {
@@ -62,9 +64,17 @@ pub struct View {
 	mounted_cells: Vec<MountedCell>,
 	executor: AsyncExecutor,
 	frontend_tasks: FrontendTasks,
-	catalog: Option<networking::skymap_catalog::SkymapCatalog>,
+	catalog: Option<SkymapCatalog>,
 	popup_remote_skymap_downloader: PopupHolder<views::remote_skymap_downloader::View>,
 	on_updated_library: Rc<dyn Fn()>,
+}
+
+fn get_entry_by_uuid(catalog: &SkymapCatalog, skymap_uuid: Uuid) -> Option<&SkymapCatalogEntry> {
+	let Some(entry) = catalog.entries.iter().find(|entry| entry.uuid == skymap_uuid) else {
+		return None;
+	};
+
+	Some(entry)
 }
 
 impl ViewTrait for View {
@@ -106,6 +116,9 @@ impl ViewTrait for View {
 					} else {
 						log::error!("preview image not present, ignoring request");
 					}
+				}
+				Task::RefreshCells => {
+					self.refresh_cells(par.layout)?;
 				}
 			}
 		}
@@ -154,6 +167,21 @@ impl View {
 				.await
 				.ok(),
 		)));
+	}
+
+	fn refresh_cells(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
+		let Some(catalog) = &self.catalog else {
+			debug_assert!(false);
+			return Ok(());
+		};
+
+		for cell in &mut self.mounted_cells {
+			if let Some(entry) = get_entry_by_uuid(&catalog, cell.skymap_uuid) {
+				cell.view.refresh_resolution_pips(layout, entry)?;
+			}
+		}
+
+		Ok(())
 	}
 
 	fn mount_catalog(
@@ -212,10 +240,19 @@ impl View {
 			return Ok(());
 		};
 
-		let Some(entry) = catalog.entries.iter().find(|entry| entry.uuid == uuid) else {
-			debug_assert!(false); // impossible
+		let Some(entry) = get_entry_by_uuid(&catalog, uuid) else {
 			return Ok(());
 		};
+
+		// call our task before calling underlying on_updated_library callback
+		let on_updated_library = Rc::new({
+			let func = self.on_updated_library.clone();
+			let tasks = self.tasks.clone();
+			move || {
+				tasks.push(Task::RefreshCells);
+				(*func)();
+			}
+		});
 
 		views::remote_skymap_downloader::mount_popup(
 			self.frontend_tasks.clone(),
@@ -224,7 +261,7 @@ impl View {
 			entry.clone(),
 			preview_image,
 			preview_image_compressed,
-			self.on_updated_library.clone(),
+			on_updated_library,
 			self.popup_remote_skymap_downloader.clone(),
 		);
 
@@ -259,7 +296,7 @@ pub fn mount_popup(
 	frontend_tasks
 		.clone()
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
-			Translation::from_translation_key("APP_SETTINGS.DOWNLOAD_SKYMAPS"),
+			Translation::from_translation_key("APP_SETTINGS.BROWSE_ONLINE_CATALOG"),
 			Box::new(move |data| {
 				let view = View::new(Params {
 					globals: &globals,

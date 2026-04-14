@@ -80,9 +80,8 @@ enum Task {
 
 struct SettingsMountParams<'a> {
 	mp: &'a mut MacroParams<'a>,
-	globals: &'a WguiGlobals,
 	frontend_tasks: &'a FrontendTasks,
-	parent_id: WidgetID,
+	id_parent: WidgetID,
 }
 
 trait SettingsTab {
@@ -538,8 +537,7 @@ impl<T> TabSettings<T> {
 
 		let settings_mount_params = SettingsMountParams {
 			mp: &mut mp,
-			globals: &globals,
-			parent_id: root,
+			id_parent: root,
 			frontend_tasks: &self.frontend_tasks,
 		};
 

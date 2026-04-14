@@ -2,6 +2,7 @@ use glam::{Mat4, Vec2};
 use wgui::{
 	animation::{Animation, AnimationEasing},
 	assets::AssetPath,
+	components::{self, button::ButtonClickCallback},
 	drawing,
 	i18n::Translation,
 	layout::{Layout, LayoutTask, WidgetID},
@@ -12,12 +13,39 @@ use wgui::{
 	},
 	taffy::{self, prelude::length},
 	widget::{
+		ConstructEssentials,
 		label::{WidgetLabel, WidgetLabelParams},
 		sprite::{WidgetSprite, WidgetSpriteParams},
 	},
 };
 
-pub fn create_label(layout: &mut Layout, parent: WidgetID, content: Translation) -> anyhow::Result<()> {
+pub struct CreateButtonParams<'a> {
+	pub id_parent: WidgetID,
+	pub layout: &'a mut Layout,
+	pub content: Translation,
+	pub icon_builtin: AssetPath<'a>,
+	pub on_click: ButtonClickCallback,
+}
+
+pub fn create_button(par: CreateButtonParams) -> anyhow::Result<()> {
+	let (_, button) = components::button::construct(
+		&mut ConstructEssentials {
+			layout: par.layout,
+			parent: par.id_parent,
+		},
+		components::button::Params {
+			text: Some(par.content),
+			sprite_src: Some(par.icon_builtin),
+			..Default::default()
+		},
+	)?;
+
+	button.on_click(par.on_click);
+
+	Ok(())
+}
+
+pub fn create_label(layout: &mut Layout, id_parent: WidgetID, content: Translation) -> anyhow::Result<()> {
 	let label = WidgetLabel::create(
 		&mut layout.state,
 		WidgetLabelParams {
@@ -29,7 +57,7 @@ pub fn create_label(layout: &mut Layout, parent: WidgetID, content: Translation)
 		},
 	);
 
-	layout.add_child(parent, label, Default::default())?;
+	layout.add_child(id_parent, label, Default::default())?;
 
 	Ok(())
 }

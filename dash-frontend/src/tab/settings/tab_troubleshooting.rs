@@ -11,7 +11,7 @@ impl State {
 	pub fn mount(par: SettingsMountParams) -> anyhow::Result<Self> {
 		let c = options_category(
 			par.mp,
-			par.parent_id,
+			par.id_parent,
 			"APP_SETTINGS.TROUBLESHOOTING",
 			"dashboard/cpu.svg",
 		)?;

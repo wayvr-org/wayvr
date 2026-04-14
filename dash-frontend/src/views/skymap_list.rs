@@ -12,10 +12,10 @@ use wgui::{
 use wlx_common::{async_executor::AsyncExecutor, config_io};
 
 use crate::{
-	frontend::FrontendTasks,
+	frontend::{FrontendTask, FrontendTasks},
 	util::{
 		networking::skymap_catalog::{self, SkymapCatalogEntry, SkymapResolution},
-		popup_manager::PopupHolder,
+		popup_manager::{MountPopupOnceParams, PopupHolder},
 		wgui_simple,
 	},
 	views::{self, ViewTrait, ViewUpdateParams},
@@ -181,4 +181,23 @@ impl View {
 
 		Ok(())
 	}
+}
+
+pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, popup: PopupHolder<View>) {
+	frontend_tasks
+		.clone()
+		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
+			Translation::from_translation_key("APP_SETTINGS.BROWSE_SKYMAPS"),
+			Box::new(move |data| {
+				let view = View::new(Params {
+					globals: globals.clone(),
+					layout: data.layout,
+					parent_id: data.id_content,
+					frontend_tasks: &frontend_tasks,
+				})?;
+
+				popup.set_view(data.handle, view, None);
+				Ok(popup.get_close_callback(data.layout))
+			}),
+		)));
 }

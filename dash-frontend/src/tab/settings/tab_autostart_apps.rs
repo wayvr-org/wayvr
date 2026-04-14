@@ -16,7 +16,7 @@ impl State {
 		if !par.mp.config.autostart_apps.is_empty() {
 			let c = options_category(
 				par.mp,
-				par.parent_id,
+				par.id_parent,
 				"APP_SETTINGS.AUTOSTART_APPS",
 				"dashboard/apps.svg",
 			)?;
@@ -27,6 +27,7 @@ impl State {
 				options_autostart_app(par.mp, c, &app.name, app_button_ids)?;
 			}
 		}
+
 		Ok(State {})
 	}
 }
