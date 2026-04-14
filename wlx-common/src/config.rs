@@ -165,6 +165,30 @@ const fn def_point3() -> f32 {
 	0.3
 }
 
+const fn def_point13() -> f32 {
+	0.13
+}
+
+const fn def_point18() -> f32 {
+	0.18
+}
+
+const fn def_point12() -> f32 {
+	0.12
+}
+
+const fn def_point32() -> f32 {
+	0.32
+}
+
+const fn def_point45() -> f32 {
+	0.45
+}
+
+const fn def_point145() -> f32 {
+	1.45
+}
+
 const fn def_osc_port() -> u16 {
 	9000
 }
@@ -329,6 +353,28 @@ pub struct GeneralConfig {
 
 	#[serde(default = "def_point3")]
 	pub pointer_lerp_factor: f32,
+
+	#[serde(default = "def_point13")]
+	pub focused_screen_assist_x: f32,
+
+	#[serde(default = "def_point18")]
+	pub focused_screen_assist_y: f32,
+
+	#[serde(default = "def_point13")]
+	pub focused_screen_rotate_assist_x: f32,
+
+	#[serde(default = "def_point12")]
+	pub focused_screen_rotate_assist_y: f32,
+
+	#[serde(default = "def_point32")]
+	#[serde(alias = "focused_screen_curvature")]
+	pub focused_screen_curve_x: f32,
+
+	#[serde(default = "def_point45")]
+	pub focused_screen_distance: f32,
+
+	#[serde(default = "def_point145")]
+	pub focused_screen_scale: f32,
 
 	#[serde(default = "def_true")]
 	pub space_drag_unlocked: bool,

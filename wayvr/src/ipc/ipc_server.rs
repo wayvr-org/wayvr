@@ -382,6 +382,21 @@ impl Connection {
             }));
     }
 
+    fn handle_wlx_screen_focus_toggle(
+        params: &mut TickParams,
+        screen_focus: packet_client::WlxScreenFocusToggleParams,
+    ) {
+        params.signals.send(WayVRSignal::ScreenFocusToggle(
+            crate::backend::task::ScreenFocusTask {
+                screen_name: screen_focus.screen_name,
+                target_x: screen_focus.target_x.clamp(0.0, 1.0),
+                target_y: screen_focus.target_y.clamp(0.0, 1.0),
+                crop_rect: screen_focus.crop_rect.map(sanitize_crop_rect),
+                refresh_only: screen_focus.refresh_only,
+            },
+        ));
+    }
+
     // FIXME: we should probably respond an error to the client in case if wayland server feature is disabled
     //        fix this after we're done with the webkit-based wayvr-dashboard
     #[allow(unused_variables)]
@@ -403,6 +418,9 @@ impl Connection {
             }
             PacketClient::WvrWindowSetVisible(window_handle, visible) => {
                 Self::handle_wvr_window_set_visible(params, window_handle, visible);
+            }
+            PacketClient::WlxScreenFocusToggle(screen_focus) => {
+                Self::handle_wlx_screen_focus_toggle(params, screen_focus);
             }
             PacketClient::WvrProcessGet(serial, process_handle) => {
                 self.handle_wvr_process_get(params, serial, process_handle)?;
@@ -493,6 +511,56 @@ impl Connection {
 
     fn tick(&mut self, params: &mut TickParams) {
         while self.read_packet(params) {}
+    }
+}
+
+fn sanitize_crop_rect(crop_rect: [f32; 4]) -> [f32; 4] {
+    let raw_w = if crop_rect[2].is_finite() {
+        crop_rect[2].clamp(0.01, 1.0)
+    } else {
+        1.0
+    };
+    let raw_h = if crop_rect[3].is_finite() {
+        crop_rect[3].clamp(0.01, 1.0)
+    } else {
+        1.0
+    };
+
+    let x = if crop_rect[0].is_finite() {
+        crop_rect[0].clamp(0.0, 1.0 - raw_w)
+    } else {
+        0.0
+    };
+    let y = if crop_rect[1].is_finite() {
+        crop_rect[1].clamp(0.0, 1.0 - raw_h)
+    } else {
+        0.0
+    };
+
+    let w = raw_w.min(1.0 - x).max(0.01);
+    let h = raw_h.min(1.0 - y).max(0.01);
+    [x, y, w, h]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_crop_rect;
+
+    #[test]
+    fn sanitize_crop_rect_prevents_edge_panic() {
+        let crop = sanitize_crop_rect([1.0, 1.0, 0.02, 0.02]);
+        assert!((crop[0] - 0.98).abs() < 0.0001);
+        assert!((crop[1] - 0.98).abs() < 0.0001);
+        assert!((crop[2] - 0.02).abs() < 0.0001);
+        assert!((crop[3] - 0.02).abs() < 0.0001);
+    }
+
+    #[test]
+    fn sanitize_crop_rect_handles_non_finite_values() {
+        assert_eq!(
+            sanitize_crop_rect([f32::NAN, f32::INFINITY, f32::NAN, -1.0]),
+            [0.0, 0.0, 1.0, 0.01]
+        );
     }
 }
 

@@ -57,11 +57,14 @@ pub struct ScreenBackend {
     stereo: Option<StereoMode>,
     stereo_full_frame: bool,
     stereo_adjust_mouse: bool,
+    crop_rect: [f32; 4],
+    crop_dirty: bool,
     pub(super) logical_pos: Vec2,
     pub(super) logical_size: Vec2,
     pub(super) mouse_transform_original: Transform,
     mouse_transform_override: MouseTransform,
     just_resumed: bool,
+    source_meta: Option<FrameMeta>,
 }
 
 impl ScreenBackend {
@@ -87,17 +90,22 @@ impl ScreenBackend {
             },
             stereo_full_frame: false,
             stereo_adjust_mouse: false,
+            crop_rect: [0.0, 0.0, 1.0, 1.0],
+            crop_dirty: false,
             logical_pos: Vec2::ZERO,
             logical_size: Vec2::ZERO,
             mouse_transform_original: Transform::Undefined,
             mouse_transform_override: MouseTransform::Default,
             just_resumed: false,
+            source_meta: None,
         }
     }
 
     pub(super) fn apply_mouse_transform_with_override(&mut self, override_transform: Transform) {
-        let mut size = self.logical_size;
-        let pos = self.logical_pos;
+        let crop_origin = Vec2::new(self.crop_rect[0], self.crop_rect[1]);
+        let crop_size = Vec2::new(self.crop_rect[2], self.crop_rect[3]);
+        let mut size = self.logical_size * crop_size;
+        let pos = self.logical_pos + self.logical_size * crop_origin;
 
         if self.stereo_adjust_mouse
             && let Some(stereo) = self.stereo.as_ref()
@@ -152,6 +160,64 @@ impl ScreenBackend {
                 vec2(pos.x + size.x, pos.y + size.y),
             ),
         };
+    }
+
+    fn effective_extent(&self, source_extent: [u32; 2]) -> [u32; 2] {
+        [
+            (source_extent[0] as f32 * self.crop_rect[2])
+                .round()
+                .max(1.0) as u32,
+            (source_extent[1] as f32 * self.crop_rect[3])
+                .round()
+                .max(1.0) as u32,
+        ]
+    }
+
+    fn apply_meta_state(
+        &mut self,
+        app: &mut AppState,
+        mut source_meta: FrameMeta,
+        stereo: StereoMode,
+    ) -> anyhow::Result<()> {
+        let source_extent = source_meta.extent;
+        let effective_extent = self.effective_extent(source_extent);
+        source_meta.extent = effective_extent;
+
+        if let Some(pipeline) = self.pipeline.as_mut() {
+            if self
+                .meta
+                .is_some_and(|old| old.extent != source_meta.extent)
+            {
+                pipeline.set_extent(
+                    app,
+                    [source_meta.extent[0] as f32, source_meta.extent[1] as f32],
+                    [0.0, 0.0],
+                    [source_extent[0] as f32, source_extent[1] as f32],
+                )?;
+                self.interaction_transform = Some(ui_transform(source_meta.extent));
+            }
+            if self.crop_dirty {
+                pipeline.set_crop_rect(self.crop_rect)?;
+            }
+            pipeline.ensure_stereo(stereo);
+        } else {
+            let pipeline = ScreenPipeline::new(
+                &source_meta,
+                source_extent,
+                app,
+                stereo,
+                [0.0, 0.0],
+                self.crop_rect,
+            )?;
+            self.pipeline = Some(pipeline);
+            self.interaction_transform = Some(ui_transform(source_meta.extent));
+        }
+
+        self.meta = Some(source_meta);
+        self.crop_dirty = false;
+        let frame_transform = mouse_transform_to_transform(self.mouse_transform_override);
+        self.apply_mouse_transform_with_override(frame_transform);
+        Ok(())
     }
 }
 
@@ -237,26 +303,19 @@ impl OverlayBackend for ScreenBackend {
                 }
             }
 
-            if let Some(pipeline) = self.pipeline.as_mut() {
-                if self.meta.is_some_and(|old| old.extent != meta.extent) {
-                    pipeline.set_extent(
-                        app,
-                        [meta.extent[0] as _, meta.extent[1] as _],
-                        [0., 0.],
-                    )?;
-                    self.interaction_transform = Some(ui_transform(meta.extent));
-                }
-            } else {
-                let pipeline = ScreenPipeline::new(&meta, app, stereo, [0., 0.])?;
-                self.pipeline = Some(pipeline);
-                self.interaction_transform = Some(ui_transform(meta.extent));
-            }
-
-            self.meta = Some(meta);
+            self.source_meta = Some(meta);
+            self.apply_meta_state(app, meta, stereo)?;
             self.cur_frame = Some(frame);
 
             Ok(ShouldRender::Should)
         } else if self.cur_frame.is_some() {
+            if self.crop_dirty
+                && let Some(source_meta) = self.source_meta
+            {
+                let stereo = self.stereo.unwrap_or(StereoMode::None);
+                self.apply_meta_state(app, source_meta, stereo)?;
+                return Ok(ShouldRender::Should);
+            }
             if self.just_resumed {
                 self.just_resumed = false;
                 Ok(ShouldRender::Should)
@@ -364,6 +423,7 @@ impl OverlayBackend for ScreenBackend {
             BackendAttrib::StereoAdjustMouse => Some(BackendAttribValue::StereoAdjustMouse(
                 self.stereo_adjust_mouse,
             )),
+            BackendAttrib::CropRect => Some(BackendAttribValue::CropRect(self.crop_rect)),
             _ => None,
         }
     }
@@ -393,6 +453,13 @@ impl OverlayBackend for ScreenBackend {
             }
             BackendAttribValue::StereoAdjustMouse(new) => {
                 self.stereo_adjust_mouse = new;
+                let frame_transform = mouse_transform_to_transform(self.mouse_transform_override);
+                self.apply_mouse_transform_with_override(frame_transform);
+                true
+            }
+            BackendAttribValue::CropRect(new) => {
+                self.crop_rect = new;
+                self.crop_dirty = true;
                 let frame_transform = mouse_transform_to_transform(self.mouse_transform_override);
                 self.apply_mouse_transform_with_override(frame_transform);
                 true
