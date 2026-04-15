@@ -11,8 +11,8 @@ use std::mem::transmute;
 use std::sync::LazyLock;
 use std::{fs::File, sync::atomic::AtomicBool};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
-use xkbcommon::xkb;
 use wlx_common::overlays::ToastTopic;
+use xkbcommon::xkb;
 
 use crate::overlays::toast::Toast;
 
@@ -28,14 +28,20 @@ pub(super) fn initialize() -> Result<UInputProvider, Toast> {
     if !USE_UINPUT.load(std::sync::atomic::Ordering::Relaxed) {
         const UINPUT_DISABLED: &str = "Uinput disabled by user.";
         log::info!("{UINPUT_DISABLED}");
-        return Err(Toast::new(ToastTopic::System, String::with_capacity(0), String::from(UINPUT_DISABLED)).with_timeout(5.0));
+        return Err(Toast::new(
+            ToastTopic::System,
+            String::with_capacity(0),
+            String::from(UINPUT_DISABLED),
+        )
+        .with_timeout(5.0));
     }
 
     if let Some(uinput) = UInputProvider::try_new() {
         log::info!("Initialized uinput.");
         return Ok(uinput);
     }
-    const CHECK_UINPUT_MESSAGE: &str = "Could not create uinput provider. Keyboard/Mouse input will not work!
+    const CHECK_UINPUT_MESSAGE: &str =
+        "Could not create uinput provider. Keyboard/Mouse input will not work!
 
 Check if the uinput kernel module is loaded: lsmod | grep uinput
  - If not loaded, follow your distro's instructions to load the uinput kernel module.
@@ -43,8 +49,10 @@ Check if the uinput kernel module is loaded: lsmod | grep uinput
 Check if you're in input group, run: id -nG";
     let mut full_uinput_error = String::from(CHECK_UINPUT_MESSAGE);
     if let Ok(user) = std::env::var("USER") {
-        let check_group_message = format!(" - To add yourself to the input group, run: sudo usermod -aG input {user}
- - After adding yourself to the input group, you will need to reboot.");
+        let check_group_message = format!(
+            " - To add yourself to the input group, run: sudo usermod -aG input {user}
+ - After adding yourself to the input group, you will need to reboot."
+        );
         full_uinput_error.push_str(&check_group_message);
     }
     for error_line in full_uinput_error.lines() {
@@ -52,7 +60,12 @@ Check if you're in input group, run: id -nG";
             log::error!("{error_line}");
         }
     }
-    Err(Toast::new(ToastTopic::Error, String::with_capacity(0), full_uinput_error).with_timeout(10.0))
+    Err(Toast::new(
+        ToastTopic::Error,
+        String::with_capacity(0),
+        full_uinput_error,
+    )
+    .with_timeout(10.0))
 }
 
 pub struct WheelDelta {

@@ -3,7 +3,7 @@ use super::hid::{self, HidProvider, VirtualKey};
 use crate::{
     backend::wayvr::WvrServerState,
     overlays::toast::Toast,
-    subsystem::hid::{DummyProvider, XkbKeymap}
+    subsystem::hid::{DummyProvider, XkbKeymap},
 };
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -27,17 +27,20 @@ impl HidWrapper {
             Ok(uinput) => {
                 hid_provider = Box::new(uinput);
                 error = None;
-            },
+            }
             Err(toast) => {
                 hid_provider = Box::new(DummyProvider {});
                 error = Some(toast);
             }
         }
-        (Self {
-            keyboard_focus: KeyboardFocus::PhysicalScreen,
-            inner: hid_provider,
-            keymap: None,
-        }, error)
+        (
+            Self {
+                keyboard_focus: KeyboardFocus::PhysicalScreen,
+                inner: hid_provider,
+                keymap: None,
+            },
+            error,
+        )
     }
 
     pub fn send_key_routed(
