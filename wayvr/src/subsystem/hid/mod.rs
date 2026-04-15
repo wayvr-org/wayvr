@@ -12,6 +12,9 @@ use std::sync::LazyLock;
 use std::{fs::File, sync::atomic::AtomicBool};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use xkbcommon::xkb;
+use wlx_common::overlays::ToastTopic;
+
+use crate::overlays::toast::Toast;
 
 #[cfg(feature = "wayland")]
 pub mod wayland;
@@ -21,27 +24,35 @@ mod x11;
 
 pub static USE_UINPUT: AtomicBool = AtomicBool::new(true);
 
-pub(super) fn initialize() -> Box<dyn HidProvider> {
+pub(super) fn initialize() -> Result<UInputProvider, Toast> {
     if !USE_UINPUT.load(std::sync::atomic::Ordering::Relaxed) {
-        log::info!("Uinput disabled by user.");
-        return Box::new(DummyProvider {});
+        const UINPUT_DISABLED: &str = "Uinput disabled by user.";
+        log::info!("{UINPUT_DISABLED}");
+        return Err(Toast::new(ToastTopic::System, String::with_capacity(0), String::from(UINPUT_DISABLED)).with_timeout(5.0));
     }
 
     if let Some(uinput) = UInputProvider::try_new() {
         log::info!("Initialized uinput.");
-        return Box::new(uinput);
+        return Ok(uinput);
     }
-    log::error!("Could not create uinput provider. Keyboard/Mouse input will not work!");
-    log::error!("Check if the uinput kernel module is loaded: lsmod | grep uinput");
-    log::error!(
-        " - If not loaded, follow your distro's instructions to load the uinput kernel module."
-    );
-    log::error!("Check if you're in input group, run: id -nG");
+    const CHECK_UINPUT_MESSAGE: &str = "Could not create uinput provider. Keyboard/Mouse input will not work!
+
+Check if the uinput kernel module is loaded: lsmod | grep uinput
+ - If not loaded, follow your distro's instructions to load the uinput kernel module.
+
+Check if you're in input group, run: id -nG";
+    let mut full_uinput_error = String::from(CHECK_UINPUT_MESSAGE);
     if let Ok(user) = std::env::var("USER") {
-        log::error!(" - To add yourself to the input group, run: sudo usermod -aG input {user}");
-        log::error!(" - After adding yourself to the input group, you will need to reboot.");
+        let check_group_message = format!(" - To add yourself to the input group, run: sudo usermod -aG input {user}
+ - After adding yourself to the input group, you will need to reboot.");
+        full_uinput_error.push_str(&check_group_message);
     }
-    Box::new(DummyProvider {})
+    for error_line in full_uinput_error.lines() {
+        if !error_line.is_empty() {
+            log::error!("{error_line}");
+        }
+    }
+    Err(Toast::new(ToastTopic::Error, String::with_capacity(0), full_uinput_error).with_timeout(10.0))
 }
 
 pub struct WheelDelta {
