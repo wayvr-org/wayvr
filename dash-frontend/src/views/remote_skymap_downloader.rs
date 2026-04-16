@@ -37,8 +37,10 @@ pub struct Params<'a> {
 #[derive(Clone)]
 enum Task {
 	Refresh,
-	ResolutionClicked(networking::skymap_catalog::SkymapResolution),
+	ResolutionClicked(SkymapResolution),
 	DownloadFinished,
+	RunDownload(SkymapResolution),
+	RemoveFile(SkymapResolution),
 }
 
 pub struct View {
@@ -54,6 +56,8 @@ pub struct View {
 	parser_state: ParserState,
 
 	popup_download: PopupHolder<views::download_file::View>,
+	popup_dialog_box: PopupHolder<views::dialog_box::View>,
+
 	preview_image_compressed: Rc<Vec<u8>>,
 	on_updated_library: Rc<dyn Fn()>,
 }
@@ -90,8 +94,8 @@ impl ViewTrait for View {
 	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
 		for task in self.tasks.drain() {
 			match task {
-				Task::ResolutionClicked(skymap_resolution) => {
-					self.run_download(skymap_resolution)?;
+				Task::ResolutionClicked(resolution) => {
+					self.resolution_clicked(resolution)?;
 				}
 				Task::Refresh => {
 					self.refresh(par.layout)?;
@@ -99,10 +103,17 @@ impl ViewTrait for View {
 				Task::DownloadFinished => {
 					self.download_finished()?;
 				}
+				Task::RunDownload(resolution) => {
+					self.run_download(resolution)?;
+				}
+				Task::RemoveFile(resolution) => {
+					self.remove_file(resolution)?;
+				}
 			}
 		}
 
 		self.popup_download.update(par)?;
+		self.popup_dialog_box.update(par)?;
 		Ok(())
 	}
 }
@@ -180,6 +191,7 @@ impl View {
 			parser_state,
 			frontend_tasks: par.frontend_tasks,
 			popup_download: Default::default(),
+			popup_dialog_box: Default::default(),
 			id_resolution_buttons,
 			preview_image_compressed: par.preview_image_compressed,
 			on_updated_library: par.on_updated_library,
@@ -212,6 +224,57 @@ impl View {
 		Ok(())
 	}
 
+	fn resolution_clicked(&mut self, resolution: SkymapResolution) -> anyhow::Result<()> {
+		let is_downloaded = self.entry.is_downloaded(resolution).unwrap_or(false);
+		if !is_downloaded {
+			self.tasks.push(Task::RunDownload(resolution));
+		} else {
+			self.show_dialog_box_action(resolution)?;
+		}
+		Ok(())
+	}
+
+	fn show_dialog_box_action(&mut self, resolution: SkymapResolution) -> anyhow::Result<()> {
+		const ACTION_REMOVE: &'static str = "remove";
+		const ACTION_DOWNLOAD_AGAIN: &'static str = "download_again";
+
+		let tasks = self.tasks.clone();
+
+		views::dialog_box::mount_popup(
+			self.popup_dialog_box.clone(),
+			self.frontend_tasks.clone(),
+			views::dialog_box::Params {
+				globals: self.globals.clone(),
+				message: Translation::from_translation_key("APP_SETTINGS.SKYMAP_ALREADY_DOWNLOADED"),
+				entries: vec![
+					views::dialog_box::ButtonEntry {
+						content: Translation::from_translation_key("REMOVE"),
+						icon: "dashboard/trash.svg",
+						action: ACTION_REMOVE,
+					},
+					views::dialog_box::ButtonEntry {
+						content: Translation::from_translation_key("DOWNLOAD_AGAIN"),
+						icon: "dashboard/download.svg",
+						action: ACTION_DOWNLOAD_AGAIN,
+					},
+				],
+				on_action_click: Box::new(move |action| match action {
+					ACTION_REMOVE => {
+						tasks.push(Task::RemoveFile(resolution));
+						tasks.push(Task::Refresh);
+					}
+					ACTION_DOWNLOAD_AGAIN => {
+						tasks.push(Task::RunDownload(resolution));
+						tasks.push(Task::Refresh);
+					}
+					_ => unreachable!(),
+				}),
+			},
+		);
+
+		Ok(())
+	}
+
 	fn download_finished(&mut self) -> anyhow::Result<()> {
 		self.entry.save_metadata()?;
 		let mut uuids = config_io::get_skymaps_uuids().unwrap_or_default();
@@ -222,8 +285,7 @@ impl View {
 		config_io::set_skymaps_uuids(&uuids)?;
 
 		// Save preview image
-		let preview_path = config_io::get_skymaps_root().join(&self.entry.files.preview);
-		std::fs::write(preview_path, self.preview_image_compressed.as_ref())?;
+		self.entry.files.save_preview_to_file(&self.preview_image_compressed)?;
 
 		(*self.on_updated_library)();
 
@@ -251,6 +313,27 @@ impl View {
 				on_downloaded: self.tasks.make_callback_box(Task::DownloadFinished),
 			},
 		);
+		Ok(())
+	}
+
+	fn remove_file(&mut self, resolution: SkymapResolution) -> anyhow::Result<()> {
+		self.entry.remove_file(resolution);
+
+		if !self.entry.has_any_downloaded() {
+			// all skymaps of this uuid are removed, clean-up files
+			self.entry.remove_metadata();
+
+			// remove uuid of this entry from downloaded skymaps uuid and save the file again
+			let mut uuids = config_io::get_skymaps_uuids().unwrap_or_default();
+			uuids.retain(|uuid| *uuid != self.entry.uuid.to_string());
+			config_io::set_skymaps_uuids(&uuids)?;
+
+			// remove "_preview.dds" files from the disk too
+			self.entry.files.remove_preview_file();
+		}
+
+		(*self.on_updated_library)();
+
 		Ok(())
 	}
 }

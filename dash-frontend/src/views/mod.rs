@@ -2,6 +2,7 @@ use wlx_common::async_executor::AsyncExecutor;
 
 pub mod app_launcher;
 pub mod audio_settings;
+pub mod dialog_box;
 pub mod download_file;
 pub mod game_cover;
 pub mod game_launcher;

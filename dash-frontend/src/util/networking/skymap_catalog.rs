@@ -32,6 +32,15 @@ impl SkymapResolution {
 			SkymapResolution::Res8k => "8K",
 		}
 	}
+
+	pub fn from_display_str_simple(text: &str) -> Option<SkymapResolution> {
+		match text {
+			"2K" => Some(SkymapResolution::Res2k),
+			"4K" => Some(SkymapResolution::Res4k),
+			"8K" => Some(SkymapResolution::Res8k),
+			_ => None,
+		}
+	}
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -69,6 +78,19 @@ impl SkymapCatalogEntryFiles {
 
 		Some(format!("{}/files/{}", WAYVR_SKYMAPS_ROOT, filename))
 	}
+
+	pub fn get_preview_path(&self) -> PathBuf {
+		config_io::get_skymaps_root().join(&self.preview)
+	}
+
+	pub fn save_preview_to_file(&self, data: &[u8]) -> anyhow::Result<()> {
+		std::fs::write(self.get_preview_path(), data)?;
+		Ok(())
+	}
+
+	pub fn remove_preview_file(&self) {
+		let _dont_care = std::fs::remove_file(self.get_preview_path());
+	}
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -104,10 +126,28 @@ impl SkymapCatalogEntry {
 		Ok(std::fs::exists(full_path)?)
 	}
 
+	pub fn has_any_downloaded(&self) -> bool {
+		self.is_downloaded(SkymapResolution::Res2k).unwrap_or(false)
+			|| self.is_downloaded(SkymapResolution::Res4k).unwrap_or(false)
+			|| self.is_downloaded(SkymapResolution::Res8k).unwrap_or(false)
+	}
+
+	pub fn remove_file(&self, resolution: SkymapResolution) {
+		let Some(full_path) = self.get_destination_path(resolution) else {
+			return;
+		};
+
+		let _dont_care = std::fs::remove_file(full_path);
+	}
+
 	pub fn save_metadata(&self) -> anyhow::Result<()> {
 		let json = serde_json::to_string_pretty(self)?;
 		std::fs::write(self.get_destination_metadata_path(), json)?;
 		Ok(())
+	}
+
+	pub fn remove_metadata(&self) {
+		let _dont_care = std::fs::remove_file(self.get_destination_metadata_path());
 	}
 }
 

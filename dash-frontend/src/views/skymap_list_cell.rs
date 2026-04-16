@@ -59,7 +59,7 @@ fn populate_res_pips(
 		tpar.insert(
 			Rc::from("color"),
 			if downloaded {
-				Rc::from("#116625")
+				Rc::from("#11aa40")
 			} else {
 				Rc::from("#444444")
 			},
