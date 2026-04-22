@@ -8,7 +8,7 @@ use crate::{
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::Layout,
-	parser::{self, Fetchable, ParserData, ParserState},
+	parser::{self, Fetchable, ParserState},
 	task::Tasks,
 	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra},
 };

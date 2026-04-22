@@ -475,7 +475,6 @@ impl SettingType {
 				| Self::UiGradientIntensity
 				| Self::UprightScreenFix
 				| Self::DoubleCursorFix
-				| Self::ScreenRenderDown
 				| Self::Language
 				| Self::CaptureMethod
 		)

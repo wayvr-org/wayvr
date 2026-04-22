@@ -86,7 +86,8 @@
           round="8"
           flex_grow="1"
           width="100%"
-          overflow_y="scroll"
+          overflow="scroll"
+          position="relative"
         >
           <!-- radial gradient -->
           <rectangle
