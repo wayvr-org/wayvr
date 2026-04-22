@@ -65,7 +65,7 @@ Check if you're in input group, run: id -nG";
         String::with_capacity(0),
         full_uinput_error,
     )
-    .with_timeout(10.0))
+    .with_timeout(30.0))
 }
 
 pub struct WheelDelta {
