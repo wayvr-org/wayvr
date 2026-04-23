@@ -117,8 +117,7 @@ impl ViewTrait for View {
 						.get_destination_path(resolution)
 						.context("Skymap not found" /* you shouldn't really see this, like ever. */)?;
 
-					par.general_config.skybox_texture = config_io::get_skymaps_root()
-						.join(skymap_file_path)
+					par.general_config.skybox_texture = skymap_file_path
 						.to_str()
 						.context("Skymap filename not valid UTF-8")?
 						.into();

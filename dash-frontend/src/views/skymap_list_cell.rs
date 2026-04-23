@@ -23,7 +23,7 @@ use crate::util::{
 pub struct Params<'a> {
 	pub id_parent: WidgetID,
 	pub layout: &'a mut Layout,
-	pub entry: networking::skymap_catalog::SkymapCatalogEntry,
+	pub entry: Option<networking::skymap_catalog::SkymapCatalogEntry>,
 	pub on_click: ButtonClickCallback,
 }
 
@@ -108,11 +108,20 @@ impl View {
 
 			label_title.set_text_simple(
 				&mut globals.get(),
-				Translation::from_raw_text_string(par.entry.name.clone()),
+				Translation::from_raw_text_string(
+					par
+						.entry
+						.as_ref()
+						.map(|e| e.name.clone())
+						.unwrap_or_else(|| "Built-in Sky Shader".into()),
+				),
 			);
 			label_author.set_text_simple(
 				&mut globals.get(),
-				Translation::from_raw_text_string(format!("by {}", par.entry.author)),
+				Translation::from_raw_text_string(format!(
+					"by {}",
+					par.entry.as_ref().map(|e| e.author.as_str()).unwrap_or("WayVR Team")
+				)),
 			);
 		}
 
@@ -123,7 +132,9 @@ impl View {
 		})?;
 
 		// Populate resolution pips
-		populate_res_pips(par.layout, id_resolution_pips, &mut parser_state, &par.entry)?;
+		if let Some(entry) = par.entry.as_ref() {
+			populate_res_pips(par.layout, id_resolution_pips, &mut parser_state, entry)?;
+		}
 
 		Ok(Self {
 			parser_state,

@@ -16,7 +16,6 @@ use crate::{
 	util::{
 		networking::skymap_catalog::{self, SkymapCatalogEntry, SkymapResolution},
 		popup_manager::{MountPopupOnceParams, PopupHolder},
-		wgui_simple,
 	},
 	views::{self, ViewTrait, ViewUpdateParams},
 };
@@ -27,6 +26,7 @@ enum Task {
 	Refresh,
 	ShowSkymapResolutionSelector(SkymapCatalogEntry),
 	SetSkymap(SkymapCatalogEntry, SkymapResolution),
+	SetSkymapBuiltIn,
 }
 
 pub struct Params<'a> {
@@ -76,6 +76,10 @@ impl ViewTrait for View {
 					}
 					Task::SetSkymap(entry, resolution) => {
 						self.set_skymap(entry, resolution, par.general_config, par.config_change_kind)?;
+					}
+					Task::SetSkymapBuiltIn => {
+						par.general_config.skybox_texture = "".into();
+						*par.config_change_kind = Some(ConfigChangeKind::EnvironmentBlend);
 					}
 				}
 			}
@@ -205,22 +209,27 @@ impl View {
 		layout.remove_children(self.list_parent);
 		self.cells.clear();
 
-		if entries.is_empty() {
-			wgui_simple::create_label(
-				layout,
-				self.list_parent,
-				Translation::from_translation_key("APP_SETTINGS.NO_SKYMAPS_FOUND"),
-			)?;
-			return Ok(());
+		let skymaps_root = config_io::get_skymaps_root();
+
+		let mut view = views::skymap_list_cell::View::new(views::skymap_list_cell::Params {
+			id_parent: self.list_parent,
+			layout,
+			entry: None,
+			on_click: self.tasks.get_button_click_callback(Task::SetSkymapBuiltIn),
+		})?;
+		// load preview image
+		let data = include_bytes!("../../assets/dashboard/builtin-skybox-preview.jpg");
+		if let Ok(glyph_data) = CustomGlyphData::from_bytes_raster(&self.globals, "builtin-skybox-preview.jpg", data) {
+			view.set_image(layout, Some(glyph_data))?;
 		}
 
-		let skymaps_root = config_io::get_skymaps_root();
+		self.cells.push(Cell { view });
 
 		for entry in &entries {
 			let mut view = views::skymap_list_cell::View::new(views::skymap_list_cell::Params {
 				id_parent: self.list_parent,
 				layout,
-				entry: entry.clone(),
+				entry: Some(entry.clone()),
 				on_click: self
 					.tasks
 					.get_button_click_callback(Task::ShowSkymapResolutionSelector(entry.clone())),

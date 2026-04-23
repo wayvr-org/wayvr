@@ -215,7 +215,7 @@ impl View {
 				view: views::skymap_list_cell::View::new(views::skymap_list_cell::Params {
 					id_parent: id_list,
 					layout,
-					entry: entry.clone(),
+					entry: Some(entry.clone()),
 					on_click: self
 						.tasks
 						.get_button_click_callback(Task::ShowRemoteSkymapDownloader(skymap_uuid)),
