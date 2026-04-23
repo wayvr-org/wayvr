@@ -4,7 +4,7 @@ use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
 		SettingType, SettingsMountParams, SettingsTab,
-		macros::{options_category, options_checkbox},
+		macros::{options_category, options_checkbox, options_slider_f32},
 	},
 	util::{popup_manager::PopupHolder, wgui_simple},
 	views::{self, ViewUpdateParams, skymap_list},
@@ -40,6 +40,7 @@ impl State {
 		let id_category = options_category(par.mp, par.id_parent, "APP_SETTINGS.SKYBOX", "dashboard/globe.svg")?;
 		options_checkbox(par.mp, id_category, SettingType::UseSkybox)?;
 		options_checkbox(par.mp, id_category, SettingType::UsePassthrough)?;
+		options_slider_f32(par.mp, id_category, SettingType::GridOpacity, 0.0, 1.0, 0.05)?;
 
 		let tasks = Tasks::<Task>::new();
 
