@@ -143,7 +143,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 							&wgui::event::Event::MouseWheel(MouseWheelEvent {
 								delta: Vec2::new(x, y),
 								pos: mouse / scale,
-								device: 0,
+								device: wgui::event::DeviceBitmask(0),
 							}),
 							&mut (),
 							&mut (),
@@ -157,7 +157,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 							&wgui::event::Event::MouseWheel(MouseWheelEvent {
 								delta: Vec2::new(pos.x as f32 / 5.0, pos.y as f32 / 5.0),
 								pos: mouse / scale,
-								device: 0,
+								device: wgui::event::DeviceBitmask(0),
 							}),
 							&mut (),
 							&mut (),
@@ -177,7 +177,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 								&wgui::event::Event::MouseDown(MouseButtonEvent {
 									pos: mouse / scale,
 									index: MouseButtonIndex::Left,
-									device: 0,
+									device: wgui::event::DeviceBitmask(0),
 								}),
 								&mut (),
 								&mut (),
@@ -190,7 +190,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 								&wgui::event::Event::MouseUp(MouseButtonEvent {
 									pos: mouse / scale,
 									index: MouseButtonIndex::Left,
-									device: 0,
+									device: wgui::event::DeviceBitmask(0),
 								}),
 								&mut (),
 								&mut (),
@@ -209,7 +209,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 					.push_event(
 						&wgui::event::Event::MouseMotion(MouseMotionEvent {
 							pos: mouse / scale,
-							device: 0,
+							device: wgui::event::DeviceBitmask(0),
 						}),
 						&mut (),
 						&mut (),

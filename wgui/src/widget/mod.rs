@@ -8,7 +8,8 @@ use crate::{
 	any::AnyTrait,
 	drawing::{self, PrimitiveExtent},
 	event::{
-		self, CallbackData, CallbackDataCommon, CallbackMetadata, Event, EventAlterables, EventListenerCollection,
+		self, CallbackData, CallbackDataCommon, CallbackMetadata, DeviceBitmask, Event, EventAlterables,
+		EventListenerCollection,
 		EventListenerKind::{self, InternalStateChange, MouseLeave},
 		MouseWheelEvent,
 	},
@@ -26,8 +27,8 @@ pub mod sprite;
 pub mod util;
 
 pub struct WidgetData {
-	hovered: usize,
-	pressed: usize,
+	hovered: DeviceBitmask,
+	pressed: DeviceBitmask,
 	pub scrolling_target: Vec2,   // normalized, 0.0-1.0. Not used in case if overflow != scroll
 	pub scrolling_cur: Vec2,      // normalized, used for smooth scrolling animation
 	pub scrolling_cur_prev: Vec2, // for motion interpolation while rendering between ticks
@@ -36,46 +37,46 @@ pub struct WidgetData {
 }
 
 impl WidgetData {
-	pub const fn set_device_pressed(&mut self, device: usize, pressed: bool) -> bool {
-		let bit = 1 << device;
+	pub const fn set_device_pressed(&mut self, device: DeviceBitmask, pressed: bool) -> bool {
+		let bit = 1 << device.0;
 		let state_changed;
 		if pressed {
-			state_changed = self.pressed == 0;
-			self.pressed |= bit;
+			state_changed = self.pressed.0 == 0;
+			self.pressed.0 |= bit;
 		} else {
-			state_changed = self.pressed == bit;
-			self.pressed &= !bit;
+			state_changed = self.pressed.0 == bit;
+			self.pressed.0 &= !bit;
 		}
 		state_changed
 	}
 
-	pub const fn set_device_hovered(&mut self, device: usize, hovered: bool) -> bool {
-		let bit = 1 << device;
+	pub const fn set_device_hovered(&mut self, device: DeviceBitmask, hovered: bool) -> bool {
+		let bit = 1 << device.0;
 		let state_changed;
 		if hovered {
-			state_changed = self.hovered == 0;
-			self.hovered |= bit;
+			state_changed = self.hovered.0 == 0;
+			self.hovered.0 |= bit;
 		} else {
-			state_changed = self.hovered == bit;
-			self.hovered &= !bit;
+			state_changed = self.hovered.0 == bit;
+			self.hovered.0 &= !bit;
 		}
 		state_changed
 	}
 
-	pub const fn get_pressed(&self, device: usize) -> bool {
-		self.pressed & (1 << device) != 0
+	pub const fn get_pressed(&self, device: DeviceBitmask) -> bool {
+		self.pressed.0 & (1 << device.0) != 0
 	}
 
-	pub const fn get_hovered(&self, device: usize) -> bool {
-		self.hovered & (1 << device) != 0
+	pub const fn get_hovered(&self, device: DeviceBitmask) -> bool {
+		self.hovered.0 & (1 << device.0) != 0
 	}
 
 	pub const fn is_pressed(&self) -> bool {
-		self.pressed != 0
+		self.pressed.0 != 0
 	}
 
 	pub const fn is_hovered(&self) -> bool {
-		self.hovered != 0
+		self.hovered.0 != 0
 	}
 }
 
@@ -116,8 +117,8 @@ impl WidgetState {
 	fn new(flags: WidgetStateFlags, obj: Box<dyn WidgetObj>) -> Self {
 		Self {
 			data: WidgetData {
-				hovered: 0,
-				pressed: 0,
+				hovered: DeviceBitmask(0),
+				pressed: DeviceBitmask(0),
 				scrolling_target: Vec2::default(),
 				scrolling_cur: Vec2::default(),
 				scrolling_cur_prev: Vec2::default(),

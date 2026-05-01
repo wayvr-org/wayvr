@@ -9,7 +9,7 @@ use crate::{
 	layout::WidgetPair,
 	widget::{ConstructEssentials, div::WidgetDiv},
 };
-use std::{cell::RefCell, fmt::Pointer, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use taffy::{
 	AlignItems,
 	prelude::{length, percent},

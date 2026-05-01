@@ -1,12 +1,7 @@
-#![allow(dead_code)]
-use std::path::PathBuf;
-
-// TODO: Remove later
-use serde::{Deserialize, Serialize};
-use wlx_common::{async_executor::AsyncExecutor, config_io};
-
 use crate::util::networking::{self, WAYVR_SKYMAPS_ROOT, http_client};
-
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use wlx_common::{async_executor::AsyncExecutor, config_io};
 pub type SkymapUuid = uuid::Uuid;
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]

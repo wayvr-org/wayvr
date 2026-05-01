@@ -11,8 +11,8 @@ use crate::{
 	},
 	drawing::{self},
 	event::{
-		self, CallbackDataCommon, CallbackMetadata, EventAlterables, EventListenerCollection, EventListenerKind,
-		StyleSetRequest,
+		self, CallbackDataCommon, CallbackMetadata, DeviceBitmask, EventAlterables, EventListenerCollection,
+		EventListenerKind, StyleSetRequest,
 	},
 	i18n::Translation,
 	layout::{WidgetID, WidgetPair},
@@ -77,7 +77,7 @@ pub struct Params {
 }
 
 struct State {
-	dragged_by: Option<usize>,
+	dragged_by: Option<DeviceBitmask>,
 	hovered: bool,
 	values: ValuesMinMax,
 	on_value_changed: Option<SliderValueChangedCallback>,
