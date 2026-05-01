@@ -26,12 +26,17 @@ pub mod rectangle;
 pub mod sprite;
 pub mod util;
 
+const SWIPE_START_THRESHOLD_UNITS: f32 = 16.0;
+
 pub struct WidgetData {
 	hovered: DeviceBitmask,
 	pressed: DeviceBitmask,
-	pub scrolling_target: Vec2,   // normalized, 0.0-1.0. Not used in case if overflow != scroll
-	pub scrolling_cur: Vec2,      // normalized, used for smooth scrolling animation
-	pub scrolling_cur_prev: Vec2, // for motion interpolation while rendering between ticks
+	scrolling_target: Vec2,   // normalized, 0.0-1.0. Not used in case if overflow != scroll
+	scrolling_cur: Vec2,      // normalized, used for smooth scrolling animation
+	scrolling_cur_prev: Vec2, // for motion interpolation while rendering between ticks
+	press_down_start_mouse_pos: Option<Vec2>,
+	swipe_running: bool,
+	swipe_scroll_start: Vec2, // normalized, 0.0-1.0
 	pub transform: glam::Mat4,
 	pub cached_absolute_boundary: drawing::Boundary, // updated in Layout::push_event_widget
 }
@@ -124,6 +129,9 @@ impl WidgetState {
 				scrolling_cur_prev: Vec2::default(),
 				transform: glam::Mat4::IDENTITY,
 				cached_absolute_boundary: drawing::Boundary::default(),
+				press_down_start_mouse_pos: None,
+				swipe_running: false,
+				swipe_scroll_start: Vec2::default(),
 			},
 			obj,
 			event_listeners: EventListenerCollection::default(),
@@ -193,7 +201,7 @@ pub struct EventParams<'a> {
 	pub style: &'a taffy::Style,
 	pub state: &'a LayoutState,
 	pub alterables: &'a mut EventAlterables,
-	pub layout: &'a taffy::Layout,
+	pub taffy_layout: &'a taffy::Layout,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd)]
@@ -222,6 +230,22 @@ fn get_scroll_enabled(style: &taffy::Style) -> (bool, bool) {
 	)
 }
 
+const OVERFLOW_START_THRESHOLD_UNITS: f32 = 3.0; // don't show scrollbars for nearly non-scrollable lists
+
+fn get_scroll_active_axis(style: &taffy::Style, taffy_layout: &taffy::Layout) -> (bool, bool) {
+	let (enabled_horiz, enabled_vert) = get_scroll_enabled(style);
+	if !enabled_horiz && !enabled_vert {
+		return (false, false);
+	}
+
+	let overflow = Vec2::new(taffy_layout.scroll_width(), taffy_layout.scroll_height());
+
+	(
+		overflow.x >= OVERFLOW_START_THRESHOLD_UNITS,
+		overflow.y >= OVERFLOW_START_THRESHOLD_UNITS,
+	)
+}
+
 pub struct ScrollbarInfo {
 	// total contents size of the currently scrolling widget
 	content_size: Vec2,
@@ -230,21 +254,28 @@ pub struct ScrollbarInfo {
 	handle_size: Vec2,
 }
 
-pub fn get_scrollbar_info(l: &taffy::Layout) -> Option<ScrollbarInfo> {
-	let overflow_start_threshold_units = 3.0; // don't show scrollbars for nearly non-scrollable lists
-
-	let overflow = Vec2::new(l.scroll_width(), l.scroll_height());
-	if overflow.x < overflow_start_threshold_units && overflow.y < overflow_start_threshold_units {
+pub fn get_scrollbar_info(taffy_layout: &taffy::Layout) -> Option<ScrollbarInfo> {
+	let overflow = Vec2::new(taffy_layout.scroll_width(), taffy_layout.scroll_height());
+	if overflow.x < OVERFLOW_START_THRESHOLD_UNITS && overflow.y < OVERFLOW_START_THRESHOLD_UNITS {
 		return None; // not overflowing
 	}
 
-	let content_size = Vec2::new(l.content_size.width, l.content_size.height);
+	let content_size = Vec2::new(taffy_layout.content_size.width, taffy_layout.content_size.height);
 	let handle_size = 1.0 - (overflow / content_size);
 
 	Some(ScrollbarInfo {
 		content_size,
 		handle_size,
 	})
+}
+
+impl ScrollbarInfo {
+	fn get_potential_scroll_axis_multiplier(&self, taffy_layout: &taffy::Layout) -> Vec2 {
+		Vec2::new(
+			self.content_size.x - taffy_layout.content_box_width(),
+			self.content_size.y - taffy_layout.content_box_height(),
+		)
+	}
 }
 
 impl dyn WidgetObj {
@@ -433,13 +464,13 @@ impl WidgetState {
 			return false;
 		}
 
-		let l = params.layout;
+		let l = params.taffy_layout;
 		let overflow = Vec2::new(l.scroll_width(), l.scroll_height());
 		if overflow.x == 0.0 && overflow.y == 0.0 {
 			return false; // not overflowing
 		}
 
-		let Some(info) = get_scrollbar_info(params.layout) else {
+		let Some(info) = get_scrollbar_info(l) else {
 			return false;
 		};
 
@@ -510,6 +541,9 @@ impl WidgetState {
 				)?);
 			}
 			Event::MouseDown(e) => {
+				self.data.press_down_start_mouse_pos = Some(e.pos);
+				self.data.swipe_scroll_start = self.data.scrolling_target;
+
 				if hovered && self.data.set_device_pressed(e.device, true) {
 					res = Some(self.invoke_listeners(
 						&mut invoke_data,
@@ -519,6 +553,11 @@ impl WidgetState {
 				}
 			}
 			Event::MouseUp(e) => {
+				if self.data.swipe_running {
+					self.data.swipe_running = false;
+					// TODO: kinetic scroll
+				}
+
 				if self.data.set_device_pressed(e.device, false) {
 					res = Some(self.invoke_listeners(
 						&mut invoke_data,
@@ -526,10 +565,50 @@ impl WidgetState {
 						CallbackMetadata::MouseButton(*e),
 					)?);
 				}
+
+				self.data.press_down_start_mouse_pos = None;
 			}
 			Event::MouseMotion(e) => {
-				let hover_state_changed = self.data.set_device_hovered(e.device, hovered);
+				if let Some(start_mouse_pos) = &self.data.press_down_start_mouse_pos {
+					let (active_x, active_y) =
+						get_scroll_active_axis(&invoke_data.params.style, &invoke_data.params.taffy_layout);
 
+					if !self.data.swipe_running {
+						if active_x && (e.pos.x - start_mouse_pos.x).abs() >= SWIPE_START_THRESHOLD_UNITS {
+							self.data.swipe_running = true;
+						}
+
+						if active_y && (e.pos.y - start_mouse_pos.y).abs() >= SWIPE_START_THRESHOLD_UNITS {
+							self.data.swipe_running = true;
+						}
+
+						if self.data.swipe_running {
+							// Cancel eventual MousePress event so the buttons won't click
+							// if we started swiping
+							// TODO?
+						}
+					}
+
+					if self.data.swipe_running
+						&& let Some(scrollbar_info) = get_scrollbar_info(invoke_data.params.taffy_layout)
+					{
+						let mouse_diff = e.pos - start_mouse_pos;
+
+						let mult = scrollbar_info.get_potential_scroll_axis_multiplier(invoke_data.params.taffy_layout);
+
+						let scroll_diff_x = if mult.x != 0.0 { -mouse_diff.x / mult.x } else { 0.0 };
+						let scroll_diff_y = if mult.y != 0.0 { -mouse_diff.y / mult.y } else { 0.0 };
+
+						self.data.scrolling_target = (self.data.swipe_scroll_start + Vec2::new(scroll_diff_x, scroll_diff_y))
+							.clamp(Vec2::splat(0.0), Vec2::splat(1.0));
+						invoke_data.params.alterables.mark_tick(self.obj.get_id());
+
+						*invoke_data.event_result = EventResult::Consumed;
+						return Ok(());
+					}
+				}
+
+				let hover_state_changed = self.data.set_device_hovered(e.device, hovered);
 				if hover_state_changed {
 					if self.data.is_hovered() {
 						res =

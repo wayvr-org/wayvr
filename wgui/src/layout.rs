@@ -456,7 +456,7 @@ impl Layout {
 			if event_result.can_propagate() {
 				let mut params = EventParams {
 					state: &self.state,
-					layout: l,
+					taffy_layout: l,
 					alterables,
 					node_id,
 					style,
