@@ -1,5 +1,5 @@
 use anyhow::Context;
-use glam::Vec2;
+use glam::{FloatExt, Vec2};
 use taffy::{NodeId, TaffyTree};
 
 use super::drawing::RenderPrimitive;
@@ -27,6 +27,9 @@ pub mod sprite;
 pub mod util;
 
 const SWIPE_START_THRESHOLD_UNITS: f32 = 16.0;
+const KINETIC_VELOCITY_DAMPING: f32 = 0.92;
+const KINETIC_VELOCITY_BRAKE: f32 = 0.85;
+const RUBBERBANDING_DAMP: f32 = 0.8;
 
 pub struct WidgetData {
 	hovered: DeviceBitmask,
@@ -34,6 +37,7 @@ pub struct WidgetData {
 	scrolling_target: Vec2,   // normalized, 0.0-1.0. Not used in case if overflow != scroll
 	scrolling_cur: Vec2,      // normalized, used for smooth scrolling animation
 	scrolling_cur_prev: Vec2, // for motion interpolation while rendering between ticks
+	scrolling_velocity: Vec2,
 	press_down_start_mouse_pos: Option<Vec2>,
 	swipe_running: bool,
 	swipe_scroll_start: Vec2, // normalized, 0.0-1.0
@@ -132,6 +136,7 @@ impl WidgetState {
 				press_down_start_mouse_pos: None,
 				swipe_running: false,
 				swipe_scroll_start: Vec2::default(),
+				scrolling_velocity: Vec2::default(),
 			},
 			obj,
 			event_listeners: EventListenerCollection::default(),
@@ -380,6 +385,46 @@ impl WidgetState {
 		let scrolling_cur_prev = &mut self.data.scrolling_cur_prev;
 		let scrolling_target = &mut self.data.scrolling_target;
 
+		let mut perform_next_tick = false;
+
+		// check for boundaries
+		if !self.data.swipe_running {
+			// top bound
+			if scrolling_target.y < 0.0 {
+				self.data.scrolling_velocity.y *= KINETIC_VELOCITY_BRAKE;
+				scrolling_target.y *= RUBBERBANDING_DAMP;
+				perform_next_tick = true;
+			}
+
+			// left bound
+			if scrolling_target.x < 0.0 {
+				self.data.scrolling_velocity.x *= KINETIC_VELOCITY_BRAKE;
+				scrolling_target.x *= RUBBERBANDING_DAMP;
+				perform_next_tick = true;
+			}
+
+			// right bound
+			if scrolling_target.x > 1.0 {
+				self.data.scrolling_velocity.x *= KINETIC_VELOCITY_BRAKE;
+				scrolling_target.x = 1.0.lerp(scrolling_target.x, RUBBERBANDING_DAMP);
+				perform_next_tick = true;
+			}
+
+			// bottom bound
+			if scrolling_target.y > 1.0 {
+				self.data.scrolling_velocity.y *= KINETIC_VELOCITY_BRAKE;
+				scrolling_target.y = 1.0.lerp(scrolling_target.y, RUBBERBANDING_DAMP);
+				perform_next_tick = true;
+			}
+		}
+
+		// Perform kinetic velocity animation
+		if self.data.scrolling_velocity.length_squared() > 1e-9 {
+			*scrolling_target += self.data.scrolling_velocity;
+			self.data.scrolling_velocity *= KINETIC_VELOCITY_DAMPING;
+			perform_next_tick = true;
+		}
+
 		*scrolling_cur_prev = *scrolling_cur;
 
 		if scrolling_cur != scrolling_target {
@@ -387,8 +432,7 @@ impl WidgetState {
 			*scrolling_cur = scrolling_cur.lerp(*scrolling_target, 0.2);
 
 			// trigger tick request again
-			alterables.mark_tick(this_widget_id);
-			alterables.mark_redraw();
+			perform_next_tick = true;
 
 			let epsilon = 0.00001;
 			if (scrolling_cur.x - scrolling_target.x).abs() < epsilon
@@ -396,6 +440,11 @@ impl WidgetState {
 			{
 				*scrolling_cur = *scrolling_target;
 			}
+		}
+
+		if perform_next_tick {
+			alterables.mark_tick(this_widget_id);
+			alterables.mark_redraw();
 		}
 	}
 
@@ -483,7 +532,7 @@ impl WidgetState {
 				}
 
 				let mult = (1.0 / (content_box_length - content_length)) * step_pixels;
-				let new_scroll = (*scrolling_target + wheel_delta * mult).clamp(0.0, 1.0);
+				let new_scroll = *scrolling_target + wheel_delta * mult;
 				if *scrolling_target == new_scroll {
 					return;
 				}
@@ -511,20 +560,81 @@ impl WidgetState {
 		true
 	}
 
+	// this is called before calling children of this widget
+	pub fn process_event_priority(
+		&mut self,
+		params: &mut EventParams,
+		widget_id: WidgetID,
+		event: &Event,
+	) -> anyhow::Result<EventResult> {
+		match &event {
+			Event::MouseDown(e) => {
+				// firstly, check if this widget is scrollable at all
+				let (active_x, active_y) = get_scroll_active_axis(&params.style, &params.taffy_layout);
+				if active_x || active_y {
+					self.data.press_down_start_mouse_pos = Some(e.pos);
+					self.data.swipe_scroll_start = self.data.scrolling_target;
+				}
+			}
+			Event::MouseUp(_e) => {
+				if self.data.swipe_running {
+					self.data.swipe_running = false;
+					let kinetic_force = (self.data.scrolling_cur - self.data.scrolling_cur_prev) * 20.0;
+					self.data.scrolling_velocity += kinetic_force;
+					params.alterables.mark_tick(widget_id);
+					params.alterables.mark_redraw();
+				}
+				self.data.press_down_start_mouse_pos = None;
+			}
+			Event::MouseMotion(e) => {
+				if let Some(start_mouse_pos) = &self.data.press_down_start_mouse_pos {
+					let (active_x, active_y) = get_scroll_active_axis(&params.style, &params.taffy_layout);
+
+					if !self.data.swipe_running {
+						if (active_x && (e.pos.x - start_mouse_pos.x).abs() >= SWIPE_START_THRESHOLD_UNITS)
+							|| (active_y && (e.pos.y - start_mouse_pos.y).abs() >= SWIPE_START_THRESHOLD_UNITS)
+						{
+							self.data.swipe_running = true;
+							params.alterables.emit_global_event(Event::MouseCancel);
+						}
+					}
+
+					if self.data.swipe_running
+						&& let Some(scrollbar_info) = get_scrollbar_info(params.taffy_layout)
+					{
+						let mouse_diff = e.pos - start_mouse_pos;
+
+						let mult = scrollbar_info.get_potential_scroll_axis_multiplier(params.taffy_layout);
+
+						let scroll_diff_x = if mult.x != 0.0 { -mouse_diff.x / mult.x } else { 0.0 };
+						let scroll_diff_y = if mult.y != 0.0 { -mouse_diff.y / mult.y } else { 0.0 };
+
+						self.data.scrolling_target = self.data.swipe_scroll_start + Vec2::new(scroll_diff_x, scroll_diff_y);
+						params.alterables.mark_tick(self.obj.get_id());
+
+						return Ok(EventResult::Consumed);
+					}
+				}
+			}
+			_ => {}
+		}
+
+		Ok(EventResult::Pass)
+	}
+
 	pub fn process_event<'a, 'b, U1: 'static, U2: 'static>(
 		&mut self,
+		params: &'a mut EventParams<'a>,
 		widget_id: WidgetID,
-		node_id: taffy::NodeId,
 		event: &Event,
 		event_result: &'a mut EventResult,
 		user_data: &'a mut (&'b mut U1, &'b mut U2),
-		params: &'a mut EventParams<'a>,
 	) -> anyhow::Result<()> {
 		let hovered = event.test_mouse_within_transform(params.alterables.transform_stack.get());
 
 		let mut invoke_data = InvokeData {
 			widget_id,
-			node_id,
+			node_id: params.node_id,
 			event_result,
 			user_data,
 			params,
@@ -540,10 +650,10 @@ impl WidgetState {
 					CallbackMetadata::TextInput(e.clone()),
 				)?);
 			}
+			Event::MouseCancel => {
+				res = Some(self.invoke_listeners(&mut invoke_data, EventListenerKind::MouseCancel, CallbackMetadata::None)?);
+			}
 			Event::MouseDown(e) => {
-				self.data.press_down_start_mouse_pos = Some(e.pos);
-				self.data.swipe_scroll_start = self.data.scrolling_target;
-
 				if hovered && self.data.set_device_pressed(e.device, true) {
 					res = Some(self.invoke_listeners(
 						&mut invoke_data,
@@ -553,11 +663,6 @@ impl WidgetState {
 				}
 			}
 			Event::MouseUp(e) => {
-				if self.data.swipe_running {
-					self.data.swipe_running = false;
-					// TODO: kinetic scroll
-				}
-
 				if self.data.set_device_pressed(e.device, false) {
 					res = Some(self.invoke_listeners(
 						&mut invoke_data,
@@ -565,49 +670,8 @@ impl WidgetState {
 						CallbackMetadata::MouseButton(*e),
 					)?);
 				}
-
-				self.data.press_down_start_mouse_pos = None;
 			}
 			Event::MouseMotion(e) => {
-				if let Some(start_mouse_pos) = &self.data.press_down_start_mouse_pos {
-					let (active_x, active_y) =
-						get_scroll_active_axis(&invoke_data.params.style, &invoke_data.params.taffy_layout);
-
-					if !self.data.swipe_running {
-						if active_x && (e.pos.x - start_mouse_pos.x).abs() >= SWIPE_START_THRESHOLD_UNITS {
-							self.data.swipe_running = true;
-						}
-
-						if active_y && (e.pos.y - start_mouse_pos.y).abs() >= SWIPE_START_THRESHOLD_UNITS {
-							self.data.swipe_running = true;
-						}
-
-						if self.data.swipe_running {
-							// Cancel eventual MousePress event so the buttons won't click
-							// if we started swiping
-							// TODO?
-						}
-					}
-
-					if self.data.swipe_running
-						&& let Some(scrollbar_info) = get_scrollbar_info(invoke_data.params.taffy_layout)
-					{
-						let mouse_diff = e.pos - start_mouse_pos;
-
-						let mult = scrollbar_info.get_potential_scroll_axis_multiplier(invoke_data.params.taffy_layout);
-
-						let scroll_diff_x = if mult.x != 0.0 { -mouse_diff.x / mult.x } else { 0.0 };
-						let scroll_diff_y = if mult.y != 0.0 { -mouse_diff.y / mult.y } else { 0.0 };
-
-						self.data.scrolling_target = (self.data.swipe_scroll_start + Vec2::new(scroll_diff_x, scroll_diff_y))
-							.clamp(Vec2::splat(0.0), Vec2::splat(1.0));
-						invoke_data.params.alterables.mark_tick(self.obj.get_id());
-
-						*invoke_data.event_result = EventResult::Consumed;
-						return Ok(());
-					}
-				}
-
 				let hover_state_changed = self.data.set_device_hovered(e.device, hovered);
 				if hover_state_changed {
 					if self.data.is_hovered() {

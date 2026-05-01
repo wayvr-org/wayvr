@@ -240,6 +240,17 @@ fn register_event_mouse_leave(
 	)
 }
 
+fn register_event_mouse_cancel(state: Rc<RefCell<State>>, listeners: &mut EventListenerCollection) -> EventListenerID {
+	listeners.register(
+		EventListenerKind::MouseCancel,
+		Box::new(move |_common, _event_data, (), ()| {
+			let mut state = state.borrow_mut();
+			state.down = false;
+			Ok(EventResult::Pass)
+		}),
+	)
+}
+
 fn register_event_mouse_press(state: Rc<RefCell<State>>, listeners: &mut EventListenerCollection) -> EventListenerID {
 	listeners.register(
 		EventListenerKind::MousePress,
@@ -439,6 +450,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 			vec![
 				register_event_mouse_enter(state.clone(), listeners, params.tooltip, anim_mult),
 				register_event_mouse_leave(state.clone(), listeners, anim_mult),
+				register_event_mouse_cancel(state.clone(), listeners),
 				register_event_mouse_press(state.clone(), listeners),
 				register_event_mouse_release(data.clone(), state.clone(), listeners),
 			]

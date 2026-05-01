@@ -81,6 +81,7 @@ pub enum Event {
 	MouseMotion(MouseMotionEvent),
 	MouseUp(MouseButtonEvent),
 	MouseWheel(MouseWheelEvent),
+	MouseCancel, // Called if the user started scrolling by swiping above the button, to cancel all currently pressed buttons (prevent clicks)
 	TextInput(TextInputEvent),
 }
 
@@ -117,6 +118,7 @@ pub struct EventAlterables {
 	pub dirty_widgets: Vec<WidgetID>,
 	pub components_to_refresh_once: Vec<ComponentWeak>,
 	pub style_set_requests: Vec<(WidgetID, StyleSetRequest)>,
+	pub global_events_to_emit: Vec<Event>,
 	pub animations: Vec<animation::Animation>,
 	pub widgets_to_tick: HashSet<WidgetID>, // widgets which needs to be ticked in the next `Layout::update()` fn
 	pub transform_stack: TransformStack,
@@ -143,6 +145,10 @@ impl EventAlterables {
 	pub fn mark_dirty_and_redraw(&mut self, widget_id: WidgetID) {
 		self.mark_dirty(widget_id);
 		self.mark_redraw();
+	}
+
+	pub fn emit_global_event(&mut self, event: Event) {
+		self.global_events_to_emit.push(event);
 	}
 
 	pub fn mark_tick(&mut self, widget_id: WidgetID) {
@@ -235,9 +241,10 @@ impl CallbackMetadata {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventListenerKind {
 	MousePress,
-	MouseRelease,
-	MouseEnter,
 	MouseMotion,
+	MouseRelease,
+	MouseCancel,
+	MouseEnter,
 	MouseLeave,
 	TextInput,
 	InternalStateChange,

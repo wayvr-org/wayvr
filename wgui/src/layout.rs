@@ -11,7 +11,7 @@ use crate::{
 	drawing::{
 		self, ANSI_BOLD_CODE, ANSI_RESET_CODE, Boundary, PushScissorStackResult, push_scissor_stack, push_transform_stack,
 	},
-	event::{self, CallbackDataCommon, EventAlterables},
+	event::{self, CallbackDataCommon, Event, EventAlterables},
 	globals::WguiGlobals,
 	sound::WguiSoundType,
 	task::Tasks,
@@ -172,6 +172,8 @@ pub struct Layout {
 	pub alterables: EventAlterables,
 
 	pub widgets_to_tick: Vec<WidgetID>,
+
+	global_events_to_emit: Vec<Event>,
 
 	// *Main root*
 	// contains content_root_widget and topmost widgets
@@ -450,19 +452,25 @@ impl Layout {
 			.as_ref()
 			.is_none_or(PushScissorStackResult::should_display)
 		{
-			// check children first
-			self.push_event_children(node_id, event, event_result, alterables, user_data)?;
+			let res_priority = widget.process_event_priority(
+				&mut self.get_event_params(l, node_id, style, alterables),
+				widget_id,
+				event,
+			)?;
 
-			if event_result.can_propagate() {
-				let mut params = EventParams {
-					state: &self.state,
-					taffy_layout: l,
-					alterables,
-					node_id,
-					style,
-				};
+			if res_priority.can_propagate() {
+				// check children first
+				self.push_event_children(node_id, event, event_result, alterables, user_data)?;
 
-				widget.process_event(widget_id, node_id, event, event_result, user_data, &mut params)?;
+				if event_result.can_propagate() {
+					widget.process_event(
+						&mut self.get_event_params(l, node_id, style, alterables),
+						widget_id,
+						event,
+						event_result,
+						user_data,
+					)?;
+				}
 			}
 		}
 
@@ -472,6 +480,22 @@ impl Layout {
 		alterables.transform_stack.pop();
 
 		Ok(())
+	}
+
+	fn get_event_params<'a>(
+		&'a self,
+		l: &'a taffy::Layout,
+		node_id: taffy::NodeId,
+		style: &'a taffy::Style,
+		alterables: &'a mut EventAlterables,
+	) -> EventParams<'a> {
+		EventParams {
+			node_id,
+			style,
+			state: &self.state,
+			alterables,
+			taffy_layout: l,
+		}
 	}
 
 	pub const fn check_toggle_needs_redraw(&mut self) -> bool {
@@ -508,6 +532,18 @@ impl Layout {
 			&mut (user1, user2),
 		)?;
 		self.process_alterables(alterables)?;
+
+		let mut alterables = EventAlterables::default();
+		for event in std::mem::take(&mut self.global_events_to_emit) {
+			self.push_event_widget(
+				self.tree_root_node,
+				&event,
+				&mut event_result,
+				&mut alterables,
+				&mut (user1, user2),
+			)?;
+		}
+
 		Ok(event_result)
 	}
 
@@ -580,6 +616,7 @@ impl Layout {
 			sounds_to_play_once: Vec::new(),
 			focused_component: None,
 			alterables: Default::default(),
+			global_events_to_emit: Vec::new(),
 		})
 	}
 
@@ -815,10 +852,12 @@ impl Layout {
 			}
 		}
 
-		if !alterables.widgets_to_tick.is_empty() {
-			for widget_id in &alterables.widgets_to_tick {
-				self.widgets_to_tick.push(*widget_id);
-			}
+		for widget_id in alterables.widgets_to_tick {
+			self.widgets_to_tick.push(widget_id);
+		}
+
+		for event in alterables.global_events_to_emit {
+			self.global_events_to_emit.push(event);
 		}
 
 		for c in alterables.components_to_refresh_once {
