@@ -479,7 +479,10 @@ impl DashInterface<AppState> for DashInterfaceLive {
     fn get_feats(&mut self, data: &mut AppState) -> dash_interface::InterfaceFeats {
         dash_interface::InterfaceFeats {
             openxr: matches!(data.xr_backend, XrBackend::OpenXR),
+            #[cfg(feature = "openxr")]
             monado: data.monado_state.is_some(),
+            #[cfg(not(feature = "openxr"))]
+            monado: false,
         }
     }
 
