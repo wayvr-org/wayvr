@@ -17,14 +17,17 @@ use drm_fourcc::DrmFormat;
 use drm_fourcc::DrmFourcc;
 use drm_fourcc::DrmModifier;
 use pipewire as pw;
+use pipewire::context::ContextRc;
+use pipewire::main_loop::MainLoopRc;
+use pipewire::spa::buffer::meta::MetaVideoTransformValue;
+use pipewire::spa::buffer::meta::{MetaCursor, MetaHeader, MetaHeaderFlags, MetaVideoTransform};
+use pipewire::stream::StreamRc;
 use pw::spa;
 
+use pw::Error;
 use pw::properties::properties;
 use pw::stream::{Stream, StreamFlags};
-use pw::{Error, context::Context, main_loop::MainLoop};
 use spa::buffer::DataType;
-use spa::buffer::MetaData;
-use spa::buffer::MetaType;
 use spa::param::ParamType;
 use spa::param::video::VideoFormat;
 use spa::param::video::VideoInfoRaw;
@@ -278,12 +281,12 @@ where
     R: Any,
 {
     log::debug!("{}: pipewire main_loop start", &name);
-    let main_loop = MainLoop::new(None)?;
-    let context = Context::new(&main_loop)?;
-    let core = context.connect(None)?;
+    let main_loop = MainLoopRc::new(None)?;
+    let context = ContextRc::new(&main_loop, None)?;
+    let core = context.connect_rc(None)?;
 
-    let stream = Stream::new(
-        &core,
+    let stream = StreamRc::new(
+        core,
         &name,
         properties! {
             *pw::keys::MEDIA_TYPE => "Video",
@@ -377,36 +380,35 @@ where
                 }
 
                 if let Some(mut buffer) = maybe_buffer {
-                    if let MetaData::Header(header) = buffer.find_meta_data(MetaType::Header)
-                        && header.flags & spa::sys::SPA_META_HEADER_FLAG_CORRUPTED != 0
+                    if let Some(header) = buffer.find_meta::<MetaHeader>()
+                        && header.flags().contains(MetaHeaderFlags::CORRUPTED)
                     {
                         log::warn!("{}: PipeWire buffer is corrupt.", &name);
                         return;
                     }
-                    if let MetaData::VideoTransform(transform) =
-                        buffer.find_meta_data(MetaType::VideoTransform)
-                    {
-                        format.transform = match transform.transform {
-                            spa::sys::SPA_META_TRANSFORMATION_None => Transform::Normal,
-                            spa::sys::SPA_META_TRANSFORMATION_90 => Transform::Rotated90,
-                            spa::sys::SPA_META_TRANSFORMATION_180 => Transform::Rotated180,
-                            spa::sys::SPA_META_TRANSFORMATION_270 => Transform::Rotated270,
-                            spa::sys::SPA_META_TRANSFORMATION_Flipped => Transform::Flipped,
-                            spa::sys::SPA_META_TRANSFORMATION_Flipped90 => Transform::Flipped90,
-                            spa::sys::SPA_META_TRANSFORMATION_Flipped180 => Transform::Flipped180,
-                            spa::sys::SPA_META_TRANSFORMATION_Flipped270 => Transform::Flipped270,
+
+                    if let Some(transform) = buffer.find_meta::<MetaVideoTransform>() {
+                        format.transform = match transform.transform() {
+                            MetaVideoTransformValue::NONE => Transform::Normal,
+                            MetaVideoTransformValue::ROTATED90 => Transform::Rotated90,
+                            MetaVideoTransformValue::ROTATED180 => Transform::Rotated180,
+                            MetaVideoTransformValue::ROTATED270 => Transform::Rotated270,
+                            MetaVideoTransformValue::FLIPPED => Transform::Flipped,
+                            MetaVideoTransformValue::FLIPPED90 => Transform::Flipped90,
+                            MetaVideoTransformValue::FLIPPED180 => Transform::Flipped180,
+                            MetaVideoTransformValue::FLIPPED270 => Transform::Flipped270,
                             _ => Transform::Undefined,
                         };
                         log::debug!("{}: Transform: {:?}", &name, &format.transform);
                     }
 
-                    let mouse_meta = match buffer.find_meta_data(MetaType::Cursor) {
-                        MetaData::Cursor(cursor) if cursor.id != 0 => Some(MouseMeta {
-                            x: cursor.position.x as f32 / format.width as f32,
-                            y: cursor.position.y as f32 / format.height as f32,
-                        }),
-                        _ => None,
-                    };
+                    let mouse_meta = buffer
+                        .find_meta::<MetaCursor>()
+                        .filter(|c| c.is_valid())
+                        .map(|c| MouseMeta {
+                            x: c.position().x as f32 / format.width as f32,
+                            y: c.position().y as f32 / format.height as f32,
+                        });
 
                     let datas = buffer.datas_mut();
                     if datas.is_empty() {
