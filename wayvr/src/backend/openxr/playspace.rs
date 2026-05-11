@@ -244,6 +244,12 @@ impl PlayspaceMover {
             .set_reference_space_offset(ReferenceSpaceType::Stage, pose)
             .inspect_err(|e| log::warn!("Could not fix floor due to libmonado error: {e:?}"));
     }
+
+    pub fn test_availability(&mut self, monado: &mut Monado) {
+        let _ = monado
+            .get_reference_space_offset(ReferenceSpaceType::Stage)
+            .log_err("Space drag may not be available");
+    }
 }
 
 fn get_offset(monado: &mut Monado) -> Result<Affine3A, libmonado::MndResult> {

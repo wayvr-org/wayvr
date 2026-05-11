@@ -95,6 +95,11 @@ pub fn openxr_run(
     app.monado_state_init();
 
     let mut space_mover = playspace::PlayspaceMover::new();
+    if let Some(m) = app.monado_state.as_mut() {
+        // Test whether current playspace offset can be queried and log an error if it fails.
+        // `space_mover` can be used regardless and will start working if the playspace offset becomes available later.
+        space_mover.test_availability(&mut m.ipc);
+    };
 
     let mut blocker = app
         .monado_state
