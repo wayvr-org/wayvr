@@ -1,5 +1,6 @@
 use glam::{Affine3A, Mat3A, Quat, Vec3A, vec3a};
 use libmonado::{Monado, Pose, ReferenceSpaceType};
+use wgui::log::LogErr;
 
 use crate::{
     backend::{input::InputState, task::PlayspaceTask},
@@ -100,12 +101,10 @@ impl PlayspaceMover {
         } else {
             for (i, pointer) in app.input_state.pointers.iter().enumerate() {
                 if pointer.now.space_rotate {
-                    let transform = match get_offset(&mut monado.ipc) {
-                        Ok(transform) => transform,
-                        Err(err) => {
-                            log::warn!("Could not get initial space rotate offset: {err}");
-                            continue;
-                        }
+                    let Ok(transform) = get_offset(&mut monado.ipc)
+                        .log_err("Could not get initial space rotate offset")
+                    else {
+                        continue;
                     };
                     let hand_pose = Quat::from_affine3(&(transform * pointer.raw_pose));
                     self.rotate = Some(MoverData {
@@ -162,12 +161,10 @@ impl PlayspaceMover {
         } else {
             for (i, pointer) in app.input_state.pointers.iter().enumerate() {
                 if pointer.now.space_drag {
-                    let transform = match get_offset(&mut monado.ipc) {
-                        Ok(transform) => transform,
-                        Err(err) => {
-                            log::warn!("Could not get initial space drag offset: {err}");
-                            continue;
-                        }
+                    let Ok(transform) = get_offset(&mut monado.ipc)
+                        .log_err("Could not get initial space drag offset")
+                    else {
+                        continue;
                     };
                     let hand_pos = transform.transform_point3a(pointer.raw_pose.translation);
                     self.drag = Some(MoverData {
