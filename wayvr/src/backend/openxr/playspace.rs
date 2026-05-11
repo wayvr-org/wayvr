@@ -88,10 +88,11 @@ impl PlayspaceMover {
                 return;
             }
 
+            let pose_quat = Quat::from_affine3(&data.pose);
             let new_hand =
-                Quat::from_affine3(&(data.pose * app.input_state.pointers[data.hand].raw_pose));
+                pose_quat * Quat::from_affine3(&app.input_state.pointers[data.hand].raw_pose);
 
-            let dq = new_hand * data.hand_pose.conjugate();
+            let dq = pose_quat.conjugate() * (new_hand * data.hand_pose.conjugate()) * pose_quat;
             let mut space_transform = if app.session.config.space_rotate_unlocked {
                 Affine3A::from_quat(dq)
             } else {
