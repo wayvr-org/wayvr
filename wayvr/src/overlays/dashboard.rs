@@ -8,15 +8,15 @@ use wayvr_ipc::{
 };
 use wgui::{
     event::{
-        Event as WguiEvent, MouseButtonEvent, MouseButtonIndex, MouseLeaveEvent, MouseMotionEvent,
-        MouseWheelEvent,
+        DeviceBitmask, Event as WguiEvent, MouseButtonEvent, MouseButtonIndex, MouseLeaveEvent,
+        MouseMotionEvent, MouseWheelEvent,
     },
     gfx::cmd::WGfxClearMode,
     renderer_vk::context::Context as WguiContext,
     widget::EventResult,
 };
 use wlx_common::{
-    dash_interface::{self, DashInterface, RecenterMode},
+    dash_interface::{self, ConfigChangeKind, DashInterface, RecenterMode},
     locale::WayVRLangProvider,
     overlays::{BackendAttrib, BackendAttribValue},
 };
@@ -73,8 +73,12 @@ impl DashFrontend {
     fn new(app: &mut AppState) -> anyhow::Result<Self> {
         let mut interface = DashInterfaceLive::new();
 
-        for p in app.session.config.autostart_apps.clone() {
-            let _ = interface.process_launch(app, false, p);
+        if app.session.no_autostart {
+            log::info!("Not starting apps due to --no-autostart")
+        } else {
+            for p in app.session.config.autostart_apps.clone() {
+                let _ = interface.process_launch(app, false, p);
+            }
         }
 
         let frontend = frontend::Frontend::new(frontend::InitParams {
@@ -201,7 +205,7 @@ impl OverlayBackend for DashFrontend {
         let e = WguiEvent::MouseWheel(MouseWheelEvent {
             delta: vec2(delta.x, delta.y) / 8.0,
             pos: hit.uv * self.inner.layout.content_size,
-            device: hit.pointer,
+            device: DeviceBitmask::from_usize(hit.pointer),
         });
         self.push_event(&e);
     }
@@ -209,7 +213,7 @@ impl OverlayBackend for DashFrontend {
     fn on_hover(&mut self, _app: &mut AppState, hit: &PointerHit) -> HoverResult {
         let e = &WguiEvent::MouseMotion(MouseMotionEvent {
             pos: hit.uv * self.inner.layout.content_size,
-            device: hit.pointer,
+            device: DeviceBitmask::from_usize(hit.pointer),
         });
 
         self.has_focus[hit.pointer] = true;
@@ -231,7 +235,9 @@ impl OverlayBackend for DashFrontend {
     }
 
     fn on_left(&mut self, _app: &mut AppState, pointer: usize) {
-        let e = WguiEvent::MouseLeave(MouseLeaveEvent { device: pointer });
+        let e = WguiEvent::MouseLeave(MouseLeaveEvent {
+            device: DeviceBitmask::from_usize(pointer),
+        });
         self.has_focus[pointer] = false;
         self.push_event(&e);
     }
@@ -248,13 +254,13 @@ impl OverlayBackend for DashFrontend {
             WguiEvent::MouseDown(MouseButtonEvent {
                 pos: hit.uv * self.inner.layout.content_size,
                 index,
-                device: hit.pointer,
+                device: DeviceBitmask::from_usize(hit.pointer),
             })
         } else {
             WguiEvent::MouseUp(MouseButtonEvent {
                 pos: hit.uv * self.inner.layout.content_size,
                 index,
-                device: hit.pointer,
+                device: DeviceBitmask::from_usize(hit.pointer),
             })
         };
         self.push_event(&e);
@@ -263,11 +269,11 @@ impl OverlayBackend for DashFrontend {
         if !pressed && !self.has_focus[hit.pointer] {
             let e = WguiEvent::MouseMotion(MouseMotionEvent {
                 pos: vec2(-1., -1.),
-                device: hit.pointer,
+                device: DeviceBitmask::from_usize(hit.pointer),
             });
             self.push_event(&e);
             let e = WguiEvent::MouseLeave(MouseLeaveEvent {
-                device: hit.pointer,
+                device: DeviceBitmask::from_usize(hit.pointer),
             });
             self.push_event(&e);
         }
@@ -444,16 +450,22 @@ impl DashInterface<AppState> for DashInterfaceLive {
         &mut data.session.config
     }
 
-    fn config_changed(&mut self, data: &mut AppState) {
+    fn config_changed(&mut self, data: &mut AppState, kind: ConfigChangeKind) {
         data.session.config_dirty = true;
-        #[cfg(feature = "openxr")]
-        {
-            use crate::backend::task::OpenXrTask;
-            data.tasks
-                .enqueue(TaskType::OpenXR(OpenXrTask::SettingsChanged));
+
+        match kind {
+            ConfigChangeKind::OverlayConfig => data
+                .tasks
+                .enqueue(TaskType::Overlay(OverlayTask::SettingsChanged)),
+            ConfigChangeKind::EnvironmentBlend => {
+                #[cfg(feature = "openxr")]
+                {
+                    use crate::backend::task::OpenXrTask;
+                    data.tasks
+                        .enqueue(TaskType::OpenXR(OpenXrTask::EnvironmentChanged));
+                }
+            }
         }
-        data.tasks
-            .enqueue(TaskType::Overlay(OverlayTask::SettingsChanged));
     }
 
     fn restart(&mut self, _data: &mut AppState) {
@@ -464,6 +476,16 @@ impl DashInterface<AppState> for DashInterfaceLive {
     fn toggle_dashboard(&mut self, data: &mut AppState) {
         data.tasks
             .enqueue(TaskType::Overlay(OverlayTask::ToggleDashboard));
+    }
+
+    fn get_feats(&mut self, data: &mut AppState) -> dash_interface::InterfaceFeats {
+        dash_interface::InterfaceFeats {
+            openxr: matches!(data.xr_backend, XrBackend::OpenXR),
+            #[cfg(feature = "openxr")]
+            monado: data.monado_state.is_some(),
+            #[cfg(not(feature = "openxr"))]
+            monado: false,
+        }
     }
 
     #[cfg(feature = "openxr")]

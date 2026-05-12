@@ -9,7 +9,6 @@ use wgui::{
 	assets::AssetPath,
 	components::button::{ButtonClickCallback, ComponentButton},
 	globals::WguiGlobals,
-	i18n::Translation,
 	layout::{WidgetID, WidgetPair},
 	parser::{Fetchable, ParseDocumentParams, ParserState},
 	task::Tasks,
@@ -17,18 +16,17 @@ use wgui::{
 use wlx_common::desktop_finder::DesktopEntry;
 
 use crate::{
-	frontend::{Frontend, FrontendTask, FrontendTasks},
+	frontend::{Frontend, FrontendTasks},
 	tab::{Tab, TabType},
-	util::popup_manager::{MountPopupParams, PopupHandle},
-	views::{self, app_launcher},
+	util::popup_manager::PopupHolder,
+	views::{self},
 };
 
-enum Task {
-	CloseLauncher,
-}
+#[derive(Clone)]
+enum Task {}
 
 struct State {
-	view_launcher: Option<(PopupHandle, views::app_launcher::View)>,
+	view_launcher: PopupHolder<views::app_launcher::View>,
 }
 
 pub struct TabApps<T> {
@@ -47,21 +45,17 @@ impl<T> Tab<T> for TabApps<T> {
 	}
 
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, data: &mut T) -> anyhow::Result<()> {
-		let mut state = self.state.borrow_mut();
+		let state = self.state.borrow_mut();
 
 		for task in self.tasks.drain() {
-			match task {
-				Task::CloseLauncher => state.view_launcher = None,
-			}
+			match task {}
 		}
 
-		self
-			.app_list
-			.tick(frontend, &self.state, &self.tasks, &mut self.parser_state)?;
+		self.app_list.tick(frontend, &self.state, &mut self.parser_state)?;
 
-		if let Some((_, launcher)) = &mut state.view_launcher {
-			launcher.update(&mut frontend.interface, data)?;
-		}
+		state
+			.view_launcher
+			.with_view_res(|view| view.update(&mut frontend.interface, data))?;
 		Ok(())
 	}
 }
@@ -79,40 +73,14 @@ fn on_app_click(
 	globals: WguiGlobals,
 	entry: DesktopEntry,
 	state: Rc<RefCell<State>>,
-	tasks: Tasks<Task>,
 ) -> ButtonClickCallback {
 	Rc::new(move |_common, _evt| {
-		frontend_tasks.push(FrontendTask::MountPopup(MountPopupParams {
-			title: Translation::from_raw_text(&entry.app_name),
-			on_content: {
-				// this is awful
-				let state = state.clone();
-				let entry = entry.clone();
-				let globals = globals.clone();
-				let frontend_tasks = frontend_tasks.clone();
-				let tasks = tasks.clone();
-
-				Rc::new(move |data| {
-					let on_launched = {
-						let tasks = tasks.clone();
-						Box::new(move || tasks.push(Task::CloseLauncher))
-					};
-
-					let view = app_launcher::View::new(app_launcher::Params {
-						entry: entry.clone(),
-						globals: &globals,
-						layout: data.layout,
-						parent_id: data.id_content,
-						frontend_tasks: &frontend_tasks,
-						config: data.config,
-						on_launched,
-					})?;
-
-					state.borrow_mut().view_launcher = Some((data.handle, view));
-					Ok(())
-				})
-			},
-		}));
+		views::app_launcher::mount_popup(
+			frontend_tasks.clone(),
+			globals.clone(),
+			entry.clone(),
+			state.borrow_mut().view_launcher.clone(),
+		);
 		Ok(())
 	})
 }
@@ -129,7 +97,9 @@ impl<T> TabApps<T> {
 	pub fn new(frontend: &mut Frontend<T>, parent_id: WidgetID, data: &mut T) -> anyhow::Result<Self> {
 		let globals = frontend.layout.state.globals.clone();
 		let tasks = Tasks::new();
-		let state = Rc::new(RefCell::new(State { view_launcher: None }));
+		let state = Rc::new(RefCell::new(State {
+			view_launcher: Default::default(),
+		}));
 
 		let parser_state = wgui::parser::parse_from_assets(&doc_params(globals.clone()), &mut frontend.layout, parent_id)?;
 		let app_list_parent = parser_state.fetch_widget(&frontend.layout.state, "app_list_parent")?;
@@ -334,7 +304,6 @@ impl AppList {
 		&mut self,
 		frontend: &mut Frontend<T>,
 		state: &Rc<RefCell<State>>,
-		tasks: &Tasks<Task>,
 		parser_state: &mut ParserState,
 	) -> anyhow::Result<()> {
 		// load 4 entries for a single frame at most
@@ -348,7 +317,6 @@ impl AppList {
 					globals.clone(),
 					entry.clone(),
 					state.clone(),
-					tasks.clone(),
 				));
 			} else {
 				break;

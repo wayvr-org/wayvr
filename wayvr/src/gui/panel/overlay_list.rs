@@ -1,14 +1,11 @@
-use std::{collections::HashMap, rc::Rc};
-
+use crate::windowing::{OverlayID, backend::OverlayEventData, window::OverlayCategory};
 use slotmap::{Key, SecondaryMap};
+use std::{collections::HashMap, rc::Rc};
 use wgui::{
     components::button::ComponentButton,
-    event::{CallbackDataCommon, EventAlterables},
     layout::Layout,
     parser::{Fetchable, ParseDocumentParams, ParserState},
 };
-
-use crate::windowing::{OverlayID, backend::OverlayEventData, window::OverlayCategory};
 
 #[derive(Default)]
 /// Helper for managing a list of overlays
@@ -25,7 +22,6 @@ impl OverlayList {
         layout: &mut Layout,
         parser_state: &mut ParserState,
         event_data: &OverlayEventData,
-        alterables: &mut EventAlterables,
         doc_params: &ParseDocumentParams,
     ) -> anyhow::Result<bool> {
         let mut elements_changed = false;
@@ -98,11 +94,7 @@ impl OverlayList {
                             };
 
                             if meta.visible {
-                                let mut com = CallbackDataCommon {
-                                    alterables,
-                                    state: &layout.state,
-                                };
-                                overlay_button.set_sticky_state(&mut com, true);
+                                overlay_button.set_sticky_state(&mut layout.common(), true);
                             }
                             self.overlay_buttons.insert(meta.id, overlay_button);
                             continue;
@@ -121,31 +113,23 @@ impl OverlayList {
                     let overlay_button = parser_state
                         .fetch_component_as::<ComponentButton>(&format!("overlay_{i}"))?;
                     if meta.visible {
-                        let mut com = CallbackDataCommon {
-                            alterables,
-                            state: &layout.state,
-                        };
-                        overlay_button.set_sticky_state(&mut com, true);
+                        overlay_button.set_sticky_state(&mut layout.common(), true);
                     }
                     self.overlay_buttons.insert(meta.id, overlay_button);
                 }
                 elements_changed = true;
             }
             OverlayEventData::VisibleOverlaysChanged(overlays) => {
-                let mut com = CallbackDataCommon {
-                    alterables,
-                    state: &layout.state,
-                };
                 let mut overlay_buttons = self.overlay_buttons.clone();
 
                 for visible in overlays.as_ref() {
                     if let Some(btn) = overlay_buttons.remove(*visible) {
-                        btn.set_sticky_state(&mut com, true);
+                        btn.set_sticky_state(&mut layout.common(), true);
                     }
                 }
 
                 for btn in overlay_buttons.values() {
-                    btn.set_sticky_state(&mut com, false);
+                    btn.set_sticky_state(&mut layout.common(), false);
                 }
             }
             _ => {}

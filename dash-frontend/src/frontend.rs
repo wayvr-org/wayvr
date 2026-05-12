@@ -28,7 +28,7 @@ use crate::{
 	assets,
 	tab::{Tab, TabType, apps::TabApps, games::TabGames, home::TabHome, monado::TabMonado, settings::TabSettings},
 	util::{
-		popup_manager::{MountPopupParams, PopupManager, PopupManagerParams},
+		popup_manager::{MountPopupOnceParams, PopupManager, PopupManagerParams},
 		toast_manager::ToastManager,
 	},
 	views,
@@ -101,7 +101,7 @@ pub enum FrontendTask {
 	SetTab(TabType),
 	RefreshClock,
 	RefreshBackground,
-	MountPopup(MountPopupParams),
+	MountPopupOnce(MountPopupOnceParams),
 	RefreshPopupManager,
 	ShowAudioSettings,
 	UpdateAudioSettingsView,
@@ -279,10 +279,8 @@ impl<T: 'static> Frontend<T> {
 	}
 
 	fn update_time(&mut self, data: &mut T) -> anyhow::Result<()> {
-		let mut c = self.layout.start_common();
-		let mut common = c.common();
-
 		{
+			let mut common = self.layout.common();
 			let mut label = common
 				.state
 				.widgets
@@ -303,27 +301,20 @@ impl<T: 'static> Frontend<T> {
 			label.set_text(&mut common, Translation::from_raw_text(&text));
 		}
 
-		c.finish()?;
 		Ok(())
 	}
 
-	fn mount_popup(&mut self, params: MountPopupParams, data: &mut T) -> anyhow::Result<()> {
+	fn mount_popup_once(&mut self, params: MountPopupOnceParams, data: &mut T) -> anyhow::Result<()> {
 		let config = self.interface.general_config(data);
 
-		self.popup_manager.mount_popup(
-			self.globals.clone(),
-			&mut self.layout,
-			self.tasks.clone(),
-			params,
-			config,
-		)?;
+		self
+			.popup_manager
+			.mount_popup_once(&self.globals, &mut self.layout, &self.tasks, params, config)?;
 		Ok(())
 	}
 
 	fn refresh_popup_manager(&mut self) -> anyhow::Result<()> {
-		let mut c = self.layout.start_common();
-		self.popup_manager.refresh(c.common().alterables);
-		c.finish()?;
+		self.popup_manager.refresh(&mut self.layout.alterables);
 		Ok(())
 	}
 
@@ -356,7 +347,7 @@ impl<T: 'static> Frontend<T> {
 			FrontendTask::SetTab(tab_type) => self.set_tab(params.data, tab_type)?,
 			FrontendTask::RefreshClock => self.update_time(params.data)?,
 			FrontendTask::RefreshBackground => self.update_background(params.data)?,
-			FrontendTask::MountPopup(popup_params) => self.mount_popup(popup_params, params.data)?,
+			FrontendTask::MountPopupOnce(popup_params) => self.mount_popup_once(popup_params, params.data)?,
 			FrontendTask::RefreshPopupManager => self.refresh_popup_manager()?,
 			FrontendTask::ShowAudioSettings => self.action_show_audio_settings()?,
 			FrontendTask::UpdateAudioSettingsView => self.action_update_audio_settings()?,
@@ -369,8 +360,7 @@ impl<T: 'static> Frontend<T> {
 	}
 
 	fn set_tab_title(&mut self, translation: &str, icon: &str) -> anyhow::Result<()> {
-		let mut c = self.layout.start_common();
-		let mut common = c.common();
+		let mut common = self.layout.common();
 
 		{
 			let mut label = common
@@ -386,12 +376,11 @@ impl<T: 'static> Frontend<T> {
 				.widgets
 				.cast_as::<WidgetSprite>(self.widgets.id_sprite_titlebar_icon)?;
 			sprite.set_content(
-				&mut common,
+				common.alterables,
 				Some(CustomGlyphData::from_assets(&self.globals, AssetPath::BuiltIn(icon))?),
 			);
 		}
 
-		c.finish()?;
 		Ok(())
 	}
 

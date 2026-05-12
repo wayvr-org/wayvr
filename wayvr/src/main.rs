@@ -84,6 +84,10 @@ struct Args {
     #[arg(long)]
     headless: bool,
 
+    /// Do not auto-start registered apps
+    #[arg(long)]
+    no_autostart: bool,
+
     /// Path to write logs to
     #[arg(short, long, value_name = "FILE_PATH")]
     log_to: Option<String>,
@@ -150,7 +154,7 @@ fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
     if !args_get_openvr(&args) {
         use crate::backend::{BackendError, openxr::openxr_run};
         tried_xr = true;
-        match openxr_run(args.show, args.headless) {
+        match openxr_run(args.show, args.headless, args.no_autostart) {
             Ok(()) => {
                 used_backend.replace(XrBackend::OpenXR);
                 return;
@@ -168,7 +172,7 @@ fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
     if !args_get_openxr(&args) {
         use crate::backend::{BackendError, openvr::openvr_run};
         tried_vr = true;
-        match openvr_run(args.show, args.headless) {
+        match openvr_run(args.show, args.headless, args.no_autostart) {
             Ok(()) => {
                 used_backend.replace(XrBackend::OpenVR);
                 return;
@@ -281,7 +285,6 @@ fn logging_init(args: &mut Args) {
                 .from_env_lossy()
                 .add_directive("symphonia_core::probe=warn".parse().unwrap())
                 .add_directive("symphonia_bundle_mp3=warn".parse().unwrap())
-                .add_directive("ort=warn".parse().unwrap())
                 .add_directive("zbus=warn".parse().unwrap())
                 .add_directive("usvg=error".parse().unwrap())
                 .add_directive("resvg=error".parse().unwrap())

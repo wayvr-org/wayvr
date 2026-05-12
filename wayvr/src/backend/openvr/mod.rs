@@ -58,7 +58,11 @@ pub fn openvr_uninstall() {
 }
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-pub fn openvr_run(show_by_default: bool, headless: bool) -> Result<(), BackendError> {
+pub fn openvr_run(
+    show_by_default: bool,
+    headless: bool,
+    no_autostart: bool,
+) -> Result<(), BackendError> {
     let app_type = EVRApplicationType::VRApplication_Overlay;
     let Ok(context) = ovr_overlay::Context::init(app_type) else {
         log::warn!("Will not use OpenVR: Context init failed");
@@ -90,6 +94,8 @@ pub fn openvr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
         let (gfx, gfx_extras) = init_openvr_graphics(instance_extensions, device_extensions_fn)?;
         AppState::from_graphics(gfx, gfx_extras, XrBackend::OpenVR)?
     };
+
+    app.session.no_autostart = no_autostart;
 
     if show_by_default {
         app.tasks.enqueue_at(

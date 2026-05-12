@@ -56,7 +56,7 @@ pub enum OpenVrTask {
 
 #[cfg(feature = "openxr")]
 pub enum OpenXrTask {
-    SettingsChanged,
+    EnvironmentChanged,
 }
 
 pub enum PlayspaceTask {

@@ -1,0 +1,40 @@
+<layout>
+
+  <!--
+  ids:
+    "button"
+    "image_preview"
+    "label_title"
+    "label_desc"
+  -->
+  <template name="Cell">
+    <Button
+      id="button"
+      padding="8"
+      round="8"
+      flex_direction="column"
+      gap="4"
+      width="256"
+      align_items="center"
+      align_self="start">
+      <image id="image_preview" width="100%" height="128" round="6">
+        <!-- new_pass is required, because we need to render rectangles at the top of the image. Sorry. -->
+        <div new_pass="1" id="resolution_pips" gap="4" margin="6"/>
+      </image>
+      <label id="label_title" wrap="1" weight="bold"/>
+      <label id="label_author" wrap="1"/>
+    </Button>
+  </template>
+
+  <!--
+
+  params:
+    "color"
+    "text"
+  -->
+  <template name="ResolutionPip">
+    <rectangle color="${color}" padding_left="4" padding_right="4" padding_top="2" padding_bottom="2" round="3" align_self="start">
+      <label text="${text}" weight="bold" size="12" shadow="#000000" shadow_x="2" shadow_y="2"/>
+    </rectangle>
+  </template>
+</layout>

@@ -5,7 +5,7 @@ use wayvr_ipc::{
 
 use crate::{
 	config::GeneralConfig,
-	dash_interface::{self, DashInterface, RecenterMode},
+	dash_interface::{self, ConfigChangeKind, DashInterface, RecenterMode},
 	desktop_finder::DesktopFinder,
 	gen_id,
 };
@@ -230,11 +230,18 @@ impl DashInterface<()> for DashInterfaceEmulated {
 		&mut self.general_config
 	}
 
-	fn config_changed(&mut self, _: &mut ()) {}
+	fn config_changed(&mut self, _: &mut (), _: ConfigChangeKind) {}
 
 	fn restart(&mut self, _data: &mut ()) {}
 
 	fn toggle_dashboard(&mut self, _data: &mut ()) {}
+
+	fn get_feats(&mut self, _data: &mut ()) -> dash_interface::InterfaceFeats {
+		dash_interface::InterfaceFeats {
+			openxr: true,
+			monado: true,
+		}
+	}
 
 	fn monado_client_list(
 		&mut self,

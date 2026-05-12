@@ -1,5 +1,5 @@
 pub mod cached_fetcher;
-pub mod http_client;
+pub mod networking;
 pub mod pactl_wrapper;
 pub mod popup_manager;
 pub mod steam_utils;

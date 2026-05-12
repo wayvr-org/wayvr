@@ -11,8 +11,8 @@ use crate::{
 	},
 	drawing::{self},
 	event::{
-		self, CallbackDataCommon, CallbackMetadata, EventAlterables, EventListenerCollection, EventListenerKind,
-		StyleSetRequest,
+		self, CallbackDataCommon, CallbackMetadata, DeviceBitmask, EventAlterables, EventListenerCollection,
+		EventListenerKind, StyleSetRequest,
 	},
 	i18n::Translation,
 	layout::{WidgetID, WidgetPair},
@@ -29,31 +29,29 @@ use crate::{
 	},
 };
 
+#[derive(Default, Clone)]
+pub struct Value(pub f32);
+
 #[derive(Default)]
-pub struct ValuesMinMax {
-	pub value: f32,
+pub struct Limits {
 	pub min_value: f32,
 	pub max_value: f32,
 	pub step: f32,
 }
 
-impl ValuesMinMax {
-	fn to_normalized(&self) -> f32 {
-		(self.value - self.min_value) / (self.max_value - self.min_value)
+impl Value {
+	pub fn get(&self) -> f32 {
+		self.0
 	}
 
-	fn get_from_normalized(&self, normalized: f32) -> f32 {
-		normalized * (self.max_value - self.min_value) + self.min_value
-	}
-
-	fn set_value(&mut self, new_value: f32) -> &mut Self {
-		let span = self.max_value - self.min_value;
-		let clamped = new_value.max(self.min_value).min(self.max_value);
+	pub fn set(&mut self, limits: &Limits, new_value: f32) {
+		let span = limits.max_value - limits.min_value;
+		let clamped = new_value.max(limits.min_value).min(limits.max_value);
 
 		// get the step index from min
-		let mut k = ((clamped - self.min_value) / self.step).round();
+		let mut k = ((clamped - limits.min_value) / limits.step).round();
 
-		let k_max = (span / self.step).floor();
+		let k_max = (span / limits.step).floor();
 		if k < 0.0 {
 			k = 0.0;
 		}
@@ -61,25 +59,50 @@ impl ValuesMinMax {
 			k = k_max;
 		}
 
-		let snapped = self.min_value + k * self.step;
-		self.value = snapped.max(self.min_value).min(self.max_value);
+		let snapped = limits.min_value + k * limits.step;
+		self.0 = snapped.max(limits.min_value).min(limits.max_value);
+	}
+}
 
-		self
+impl Limits {
+	fn to_normalized(&self, value: f32) -> f32 {
+		(value - self.min_value) / (self.max_value - self.min_value)
+	}
+
+	fn get_from_normalized(&self, normalized: f32) -> f32 {
+		normalized * (self.max_value - self.min_value) + self.min_value
 	}
 }
 
 #[derive(Default)]
 pub struct Params {
 	pub style: taffy::Style,
-	pub values: ValuesMinMax,
+	pub limits: Limits,
+	pub value1: Value,
+	pub value2: Option<Value>, // range slider support
 	pub show_value: bool,
 	pub tooltip: Option<tooltip::TooltipInfo>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ValueIndex {
+	Primary,
+	Secondary, /* for range sliders */
+}
+
+struct DraggedBy {
+	index: ValueIndex,
+	device: DeviceBitmask,
+}
+
 struct State {
-	dragged_by: Option<usize>,
-	hovered: bool,
-	values: ValuesMinMax,
+	dragged_by: Option<DraggedBy>,
+	hovered_body: bool,
+	hovered1: bool,
+	hovered2: bool,
+	value1: Value,
+	value2: Option<Value>,
+	limits: Limits,
 	on_value_changed: Option<SliderValueChangedCallback>,
 	active_tooltip: Option<Rc<ComponentTooltip>>,
 }
@@ -90,14 +113,20 @@ impl TooltipTrait for State {
 	}
 }
 
+struct SliderHandleData {
+	id_handle_rect: WidgetID,  // Rectangle
+	id_text: Option<WidgetID>, // Text
+	id_handle: WidgetID,
+}
+
 struct Data {
 	body_node: taffy::NodeId,
-	slider_handle_rect_id: WidgetID,  // Rectangle
-	slider_text_id: Option<WidgetID>, // Text
-	slider_handle_id: WidgetID,
+	handle1: SliderHandleData,
+	handle2: Option<SliderHandleData>,
 }
 
 pub struct SliderValueChangedEvent {
+	pub index: ValueIndex,
 	pub value: f32,
 }
 
@@ -111,13 +140,15 @@ pub struct ComponentSlider {
 
 impl ComponentTrait for ComponentSlider {
 	fn refresh(&self, data: &mut RefreshData) {
-		// FIXME: refactor this after merging feat-skybox-catalog branch
-		let mut lc = data.layout.start_common();
-		let mut common = lc.common();
+		let mut common = data.layout.common();
 		let mut state = self.state.borrow_mut();
-		let value = state.values.value;
-		state.set_value(&mut common, &self.data, value);
-		let _ = lc.finish();
+
+		let value1 = state.value1.get();
+		state.set_value(&mut common, &self.data, ValueIndex::Primary, value1);
+
+		if let Some(value2) = state.value2.as_ref().map(|v| v.get()) {
+			state.set_value(&mut common, &self.data, ValueIndex::Secondary, value2);
+		}
 	}
 
 	fn base(&self) -> &ComponentBase {
@@ -130,13 +161,25 @@ impl ComponentTrait for ComponentSlider {
 }
 
 impl ComponentSlider {
-	pub fn get_value(&self) -> f32 {
-		self.state.borrow().values.value
+	pub fn get_value_primary(&self) -> f32 {
+		self.get_value(ValueIndex::Primary).unwrap() /* safe */
 	}
 
-	pub fn set_value(&self, common: &mut CallbackDataCommon, value: f32) {
+	pub fn get_value(&self, index: ValueIndex) -> Option<f32> {
+		let state = self.state.borrow();
+		match index {
+			ValueIndex::Primary => Some(state.value1.get()),
+			ValueIndex::Secondary => state.value2.as_ref().map(|v| v.get()),
+		}
+	}
+
+	pub fn set_value(&self, common: &mut CallbackDataCommon, index: ValueIndex, new_value: f32) {
 		let mut state = self.state.borrow_mut();
-		state.set_value(common, &self.data, value);
+		state.set_value(common, &self.data, index, new_value);
+	}
+
+	pub fn set_value_primary(&self, common: &mut CallbackDataCommon, new_value: f32) {
+		self.set_value(common, ValueIndex::Primary, new_value);
 	}
 
 	pub fn on_value_changed(&self, func: SliderValueChangedCallback) {
@@ -156,14 +199,15 @@ fn get_width(slider_body_node: taffy::NodeId, tree: &taffy::tree::TaffyTree<Widg
 
 fn conf_handle_style(
 	alterables: &mut EventAlterables,
-	values: &ValuesMinMax,
+	limits: &Limits,
+	value: f32,
 	slider_handle_id: WidgetID,
 	body_node: taffy::NodeId,
 	slider_handle_style: &taffy::Style,
 	tree: &taffy::tree::TaffyTree<WidgetID>,
 ) -> bool {
-	/* returns false if nothing changed */
-	let norm = values.to_normalized();
+	/* returns false if nothing has changed */
+	let norm = limits.to_normalized(value);
 
 	// convert normalized value to taffy percentage margin in percent
 	let width = get_width(body_node, tree);
@@ -187,11 +231,22 @@ const HANDLE_WIDTH: f32 = 32.0;
 const HANDLE_HEIGHT: f32 = 24.0;
 
 impl State {
+	fn get_hovered_index(&self) -> Option<ValueIndex> {
+		if self.hovered1 {
+			Some(ValueIndex::Primary)
+		} else if self.hovered2 {
+			Some(ValueIndex::Secondary)
+		} else {
+			None
+		}
+	}
+
 	fn update_value_to_mouse(
 		&mut self,
 		event_data: &event::CallbackData<'_>,
 		data: &Data,
 		common: &mut CallbackDataCommon,
+		index: ValueIndex,
 	) {
 		let mouse_pos = event_data
 			.metadata
@@ -203,10 +258,10 @@ impl State {
 			get_width(data.body_node, &common.state.tree) - HANDLE_WIDTH,
 		);
 
-		let target_value = self.values.get_from_normalized(norm);
+		let target_value = self.limits.get_from_normalized(norm);
 		let val = target_value;
 
-		self.set_value(common, data, val);
+		self.set_value(common, data, index, val);
 	}
 
 	fn update_text(common: &mut CallbackDataCommon, text: &mut WidgetLabel, value: f32) {
@@ -220,23 +275,47 @@ impl State {
 		text.set_text(common, Translation::from_raw_text(&pretty));
 	}
 
-	fn set_value(&mut self, common: &mut CallbackDataCommon, data: &Data, value: f32) {
-		let before = self.values.value;
-		self.values.set_value(value);
+	fn set_value(&mut self, common: &mut CallbackDataCommon, data: &Data, index: ValueIndex, new_value: f32) {
+		let val1 = self.value1.get();
 
-		let changed = self.values.value != before;
+		let Some(value) = (match index {
+			ValueIndex::Primary => Some(&mut self.value1),
+			ValueIndex::Secondary => self.value2.as_mut(),
+		}) else {
+			return;
+		};
 
-		let Some(slider_handle_node_id) = common.state.nodes.get(data.slider_handle_id) else {
+		// Slider handle widget
+		let Some(handle_data) = (match index {
+			ValueIndex::Primary => Some(&data.handle1),
+			ValueIndex::Secondary => data.handle2.as_ref(),
+		}) else {
+			unreachable!();
+		};
+
+		let before = value.get();
+
+		if index == ValueIndex::Secondary {
+			value.set(&self.limits, new_value.max(val1));
+		} else {
+			value.set(&self.limits, new_value);
+		}
+
+		let has_changed = value.get() != before;
+
+		let Some(slider_handle_node_id) = common.state.nodes.get(handle_data.id_handle) else {
 			return;
 		};
 
 		let Ok(style) = common.state.tree.style(*slider_handle_node_id) else {
 			return;
 		};
+
 		if !conf_handle_style(
 			common.alterables,
-			&self.values,
-			data.slider_handle_id,
+			&self.limits,
+			value.get(),
+			handle_data.id_handle,
 			data.body_node,
 			style,
 			&common.state.tree,
@@ -244,20 +323,21 @@ impl State {
 			return; // nothing changed visually
 		}
 
-		common.alterables.mark_dirty(data.slider_handle_id);
+		common.alterables.mark_dirty(handle_data.id_handle);
 		common.alterables.mark_redraw();
 
-		if let Some(slider_text_id) = data.slider_text_id
-			&& let Some(mut label) = common.state.widgets.get_as::<WidgetLabel>(slider_text_id)
+		if let Some(id_text) = handle_data.id_text
+			&& let Some(mut label) = common.state.widgets.get_as::<WidgetLabel>(id_text)
 		{
-			Self::update_text(common, &mut label, self.values.value);
+			Self::update_text(common, &mut label, value.get());
 		}
 
-		if changed && let Some(on_value_changed) = &self.on_value_changed {
+		if has_changed && let Some(on_value_changed) = &self.on_value_changed {
 			on_value_changed(
 				common,
 				SliderValueChangedEvent {
-					value: self.values.value,
+					index: index,
+					value: value.get(),
 				},
 			)
 		}
@@ -313,18 +393,16 @@ fn on_leave_anim(common: &mut event::CallbackDataCommon, handle_id: WidgetID, an
 }
 
 fn register_event_mouse_enter(
-	data: Rc<Data>,
 	state: Rc<RefCell<State>>,
 	listeners: &mut EventListenerCollection,
 	tooltip_info: Option<tooltip::TooltipInfo>,
-	anim_mult: f32,
 ) -> event::EventListenerID {
 	listeners.register(
 		EventListenerKind::MouseEnter,
 		Box::new(move |common, event_data, (), ()| {
 			common.alterables.trigger_haptics();
-			state.borrow_mut().hovered = true;
-			on_enter_anim(common, data.slider_handle_rect_id, anim_mult);
+			state.borrow_mut().hovered_body = true;
+
 			ComponentTooltip::register_hover_in(common, &tooltip_info, event_data.widget_id, state.clone());
 
 			Ok(EventResult::Pass)
@@ -333,10 +411,8 @@ fn register_event_mouse_enter(
 }
 
 fn register_event_mouse_leave(
-	data: Rc<Data>,
 	state: Rc<RefCell<State>>,
 	listeners: &mut EventListenerCollection,
-	anim_mult: f32,
 ) -> event::EventListenerID {
 	listeners.register(
 		EventListenerKind::MouseLeave,
@@ -345,36 +421,110 @@ fn register_event_mouse_leave(
 
 			{
 				let mut state = state.borrow_mut();
-				state.hovered = false;
+				state.hovered_body = false;
 				state.active_tooltip = None;
 			}
-			on_leave_anim(common, data.slider_handle_rect_id, anim_mult);
 
 			Ok(EventResult::Pass)
 		}),
 	)
 }
 
+fn get_handle_dist(common: &mut CallbackDataCommon, handle: &SliderHandleData, mouse_pos: Vec2) -> f32 {
+	let center = common.state.get_widget_boundary(handle.id_handle).center();
+	Vec2::distance(center, mouse_pos)
+}
+
+const MAX_HOVER_DIST: f32 = 64.0;
+
+fn update_handle_hovers(
+	common: &mut CallbackDataCommon,
+	data: &Data,
+	state: &mut State,
+	anim_mult: f32,
+	mouse_pos: Vec2,
+) {
+	let hovered1_prev = state.hovered1;
+	let hovered2_prev = state.hovered2;
+
+	if !state.hovered_body {
+		state.hovered1 = false;
+		state.hovered2 = false;
+	} else {
+		let dist1 = get_handle_dist(common, &data.handle1, mouse_pos);
+
+		let dist2 = data
+			.handle2
+			.as_ref()
+			.map(|h| get_handle_dist(common, h, mouse_pos))
+			.unwrap_or(std::f32::MAX);
+
+		state.hovered1 = dist1 <= MAX_HOVER_DIST;
+		state.hovered2 = dist2 <= MAX_HOVER_DIST;
+
+		// both of them are hovered, hover the closest one
+		if state.hovered1 && state.hovered2 {
+			if dist1 < dist2 {
+				state.hovered2 = false;
+			} else {
+				state.hovered1 = false;
+			}
+		}
+	}
+
+	// hover state changed, run animations
+	if state.hovered1 != hovered1_prev {
+		if state.hovered1 && !hovered1_prev {
+			on_enter_anim(common, data.handle1.id_handle_rect, anim_mult);
+		} else {
+			on_leave_anim(common, data.handle1.id_handle_rect, anim_mult);
+		}
+	}
+
+	if state.hovered2 != hovered2_prev
+		&& let Some(handle2) = data.handle2.as_ref()
+	{
+		if state.hovered2 && !hovered2_prev {
+			on_enter_anim(common, handle2.id_handle_rect, anim_mult);
+		} else {
+			on_leave_anim(common, handle2.id_handle_rect, anim_mult);
+		}
+	}
+}
+
 fn register_event_mouse_motion(
 	data: Rc<Data>,
 	state: Rc<RefCell<State>>,
 	listeners: &mut EventListenerCollection,
+	anim_mult: f32,
 ) -> event::EventListenerID {
 	listeners.register(
 		EventListenerKind::MouseMotion,
 		Box::new(move |common, event_data, (), ()| {
 			let mut state = state.borrow_mut();
 
-			let CallbackMetadata::MousePosition(pos) = event_data.metadata else {
+			let Some(pos_relative) = event_data
+				.metadata
+				.get_mouse_pos_relative(&common.alterables.transform_stack)
+			else {
 				unreachable!();
 			};
 
-			if state.dragged_by.is_some_and(|device| device == pos.device) {
-				state.update_value_to_mouse(event_data, &data, common);
-				Ok(EventResult::Consumed)
-			} else {
-				Ok(EventResult::Pass)
+			let CallbackMetadata::MousePosition(pos) = &event_data.metadata else {
+				unreachable!();
+			};
+
+			update_handle_hovers(common, &data, &mut state, anim_mult, pos_relative);
+
+			if let Some(dragged_by) = &state.dragged_by {
+				if dragged_by.device == pos.device {
+					let index = dragged_by.index;
+					state.update_value_to_mouse(event_data, &data, common, index);
+					return Ok(EventResult::Consumed);
+				}
 			}
+
+			Ok(EventResult::Pass)
 		}),
 	)
 }
@@ -395,13 +545,18 @@ fn register_event_mouse_press(
 				unreachable!();
 			};
 
-			if state.hovered {
-				state.dragged_by = Some(btn.device);
-				state.update_value_to_mouse(event_data, &data, common);
-				Ok(EventResult::Consumed)
-			} else {
-				Ok(EventResult::Pass)
+			if !state.hovered_body {
+				// this slider isn't hovered at all?
+				return Ok(EventResult::Pass);
 			}
+
+			let hovered_index = state.get_hovered_index().unwrap_or(ValueIndex::Primary);
+			state.dragged_by = Some(DraggedBy {
+				device: btn.device,
+				index: hovered_index,
+			});
+			state.update_value_to_mouse(event_data, &data, common, hovered_index);
+			Ok(EventResult::ConsumedExclusive)
 		}),
 	)
 }
@@ -426,36 +581,11 @@ fn register_event_mouse_release(
 	)
 }
 
-pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Result<(WidgetPair, Rc<ComponentSlider>)> {
-	let mut style = params.style;
-	style.position = taffy::Position::Relative;
-	style.min_size = style.size;
-	style.max_size = style.size;
-
-	let (root, slider_body_node) = ess.layout.add_child(ess.parent, WidgetDiv::create(), style)?;
-	let body_id = root.id;
-
-	let (_background_id, _) = ess.layout.add_child(
-		body_id,
-		WidgetRectangle::create(WidgetRectangleParams {
-			color: BODY_COLOR,
-			round: WLength::Percent(1.0),
-			border_color: BODY_BORDER_COLOR,
-			border: 2.0,
-			..Default::default()
-		}),
-		taffy::Style {
-			size: taffy::Size {
-				width: percent(1.0),
-				height: percent(PAD_PERCENT),
-			},
-			position: taffy::Position::Absolute,
-			align_self: Some(taffy::AlignItems::Center),
-			justify_self: Some(taffy::JustifySelf::Center),
-			..Default::default()
-		},
-	)?;
-
+fn mount_slider_handle(
+	ess: &mut ConstructEssentials,
+	body_id: WidgetID,
+	show_value: bool,
+) -> anyhow::Result<SliderHandleData> {
 	let slider_handle_style = taffy::Style {
 		size: taffy::Size {
 			width: length(0.0),
@@ -491,15 +621,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		},
 	)?;
 
-	let state = State {
-		dragged_by: None,
-		hovered: false,
-		values: params.values,
-		on_value_changed: None,
-		active_tooltip: None,
-	};
-
-	let slider_text: Option<(WidgetPair, taffy::NodeId)> = if params.show_value {
+	let slider_text: Option<(WidgetPair, taffy::NodeId)> = if show_value {
 		let label = WidgetLabel::create(
 			&mut ess.layout.state,
 			WidgetLabelParams {
@@ -517,11 +639,66 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		None
 	};
 
+	Ok(SliderHandleData {
+		id_handle_rect: slider_handle_rect.id,
+		id_text: slider_text.map(|s| s.0.id),
+		id_handle: slider_handle.id,
+	})
+}
+
+pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Result<(WidgetPair, Rc<ComponentSlider>)> {
+	let mut style = params.style;
+	style.position = taffy::Position::Relative;
+	style.min_size = style.size;
+	style.max_size = style.size;
+
+	let (root, slider_body_node) = ess.layout.add_child(ess.parent, WidgetDiv::create(), style)?;
+	let body_id = root.id;
+
+	let (_background_id, _) = ess.layout.add_child(
+		body_id,
+		WidgetRectangle::create(WidgetRectangleParams {
+			color: BODY_COLOR,
+			round: WLength::Percent(1.0),
+			border_color: BODY_BORDER_COLOR,
+			border: 2.0,
+			..Default::default()
+		}),
+		taffy::Style {
+			size: taffy::Size {
+				width: percent(1.0),
+				height: percent(PAD_PERCENT),
+			},
+			position: taffy::Position::Absolute,
+			align_self: Some(taffy::AlignItems::Center),
+			justify_self: Some(taffy::JustifySelf::Center),
+			..Default::default()
+		},
+	)?;
+
+	let slider_handle1 = mount_slider_handle(ess, body_id, params.show_value)?;
+	let slider_handle2 = if params.value2.is_some() {
+		Some(mount_slider_handle(ess, body_id, params.show_value)?)
+	} else {
+		None
+	};
+
+	let state = State {
+		dragged_by: None,
+		hovered_body: false,
+		hovered1: false,
+		hovered2: false,
+		value1: params.value1,
+		value2: params.value2,
+		limits: params.limits,
+		on_value_changed: None,
+		active_tooltip: None,
+	};
+
 	let data = Rc::new(Data {
-		slider_handle_rect_id: slider_handle_rect.id,
 		body_node: slider_body_node,
-		slider_handle_id: slider_handle.id,
-		slider_text_id: slider_text.map(|s| s.0.id),
+		handle1: slider_handle1,
+		handle2: slider_handle2,
 	});
 
 	let state = Rc::new(RefCell::new(state));
@@ -532,9 +709,9 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 			let listeners = &mut root.widget.state().event_listeners;
 			let anim_mult = ess.layout.state.theme.animation_mult;
 			vec![
-				register_event_mouse_enter(data.clone(), state.clone(), listeners, params.tooltip, anim_mult),
-				register_event_mouse_leave(data.clone(), state.clone(), listeners, anim_mult),
-				register_event_mouse_motion(data.clone(), state.clone(), listeners),
+				register_event_mouse_enter(state.clone(), listeners, params.tooltip),
+				register_event_mouse_leave(state.clone(), listeners),
+				register_event_mouse_motion(data.clone(), state.clone(), listeners, anim_mult),
 				register_event_mouse_press(data.clone(), state.clone(), listeners),
 				register_event_mouse_release(state.clone(), listeners),
 			]

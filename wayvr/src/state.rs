@@ -9,7 +9,6 @@ use wgui::{
     drawing, font_config::WguiFontConfig, gfx::WGfx, globals::WguiGlobals, parser::parse_color_hex,
     renderer_vk::context::SharedContext as WSharedContext,
 };
-use wlx_common::async_executor::AsyncExecutor;
 use wlx_common::locale::WayVRLangProvider;
 use wlx_common::{
     audio,
@@ -38,7 +37,6 @@ use crate::{
 pub struct AppState {
     pub session: AppSession,
     pub tasks: TaskContainer,
-    pub executor: AsyncExecutor,
 
     pub gfx: Arc<WGfx>,
     pub gfx_extras: WGfxExtras,
@@ -156,13 +154,11 @@ impl AppState {
         desktop_finder.refresh();
 
         let lang_provider = WayVRLangProvider::from_config(&session.config);
-
         let executor = Rc::new(smol::LocalExecutor::new());
 
         let mut app_state = Self {
             session,
             tasks,
-            executor,
             gfx,
             gfx_extras,
             hid_provider,
@@ -223,6 +219,8 @@ pub struct AppSession {
     pub config: GeneralConfig,
     pub config_dirty: bool,
 
+    pub no_autostart: bool,
+
     pub toast_topics: IdMap<ToastTopic, ToastDisplayMethod>,
 }
 
@@ -245,6 +243,7 @@ impl AppSession {
         Self {
             config,
             toast_topics,
+            no_autostart: false,
             config_dirty: false,
         }
     }

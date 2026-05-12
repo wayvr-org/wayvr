@@ -2,6 +2,7 @@ use keyvalues_parser::{Obj, Vdf};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+#[derive(Clone)]
 pub struct SteamUtils {
 	steam_root: PathBuf,
 }

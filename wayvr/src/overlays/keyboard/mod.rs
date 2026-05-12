@@ -1,6 +1,10 @@
-use crate::overlays::keyboard::builder::update_swipe_prediction_bar;
-use crate::overlays::keyboard::layout::KeyCapType;
-use crate::overlays::keyboard::swipe_type::SwipeTypingManager;
+use std::{
+    cell::Cell,
+    collections::HashMap,
+    process::{Child, Command},
+    sync::atomic::Ordering,
+};
+
 use crate::{
     KEYMAP_CHANGE,
     backend::{
@@ -23,20 +27,9 @@ use crate::{
     },
 };
 use anyhow::Context;
-use glam::{Affine3A, Quat, Vec2, Vec3, vec3};
+use glam::{Affine3A, Quat, Vec3, vec3};
 use regex::Regex;
-use slotmap::{Key, SlotMap, new_key_type};
-use std::sync::mpsc::Receiver;
-use std::{
-    cell::Cell,
-    collections::HashMap,
-    process::{Child, Command},
-    sync::atomic::Ordering,
-};
-use wgui::event::StyleSetRequest;
-use wgui::layout::LayoutTask;
-use wgui::parser::Fetchable;
-use wgui::taffy::Display;
+use slotmap::{SlotMap, new_key_type};
 use wgui::{
     drawing,
     event::{InternalStateChangeEvent, MouseButtonEvent, MouseButtonIndex},
@@ -49,7 +42,6 @@ use wlx_common::{
 
 pub mod builder;
 mod layout;
-mod swipe_type;
 
 pub const KEYBOARD_NAME: &str = "kbd";
 const AUTO_RELEASE_MODS: [KeyModifier; 5] = [SHIFT, CTRL, ALT, SUPER, META];
@@ -64,8 +56,6 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
         overlay_list: OverlayList::default(),
         set_list: SetList::default(),
         clock_12h: app.session.config.clock_12h,
-        swipe_typing_manager: None,
-        swipe_candidate_receiver: None,
     };
 
     let auto_labels = layout.auto_labels.unwrap_or(true);
@@ -121,36 +111,14 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
             transform: Affine3A::from_scale_rotation_translation(
                 Vec3::ONE * width,
                 Quat::from_rotation_x(-10f32.to_radians()),
-                vec3(0.0, -0.69, -0.5),
+                vec3(0.0, -0.65, -0.5),
             ),
             ..OverlayWindowState::default()
         },
         ..OverlayWindowConfig::from_backend(Box::new(backend))
     })
 }
-pub(self) fn init_swipe_type_manager(state: &mut KeyboardState) {
-    match SwipeTypingManager::new() {
-        Ok((engine, receiver)) => {
-            state.swipe_typing_manager = Some(engine);
-            state.swipe_candidate_receiver = Some(receiver);
-        }
-        Err(e) => {
-            log::error!("Error occurred while trying to load swipe engine: {}", e);
-        }
-    };
-}
-pub(self) fn hide_swipe_type_manager(panel: &mut GuiPanel<KeyboardState>) {
-    let predictions_root = panel
-        .parser_state
-        .get_widget_id("swipe_predictions_root")
-        .unwrap_or_default();
-    if !predictions_root.is_null() {
-        panel.layout.tasks.push(LayoutTask::SetWidgetStyle(
-            predictions_root,
-            StyleSetRequest::Display(Display::None),
-        ));
-    }
-}
+
 const fn alt_modifier_to_key(m: AltModifier) -> KeyModifier {
     match m {
         AltModifier::Shift => SHIFT,
@@ -182,18 +150,8 @@ impl KeyboardBackend {
         keymap: Option<&XkbKeymap>,
         app: &mut AppState,
     ) -> anyhow::Result<KeyboardPanelKey> {
-        let mut state = self.default_state.take();
-
-        if app.session.config.keyboard_swipe_to_type_enabled {
-            init_swipe_type_manager(&mut state);
-        }
-
-        log::info!("swipe engine created");
-        let mut panel = create_keyboard_panel(app, keymap, state, &self.wlx_layout)?;
-
-        if !app.session.config.keyboard_swipe_to_type_enabled {
-            hide_swipe_type_manager(&mut panel);
-        }
+        let panel =
+            create_keyboard_panel(app, keymap, self.default_state.take(), &self.wlx_layout)?;
 
         let id = self.layout_panels.insert(panel);
         if let Some(layout_name) = keymap.and_then(|k| k.get_name()) {
@@ -218,27 +176,23 @@ impl KeyboardBackend {
             if self.active_layout.eq(new_key) {
                 return Ok(false);
             }
-            self.internal_switch_keymap(*new_key, app);
+            self.internal_switch_keymap(*new_key);
         } else {
             let new_key = self.add_new_keymap(Some(keymap), app)?;
-            self.internal_switch_keymap(new_key, app);
+            self.internal_switch_keymap(new_key);
         }
         app.tasks
             .enqueue(TaskType::Overlay(OverlayTask::KeyboardChanged));
         Ok(true)
     }
 
-    fn internal_switch_keymap(&mut self, new_key: KeyboardPanelKey, app: &AppState) {
-        let mut state_from = self
+    fn internal_switch_keymap(&mut self, new_key: KeyboardPanelKey) {
+        let state_from = self
             .layout_panels
             .get_mut(self.active_layout)
             .unwrap()
             .state
             .take();
-
-        if app.session.config.keyboard_swipe_to_type_enabled {
-            init_swipe_type_manager(&mut state_from);
-        }
 
         self.active_layout = new_key;
 
@@ -246,10 +200,6 @@ impl KeyboardBackend {
             .get_mut(self.active_layout)
             .unwrap()
             .state = state_from;
-
-        if !app.session.config.keyboard_swipe_to_type_enabled {
-            hide_swipe_type_manager(self.layout_panels.get_mut(self.active_layout).unwrap())
-        }
     }
 
     fn get_effective_keymap(&mut self) -> anyhow::Result<XkbKeymap> {
@@ -281,13 +231,6 @@ impl KeyboardBackend {
             log::warn!("Unknown layout or IME '{fcitx_layout}', using system layout");
             get_system_keymap(self.wayland)
         }
-    }
-
-    fn update_swipe_prediction_bar(&mut self, app: &mut AppState) -> anyhow::Result<()> {
-        if update_swipe_prediction_bar(self.panel(), app)? {
-            self.panel().process_custom_elems(app);
-        }
-        Ok(())
     }
 
     fn auto_switch_keymap(&mut self, app: &mut AppState) -> anyhow::Result<bool> {
@@ -323,7 +266,6 @@ impl OverlayBackend for KeyboardBackend {
                 });
             }
         }
-        self.update_swipe_prediction_bar(app)?;
         self.panel().should_render(app)
     }
     fn render(&mut self, app: &mut AppState, rdr: &mut RenderResources) -> anyhow::Result<()> {
@@ -385,8 +327,6 @@ struct KeyboardState {
     overlay_list: OverlayList,
     set_list: SetList,
     clock_12h: bool,
-    swipe_typing_manager: Option<SwipeTypingManager>,
-    swipe_candidate_receiver: Option<Receiver<Option<Vec<String>>>>,
 }
 
 macro_rules! take_and_leave_default {
@@ -406,8 +346,6 @@ impl KeyboardState {
             overlay_list: OverlayList::default(),
             set_list: SetList::default(),
             clock_12h: self.clock_12h,
-            swipe_typing_manager: None,
-            swipe_candidate_receiver: None,
         }
     }
 }
@@ -448,75 +386,26 @@ enum KeyButtonData {
     },
 }
 
-fn handle_mouse_motion(
-    key: &KeyState,
-    key_label: &Vec<String>,
-    key_cap_type: &KeyCapType,
-    keyboard: &mut KeyboardState,
-    within_key_pos: &Option<Vec2>,
-    device: usize,
-) {
-    if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut()
-        && matches!(*key_cap_type, KeyCapType::Letter | KeyCapType::LetterAltGr)
-    {
-        if !swipe_manager.is_current_swipe_empty() {
-            match &key.button_state {
-                KeyButtonData::Key { vk, pressed } => {
-                    if let Some(pos) = within_key_pos {
-                        // check because mouse motion can trigger despite hover being false
-                        if pos.x >= 0.0 && pos.x <= 1.0 && pos.y >= 0.0 && pos.y <= 1.0 {
-                            if let Some(label) = key_label.first() {
-                                swipe_manager.add_swipe(
-                                    pos,
-                                    label.chars().next().unwrap_or_default(),
-                                    device,
-                                );
-                            }
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-}
 fn handle_press(
     app: &mut AppState,
     key: &KeyState,
-    key_label: &Vec<String>,
-    key_cap_type: &KeyCapType,
-    within_key_pos: &Option<Vec2>,
     keyboard: &mut KeyboardState,
     button: MouseButtonEvent,
-    device: usize,
 ) {
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
-            if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut()
-                && matches!(*key_cap_type, KeyCapType::Letter | KeyCapType::LetterAltGr)
-            {
-                if let Some(pos) = within_key_pos {
-                    if let Some(label) = key_label.first() {
-                        swipe_manager.add_swipe(
-                            pos,
-                            label.chars().next().unwrap_or_default(),
-                            device,
-                        );
-                    }
-                }
-            } else {
-                keyboard.modifiers |= match button.index {
-                    MouseButtonIndex::Right => SHIFT,
-                    MouseButtonIndex::Middle => keyboard.alt_modifier,
-                    _ => 0,
-                };
-                app.hid_provider
-                    .set_modifiers_routed(app.wvr_server.as_mut(), keyboard.modifiers);
-                app.hid_provider
-                    .send_key_routed(app.wvr_server.as_mut(), *vk, true);
-                pressed.set(true);
-                play_key_click(app);
-            }
+            keyboard.modifiers |= match button.index {
+                MouseButtonIndex::Right => SHIFT,
+                MouseButtonIndex::Middle => keyboard.alt_modifier,
+                _ => 0,
+            };
+
+            app.hid_provider
+                .set_modifiers_routed(app.wvr_server.as_mut(), keyboard.modifiers);
+            app.hid_provider
+                .send_key_routed(app.wvr_server.as_mut(), *vk, true);
+            pressed.set(true);
+            play_key_click(app);
         }
         KeyButtonData::Modifier { modifier, sticky } => {
             sticky.set(keyboard.modifiers & *modifier == 0);
@@ -546,51 +435,20 @@ fn handle_press(
     }
 }
 
-fn handle_release(
-    app: &mut AppState,
-    key: &KeyState,
-    k_cap_type: &KeyCapType,
-    keyboard: &mut KeyboardState,
-) -> bool {
+fn handle_release(app: &mut AppState, key: &KeyState, keyboard: &mut KeyboardState) -> bool {
     match &key.button_state {
         KeyButtonData::Key { vk, pressed } => {
-            if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut()
-                && matches!(*k_cap_type, KeyCapType::Letter | KeyCapType::LetterAltGr)
-            {
-                if swipe_manager.did_swipe_leave_first_key() {
-                    match swipe_manager.predict() {
-                        Ok(()) => {}
-                        Err(e) => {
-                            log::error!("{}", e)
-                        }
-                    }
-                } else {
-                    // pointer must have been released on the same key it was pressed on
-                    swipe_manager.reset(); // drop swipe tracking that was started on press
+            pressed.set(false);
 
-                    app.hid_provider
-                        .send_key_routed(app.wvr_server.as_mut(), *vk, true);
-                    pressed.set(true);
-                    app.hid_provider
-                        .send_key_routed(app.wvr_server.as_mut(), *vk, false);
-                    play_key_click(app);
+            for m in &AUTO_RELEASE_MODS {
+                if keyboard.modifiers & *m != 0 {
+                    keyboard.modifiers &= !*m;
                 }
-            } else {
-                if let Some(swipe_manager) = keyboard.swipe_typing_manager.as_mut() {
-                    swipe_manager.reset();
-                }
-                pressed.set(false);
-
-                for m in &AUTO_RELEASE_MODS {
-                    if keyboard.modifiers & *m != 0 {
-                        keyboard.modifiers &= !*m;
-                    }
-                }
-                app.hid_provider
-                    .send_key_routed(app.wvr_server.as_mut(), *vk, false);
-                app.hid_provider
-                    .set_modifiers_routed(app.wvr_server.as_mut(), keyboard.modifiers);
             }
+            app.hid_provider
+                .send_key_routed(app.wvr_server.as_mut(), *vk, false);
+            app.hid_provider
+                .set_modifiers_routed(app.wvr_server.as_mut(), keyboard.modifiers);
             true
         }
         KeyButtonData::Modifier { modifier, sticky } => {

@@ -1,13 +1,14 @@
 use std::{collections::HashMap, str::FromStr, sync::LazyLock};
 
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+
 use crate::{
     config::{ConfigType, load_known_yaml},
     subsystem::hid::{
         KEYS_TO_MODS, KeyType, META, NUM_LOCK, SHIFT, VirtualKey, XkbKeymap, get_key_type,
     },
 };
-use regex::Regex;
-use serde::{Deserialize, Serialize};
 
 use super::KeyButtonData;
 
@@ -229,7 +230,7 @@ pub(super) struct KeyData {
     pub(super) cap_type: KeyCapType,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum KeyCapType {
     /// Label an SVG
     Special,

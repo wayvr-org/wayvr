@@ -1,3 +1,42 @@
+[workspace]
+resolver = "3"
+members = [
+  "dash-frontend",
+  "scripts/prost_build",
+  "uidev",
+  "wayvr",
+  "wayvr-ipc",
+  "wayvrctl",
+  "wgui",
+  "wlx-capture",
+  "wlx-common",
+]
+
+[workspace.dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.53", features = ["derive"] }
+glam = { version = "0.30.9", features = ["mint", "serde"] }
+idmap = "0.2.2"
+idmap-derive = "0.2.22"
+log = "0.4.29"
+regex = "1.12.2"
+rust-embed = "8.9.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0.145"
+slotmap = "1.1.1"
+smol = "2.0.2"
+strum = { version = "0.27.2", features = ["derive"] }
+uuid = { version = "1.19.0", features = ["fast-rng", "v4", "serde"] }
+vulkano = { version = "0.35.2", default-features = false, features = [
+  "macros",
+] }
+vulkano-shaders = "0.35.0"
+wayland-client = { version = "0.31.11" }
+xdg = "3.0.0"
+
+[patch.crates-io]
+vulkano = { git = "https://github.com/galister/vulkano.git", rev = "cf7f92867928a56ce16b376037c1120f2b167678" }
+
 [profile.dev]
 opt-level = 1
 debug = true
@@ -19,41 +58,3 @@ incremental = true
 [profile.release-with-debug]
 inherits = "release"
 debug = true
-
-[workspace]
-members = [
-  "uidev",
-  "wgui",
-  "wlx-common",
-  "wayvr",
-  "wlx-capture",
-  "dash-frontend",
-  "wayvr-ipc",
-  "wayvrctl",
-  "scripts/prost_build",
-]
-resolver = "3"
-
-[patch.crates-io]
-vulkano = { git = "https://github.com/galister/vulkano.git", rev = "cf7f92867928a56ce16b376037c1120f2b167678" }
-
-[workspace.dependencies]
-anyhow = "1.0.100"
-smol = "2.0.2"
-glam = { version = "0.30.9", features = ["mint", "serde"] }
-clap = { version = "4.5.53", features = ["derive"] }
-xdg = "3.0.0"
-idmap = "0.2.2"
-idmap-derive = "0.2.22"
-log = "0.4.29"
-regex = "1.12.2"
-rust-embed = "8.9.0"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1.0.145"
-slotmap = "1.1.1"
-strum = { version = "0.27.2", features = ["derive"] }
-vulkano = { version = "0.35.2", default-features = false, features = [
-  "macros",
-] }
-vulkano-shaders = "0.35.0"
-wayland-client = { version = "0.31.11" }

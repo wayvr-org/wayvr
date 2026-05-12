@@ -17,7 +17,7 @@ use crate::{
     backend::{
         BackendError, XrBackend,
         input::interact,
-        openxr::{helpers::reconfigure_chroma_key, lines::LinePool, overlay::OpenXrOverlayData},
+        openxr::{helpers::try_apply_chroma_key, lines::LinePool, overlay::OpenXrOverlayData},
         task::{OpenXrTask, OverlayTask, TaskType},
     },
     config::{save_settings, save_state},
@@ -53,7 +53,11 @@ struct XrState {
 }
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendError> {
+pub fn openxr_run(
+    show_by_default: bool,
+    headless: bool,
+    no_autostart: bool,
+) -> Result<(), BackendError> {
     let (xr_instance, system) = match helpers::init_xr() {
         Ok((xr_instance, system)) => (xr_instance, system),
         Err(e) => {
@@ -66,6 +70,8 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
         let (gfx, gfx_extras) = init_openxr_graphics(xr_instance.clone(), system)?;
         AppState::from_graphics(gfx, gfx_extras, XrBackend::OpenXR)?
     };
+
+    app.session.no_autostart = no_autostart;
 
     let modes = xr_instance.enumerate_environment_blend_modes(system, VIEW_TYPE)?;
 
@@ -93,8 +99,6 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
             .map_err(|e| log::warn!("Will not use Monado playspace mover: {e}"))
             .ok()
     });
-
-    reconfigure_chroma_key(&app);
 
     let mut blocker = app
         .monado_state
@@ -482,7 +486,7 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
                     }
                 }
                 TaskType::OpenXR(task) => {
-                    if matches!(task, OpenXrTask::SettingsChanged) {
+                    if matches!(task, OpenXrTask::EnvironmentChanged) {
                         reconfigure_environment_blend(
                             &app,
                             &xr_state,
@@ -491,7 +495,6 @@ pub fn openxr_run(show_by_default: bool, headless: bool) -> Result<(), BackendEr
                             &mut environment_blend_mode,
                             main_session_visible,
                         );
-                        reconfigure_chroma_key(&app);
                     }
                 }
                 #[cfg(feature = "openvr")]
@@ -532,6 +535,9 @@ pub(super) enum CompositionLayer<'a> {
     Equirect2(xr::CompositionLayerEquirect2KHR<'a, xr::Vulkan>),
 }
 
+// applies chroma key settings.
+// if chroma key or passthrough is enabled, use alpha env blend
+// if alpha blend is not used and skybox is enabled, use skybox
 fn reconfigure_environment_blend(
     app: &AppState,
     xr_state: &XrState,
@@ -540,9 +546,11 @@ fn reconfigure_environment_blend(
     environment_blend_mode: &mut xr::EnvironmentBlendMode,
     main_session_visible: bool,
 ) {
+    let has_chroma_key = try_apply_chroma_key(app);
+
     *environment_blend_mode = {
         if modes.contains(&xr::EnvironmentBlendMode::ALPHA_BLEND)
-            && app.session.config.use_passthrough
+            && (app.session.config.use_passthrough || has_chroma_key)
         {
             xr::EnvironmentBlendMode::ALPHA_BLEND
         } else {
@@ -554,13 +562,17 @@ fn reconfigure_environment_blend(
         && app.session.config.use_skybox
         && !main_session_visible;
 
-    if want_skybox == skybox.is_some() {
-        return;
-    }
-
     if want_skybox {
-        log::debug!("Allocating skybox.");
-        *skybox = create_skybox(xr_state, app);
+        if let Some(curr_skybox) = skybox.as_ref() {
+            if curr_skybox.needs_recreate(app) {
+                *skybox = None;
+                log::debug!("Allocating skybox.");
+                *skybox = create_skybox(xr_state, app);
+            }
+        } else {
+            log::debug!("Allocating skybox.");
+            *skybox = create_skybox(xr_state, app);
+        }
     } else {
         log::debug!("Destroying skybox.");
         *skybox = None;

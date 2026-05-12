@@ -32,3 +32,10 @@ pub mod frag_srgb {
         path: "src/shaders/srgb.frag",
     }
 }
+
+pub mod frag_sky {
+    vulkano_shaders::shader! {
+        ty: "fragment",
+        path: "src/shaders/sky.frag",
+    }
+}

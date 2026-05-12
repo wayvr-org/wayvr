@@ -19,6 +19,8 @@ impl MonadoState {
         Ok(res)
     }
 
+    #[allow(clippy::missing_const_for_fn)]
+    #[allow(clippy::unused_self)]
     pub fn update(&mut self) {
         #[cfg(feature = "feat-monado-metrics")]
         if let Some(metrics) = &mut self.metrics {
@@ -30,6 +32,10 @@ impl MonadoState {
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
+    #[allow(clippy::unused_self)]
+    #[allow(clippy::unnecessary_wraps)]
+    #[cfg(feature = "feat-monado-metrics")]
     pub fn set_metrics_enabled(&mut self, enabled: bool) -> anyhow::Result<()> {
         #[cfg(feature = "feat-monado-metrics")]
         {

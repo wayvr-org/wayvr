@@ -2,7 +2,6 @@ use std::{collections::HashMap, rc::Rc};
 
 use wgui::{
     components::button::ComponentButton,
-    event::{CallbackDataCommon, EventAlterables},
     layout::Layout,
     parser::{Fetchable, ParseDocumentParams, ParserState},
 };
@@ -23,25 +22,20 @@ impl SetList {
         layout: &mut Layout,
         parser_state: &mut ParserState,
         event_data: &OverlayEventData,
-        alterables: &mut EventAlterables,
         doc_params: &ParseDocumentParams,
     ) -> anyhow::Result<bool> {
         let mut elements_changed = false;
         match event_data {
             OverlayEventData::ActiveSetChanged(current_set) => {
-                let mut com = CallbackDataCommon {
-                    alterables,
-                    state: &layout.state,
-                };
                 if let Some(old_set) = self.current_set.take()
                     && let Some(old_set) = self.set_buttons.get_mut(old_set)
                 {
-                    old_set.set_sticky_state(&mut com, false);
+                    old_set.set_sticky_state(&mut layout.common(), false);
                 }
                 if let Some(new_set) = current_set
                     && let Some(new_set) = self.set_buttons.get_mut(*new_set)
                 {
-                    new_set.set_sticky_state(&mut com, true);
+                    new_set.set_sticky_state(&mut layout.common(), true);
                 }
                 self.current_set = *current_set;
             }
@@ -59,11 +53,7 @@ impl SetList {
                     let set_button =
                         parser_state.fetch_component_as::<ComponentButton>(&format!("set_{i}"))?;
                     if self.current_set == Some(i) {
-                        let mut com = CallbackDataCommon {
-                            alterables,
-                            state: &layout.state,
-                        };
-                        set_button.set_sticky_state(&mut com, true);
+                        set_button.set_sticky_state(&mut layout.common(), true);
                     }
                     self.set_buttons.push(set_button);
                 }

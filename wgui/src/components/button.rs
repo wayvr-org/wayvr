@@ -123,21 +123,16 @@ impl ComponentTrait for ComponentButton {
 	fn refresh(&self, data: &mut RefreshData) {
 		let mut state = self.state.borrow_mut();
 
-		// FIXME: refactor this after merging feat-skybox-catalog branch
-		let mut lc = data.layout.start_common();
-
 		if state.active_tooltip.is_some() {
-			let common = lc.common();
-			if let Some(node_id) = common.state.nodes.get(self.base.get_id()) {
-				if !widget::is_node_visible(&common.state.tree, *node_id) {
+			let l_state = &data.layout.state;
+			if let Some(node_id) = l_state.nodes.get(self.base.get_id()) {
+				if !widget::is_node_visible(&l_state.tree, *node_id) {
 					state.active_tooltip = None; // destroy the tooltip, this button is now hidden
 				}
 			} else {
 				debug_assert!(false);
 			}
 		}
-
-		let _ = lc.finish();
 	}
 }
 
@@ -333,6 +328,18 @@ fn register_event_mouse_leave(
 				.animate(anim_hover_create(state.clone(), event_data.widget_id, false, anim_mult));
 			let mut state = state.borrow_mut();
 			state.active_tooltip = None;
+			state.hovered = false;
+			Ok(EventResult::Pass)
+		}),
+	)
+}
+
+fn register_event_mouse_cancel(state: Rc<RefCell<State>>, listeners: &mut EventListenerCollection) -> EventListenerID {
+	listeners.register(
+		EventListenerKind::MouseCancel,
+		Box::new(move |_common, _event_data, (), ()| {
+			let mut state = state.borrow_mut();
+			state.down = false;
 			state.hovered = false;
 			Ok(EventResult::Pass)
 		}),
@@ -557,6 +564,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 			let listeners = &mut root.widget.state().event_listeners;
 			let anim_mult = ess.layout.state.theme.animation_mult;
 			vec![
+				register_event_mouse_cancel(state.clone(), listeners),
 				register_event_mouse_enter(data.clone(), state.clone(), listeners, params.tooltip, anim_mult),
 				register_event_mouse_leave(state.clone(), listeners, anim_mult),
 				register_event_mouse_press(state.clone(), listeners),

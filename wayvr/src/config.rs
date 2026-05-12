@@ -1,7 +1,7 @@
 use config::{Config, File};
 use log::error;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use wayvr_ipc::packet_client::WvrProcessLaunchParams;
 use wlx_common::{
     astr_containers::AStrMap,
@@ -45,6 +45,32 @@ where
     panic!("No usable config found.");
 }
 
+const SUPPORTED_EXTESIONS: [&'static str; 4] = ["yaml", "yml", "json", "json5"];
+
+fn is_supported_config_file(path: &Path) -> bool {
+    if path.is_dir() {
+        return false;
+    }
+    match path.extension().and_then(|e| e.to_str()) {
+        Some(ext) => {
+            for sup in SUPPORTED_EXTESIONS {
+                if sup.eq_ignore_ascii_case(ext) {
+                    return true;
+                }
+            }
+
+            log::error!(
+                "Unsupported file extension: \".{}\" in {}. Ignoring file.",
+                ext,
+                path.to_string_lossy()
+            );
+            debug_assert!(false);
+            false
+        }
+        _ => false,
+    }
+}
+
 pub fn load_config_with_conf_d<ConfigData>(
     root_config_filename: &str,
     ctype: config_io::ConfigRoot,
@@ -68,7 +94,8 @@ where
     if let Ok(paths_unsorted) = std::fs::read_dir(path_conf_d) {
         let mut paths: Vec<_> = paths_unsorted
             .filter_map(|r| match r {
-                Ok(entry) => Some(entry),
+                Ok(entry) if is_supported_config_file(&entry.path()) => Some(entry),
+                Ok(_other) => None,
                 Err(e) => {
                     error!("Failed to read conf.d directory: {e}");
                     None
@@ -140,7 +167,6 @@ pub struct AutoSettings {
     pub context_menu_hold_and_release: bool,
     pub capture_method: CaptureMethod,
     pub keyboard_middle_click_mode: AltModifier,
-    pub keyboard_swipe_to_type_enabled: bool,
     pub autostart_apps: Vec<WvrProcessLaunchParams>,
     pub handsfree_pointer: HandsfreePointer,
     pub language: Option<Language>,
@@ -193,7 +219,6 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         context_menu_hold_and_release: config.context_menu_hold_and_release,
         capture_method: config.capture_method,
         keyboard_middle_click_mode: config.keyboard_middle_click_mode,
-        keyboard_swipe_to_type_enabled: config.keyboard_swipe_to_type_enabled,
         autostart_apps: config.autostart_apps.clone(),
         handsfree_pointer: config.handsfree_pointer,
         language: config.language,

@@ -277,7 +277,6 @@ impl HidProvider for UInputProvider {
             log::error!("send_key: {res}");
         }
     }
-
     fn set_desktop_extent(&mut self, extent: Vec2) {
         self.desktop_extent = extent;
     }
@@ -361,7 +360,7 @@ pub const META: KeyModifier = 0x80;
 
 #[allow(non_camel_case_types)]
 #[repr(u16)]
-#[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, IntegerId, EnumString, EnumIter, Hash)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, IntegerId, EnumString, EnumIter)]
 pub enum VirtualKey {
     Escape = 9,
     N1, // number row

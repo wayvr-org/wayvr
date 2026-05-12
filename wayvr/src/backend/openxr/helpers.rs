@@ -212,9 +212,10 @@ pub(super) fn posef_to_transform(pose: &xr::Posef) -> Affine3A {
     Affine3A::from_rotation_translation(rotation, translation)
 }
 
-pub(super) fn reconfigure_chroma_key(app: &AppState) {
+pub(super) fn try_apply_chroma_key(app: &AppState) -> bool {
     let Some(monado) = app.monado_state.as_ref() else {
-        return;
+        log::warn!("Could not set Chroma Key: no monado_state");
+        return false;
     };
 
     let params = &app.session.config.chroma_key_params;
@@ -226,6 +227,9 @@ pub(super) fn reconfigure_chroma_key(app: &AppState) {
         params.curve,
         params.despill,
     ) {
-        log::warn!("Could not set Chroma Key: {e:?}")
+        log::warn!("Could not set Chroma Key: {e:?}");
+        return false;
     }
+
+    params.curve > 0.001
 }

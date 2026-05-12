@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use wgui::{
 	assets::AssetPath,
@@ -16,20 +16,19 @@ use wgui::{
 use wlx_common::async_executor::AsyncExecutor;
 
 use crate::{
-	frontend::{FrontendTask, FrontendTasks},
+	frontend::FrontendTasks,
 	util::{
 		cached_fetcher::CoverArt,
-		popup_manager::{MountPopupParams, PopupHandle},
+		popup_manager::PopupHolder,
 		steam_utils::{self, AppID, SteamUtils},
 	},
-	views::{self, game_cover, game_launcher},
+	views::{self, ViewTrait, ViewUpdateParams, game_cover},
 };
 
 #[derive(Clone)]
 enum Task {
 	AppManifestClicked(steam_utils::AppManifest),
 	SetCoverArt(AppID, Rc<CoverArt>),
-	CloseLauncher,
 	LoadManifests,
 	FillPage(u32),
 	PrevPage,
@@ -42,16 +41,13 @@ pub struct Params<'a> {
 	pub frontend_tasks: FrontendTasks,
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
+	pub steam_utils: &'a SteamUtils,
 }
 
 const MAX_GAMES_PER_PAGE: u32 = 30;
 
 pub struct GameCoverCell {
 	view_cover: game_cover::View,
-}
-
-struct State {
-	view_launcher: Option<(PopupHandle, views::game_launcher::View)>,
 }
 
 pub struct View {
@@ -63,12 +59,37 @@ pub struct View {
 	id_list_parent: WidgetID,
 	game_cover_view_common: game_cover::ViewCommon,
 	executor: AsyncExecutor,
-	state: Rc<RefCell<State>>,
 	mounted_game_covers: HashMap<AppID, GameCoverCell>,
 	all_manifests: Vec<steam_utils::AppManifest>,
 	cur_page: u32,
 	page_count: u32,
 	id_label_page: WidgetID,
+	view_launcher: PopupHolder<views::game_launcher::View>,
+	steam_utils: SteamUtils,
+}
+
+impl ViewTrait for View {
+	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		loop {
+			let tasks = self.tasks.drain();
+			if tasks.is_empty() {
+				break;
+			}
+			for task in tasks {
+				match task {
+					Task::LoadManifests => self.load_manifests(),
+					Task::FillPage(page_idx) => self.fill_page(&mut par.layout, &mut par.executor, page_idx)?,
+					Task::AppManifestClicked(manifest) => self.action_app_manifest_clicked(manifest)?,
+					Task::SetCoverArt(app_id, cover_art) => self.set_cover_art(&mut par.layout, app_id, cover_art),
+					Task::PrevPage => self.page_prev(),
+					Task::NextPage => self.page_next(),
+				}
+			}
+		}
+
+		self.view_launcher.update(par)?;
+		Ok(())
+	}
 }
 
 impl View {
@@ -105,45 +126,14 @@ impl View {
 			id_list_parent: list_parent.id,
 			mounted_game_covers: HashMap::new(),
 			game_cover_view_common: game_cover::ViewCommon::new(params.globals.clone()),
-			state: Rc::new(RefCell::new(State { view_launcher: None })),
 			executor: params.executor,
 			all_manifests: Vec::new(),
 			cur_page: 0,
 			page_count: 0,
 			id_label_page,
+			view_launcher: Default::default(),
+			steam_utils: params.steam_utils.clone(),
 		})
-	}
-
-	pub fn update(
-		&mut self,
-		layout: &mut Layout,
-		steam_utils: &mut SteamUtils,
-		executor: &AsyncExecutor,
-	) -> anyhow::Result<()> {
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-			for task in tasks {
-				match task {
-					Task::LoadManifests => self.load_manifests(steam_utils),
-					Task::FillPage(page_idx) => self.fill_page(layout, executor, page_idx)?,
-					Task::AppManifestClicked(manifest) => self.action_app_manifest_clicked(manifest)?,
-					Task::SetCoverArt(app_id, cover_art) => self.set_cover_art(layout, app_id, cover_art),
-					Task::CloseLauncher => self.state.borrow_mut().view_launcher = None,
-					Task::PrevPage => self.page_prev(),
-					Task::NextPage => self.page_next(),
-				}
-			}
-		}
-
-		let mut state = self.state.borrow_mut();
-		if let Some((_, view)) = &mut state.view_launcher {
-			view.update(layout)?;
-		}
-
-		Ok(())
 	}
 }
 
@@ -187,8 +177,11 @@ fn fill_game_list(
 }
 
 impl View {
-	fn load_manifests(&mut self, steam_utils: &mut SteamUtils) {
-		match steam_utils.list_installed_games(steam_utils::GameSortMethod::PlayDateDesc) {
+	fn load_manifests(&mut self) {
+		match self
+			.steam_utils
+			.list_installed_games(steam_utils::GameSortMethod::PlayDateDesc)
+		{
 			Ok(manifests) => {
 				self.page_count = (manifests.len() as u32 + MAX_GAMES_PER_PAGE) / MAX_GAMES_PER_PAGE;
 				self.all_manifests = manifests;
@@ -233,16 +226,14 @@ impl View {
 		}
 
 		// set page text
-		let mut c = layout.start_common();
 		{
-			let mut common = c.common();
-			let mut widget = common.state.widgets.cast_as::<WidgetLabel>(self.id_label_page)?;
+			let mut c = layout.common();
+			let mut widget = c.state.widgets.cast_as::<WidgetLabel>(self.id_label_page)?;
 			widget.set_text(
-				&mut common,
+				&mut c,
 				Translation::from_raw_text_string(format!("{}/{}", self.cur_page + 1, self.page_count)),
 			);
 		}
-		c.finish()?;
 
 		fill_game_list(
 			&mut ConstructEssentials {
@@ -283,36 +274,13 @@ impl View {
 	}
 
 	fn action_app_manifest_clicked(&mut self, manifest: steam_utils::AppManifest) -> anyhow::Result<()> {
-		self.frontend_tasks.push(FrontendTask::MountPopup(MountPopupParams {
-			title: Translation::from_raw_text(&manifest.name),
-			on_content: {
-				let state = self.state.clone();
-				let tasks = self.tasks.clone();
-				let executor = self.executor.clone();
-				let globals = self.globals.clone();
-				let frontend_tasks = self.frontend_tasks.clone();
-
-				Rc::new(move |data| {
-					let on_launched = {
-						let tasks = tasks.clone();
-						Box::new(move || tasks.push(Task::CloseLauncher))
-					};
-
-					let view = game_launcher::View::new(game_launcher::Params {
-						manifest: manifest.clone(),
-						executor: executor.clone(),
-						globals: &globals,
-						layout: data.layout,
-						parent_id: data.id_content,
-						frontend_tasks: &frontend_tasks,
-						on_launched,
-					})?;
-
-					state.borrow_mut().view_launcher = Some((data.handle, view));
-					Ok(())
-				})
-			},
-		}));
+		views::game_launcher::mount_popup(
+			self.frontend_tasks.clone(),
+			self.executor.clone(),
+			self.globals.clone(),
+			manifest,
+			self.view_launcher.clone(),
+		);
 
 		Ok(())
 	}

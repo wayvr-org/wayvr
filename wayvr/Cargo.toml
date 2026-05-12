@@ -83,15 +83,13 @@ sysinfo = { version = "0.37" }
 thiserror = "2.0"
 tracing = "0.1.43"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-uuid = { version = "1.19.0", features = ["fast-rng", "v4"] }
+uuid = { workspace = true }
 wayland-client = { workspace = true }
 winit = { version = "0.30.12", optional = true }
 xcb = { version = "1.6.0", features = [
   "as-raw-xcb-connection",
 ], optional = true }
 xkbcommon = { version = "0.8.0" }  # 0.9.0 breaks keymap import on some distros
-arboard = { version="3.6.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
-super-swipe-type = "0.2.2"
 
 [build-dependencies]
 regex.workspace = true

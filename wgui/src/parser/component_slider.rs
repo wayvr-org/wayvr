@@ -18,7 +18,8 @@ pub fn parse_component_slider(
 ) -> anyhow::Result<WidgetID> {
 	let mut min_value = 0.0;
 	let mut max_value = 1.0;
-	let mut initial_value = 0.5;
+	let mut initial_value1 = 0.5;
+	let mut initial_value2: Option<f32> = None;
 	let mut step = 1.0;
 	let mut show_value = 1;
 	let mut tooltip = TooltipAttribs::default();
@@ -35,7 +36,13 @@ pub fn parse_component_slider(
 				ctx.parse_check_f32(tag_name, key, value, &mut max_value);
 			}
 			"value" => {
-				ctx.parse_check_f32(tag_name, key, value, &mut initial_value);
+				ctx.parse_check_f32(tag_name, key, value, &mut initial_value1);
+			}
+			"value2" => {
+				let mut val = 0.0;
+				if ctx.parse_check_f32(tag_name, key, value, &mut val) {
+					initial_value2 = Some(val);
+				}
 			}
 			"step" => {
 				ctx.parse_check_f32(tag_name, key, value, &mut step);
@@ -56,12 +63,13 @@ pub fn parse_component_slider(
 		},
 		slider::Params {
 			style,
-			values: slider::ValuesMinMax {
+			limits: slider::Limits {
 				min_value,
 				max_value,
-				value: initial_value,
 				step,
 			},
+			value1: slider::Value(initial_value1),
+			value2: initial_value2.map(|v| slider::Value(v)),
 			show_value: show_value != 0,
 			tooltip: tooltip.get_info(),
 		},

@@ -22,25 +22,28 @@ If this is a regression, please mention which version was working previously.
 **Kernel version**: 
 
 **VR Runtime**:
-- [ ] Monado/WiVRn
-- [ ] SteamVR/ALVR
+- [ ] Monado
+- [ ] WiVRn
+- [ ] ALVR
+- [ ] SteamLink
+- [ ] SteamVR (not SteamLink)
 
 <!-- Run `vulkaninfo --summary` and paste the devices section from the bottom. -->
 **GPU models and driver versions**: 
 
 ## Overlay Logs
 
-<!-- Start the overlay once more with the following environment variables:
-  RUST_BACKTRACE=full
-  RUST_LOG=debug
-If your issue is graphical or crash or freeze, also add:
-  VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+<!-- Start the overlay from terminal, with additional environment variables:
 
-Next, create the empty log file: echo > /tmp/wlx.log
+AppImage:
+  RUST_BACKTRACE=full RUST_LOG=debug /path/to/WayVR.AppImage
 
-Be sure to go and reproduce the issue once more, after these have been set.
+System or AUR package:
+  RUST_BACKTRACE=full RUST_LOG=debug wayvr
 
-Upload the log file from: /tmp/wlx.log
+Reproduce the issue once more, while WayVR is running from the terminal.
+
+Upload the log file from: /tmp/wayvr.log
 
 -->
 

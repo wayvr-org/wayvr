@@ -1,10 +1,20 @@
-use std::{cell::RefCell, rc::Rc};
-
+use super::timer::GuiTimer;
+use crate::{
+    app_misc,
+    backend::input::{Haptics, HoverResult, PointerHit, PointerMode},
+    backend::task::ModifyPanelCommand,
+    state::AppState,
+    subsystem::hid::WheelDelta,
+    windowing::backend::{
+        FrameMeta, OverlayBackend, OverlayEventData, RenderResources, ShouldRender, ui_transform,
+    },
+};
 use anyhow::Context;
 use button::setup_custom_button;
 use glam::{Affine2, Vec2, vec2};
 use idmap::IdMap;
 use label::setup_custom_label;
+use std::{cell::RefCell, rc::Rc};
 use wgui::{
     assets::AssetPath,
     components::{
@@ -12,9 +22,9 @@ use wgui::{
         slider::ComponentSlider,
     },
     event::{
-        CallbackDataCommon, Event as WguiEvent, EventAlterables, EventCallback, EventListenerID,
-        EventListenerKind, InternalStateChangeEvent, MouseButtonEvent, MouseButtonIndex,
-        MouseLeaveEvent, MouseMotionEvent, MouseWheelEvent,
+        DeviceBitmask, Event as WguiEvent, EventCallback, EventListenerID, EventListenerKind,
+        InternalStateChangeEvent, MouseButtonEvent, MouseButtonIndex, MouseLeaveEvent,
+        MouseMotionEvent, MouseWheelEvent,
     },
     gfx::cmd::WGfxClearMode,
     i18n::Translation,
@@ -32,19 +42,6 @@ use wgui::{
 };
 use wlx_common::overlays::{BackendAttrib, BackendAttribValue};
 use wlx_common::timestep::Timestep;
-
-use crate::{
-    app_misc,
-    backend::input::{Haptics, HoverResult, PointerHit, PointerMode},
-    backend::task::ModifyPanelCommand,
-    state::AppState,
-    subsystem::hid::WheelDelta,
-    windowing::backend::{
-        FrameMeta, OverlayBackend, OverlayEventData, RenderResources, ShouldRender, ui_transform,
-    },
-};
-
-use super::timer::GuiTimer;
 
 pub mod button;
 pub mod device_list;
@@ -371,7 +368,7 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
         let e = WguiEvent::MouseWheel(MouseWheelEvent {
             delta: vec2(delta.x, delta.y) / 8.0,
             pos: hit.uv * self.layout.content_size,
-            device: hit.pointer,
+            device: DeviceBitmask::from_usize(hit.pointer),
         });
         self.push_event(app, &e);
     }
@@ -379,7 +376,7 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
     fn on_hover(&mut self, app: &mut AppState, hit: &PointerHit) -> HoverResult {
         let e = &WguiEvent::MouseMotion(MouseMotionEvent {
             pos: hit.uv * self.layout.content_size,
-            device: hit.pointer,
+            device: DeviceBitmask::from_usize(hit.pointer),
         });
 
         self.has_focus[hit.pointer] = true;
@@ -400,7 +397,9 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
     }
 
     fn on_left(&mut self, app: &mut AppState, pointer: usize) {
-        let e = WguiEvent::MouseLeave(MouseLeaveEvent { device: pointer });
+        let e = WguiEvent::MouseLeave(MouseLeaveEvent {
+            device: DeviceBitmask::from_usize(pointer),
+        });
         self.has_focus[pointer] = false;
         self.push_event(app, &e);
     }
@@ -417,13 +416,13 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
             WguiEvent::MouseDown(MouseButtonEvent {
                 pos: hit.uv * self.layout.content_size,
                 index,
-                device: hit.pointer,
+                device: DeviceBitmask::from_usize(hit.pointer),
             })
         } else {
             WguiEvent::MouseUp(MouseButtonEvent {
                 pos: hit.uv * self.layout.content_size,
                 index,
-                device: hit.pointer,
+                device: DeviceBitmask::from_usize(hit.pointer),
             })
         };
         self.push_event(app, &e);
@@ -432,11 +431,11 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
         if !pressed && !self.has_focus[hit.pointer] {
             let e = WguiEvent::MouseMotion(MouseMotionEvent {
                 pos: vec2(-1., -1.),
-                device: hit.pointer,
+                device: DeviceBitmask::from_usize(hit.pointer),
             });
             self.push_event(app, &e);
             let e = WguiEvent::MouseLeave(MouseLeaveEvent {
-                device: hit.pointer,
+                device: DeviceBitmask::from_usize(hit.pointer),
             });
             self.push_event(app, &e);
         }
@@ -493,17 +492,13 @@ pub fn apply_custom_command<T>(
     element: &str,
     command: &ModifyPanelCommand,
 ) -> anyhow::Result<()> {
-    let mut alterables = EventAlterables::default();
-    let mut com = CallbackDataCommon {
-        alterables: &mut alterables,
-        state: &panel.layout.state,
-    };
+    let mut com = panel.layout.common();
 
     match command {
         ModifyPanelCommand::SetText(text) => {
             if let Ok(mut label) = panel
                 .parser_state
-                .fetch_widget_as::<WidgetLabel>(&panel.layout.state, element)
+                .fetch_widget_as::<WidgetLabel>(&com.state, element)
             {
                 label.set_text(&mut com, Translation::from_raw_text(text));
             } else if let Ok(button) = panel
@@ -516,10 +511,7 @@ pub fn apply_custom_command<T>(
             }
         }
         ModifyPanelCommand::SetImage(path) => {
-            if let Ok(pair) = panel
-                .parser_state
-                .fetch_widget(&panel.layout.state, element)
-            {
+            if let Ok(pair) = panel.parser_state.fetch_widget(&com.state, element) {
                 let data = CustomGlyphData::from_assets(
                     &app.wgui_globals,
                     wgui::assets::AssetPath::File(path),
@@ -527,9 +519,9 @@ pub fn apply_custom_command<T>(
                 .context("Could not load content from supplied path.")?;
 
                 if let Some(mut sprite) = pair.widget.get_as::<WidgetSprite>() {
-                    sprite.set_content(&mut com, Some(data));
+                    sprite.set_content(com.alterables, Some(data));
                 } else if let Some(mut image) = pair.widget.get_as::<WidgetImage>() {
-                    image.set_content(&mut com, Some(data));
+                    image.set_content(com.alterables, Some(data));
                 } else {
                     anyhow::bail!("No <sprite> or <image> with such id.");
                 }
@@ -541,10 +533,7 @@ pub fn apply_custom_command<T>(
             let color = parse_color_hex(color)
                 .context("Invalid color format, must be a html hex color!")?;
 
-            if let Ok(pair) = panel
-                .parser_state
-                .fetch_widget(&panel.layout.state, element)
-            {
+            if let Ok(pair) = panel.parser_state.fetch_widget(&com.state, element) {
                 if let Some(mut rect) = pair.widget.get_as::<WidgetRectangle>() {
                     rect.set_color(&mut com, color);
                 } else if let Some(mut label) = pair.widget.get_as::<WidgetLabel>() {
@@ -592,7 +581,7 @@ pub fn apply_custom_command<T>(
                 .fetch_component_as::<ComponentSlider>(element)
             {
                 let value_f32 = value_str.parse::<f32>().context("Not a valid number")?;
-                slider.set_value(&mut com, value_f32);
+                slider.set_value_primary(&mut com, value_f32);
             } else if let Ok(radio) = panel
                 .parser_state
                 .fetch_component_as::<ComponentRadioGroup>(element)
@@ -610,6 +599,5 @@ pub fn apply_custom_command<T>(
         }
     }
 
-    panel.layout.process_alterables(alterables)?;
     Ok(())
 }

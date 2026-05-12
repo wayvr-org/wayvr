@@ -4,9 +4,10 @@ use crate::{
 	frontend::{FrontendTask, FrontendTasks, SoundType},
 	util::{
 		cached_fetcher::{self, CoverArt},
+		popup_manager::{MountPopupOnceParams, PopupHolder},
 		steam_utils::{self, AppID, AppManifest},
 	},
-	views::game_cover,
+	views::{ViewTrait, ViewUpdateParams, game_cover},
 };
 use wgui::{
 	assets::AssetPath,
@@ -34,18 +35,43 @@ pub struct Params<'a> {
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
 	pub frontend_tasks: &'a FrontendTasks,
-	pub on_launched: Box<dyn Fn()>,
+	pub on_launched: Box<dyn FnOnce()>,
 }
+
 pub struct View {
 	#[allow(dead_code)]
 	state: ParserState,
 	tasks: Tasks<Task>,
-	on_launched: Box<dyn Fn()>,
+	on_launched: Option<Box<dyn FnOnce()>>,
 	frontend_tasks: FrontendTasks,
 
 	game_cover_view_common: game_cover::ViewCommon,
 	view_cover: game_cover::View,
 	app_id: AppID,
+}
+
+impl ViewTrait for View {
+	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		loop {
+			let tasks = self.tasks.drain();
+			if tasks.is_empty() {
+				break;
+			}
+			for task in tasks {
+				match task {
+					Task::FillAppDetails(details) => self.action_fill_app_details(&mut par.layout, details)?,
+					Task::Launch => self.action_launch(),
+					Task::SetCoverArt(cover_art) => {
+						let _ = self
+							.view_cover
+							.set_cover_art(&mut self.game_cover_view_common, &mut par.layout, &cover_art);
+					}
+				}
+			}
+		}
+
+		Ok(())
+	}
 }
 
 impl View {
@@ -104,7 +130,7 @@ impl View {
 		Ok(Self {
 			state,
 			tasks,
-			on_launched: params.on_launched,
+			on_launched: Some(params.on_launched),
 			frontend_tasks: params.frontend_tasks.clone(),
 			game_cover_view_common: game_cover::ViewCommon::new(params.globals.clone()),
 			view_cover,
@@ -112,43 +138,20 @@ impl View {
 		})
 	}
 
-	pub fn update(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-			for task in tasks {
-				match task {
-					Task::FillAppDetails(details) => self.action_fill_app_details(layout, details)?,
-					Task::Launch => self.action_launch(),
-					Task::SetCoverArt(cover_art) => {
-						let _ = self
-							.view_cover
-							.set_cover_art(&mut self.game_cover_view_common, layout, &cover_art);
-					}
-				}
-			}
-		}
-
-		Ok(())
-	}
-
 	fn action_fill_app_details(
 		&mut self,
 		layout: &mut Layout,
 		mut details: cached_fetcher::AppDetailsJSONData,
 	) -> anyhow::Result<()> {
-		let mut c = layout.start_common();
-
 		{
-			let label_author = self.state.fetch_widget(&c.layout.state, "label_author")?.widget;
-			let label_description = self.state.fetch_widget(&c.layout.state, "label_description")?.widget;
+			let mut c = layout.common();
+			let label_author = self.state.fetch_widget(&c.state, "label_author")?.widget;
+			let label_description = self.state.fetch_widget(&c.state, "label_description")?.widget;
 
 			if let Some(developer) = details.developers.pop() {
 				label_author
 					.cast::<WidgetLabel>()?
-					.set_text(&mut c.common(), Translation::from_raw_text_string(developer));
+					.set_text(&mut c, Translation::from_raw_text_string(developer));
 			}
 
 			let desc = if let Some(desc) = &details.short_description {
@@ -162,11 +165,10 @@ impl View {
 			if let Some(desc) = desc {
 				label_description
 					.cast::<WidgetLabel>()?
-					.set_text(&mut c.common(), Translation::from_raw_text(desc));
+					.set_text(&mut c, Translation::from_raw_text(desc));
 			}
 		}
 
-		c.finish()?;
 		Ok(())
 	}
 
@@ -190,6 +192,37 @@ impl View {
 			}
 		}
 
-		(*self.on_launched)();
+		if let Some(on_launched) = self.on_launched.take() {
+			on_launched();
+		}
 	}
+}
+
+pub fn mount_popup(
+	frontend_tasks: FrontendTasks,
+	executor: AsyncExecutor,
+	globals: WguiGlobals,
+	manifest: AppManifest,
+	popup: PopupHolder<View>,
+) {
+	frontend_tasks
+		.clone()
+		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
+			Translation::from_raw_text(&manifest.name),
+			Box::new(move |data| {
+				let on_launched = popup.get_close_callback(data.layout);
+				let view = View::new(Params {
+					manifest: manifest.clone(),
+					executor: executor.clone(),
+					globals: &globals,
+					layout: data.layout,
+					parent_id: data.id_content,
+					frontend_tasks: &frontend_tasks,
+					on_launched,
+				})?;
+
+				popup.set_view(data.handle, view, None);
+				Ok(popup.get_close_callback(data.layout))
+			}),
+		)));
 }

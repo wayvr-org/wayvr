@@ -24,11 +24,12 @@ use super::{
 };
 
 pub(super) struct Skybox {
-    view: Arc<ImageView>,
+    view: Option<Arc<ImageView>>,
     sky: Option<WlxSwapchain>,
     grid: Option<WlxSwapchain>,
     grid_pose: xr::Posef,
     grid_color_scale_bias_khr: Option<Box<xr::sys::CompositionLayerColorScaleBiasKHR>>,
+    current_skybox: Arc<str>,
 }
 
 impl Skybox {
@@ -66,14 +67,18 @@ impl Skybox {
             }
         }
 
-        if maybe_image.is_none() {
-            let p = include_bytes!("../../res/table_mountain_2.dds");
-            maybe_image = Some(command_buffer.upload_image_dds(p.as_slice())?);
-        }
+        let current_skybox = if maybe_image.is_some() {
+            app.session.config.skybox_texture.clone()
+        } else {
+            "".into()
+        };
 
-        command_buffer.build_and_execute_now()?;
-
-        let view = ImageView::new_default(maybe_image.unwrap())?; // safe unwrap
+        let view = if let Some(image) = maybe_image {
+            command_buffer.build_and_execute_now()?;
+            Some(ImageView::new_default(image)?)
+        } else {
+            None
+        };
 
         let grid_color_scale_bias_khr = xr
             .instance
@@ -99,7 +104,12 @@ impl Skybox {
             grid: None,
             grid_pose: translation_rotation_to_posef(Vec3A::ZERO, Quat::from_rotation_x(PI * -0.5)),
             grid_color_scale_bias_khr,
+            current_skybox,
         })
+    }
+
+    pub(super) fn needs_recreate(&self, app: &AppState) -> bool {
+        *self.current_skybox != *app.session.config.skybox_texture
     }
 
     fn prepare_sky<'a>(
@@ -113,7 +123,12 @@ impl Skybox {
         }
         let opts = SwapchainOpts::new().immutable();
 
-        let extent = self.view.extent_u32arr();
+        let extent = self
+            .view
+            .as_ref()
+            .map(|v| v.extent_u32arr())
+            .unwrap_or([4096, 4096]);
+
         let mut swapchain = create_swapchain(xr, app.gfx.clone(), extent, 1, opts)?;
         let tgt = swapchain
             .acquire_wait_image()?
@@ -121,23 +136,42 @@ impl Skybox {
             .into_iter()
             .next()
             .unwrap();
-        let pipeline = app.gfx.create_pipeline(
-            app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
-            app.gfx_extras.shaders.get("frag_srgb").unwrap(), // want panic
-            WPipelineCreateInfo::new(app.gfx.surface_format),
-        )?;
 
-        let set0 = pipeline.uniform_sampler(0, self.view.clone(), app.gfx.texture_filter)?;
-        let set1 = pipeline.uniform_buffer_upload(1, vec![1f32])?;
-        let pass = pipeline.create_pass(
-            tgt.extent_f32(),
-            [0.0, 0.0],
-            app.gfx_extras.quad_verts.clone(),
-            0..4,
-            0..1,
-            vec![set0, set1],
-            &Default::default(),
-        )?;
+        let pass = if let Some(view) = self.view.as_ref() {
+            let pipeline = app.gfx.create_pipeline(
+                app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
+                app.gfx_extras.shaders.get("frag_srgb").unwrap(), // want panic
+                WPipelineCreateInfo::new(app.gfx.surface_format),
+            )?;
+
+            let set0 = pipeline.uniform_sampler(0, view.clone(), app.gfx.texture_filter)?;
+            let set1 = pipeline.uniform_buffer_upload(1, vec![1f32])?;
+            pipeline.create_pass(
+                tgt.extent_f32(),
+                [0.0, 0.0],
+                app.gfx_extras.quad_verts.clone(),
+                0..4,
+                0..1,
+                vec![set0, set1],
+                &Default::default(),
+            )?
+        } else {
+            let pipeline = app.gfx.create_pipeline(
+                app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
+                app.gfx_extras.shaders.get("frag_sky").unwrap(),  // want panic
+                WPipelineCreateInfo::new(app.gfx.surface_format),
+            )?;
+
+            pipeline.create_pass(
+                tgt.extent_f32(),
+                [0.0, 0.0],
+                app.gfx_extras.quad_verts.clone(),
+                0..4,
+                0..1,
+                vec![],
+                &Default::default(),
+            )?
+        };
 
         let mut cmd_buffer = app
             .gfx

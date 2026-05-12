@@ -1,8 +1,5 @@
-use super::{
-    KeyButtonData, KeyState, KeyboardState, handle_mouse_motion, handle_press, handle_release,
-    init_swipe_type_manager,
-    layout::{self, KeyCapType},
-};
+use std::{collections::HashMap, rc::Rc, time::Duration};
+
 use crate::{
     app_misc,
     gui::{
@@ -14,24 +11,24 @@ use crate::{
     subsystem::hid::XkbKeymap,
     windowing::backend::OverlayEventData,
 };
-use anyhow::{Context, bail};
+use anyhow::Context;
 use glam::{FloatExt, Mat4, Vec2, vec2, vec3};
-use slotmap::Key;
-use std::{collections::HashMap, rc::Rc, time::Duration};
-use wgui::event::StyleSetRequest;
-use wgui::layout::LayoutTask;
-use wgui::taffy::Display;
 use wgui::{
     animation::{Animation, AnimationEasing},
     assets::AssetPath,
     drawing::{self, Color},
-    event::{self, CallbackMetadata, EventAlterables, EventListenerKind},
+    event::{self, CallbackMetadata, EventListenerKind},
     layout::LayoutUpdateParams,
     log::LogErr,
     parser::{Fetchable, ParseDocumentParams},
     renderer_vk::util,
     taffy::{self, prelude::length},
     widget::{EventResult, div::WidgetDiv, rectangle::WidgetRectangle},
+};
+
+use super::{
+    KeyButtonData, KeyState, KeyboardState, handle_press, handle_release,
+    layout::{self, KeyCapType},
 };
 
 const PIXELS_PER_UNIT: f32 = 60.;
@@ -44,134 +41,6 @@ fn new_doc_params(panel: &mut GuiPanel<KeyboardState>) -> ParseDocumentParams<'s
     }
 }
 
-pub(super) fn update_swipe_prediction_bar(
-    panel: &mut GuiPanel<KeyboardState>,
-    app: &mut AppState,
-) -> anyhow::Result<bool> {
-    let mut elements_changed = false;
-
-    let (accent_color, anim_mult) = {
-        let theme = &app.wgui_theme;
-        (theme.accent_color, theme.animation_mult)
-    };
-
-    if let Some(recv) = panel.state.swipe_candidate_receiver.as_mut()
-        && let Ok(candidates) = recv.try_recv()
-    {
-        let predictions_root = panel
-            .parser_state
-            .get_widget_id("swipe_predictions_root")
-            .unwrap_or_default();
-
-        if predictions_root.is_null() {
-            return Ok(elements_changed);
-        }
-        let doc_params = new_doc_params(panel);
-
-        panel.layout.remove_children(predictions_root);
-
-        let Some(new_suggestions) = candidates else {
-            return Ok(elements_changed);
-        };
-
-        let mut iter = new_suggestions.iter();
-        let Some(best_prediction) = iter.next() else {
-            bail!("not enough swipe predictions");
-        };
-        if let Some(manager) = panel.state.swipe_typing_manager.as_mut() {
-            manager.select_word(best_prediction, app, panel.state.modifiers);
-        }
-        for (i, prediction) in iter.enumerate() {
-            let mut params = HashMap::new();
-            let id: Rc<str> = Rc::from(format!("Prediction-{i}"));
-            params.insert("id".into(), id.clone());
-            params.insert("text".into(), prediction.clone().into());
-
-            panel.parser_state.instantiate_template(
-                &doc_params,
-                "KeyPrediction",
-                &mut panel.layout,
-                predictions_root,
-                params,
-            )?;
-
-            if let Ok(widget_id) = panel.parser_state.get_widget_id(&id) {
-                let key_state = {
-                    let rect = panel
-                        .layout
-                        .state
-                        .widgets
-                        .get_as::<WidgetRectangle>(widget_id)
-                        .unwrap(); // want panic
-
-                    Rc::new(KeyState {
-                        // fake button state just so we get key state for anims
-                        button_state: KeyButtonData::Modifier {
-                            modifier: 0,
-                            sticky: core::cell::Cell::new(false),
-                        },
-                        color: rect.params.color,
-                        color2: rect.params.color2,
-                        base_border_color: rect.params.border_color,
-                        cur_border_color: rect.params.border_color.into(),
-                        border: rect.params.border,
-                        drawn_state: false.into(),
-                    })
-                };
-                panel.add_event_listener(
-                    widget_id,
-                    EventListenerKind::MousePress,
-                    Box::new({
-                        let k = key_state.clone();
-                        let pred = prediction.clone();
-                        move |common, data, app, state| {
-                            if let Some(manager) = state.swipe_typing_manager.as_mut() {
-                                manager.select_alternate_prediction(&pred, app, state.modifiers);
-                                on_press_anim(k.clone(), common, data)
-                            }
-                            Ok(EventResult::Pass)
-                        }
-                    }),
-                );
-                panel.add_event_listener(
-                    widget_id,
-                    EventListenerKind::MouseEnter,
-                    Box::new({
-                        let k = key_state.clone();
-                        move |common, data, _app, _state| {
-                            on_enter_anim(k.clone(), common, data, accent_color, anim_mult, 0.0);
-                            Ok(EventResult::Pass)
-                        }
-                    }),
-                );
-                panel.add_event_listener(
-                    widget_id,
-                    EventListenerKind::MouseLeave,
-                    Box::new({
-                        let k = key_state.clone();
-                        move |common, data, _app, _state| {
-                            on_leave_anim(k.clone(), common, data, accent_color, anim_mult, 0.0);
-                            Ok(EventResult::Pass)
-                        }
-                    }),
-                );
-                panel.add_event_listener(
-                    widget_id,
-                    EventListenerKind::MouseRelease,
-                    Box::new({
-                        let k = key_state.clone();
-                        move |common, data, _app, _state| {
-                            on_release_anim(k.clone(), common, data);
-                            Ok(EventResult::Pass)
-                        }
-                    }),
-                );
-            }
-        }
-        elements_changed = true;
-    }
-    Ok(elements_changed)
-}
 #[allow(clippy::too_many_lines, clippy::significant_drop_tightening)]
 pub(super) fn create_keyboard_panel(
     app: &mut AppState,
@@ -244,7 +113,7 @@ pub(super) fn create_keyboard_panel(
             params.insert(Rc::from("width"), Rc::from(key_width.to_string()));
             params.insert(Rc::from("height"), Rc::from(key_height.to_string()));
 
-            let mut label = key.label.clone().into_iter();
+            let mut label = key.label.into_iter();
             label
                 .next()
                 .and_then(|s| params.insert("text".into(), s.into()));
@@ -300,9 +169,6 @@ pub(super) fn create_keyboard_panel(
                     })
                 };
 
-                let key_cap_type: Rc<KeyCapType> = Rc::from(key.cap_type);
-                let key_label: Rc<Vec<String>> = Rc::from(key.label);
-
                 let width_mul = 1. / my_size_f32;
 
                 panel.add_event_listener(
@@ -320,7 +186,6 @@ pub(super) fn create_keyboard_panel(
                                 anim_mult,
                                 width_mul,
                             );
-
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -340,7 +205,6 @@ pub(super) fn create_keyboard_panel(
                                 anim_mult,
                                 width_mul,
                             );
-
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -350,54 +214,13 @@ pub(super) fn create_keyboard_panel(
                     EventListenerKind::MousePress,
                     Box::new({
                         let k = key_state.clone();
-                        let k_label = key_label.clone();
-                        let k_cap_type = key_cap_type.clone();
                         move |common, data, app, state| {
                             let CallbackMetadata::MouseButton(button) = data.metadata else {
                                 panic!("CallbackMetadata should contain MouseButton!");
                             };
-                            let within_key_pos = data
-                                .metadata
-                                .get_mouse_pos_normalized(&common.alterables.transform_stack);
 
-                            handle_press(
-                                app,
-                                &k,
-                                &k_label,
-                                &k_cap_type,
-                                &within_key_pos,
-                                state,
-                                button,
-                                button.device,
-                            );
+                            handle_press(app, &k, state, button);
                             on_press_anim(k.clone(), common, data);
-                            Ok(EventResult::Pass)
-                        }
-                    }),
-                );
-                panel.add_event_listener(
-                    widget_id,
-                    EventListenerKind::MouseMotion,
-                    Box::new({
-                        let k = key_state.clone();
-                        let k_label = key_label.clone();
-                        let k_cap_type = key_cap_type.clone();
-                        move |common, data, _app, state| {
-                            let within_key_pos = data
-                                .metadata
-                                .get_mouse_pos_normalized(&common.alterables.transform_stack);
-                            let CallbackMetadata::MousePosition(position) = data.metadata else {
-                                panic!("CallbackMetadata should contain MousePosition!");
-                            };
-
-                            handle_mouse_motion(
-                                &k,
-                                &k_label,
-                                &k_cap_type,
-                                state,
-                                &within_key_pos,
-                                position.device,
-                            );
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -407,12 +230,10 @@ pub(super) fn create_keyboard_panel(
                     EventListenerKind::MouseRelease,
                     Box::new({
                         let k = key_state.clone();
-                        let k_cap_type = key_cap_type.clone();
                         move |common, data, app, state| {
-                            if handle_release(app, &k, &k_cap_type, state) {
+                            if handle_release(app, &k, state) {
                                 on_release_anim(k.clone(), common, data);
                             }
-
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -444,13 +265,10 @@ pub(super) fn create_keyboard_panel(
     panel.on_notify = Some(Box::new({
         let name = "kbd";
         move |panel, app, event_data| {
-            let mut alterables = EventAlterables::default();
-
             let mut elems_changed = panel.state.overlay_list.on_notify(
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &mut alterables,
                 &doc_params,
             )?;
 
@@ -458,7 +276,6 @@ pub(super) fn create_keyboard_panel(
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &mut alterables,
                 &doc_params,
             )?;
 
@@ -486,41 +303,6 @@ pub(super) fn create_keyboard_panel(
                             elems_changed = true;
                         }
                     }
-                    if !app.session.config.keyboard_swipe_to_type_enabled {
-                        panel.state.swipe_typing_manager = None;
-                        panel.state.swipe_candidate_receiver = None;
-
-                        let predictions_root = panel
-                            .parser_state
-                            .get_widget_id("swipe_predictions_root")
-                            .unwrap_or_default();
-
-                        if !predictions_root.is_null() {
-                            panel.layout.remove_children(predictions_root);
-
-                            panel.layout.tasks.push(LayoutTask::SetWidgetStyle(
-                                predictions_root,
-                                StyleSetRequest::Display(Display::None),
-                            ));
-                        }
-                    }
-                    if app.session.config.keyboard_swipe_to_type_enabled
-                        && panel.state.swipe_typing_manager.is_none()
-                    {
-                        init_swipe_type_manager(&mut panel.state);
-
-                        let predictions_root = panel
-                            .parser_state
-                            .get_widget_id("swipe_predictions_root")
-                            .unwrap_or_default();
-
-                        if !predictions_root.is_null() {
-                            panel.layout.tasks.push(LayoutTask::SetWidgetStyle(
-                                predictions_root,
-                                StyleSetRequest::Display(Display::Flex),
-                            ));
-                        }
-                    }
                 }
 
                 OverlayEventData::CustomCommand { element, command } => {
@@ -536,7 +318,6 @@ pub(super) fn create_keyboard_panel(
                 panel.process_custom_elems(app);
             }
 
-            panel.layout.process_alterables(alterables)?;
             Ok(())
         }
     }));

@@ -29,7 +29,7 @@
           </div>
     
           <div gap="8" flex_direction="column" width="100%">
-            <label text="Curve"/>
+            <label text="Curve (0 = disabled)"/>
             <Slider id="slider_keying_curve" min_value="0" max_value="100" macro="slider"/>
           </div>
         </div>

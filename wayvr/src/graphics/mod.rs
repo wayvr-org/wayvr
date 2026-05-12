@@ -21,7 +21,7 @@ use wgui::gfx::WGfx;
 use vulkano::instance::InstanceCreateFlags;
 use wlx_capture::DrmFormat;
 
-use crate::shaders::{frag_color, frag_grid, frag_screen, frag_srgb, vert_quad};
+use crate::shaders::{frag_color, frag_grid, frag_screen, frag_sky, frag_srgb, vert_quad};
 
 #[cfg(feature = "openxr")]
 use {ash::vk, std::os::raw::c_void};
@@ -73,6 +73,9 @@ impl WGfxExtras {
 
         let shader = frag_srgb::load(gfx.device.clone())?;
         shaders.insert("frag_srgb", shader);
+
+        let shader = frag_sky::load(gfx.device.clone())?;
+        shaders.insert("frag_sky", shader);
 
         let shader = frag_grid::load(gfx.device.clone())?;
         shaders.insert("frag_grid", shader);

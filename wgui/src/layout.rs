@@ -11,7 +11,7 @@ use crate::{
 	drawing::{
 		self, ANSI_BOLD_CODE, ANSI_RESET_CODE, Boundary, PushScissorStackResult, push_scissor_stack, push_transform_stack,
 	},
-	event::{self, CallbackDataCommon, EventAlterables},
+	event::{self, CallbackDataCommon, Event, EventAlterables},
 	globals::WguiGlobals,
 	sound::WguiSoundType,
 	task::Tasks,
@@ -84,6 +84,11 @@ impl WidgetMap {
 
 	pub fn get(&self, handle: WidgetID) -> Option<&Widget> {
 		self.0.get(handle)
+	}
+
+	// same as get(), but with error message
+	pub fn fetch(&self, handle: WidgetID) -> anyhow::Result<Widget> {
+		self.get(handle).cloned().context("Failed to fetch widget")
 	}
 
 	pub fn insert(&mut self, obj: Widget) -> WidgetID {
@@ -163,7 +168,12 @@ pub struct Layout {
 	sounds_to_play_once: Vec<WguiSoundType>,
 	focused_component: Option<ComponentWeak>,
 
+	// Global EventAlterables queue, always processed in update() call at the end
+	pub alterables: EventAlterables,
+
 	pub widgets_to_tick: Vec<WidgetID>,
+
+	global_events_to_emit: Vec<Event>,
 
 	// *Main root*
 	// contains content_root_widget and topmost widgets
@@ -218,31 +228,11 @@ fn add_child_internal(
 	))
 }
 
-pub struct LayoutCommon<'a> {
-	alterables: EventAlterables,
-	pub layout: &'a mut Layout,
-}
-
-impl LayoutCommon<'_> {
-	pub const fn common(&mut self) -> CallbackDataCommon<'_> {
+impl Layout {
+	pub fn common(&mut self) -> CallbackDataCommon<'_> {
 		CallbackDataCommon {
 			alterables: &mut self.alterables,
-			state: &self.layout.state,
-		}
-	}
-
-	pub fn finish(self) -> anyhow::Result<()> {
-		self.layout.process_alterables(self.alterables)?;
-		Ok(())
-	}
-}
-
-impl Layout {
-	// helper function
-	pub fn start_common(&mut self) -> LayoutCommon<'_> {
-		LayoutCommon {
-			alterables: EventAlterables::default(),
-			layout: self,
+			state: &self.state,
 		}
 	}
 
@@ -338,13 +328,8 @@ impl Layout {
 		self.needs_redraw = true;
 	}
 
-	fn process_pending_components(&mut self, alterables: &mut EventAlterables) {
+	fn process_pending_components(&mut self) {
 		for comp in std::mem::take(&mut self.components_to_refresh_once) {
-			let mut common = CallbackDataCommon {
-				state: &self.state,
-				alterables,
-			};
-
 			comp.0.refresh(&mut RefreshData { layout: self });
 		}
 	}
@@ -467,19 +452,23 @@ impl Layout {
 			.as_ref()
 			.is_none_or(PushScissorStackResult::should_display)
 		{
-			// check children first
-			self.push_event_children(node_id, event, event_result, alterables, user_data)?;
+			let res_priority = widget.process_event_priority(
+				&mut self.get_event_params(l, node_id, style, alterables),
+				widget_id,
+				event,
+			)?;
 
-			if event_result.can_propagate() {
-				let mut params = EventParams {
-					state: &self.state,
-					layout: l,
-					alterables,
-					node_id,
-					style,
-				};
+			if res_priority.can_propagate() {
+				// check children first
+				self.push_event_children(node_id, event, event_result, alterables, user_data)?;
 
-				widget.process_event(widget_id, node_id, event, event_result, user_data, &mut params)?;
+				widget.process_event(
+					&mut self.get_event_params(l, node_id, style, alterables),
+					widget_id,
+					event,
+					event_result,
+					user_data,
+				)?;
 			}
 		}
 
@@ -489,6 +478,22 @@ impl Layout {
 		alterables.transform_stack.pop();
 
 		Ok(())
+	}
+
+	fn get_event_params<'a>(
+		&'a self,
+		l: &'a taffy::Layout,
+		node_id: taffy::NodeId,
+		style: &'a taffy::Style,
+		alterables: &'a mut EventAlterables,
+	) -> EventParams<'a> {
+		EventParams {
+			node_id,
+			style,
+			state: &self.state,
+			alterables,
+			taffy_layout: l,
+		}
 	}
 
 	pub const fn check_toggle_needs_redraw(&mut self) -> bool {
@@ -525,6 +530,18 @@ impl Layout {
 			&mut (user1, user2),
 		)?;
 		self.process_alterables(alterables)?;
+
+		let mut alterables = EventAlterables::default();
+		for event in std::mem::take(&mut self.global_events_to_emit) {
+			self.push_event_widget(
+				self.tree_root_node,
+				&event,
+				&mut event_result,
+				&mut alterables,
+				&mut (user1, user2),
+			)?;
+		}
+
 		Ok(event_result)
 	}
 
@@ -596,6 +613,8 @@ impl Layout {
 			tasks: LayoutTasks::new(),
 			sounds_to_play_once: Vec::new(),
 			focused_component: None,
+			alterables: Default::default(),
+			global_events_to_emit: Vec::new(),
 		})
 	}
 
@@ -683,10 +702,12 @@ impl Layout {
 	}
 
 	pub fn update(&mut self, params: &mut LayoutUpdateParams) -> anyhow::Result<LayoutUpdateResult> {
-		let mut alterables = EventAlterables::default();
+		// get all queued alterables and process them
+		let alterables = std::mem::take(&mut self.alterables);
+
 		self
 			.animations
-			.process(&self.state, &mut alterables, params.timestep_alpha);
+			.process(&self.state, &mut self.alterables, params.timestep_alpha);
 		self.process_alterables(alterables)?;
 		self.try_recompute_layout(params.size)?;
 
@@ -698,7 +719,7 @@ impl Layout {
 	pub fn tick(&mut self) -> anyhow::Result<()> {
 		let mut alterables = EventAlterables::default();
 		self.animations.tick(&self.state, &mut alterables);
-		self.process_pending_components(&mut alterables);
+		self.process_pending_components();
 		self.process_pending_widget_ticks(&mut alterables);
 		self.process_alterables(alterables)?;
 		Ok(())
@@ -720,9 +741,7 @@ impl Layout {
 					}
 				}
 				LayoutTask::Dispatch(func) => {
-					let mut c = self.start_common();
-					func(&mut c.common())?;
-					c.finish()?;
+					func(&mut self.common())?;
 				}
 				LayoutTask::SetWidgetStyle(widget_id, style_request) => {
 					self.set_style_request(widget_id, &style_request);
@@ -740,29 +759,26 @@ impl Layout {
 	}
 
 	pub fn set_focus(&mut self, to_focus: Option<&Component>) -> anyhow::Result<()> {
-		let mut c = self.start_common();
-
-		if let Some(focused) = &c.layout.focused_component
+		if let Some(focused) = &self.focused_component
 			&& let Some(focused) = focused.upgrade()
 		{
 			// Unfocus
 			focused.on_focus_change(&mut FocusChangeData {
-				common: &mut c.common(),
+				common: &mut self.common(),
 				focused: false,
 			});
-			c.layout.focused_component = None;
+			self.focused_component = None;
 		}
 
 		if let Some(to_focus) = to_focus {
 			to_focus.0.on_focus_change(&mut FocusChangeData {
-				common: &mut c.common(),
+				common: &mut self.common(),
 				focused: true,
 			});
 
-			c.layout.focused_component = Some(to_focus.weak());
+			self.focused_component = Some(to_focus.weak());
 		}
 
-		c.finish()?;
 		Ok(())
 	}
 
@@ -834,10 +850,12 @@ impl Layout {
 			}
 		}
 
-		if !alterables.widgets_to_tick.is_empty() {
-			for widget_id in &alterables.widgets_to_tick {
-				self.widgets_to_tick.push(*widget_id);
-			}
+		for widget_id in alterables.widgets_to_tick {
+			self.widgets_to_tick.push(widget_id);
+		}
+
+		for event in alterables.global_events_to_emit {
+			self.global_events_to_emit.push(event);
 		}
 
 		for c in alterables.components_to_refresh_once {

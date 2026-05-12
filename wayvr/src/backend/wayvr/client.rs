@@ -1,8 +1,6 @@
 use std::{io::Read, os::unix::net::UnixStream, path::PathBuf, sync::Arc};
 
 use anyhow::Context;
-use smithay::input::Seat;
-use smithay::wayland::selection::data_device::set_data_device_selection;
 use smithay::{
     backend::input::Keycode,
     input::{keyboard::KeyboardHandle, pointer::PointerHandle},
@@ -11,13 +9,13 @@ use smithay::{
 };
 use xkbcommon::xkb;
 
+use crate::backend::wayvr::{ExternalProcessRequest, WayVRTask};
+
 use super::{
     ProcessWayVREnv,
     comp::{self, ClientState},
     process,
 };
-use crate::backend::wayvr::comp::Application;
-use crate::backend::wayvr::{ExternalProcessRequest, WayVRTask};
 
 pub struct WayVRClient {
     pub client: wayland_server::Client,
@@ -28,7 +26,6 @@ pub struct WayVRCompositor {
     pub state: comp::Application,
     pub seat_keyboard: KeyboardHandle<comp::Application>,
     pub seat_pointer: PointerHandle<comp::Application>,
-    pub seat: Seat<comp::Application>,
     pub serial_counter: SerialCounter,
     pub wayland_env: super::WaylandEnv,
 
@@ -71,7 +68,6 @@ impl WayVRCompositor {
         display: wayland_server::Display<comp::Application>,
         seat_keyboard: KeyboardHandle<comp::Application>,
         seat_pointer: PointerHandle<comp::Application>,
-        seat: Seat<comp::Application>,
     ) -> anyhow::Result<Self> {
         let (wayland_env, listener) = create_wayland_listener()?;
 
@@ -85,7 +81,6 @@ impl WayVRCompositor {
             serial_counter: SerialCounter::new(),
             clients: Vec::new(),
             toplevel_surf_count: 0,
-            seat,
         })
     }
 
@@ -205,17 +200,6 @@ impl WayVRCompositor {
         );
     }
 
-    pub fn set_clipboard_text(&mut self, text: String) {
-        set_data_device_selection::<Application>(
-            &self.state.display_handle,
-            &self.seat,
-            vec![
-                "text/plain;charset=utf-8".to_string(),
-                "text/plain".to_string(),
-            ],
-            text.as_bytes().into(),
-        );
-    }
     pub fn set_keymap(&mut self, keymap: &xkb::Keymap) -> anyhow::Result<()> {
         // Smithay only accepts keymaps in a string form due to thread safety concerns
         self.seat_keyboard

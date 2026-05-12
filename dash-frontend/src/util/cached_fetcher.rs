@@ -1,8 +1,7 @@
+use crate::util::{networking::http_client, steam_utils::AppID};
 use anyhow::Context;
 use serde::Deserialize;
 use wlx_common::{async_executor::AsyncExecutor, cache_dir};
-
-use crate::util::{http_client, steam_utils::AppID};
 
 pub struct CoverArt {
 	// can be empty in case if data couldn't be fetched (use a fallback image then)
@@ -24,7 +23,7 @@ pub async fn request_image(executor: AsyncExecutor, app_id: AppID) -> anyhow::Re
 		app_id
 	);
 
-	match http_client::get(&executor, &url).await {
+	match http_client::get_simple(&executor, &url).await {
 		Ok(response) => {
 			log::info!("Success");
 			cache_dir::set_data(&cache_file_path, &response.data).await?;
@@ -69,7 +68,7 @@ async fn get_app_details_json_internal(
 	// Fetch from Steam API
 	log::info!("Fetching app detail ID {}", app_id);
 	let url = format!("https://store.steampowered.com/api/appdetails?appids={}", app_id);
-	let response = http_client::get(&executor, &url).await?;
+	let response = http_client::get_simple(&executor, &url).await?;
 	let res_utf8 = String::from_utf8(response.data)?;
 	let root = serde_json::from_str::<serde_json::Value>(&res_utf8)?;
 	let body = root.get(&app_id).context("invalid body")?;

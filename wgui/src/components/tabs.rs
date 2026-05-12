@@ -94,6 +94,16 @@ impl ComponentTabs {
 	pub fn on_select(&self, callback: TabSelectCallback) {
 		self.state.borrow_mut().on_select = Some(callback);
 	}
+
+	pub fn get_tab_button(&self, name: &str) -> Option<Rc<ComponentButton>> {
+		self
+			.state
+			.borrow_mut()
+			.mounted_entries
+			.iter()
+			.find(|e| name == &*e.name)
+			.map(|e| e.button.clone())
+	}
 }
 
 pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Result<(WidgetPair, Rc<ComponentTabs>)> {

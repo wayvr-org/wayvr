@@ -18,7 +18,7 @@ use wgui::{
 };
 use wlx_common::{
 	config::GeneralConfig,
-	dash_interface::{self, MonadoDumpSessionFrame},
+	dash_interface::{self, ConfigChangeKind, MonadoDumpSessionFrame},
 };
 
 use crate::{
@@ -175,7 +175,9 @@ impl<T> Tab<T> for TabMonado<T> {
 				Task::GeneralSettingsChromaUpdate => {
 					if let Subtab::GeneralSettings(tab) = &mut self.subtab {
 						tab.chroma_update(frontend.interface.general_config(data));
-						frontend.interface.config_changed(data);
+						frontend
+							.interface
+							.config_changed(data, ConfigChangeKind::EnvironmentBlend);
 					}
 				}
 				Task::SetBrightness(brightness) => self.set_brightness(frontend, data, brightness),
@@ -281,9 +283,7 @@ impl SubtabGeneralSettings {
 		// get brightness
 		let slider_brightness = state.fetch_component_as::<ComponentSlider>("slider_brightness")?;
 		if let Some(brightness) = frontend.interface.monado_brightness_get(data) {
-			let mut c = frontend.layout.start_common();
-			slider_brightness.set_value(&mut c.common(), brightness * 100.0);
-			c.finish()?;
+			slider_brightness.set_value_primary(&mut frontend.layout.common(), brightness * 100.0);
 
 			slider_brightness.on_value_changed({
 				let tasks = tasks.clone();
@@ -304,16 +304,15 @@ impl SubtabGeneralSettings {
 		let slider_keying_value_range = state.fetch_component_as::<ComponentSlider>("slider_keying_value_range")?;
 
 		{
-			let mut lc = frontend.layout.start_common();
-			let mut common = lc.common();
+			let mut common = frontend.layout.common();
 
 			// set initial values
 			let (rgb, range_h, range_s, range_v) = config.chroma_key_params.get_rgb_and_hsv_ranges();
-			slider_keying_curve.set_value(&mut common, config.chroma_key_params.curve * SLIDER_MULTIPLIER);
-			slider_keying_despill.set_value(&mut common, config.chroma_key_params.despill * SLIDER_MULTIPLIER);
-			slider_keying_hue_range.set_value(&mut common, range_h * SLIDER_MULTIPLIER);
-			slider_keying_saturation_range.set_value(&mut common, range_s * SLIDER_MULTIPLIER);
-			slider_keying_value_range.set_value(&mut common, range_v * SLIDER_MULTIPLIER);
+			slider_keying_curve.set_value_primary(&mut common, config.chroma_key_params.curve * SLIDER_MULTIPLIER);
+			slider_keying_despill.set_value_primary(&mut common, config.chroma_key_params.despill * SLIDER_MULTIPLIER);
+			slider_keying_hue_range.set_value_primary(&mut common, range_h * SLIDER_MULTIPLIER);
+			slider_keying_saturation_range.set_value_primary(&mut common, range_s * SLIDER_MULTIPLIER);
+			slider_keying_value_range.set_value_primary(&mut common, range_v * SLIDER_MULTIPLIER);
 			cs_keying.set_color(&mut common, rgb);
 
 			// prepare callbacks
@@ -340,8 +339,6 @@ impl SubtabGeneralSettings {
 			slider_keying_saturation_range.on_value_changed(get_slider_callback(&tasks));
 			slider_keying_value_range.on_value_changed(get_slider_callback(&tasks));
 			cs_keying.on_changed(get_color_selector_callback(&tasks));
-
-			lc.finish()?;
 		}
 
 		Ok(Self {
@@ -356,11 +353,11 @@ impl SubtabGeneralSettings {
 	}
 
 	fn chroma_update(&mut self, config: &mut GeneralConfig) {
-		let val_curve = self.slider_keying_curve.get_value();
-		let val_despill = self.slider_keying_despill.get_value();
-		let val_range_h = self.slider_keying_hue_range.get_value();
-		let val_range_s = self.slider_keying_saturation_range.get_value();
-		let val_range_v = self.slider_keying_value_range.get_value();
+		let val_curve = self.slider_keying_curve.get_value_primary();
+		let val_despill = self.slider_keying_despill.get_value_primary();
+		let val_range_h = self.slider_keying_hue_range.get_value_primary();
+		let val_range_s = self.slider_keying_saturation_range.get_value_primary();
+		let val_range_v = self.slider_keying_value_range.get_value_primary();
 		let val_rgb = self.cs_keying.get_color();
 
 		config.chroma_key_params.despill = val_despill / SLIDER_MULTIPLIER;

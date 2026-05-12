@@ -241,13 +241,7 @@ impl WvrServerState {
         };
 
         Ok(Self {
-            manager: client::WayVRCompositor::new(
-                state,
-                display,
-                seat_keyboard,
-                seat_pointer,
-                seat,
-            )?,
+            manager: client::WayVRCompositor::new(state, display, seat_keyboard, seat_pointer)?,
             processes: ProcessVec::new(),
             wm: window::WindowManager::new(),
             ticks: 0,
@@ -613,9 +607,6 @@ impl WvrServerState {
 
     pub fn send_key(&mut self, virtual_key: u32, down: bool) {
         self.manager.send_key(virtual_key, down);
-    }
-    pub fn set_clipboard_text(&mut self, text: String) {
-        self.manager.set_clipboard_text(text);
     }
 
     pub fn set_keymap(&mut self, keymap: &xkb::Keymap) -> anyhow::Result<()> {

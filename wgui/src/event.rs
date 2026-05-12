@@ -19,6 +19,17 @@ use crate::{
 	widget::{EventResult, WidgetData, WidgetObj},
 };
 
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub struct DeviceBitmask(pub u8);
+
+impl DeviceBitmask {
+	pub fn from_usize(mask: usize) -> Self {
+		// more than 8 input devices?
+		debug_assert!(mask & !0xff == 0);
+		Self(mask as u8)
+	}
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum MouseButtonIndex {
 	Left,
@@ -30,28 +41,28 @@ pub enum MouseButtonIndex {
 pub struct MouseButtonEvent {
 	pub index: MouseButtonIndex,
 	pub pos: Vec2,
-	pub device: usize,
+	pub device: DeviceBitmask,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct MousePosition {
 	pub pos: Vec2,
-	pub device: usize,
+	pub device: DeviceBitmask,
 }
 
 pub struct MouseLeaveEvent {
-	pub device: usize,
+	pub device: DeviceBitmask,
 }
 
 pub struct MouseMotionEvent {
 	pub pos: Vec2,
-	pub device: usize,
+	pub device: DeviceBitmask,
 }
 
 pub struct MouseWheelEvent {
 	pub pos: Vec2,   /* mouse position */
 	pub delta: Vec2, /* wheel delta */
-	pub device: usize,
+	pub device: DeviceBitmask,
 }
 
 #[derive(Clone)]
@@ -70,6 +81,7 @@ pub enum Event {
 	MouseMotion(MouseMotionEvent),
 	MouseUp(MouseButtonEvent),
 	MouseWheel(MouseWheelEvent),
+	MouseCancel, // Called if the user started scrolling by swiping above the button, to cancel all currently pressed buttons (prevent clicks)
 	TextInput(TextInputEvent),
 }
 
@@ -106,6 +118,7 @@ pub struct EventAlterables {
 	pub dirty_widgets: Vec<WidgetID>,
 	pub components_to_refresh_once: Vec<ComponentWeak>,
 	pub style_set_requests: Vec<(WidgetID, StyleSetRequest)>,
+	pub global_events_to_emit: Vec<Event>,
 	pub animations: Vec<animation::Animation>,
 	pub widgets_to_tick: HashSet<WidgetID>, // widgets which needs to be ticked in the next `Layout::update()` fn
 	pub transform_stack: TransformStack,
@@ -127,6 +140,15 @@ impl EventAlterables {
 
 	pub fn mark_dirty(&mut self, widget_id: WidgetID) {
 		self.dirty_widgets.push(widget_id);
+	}
+
+	pub fn mark_dirty_and_redraw(&mut self, widget_id: WidgetID) {
+		self.mark_dirty(widget_id);
+		self.mark_redraw();
+	}
+
+	pub fn emit_global_event(&mut self, event: Event) {
+		self.global_events_to_emit.push(event);
 	}
 
 	pub fn mark_tick(&mut self, widget_id: WidgetID) {
@@ -174,8 +196,7 @@ impl CallbackDataCommon<'_> {
 
 	// helper functions
 	pub fn mark_widget_dirty(&mut self, id: WidgetID) {
-		self.alterables.mark_dirty(id);
-		self.alterables.mark_redraw();
+		self.alterables.mark_dirty_and_redraw(id);
 	}
 
 	pub fn globals(&self) -> RefMut<'_, globals::Globals> {
@@ -215,18 +236,15 @@ impl CallbackMetadata {
 		let mouse_pos_abs = self.get_mouse_pos_absolute()?;
 		Some(mouse_pos_abs - transform_stack.get().abs_pos)
 	}
-	pub fn get_mouse_pos_normalized(&self, transform_stack: &TransformStack) -> Option<Vec2> {
-		let pos_relative = self.get_mouse_pos_relative(transform_stack)?;
-		Some(pos_relative / transform_stack.parent().raw_dim)
-	}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventListenerKind {
 	MousePress,
-	MouseRelease,
-	MouseEnter,
 	MouseMotion,
+	MouseRelease,
+	MouseCancel,
+	MouseEnter,
 	MouseLeave,
 	TextInput,
 	InternalStateChange,
