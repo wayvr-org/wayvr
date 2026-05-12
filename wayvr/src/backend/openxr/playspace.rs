@@ -1,5 +1,6 @@
-use glam::{Affine3A, Quat, Vec3A, vec3a};
+use glam::{Affine3A, Mat3A, Quat, Vec3A, vec3a};
 use libmonado::{Monado, Pose, ReferenceSpaceType};
+use wgui::log::LogErr;
 
 use crate::{
     backend::{input::InputState, task::PlayspaceTask},
@@ -16,31 +17,16 @@ struct MoverData<T> {
 }
 
 pub(super) struct PlayspaceMover {
-    last_transform: Affine3A,
     drag: Option<MoverData<Vec3A>>,
     rotate: Option<MoverData<Quat>>,
 }
 
 impl PlayspaceMover {
-    pub fn new(monado: &mut Monado) -> anyhow::Result<Self> {
-        log::info!("Monado: using space offset API");
-
-        let Ok(stage) = monado.get_reference_space_offset(ReferenceSpaceType::Stage) else {
-            anyhow::bail!("Space offsets not supported.");
-        };
-
-        log::debug!("STAGE is at {:?}, {:?}", stage.position, stage.orientation);
-
-        // initial offset
-        let last_transform =
-            Affine3A::from_rotation_translation(stage.orientation.into(), stage.position.into());
-
-        Ok(Self {
-            last_transform,
-
+    pub fn new() -> Self {
+        Self {
             drag: None,
             rotate: None,
-        })
+        }
     }
 
     pub fn handle_task(&mut self, app: &mut AppState, task: PlayspaceTask) {
@@ -83,7 +69,6 @@ impl PlayspaceMover {
         if let Some(mut data) = self.rotate.take() {
             let pointer = &app.input_state.pointers[data.hand];
             if !pointer.now.space_rotate {
-                self.last_transform = data.pose;
                 log::info!("End space rotate");
                 return;
             }
@@ -116,9 +101,14 @@ impl PlayspaceMover {
         } else {
             for (i, pointer) in app.input_state.pointers.iter().enumerate() {
                 if pointer.now.space_rotate {
-                    let hand_pose = Quat::from_affine3(&(self.last_transform * pointer.raw_pose));
+                    let Ok(transform) = get_offset(&mut monado.ipc)
+                        .log_err("Could not get initial space rotate offset")
+                    else {
+                        continue;
+                    };
+                    let hand_pose = Quat::from_affine3(&(transform * pointer.raw_pose));
                     self.rotate = Some(MoverData {
-                        pose: self.last_transform,
+                        pose: transform,
                         hand: i,
                         hand_pose,
                     });
@@ -132,7 +122,6 @@ impl PlayspaceMover {
         if let Some(mut data) = self.drag.take() {
             let pointer = &app.input_state.pointers[data.hand];
             if !pointer.now.space_drag {
-                self.last_transform = data.pose;
                 log::info!("End space drag");
                 return;
             }
@@ -172,11 +161,14 @@ impl PlayspaceMover {
         } else {
             for (i, pointer) in app.input_state.pointers.iter().enumerate() {
                 if pointer.now.space_drag {
-                    let hand_pos = self
-                        .last_transform
-                        .transform_point3a(pointer.raw_pose.translation);
+                    let Ok(transform) = get_offset(&mut monado.ipc)
+                        .log_err("Could not get initial space drag offset")
+                    else {
+                        continue;
+                    };
+                    let hand_pos = transform.transform_point3a(pointer.raw_pose.translation);
                     self.drag = Some(MoverData {
-                        pose: self.last_transform,
+                        pose: transform,
                         hand: i,
                         hand_pose: hand_pos,
                     });
@@ -222,8 +214,7 @@ impl PlayspaceMover {
             self.rotate = None;
         }
 
-        self.last_transform = Affine3A::IDENTITY;
-        apply_offset(self.last_transform, monado);
+        apply_offset(Affine3A::IDENTITY, monado);
     }
 
     pub fn fix_floor(&mut self, input: &InputState, monado: &mut Monado) {
@@ -253,6 +244,20 @@ impl PlayspaceMover {
             .set_reference_space_offset(ReferenceSpaceType::Stage, pose)
             .inspect_err(|e| log::warn!("Could not fix floor due to libmonado error: {e:?}"));
     }
+
+    pub fn test_availability(&mut self, monado: &mut Monado) {
+        let _ = monado
+            .get_reference_space_offset(ReferenceSpaceType::Stage)
+            .log_err("Space drag may not be available");
+    }
+}
+
+fn get_offset(monado: &mut Monado) -> Result<Affine3A, libmonado::MndResult> {
+    let pose = monado.get_reference_space_offset(ReferenceSpaceType::Stage)?;
+    Ok(Affine3A {
+        matrix3: Mat3A::from_quat(pose.orientation.into()),
+        translation: pose.position.into(),
+    })
 }
 
 fn apply_offset(transform: Affine3A, monado: &mut Monado) {
