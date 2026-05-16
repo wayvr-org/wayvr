@@ -414,6 +414,8 @@ where
     let pending_haptics = pointer.pending_haptics.take();
 
     if !pointer.tracked {
+        pointer.interaction.should_block_input = false;
+        pointer.interaction.should_block_poses = false;
         return (None, pending_haptics); // no hit
     }
 
@@ -644,6 +646,10 @@ where
     O: Default,
 {
     let pointer = &mut app.input_state.pointers[pointer_idx];
+    if !pointer.tracked {
+        return (None, None);
+    }
+
     let ray_origin = pointer.pose;
     let mode = pointer.interaction.mode;
     let edit_mode = overlays.get_edit_mode();

@@ -244,7 +244,13 @@ pub fn openvr_run(
         let universe = playspace.get_universe();
 
         app.input_state.pre_update();
-        input_source.update(universe.clone(), &mut input_mgr, &mut system_mgr, &mut app);
+        input_source.update(
+            universe.clone(),
+            &mut input_mgr,
+            &mut overlay_mgr,
+            &mut system_mgr,
+            &mut app,
+        );
         app.input_state.post_update(&app.session);
 
         if app
