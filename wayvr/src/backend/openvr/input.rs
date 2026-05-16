@@ -330,6 +330,17 @@ fn get_tracked_device(
     index: TrackedDeviceIndex,
     role: TrackedDeviceRole,
 ) -> Option<TrackedDevice> {
+    let provides_battery = system
+        .get_tracked_device_property(
+            index,
+            ETrackedDeviceProperty::Prop_DeviceProvidesBatteryStatus_Bool,
+        )
+        .unwrap_or(false);
+    if !provides_battery {
+        // don't show devices that don't have battery info
+        return None;
+    }
+
     let soc = system
         .get_tracked_device_property(
             index,
