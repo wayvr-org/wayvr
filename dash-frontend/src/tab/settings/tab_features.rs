@@ -17,6 +17,9 @@ impl State {
 			// monado or openvr
 			options_checkbox(par.mp, c, SettingType::SpaceDragUnlocked)?;
 			options_slider_f32(par.mp, c, SettingType::SpaceDragMultiplier, -10.0, 10.0, 0.5)?;
+			options_slider_f32(par.mp, c, SettingType::SpaceDragGravity, 0.0, 10.0, 0.5)?;
+			options_slider_f32(par.mp, c, SettingType::SpaceDragDamping, 0.1, 1.0, 0.01)?;
+			options_slider_f32(par.mp, c, SettingType::SpaceDragFlingStrength, 0.0, 3.0, 0.1)?;
 		}
 		if par.feats.monado {
 			// openvr can only ever rotate yaw

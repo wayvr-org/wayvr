@@ -1,4 +1,5 @@
 pub mod input;
+pub mod playspace_common;
 
 #[cfg(feature = "openvr")]
 pub mod openvr;

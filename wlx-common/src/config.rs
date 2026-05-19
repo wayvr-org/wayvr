@@ -165,6 +165,10 @@ const fn def_point3() -> f32 {
 	0.3
 }
 
+const fn def_point98() -> f32 {
+	0.98
+}
+
 const fn def_osc_port() -> u16 {
 	9000
 }
@@ -338,6 +342,15 @@ pub struct GeneralConfig {
 
 	#[serde(default = "def_false")]
 	pub space_rotate_unlocked: bool,
+
+	#[serde(default = "def_one")]
+	pub space_drag_gravity: f32,
+
+	#[serde(default = "def_point98")]
+	pub space_drag_damping: f32,
+
+	#[serde(default = "def_one")]
+	pub space_drag_fling_strength: f32,
 
 	#[serde(default)]
 	pub alt_click_down: Vec<String>,

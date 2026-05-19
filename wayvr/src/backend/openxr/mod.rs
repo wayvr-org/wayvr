@@ -94,7 +94,7 @@ pub fn openxr_run(
 
     app.monado_state_init();
 
-    let mut playspace = app.monado_state.as_mut().and_then(|m| {
+    let mut playspace_mover = app.monado_state.as_mut().and_then(|m| {
         playspace::PlayspaceMover::new(&mut m.ipc)
             .map_err(|e| log::warn!("Will not use Monado playspace mover: {e}"))
             .ok()
@@ -155,8 +155,12 @@ pub fn openxr_run(
 
     let mut main_session_visible = false;
     let mut environment_blend_mode = modes[0];
+    let mut last_frame_time = Instant::now();
 
     'main_loop: loop {
+        let now = Instant::now();
+        app.delta_time = (now.duration_since(last_frame_time).as_secs_f32()).clamp(0.001, 0.2); // 5 - 1000 fps
+        last_frame_time = now;
         let cur_frame = FRAME_COUNTER.fetch_add(1, Ordering::Relaxed);
 
         if !RUNNING.load(Ordering::Relaxed) {
@@ -296,8 +300,8 @@ pub fn openxr_run(
                 .enqueue(TaskType::Overlay(OverlayTask::ToggleDashboard));
         }
 
-        if let Some(ref mut space_mover) = playspace {
-            space_mover.update(&mut overlays, &mut app);
+        if let Some(ref mut playspace_mover) = playspace_mover {
+            playspace_mover.update(&mut overlays, &mut app);
         }
 
         for o in overlays.values_mut() {
@@ -484,8 +488,8 @@ pub fn openxr_run(
                     overlays.handle_task(&mut app, task)?;
                 }
                 TaskType::Playspace(task) => {
-                    if let Some(playspace) = playspace.as_mut() {
-                        playspace.handle_task(&mut app, task);
+                    if let Some(playspace_mover) = playspace_mover.as_mut() {
+                        playspace_mover.handle_task(&mut app, task);
                     }
                 }
                 TaskType::OpenXR(task) => {

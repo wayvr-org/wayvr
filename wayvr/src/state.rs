@@ -71,6 +71,8 @@ pub struct AppState {
 
     #[cfg(feature = "openxr")]
     pub monado_state: Option<backend::openxr::monado_state::MonadoState>,
+
+    pub delta_time: f32,
 }
 
 #[allow(unused_mut)]
@@ -188,6 +190,8 @@ impl AppState {
 
             #[cfg(feature = "openxr")]
             monado_state: None,
+
+            delta_time: 1.0 / 120.0,
         };
 
         if let Some(error_toast) = hid_error {
