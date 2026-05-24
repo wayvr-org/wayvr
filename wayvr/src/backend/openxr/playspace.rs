@@ -5,7 +5,7 @@ use wgui::log::LogErr;
 use crate::{
     backend::{
         input::InputState,
-        playspace_common::{SpaceGravity, SpaceGravityUpdateParams},
+        playspace_common::{self, SpaceGravity, SpaceGravityUpdateParams},
         task::PlayspaceTask,
     },
     state::AppState,
@@ -174,16 +174,7 @@ impl PlayspaceMover {
             }
 
             let overlay_offset = data.pose.inverse().transform_vector3a(relative_pos) * -1.0;
-
-            overlays.values_mut().for_each(|overlay| {
-                let Some(state) = overlay.config.active_state.as_mut() else {
-                    return;
-                };
-                if state.positioning.moves_with_space() {
-                    state.transform.translation += overlay_offset;
-                }
-                overlay.config.dirty = true;
-            });
+            playspace_common::shift_overlays(overlays, overlay_offset);
 
             data.pose.translation += relative_pos;
             data.hand_pose = new_hand;
@@ -220,15 +211,17 @@ impl PlayspaceMover {
             }
         }
 
-        if let Some(playspace_pos) = self.gravity.update(SpaceGravityUpdateParams {
+        if let Some(res) = self.gravity.update(SpaceGravityUpdateParams {
             dt: app.delta_time,
             dragging: self.drag.is_some(),
             config: &app.session.config,
         }) {
             apply_offset(
-                Affine3A::from_translation(playspace_pos.into()),
+                Affine3A::from_translation(res.playspace_pos.into()),
                 &mut monado.ipc,
             );
+
+            playspace_common::shift_overlays(overlays, -res.playspace_pos_offset);
         }
     }
 

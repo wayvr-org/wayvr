@@ -39,12 +39,14 @@ mod tab_features;
 mod tab_look_and_feel;
 mod tab_misc;
 mod tab_skybox;
+mod tab_space_drag;
 mod tab_troubleshooting;
 
 #[derive(Clone)]
 enum TabNameEnum {
 	LookAndFeel,
 	Features,
+	SpaceDrag,
 	Controls,
 	Misc,
 	AutostartApps,
@@ -58,6 +60,7 @@ impl TabNameEnum {
 			"look_and_feel" => Some(TabNameEnum::LookAndFeel),
 			"features" => Some(TabNameEnum::Features),
 			"controls" => Some(TabNameEnum::Controls),
+			"space_drag" => Some(TabNameEnum::SpaceDrag),
 			"misc" => Some(TabNameEnum::Misc),
 			"autostart_apps" => Some(TabNameEnum::AutostartApps),
 			"troubleshooting" => Some(TabNameEnum::Troubleshooting),
@@ -586,6 +589,9 @@ impl<T> TabSettings<T> {
 			}
 			TabNameEnum::Features => {
 				self.current_tab = Some(Box::new(tab_features::State::mount(settings_mount_params)?));
+			}
+			TabNameEnum::SpaceDrag => {
+				self.current_tab = Some(Box::new(tab_space_drag::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Controls => {
 				self.current_tab = Some(Box::new(tab_controls::State::mount(settings_mount_params)?));

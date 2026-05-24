@@ -1,6 +1,8 @@
 use glam::Vec3A;
 use wlx_common::config::GeneralConfig;
 
+use crate::windowing::manager::OverlayWindowManager;
+
 pub struct SpaceGravityUpdateParams<'a> {
     pub dt: f32,
     pub dragging: bool,
@@ -10,6 +12,26 @@ pub struct SpaceGravityUpdateParams<'a> {
 pub struct SpaceGravity {
     velocity: Vec3A,
     space_pos: Vec3A,
+}
+
+pub fn shift_overlays<OverlayData>(
+    overlays: &mut OverlayWindowManager<OverlayData>,
+    overlay_offset: Vec3A,
+) {
+    overlays.values_mut().for_each(|overlay| {
+        let Some(state) = overlay.config.active_state.as_mut() else {
+            return;
+        };
+        if state.positioning.moves_with_space() {
+            state.transform.translation += overlay_offset;
+        }
+        overlay.config.dirty = true;
+    });
+}
+
+pub struct SpaceGravityUpdateResult {
+    pub playspace_pos: Vec3A,
+    pub playspace_pos_offset: Vec3A, // position difference compared to previous update() call
 }
 
 impl SpaceGravity {
@@ -31,21 +53,29 @@ impl SpaceGravity {
         self.space_pos = space_pos;
     }
 
-    pub fn update(&mut self, par: SpaceGravityUpdateParams) -> Option<Vec3A> {
-        if !par.dragging {
-            self.velocity.y += par.config.space_drag_gravity * par.dt;
-            // terminal velocity
-            self.velocity.y = self.velocity.y.min(200.0);
+    pub fn update(&mut self, par: SpaceGravityUpdateParams) -> Option<SpaceGravityUpdateResult> {
+        if par.dragging {
+            return None;
+        }
 
-            self.velocity *= (par.config.space_drag_damping).powf(par.dt * 10.0);
-            self.space_pos += self.velocity * par.dt;
+        let prev_pos = self.space_pos;
 
-            self.space_pos.y = self.space_pos.y.min(0.0);
+        self.velocity.y += par.config.space_drag_gravity * par.dt;
 
-            if self.velocity.length_squared() > 0.00003 {
-                // log::info!("velocity {}", self.velocity);
-                return Some(self.space_pos);
-            }
+        // terminal velocity
+        self.velocity.y = self.velocity.y.min(200.0);
+
+        self.velocity *= (par.config.space_drag_damping).powf(par.dt * 10.0);
+        self.space_pos += self.velocity * par.dt;
+
+        self.space_pos.y = self.space_pos.y.min(0.0);
+
+        if self.velocity.length_squared() > 0.00003 {
+            // Space position changed
+            return Some(SpaceGravityUpdateResult {
+                playspace_pos: self.space_pos,
+                playspace_pos_offset: self.space_pos - prev_pos,
+            });
         }
 
         None
