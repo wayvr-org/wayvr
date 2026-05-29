@@ -109,6 +109,7 @@
 		"SPACE_DRAG_DAMPING": "Damping",
 		"SPACE_DRAG_GRAVITY": "Gravity",
 		"SPACE_DRAG_MULTIPLIER": "Space drag multiplier",
+		"SPACE_DRAG_GROUND_FRICTION": "Ground friction",
 		"SPACE_DRAG_UNLOCKED": "Allow space drag on all axes",
 		"SPACE_ROTATE_UNLOCKED": "Allow space rotate on all axes",
 		"TROUBLESHOOTING": "Troubleshooting",

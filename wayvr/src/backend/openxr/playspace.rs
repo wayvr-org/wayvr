@@ -248,6 +248,8 @@ impl PlayspaceMover {
         let _ = monado
             .set_reference_space_offset(ReferenceSpaceType::Stage, pose)
             .inspect_err(|e| log::warn!("Could not recenter due to libmonado error: {e:?}"));
+
+        self.gravity.reset();
     }
 
     pub fn reset_offset(&mut self, monado: &mut Monado) {
@@ -260,6 +262,7 @@ impl PlayspaceMover {
             self.rotate = None;
         }
 
+        self.gravity.reset();
         apply_offset(Affine3A::IDENTITY, monado);
     }
 

@@ -295,8 +295,8 @@ impl AppList {
 		state: &Rc<RefCell<State>>,
 		parser_state: &mut ParserState,
 	) -> anyhow::Result<()> {
-		// load 4 entries for a single frame at most
-		for _ in 0..4 {
+		// load 30 entries for a single frame at most
+		for _ in 0..30 {
 			if let Some(entry) = self.entries_to_mount.pop_front() {
 				let globals = frontend.layout.state.globals.clone();
 				let button = self.mount_entry(frontend, parser_state, &doc_params(globals.clone()), &entry)?;

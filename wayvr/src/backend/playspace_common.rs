@@ -53,6 +53,11 @@ impl SpaceGravity {
         self.space_pos = space_pos;
     }
 
+    pub fn reset(&mut self) {
+        self.velocity = Vec3A::default();
+        self.space_pos = Vec3A::default();
+    }
+
     pub fn update(&mut self, par: SpaceGravityUpdateParams) -> Option<SpaceGravityUpdateResult> {
         if par.dragging {
             return None;
@@ -66,9 +71,17 @@ impl SpaceGravity {
         self.velocity.y = self.velocity.y.min(200.0);
 
         self.velocity *= (par.config.space_drag_damping).powf(par.dt * 10.0);
+
         self.space_pos += self.velocity * par.dt;
 
         self.space_pos.y = self.space_pos.y.min(0.0);
+
+        if self.space_pos.y >= 0.0
+        /* at zero or below ground level */
+        {
+            // apply ground friction
+            self.velocity *= 1.0 - par.config.space_drag_ground_friction * par.dt * 10.0;
+        }
 
         if self.velocity.length_squared() > 0.00003 {
             // Space position changed
