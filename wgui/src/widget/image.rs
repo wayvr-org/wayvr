@@ -8,7 +8,7 @@ use crate::{
 	globals::Globals,
 	layout::WidgetID,
 	renderer_vk::text::custom_glyph::CustomGlyphData,
-	widget::{util::WLength, WidgetStateFlags},
+	widget::{WidgetStateFlags, util::WLength},
 };
 
 use super::{WidgetObj, WidgetState};

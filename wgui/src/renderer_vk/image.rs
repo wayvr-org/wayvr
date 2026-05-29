@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+	collections::HashMap,
+	sync::{Arc, Weak},
+};
 
 use cosmic_text::SubpixelBin;
 use glam::Mat4;
@@ -14,13 +17,13 @@ use vulkano::{
 use crate::{
 	drawing::{Boundary, ImagePrimitive},
 	gfx::{
+		BLEND_ALPHA, WGfx,
 		cmd::GfxCommandBuffer,
 		pipeline::{WGfxPipeline, WPipelineCreateInfo},
-		WGfx, BLEND_ALPHA,
 	},
 	renderer_vk::{
 		model_buffer::ModelBuffer,
-		text::custom_glyph::{CustomGlyphData, RasterizeCustomGlyphRequest, RasterizedCustomGlyph},
+		text::custom_glyph::{CustomGlyphContent, CustomGlyphData, RasterizeCustomGlyphRequest, RasterizedCustomGlyph},
 	},
 };
 
@@ -67,6 +70,7 @@ impl ImagePipeline {
 pub type ImageViewCache = HashMap<usize, CachedImageView>;
 
 pub struct CachedImageView {
+	pub(super) content: Weak<CustomGlyphContent>,
 	view: Arc<ImageView>,
 	res: [u32; 2],
 }
@@ -74,8 +78,19 @@ pub struct CachedImageView {
 struct ImageVertexWithContent {
 	vert: ImageVertex,
 	content: CustomGlyphData,
-	content_key: usize, // identifies an image tag.
 	skip_cache: bool,
+}
+
+struct PendingImageUpload {
+	content_id: usize,
+	content: Weak<CustomGlyphContent>,
+	raster: RasterizedCustomGlyph,
+}
+
+enum ImageViewSource {
+	Ready(Arc<ImageView>),
+	PendingUpload(usize),
+	Missing,
 }
 
 pub struct ImageRenderer {
@@ -111,16 +126,11 @@ impl ImageRenderer {
 				],
 			},
 			content: image.content,
-			content_key: image.content_key,
 			skip_cache: image.skip_cache,
 		});
 	}
 
-	fn upload_image(
-		gfx: &Arc<WGfx>,
-		res: [u32; 2],
-		img: &ImageVertexWithContent,
-	) -> anyhow::Result<Option<Arc<ImageView>>> {
+	fn rasterize_image(res: [u32; 2], img: &ImageVertexWithContent) -> Option<RasterizedCustomGlyph> {
 		let Some(raster) = RasterizedCustomGlyph::try_from(&RasterizeCustomGlyphRequest {
 			data: img.content.clone(),
 			width: res[0] as _,
@@ -130,21 +140,10 @@ impl ImageRenderer {
 			scale: 1.0, // unused
 		}) else {
 			log::error!("Unable to rasterize custom image");
-			return Ok(None);
+			return None;
 		};
-		let mut cmd_buf = gfx.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
-		let image = cmd_buf.upload_image(
-			raster.width.into(),
-			raster.height.into(),
-			Format::R8G8B8A8_UNORM,
-			&raster.data,
-		)?;
-		let image_view = ImageView::new_default(image)?;
-
-		cmd_buf.build_and_execute_now()?;
-
-		Ok(Some(image_view))
+		Some(raster)
 	}
 
 	pub fn render(
@@ -158,26 +157,90 @@ impl ImageRenderer {
 		let res = viewport.resolution();
 		self.model_buffer.upload(gfx)?;
 
+		let mut pending_upload_by_key = HashMap::<usize, usize>::new();
+		let mut pending_uploads = Vec::<PendingImageUpload>::new();
+		let mut image_sources = Vec::<ImageViewSource>::with_capacity(self.image_verts.len());
+
+		// decide which images need to be rasterized and uploaded
 		for img in &self.image_verts {
-			let image_view = if let Some(x) = image_view_cache.get_mut(&img.content_key) {
-				if img.skip_cache || x.res != res {
-					// image changed
-					let Some(image_view) = Self::upload_image(&self.pipeline.gfx, res, img)? else {
-						continue;
-					};
+			if let Some(upload_idx) = pending_upload_by_key.get(&img.content.id) {
+				image_sources.push(ImageViewSource::PendingUpload(*upload_idx));
+				continue;
+			}
 
-					x.view = image_view;
-					x.res = res;
-				}
+			if let Some(cached) = image_view_cache.get(&img.content.id)
+				&& !img.skip_cache
+				&& cached.res == res
+			{
+				image_sources.push(ImageViewSource::Ready(cached.view.clone()));
+				continue;
+			}
 
-				x.view.clone()
-			} else {
-				let Some(image_view) = Self::upload_image(&self.pipeline.gfx, res, img)? else {
+			let Some(raster) = Self::rasterize_image(res, img) else {
+				image_sources.push(ImageViewSource::Missing);
+				continue;
+			};
+
+			let upload_idx = pending_uploads.len();
+			pending_uploads.push(PendingImageUpload {
+				content: Arc::downgrade(&img.content.content),
+				content_id: img.content.id,
+				raster,
+			});
+			pending_upload_by_key.insert(img.content.id, upload_idx);
+			image_sources.push(ImageViewSource::PendingUpload(upload_idx));
+		}
+
+		// upload every missing/stale image using one transfer command buffer
+		let mut uploaded_image_views = vec![None; pending_uploads.len()];
+
+		if !pending_uploads.is_empty() {
+			let mut xfer_cmd_buf = gfx.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+
+			for (upload_idx, upload) in pending_uploads.iter().enumerate() {
+				log::trace!("Uploading image {}", upload.content_id);
+				let image = xfer_cmd_buf.upload_image(
+					upload.raster.width.into(),
+					upload.raster.height.into(),
+					Format::R8G8B8A8_UNORM,
+					&upload.raster.data,
+				)?;
+				uploaded_image_views[upload_idx] = Some(ImageView::new_default(image)?);
+			}
+
+			xfer_cmd_buf.build_and_execute_now()?;
+
+			for (upload_idx, upload) in pending_uploads.iter().enumerate() {
+				let Some(image_view) = uploaded_image_views[upload_idx].as_ref() else {
 					continue;
 				};
 
-				image_view_cache.insert(img.content_key, CachedImageView { view: image_view, res });
-				image_view_cache.get_mut(&img.content_key).unwrap().view.clone()
+				image_view_cache.insert(
+					upload.content_id,
+					CachedImageView {
+						content: upload.content.clone(),
+						view: image_view.clone(),
+						res,
+					},
+				);
+			}
+		}
+
+		// run the rendering work
+		for (img, image_source) in self.image_verts.iter().zip(image_sources.iter()) {
+			let image_view = match image_source {
+				ImageViewSource::Ready(image_view) => image_view.clone(),
+				ImageViewSource::PendingUpload(upload_idx, ..) => {
+					let Some(image_view) = uploaded_image_views
+						.get(*upload_idx)
+						.and_then(|image_view| image_view.as_ref())
+					else {
+						continue;
+					};
+
+					image_view.clone()
+				}
+				ImageViewSource::Missing => continue,
 			};
 
 			let vert_buffer = self.pipeline.gfx.empty_buffer(

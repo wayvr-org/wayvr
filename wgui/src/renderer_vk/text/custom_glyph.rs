@@ -163,6 +163,7 @@ impl CustomGlyphData {
 			Ok(data) => Ok(data),
 			Err(hashed_asset) => {
 				let data = Self::new(CustomGlyphContent::from_bin_raster(data)?);
+				log::trace!("Caching {path} with content_id {}", data.id);
 				globals_borrow.custom_glyph_cache.insert(hashed_asset, &data);
 				Ok(data)
 			}

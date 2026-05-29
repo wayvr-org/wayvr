@@ -2,22 +2,22 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use cosmic_text::Buffer;
 use glam::{Mat4, Vec2, Vec3};
-use slotmap::{new_key_type, SlotMap};
+use slotmap::{SlotMap, new_key_type};
 use vulkano::pipeline::graphics::viewport;
 
 use crate::{
 	drawing::{self},
 	font_config,
-	gfx::{cmd::GfxCommandBuffer, WGfx},
+	gfx::{WGfx, cmd::GfxCommandBuffer},
 	renderer_vk::image::{ImagePipeline, ImageRenderer, ImageViewCache},
 };
 
 use super::{
 	rect::{RectPipeline, RectRenderer},
 	text::{
+		DEFAULT_METRICS, SWASH_CACHE, TextArea, TextBounds,
 		text_atlas::{TextAtlas, TextPipeline},
 		text_renderer::TextRenderer,
-		TextArea, TextBounds, DEFAULT_METRICS, SWASH_CACHE,
 	},
 	viewport::Viewport,
 };
@@ -246,6 +246,9 @@ impl Context {
 		let mut passes = Vec::<RendererPass>::new();
 		let mut needs_new_pass = true;
 		let mut cur_scissor: Option<drawing::Boundary> = None;
+
+		// drop unreferenced image views to avoid vram leaks
+		self.image_cache.retain(|_, v| v.content.strong_count() > 0);
 
 		for primitive in primitives {
 			if needs_new_pass {

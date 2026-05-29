@@ -10,9 +10,9 @@ use vulkano::{
 use crate::{
 	drawing::{Boundary, Rectangle},
 	gfx::{
+		BLEND_ALPHA, WGfx,
 		cmd::GfxCommandBuffer,
 		pipeline::{WGfxPipeline, WPipelineCreateInfo},
-		WGfx, BLEND_ALPHA,
 	},
 	renderer_vk::model_buffer::ModelBuffer,
 };
