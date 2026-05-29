@@ -60,6 +60,10 @@ impl TextRenderer {
 		self.glyph_vertices.clear();
 
 		let resolution = viewport.resolution();
+		let mut glyphs_to_render = Vec::new();
+		let mut pending_glyph_uploads = Vec::new();
+		let mut missing_glyphs = HashSet::new();
+		let mut unavailable_glyphs = HashSet::new();
 
 		for text_area in text_areas {
 			let bounds_min_x = text_area.bounds.left.max(0);
@@ -96,26 +100,14 @@ impl TextRenderer {
 					.or(glyph.color)
 					.unwrap_or(text_area.default_color);
 
-				if let Some(glyph_to_render) = prepare_glyph(
-					&mut PrepareGlyphParams {
-						label_pos: Vec2::new(text_area.left, text_area.top),
-						x,
-						y,
-						line_y: 0.0,
-						color,
-						cache_key,
-						atlas,
-						cache,
-						font_system,
-						model_buffer: &mut self.model_buffer,
-						scale_factor: text_area.scale,
-						glyph_scale: f32::from(width) / f32::from(cached_width),
-						bounds_min_x,
-						bounds_min_y,
-						bounds_max_x,
-						bounds_max_y,
-						transform: &text_area.transform,
-					},
+				if queue_missing_glyph_upload(
+					atlas,
+					font_system,
+					cache,
+					cache_key,
+					&mut missing_glyphs,
+					&mut unavailable_glyphs,
+					&mut pending_glyph_uploads,
 					|_cache, _font_system| -> Option<GetGlyphImageResult> {
 						if cached_width == 0 || cached_height == 0 {
 							return None;
@@ -143,8 +135,22 @@ impl TextRenderer {
 							data: output.data,
 						})
 					},
-				)? {
-					self.glyph_vertices.push(glyph_to_render);
+				) {
+					glyphs_to_render.push(QueuedGlyph {
+						label_pos: Vec2::new(text_area.left, text_area.top),
+						x,
+						y,
+						line_y: 0.0,
+						color,
+						cache_key,
+						transform: text_area.transform,
+						scale_factor: text_area.scale,
+						glyph_scale: f32::from(width) / f32::from(cached_width),
+						bounds_min_x,
+						bounds_min_y,
+						bounds_max_x,
+						bounds_max_y,
+					});
 				}
 			}
 
@@ -171,26 +177,16 @@ impl TextRenderer {
 						.or(glyph.color_opt)
 						.unwrap_or(text_area.default_color);
 
-					if let Some(glyph_to_render) = prepare_glyph(
-						&mut PrepareGlyphParams {
-							label_pos: Vec2::new(text_area.left, text_area.top),
-							x: physical_glyph.x,
-							y: physical_glyph.y,
-							line_y: run.line_y,
-							color,
-							cache_key: GlyphonCacheKey::Text(physical_glyph.cache_key),
-							atlas,
-							cache,
-							font_system,
-							model_buffer: &mut self.model_buffer,
-							glyph_scale: 1.0,
-							scale_factor: text_area.scale,
-							bounds_min_x,
-							bounds_min_y,
-							bounds_max_x,
-							bounds_max_y,
-							transform: &text_area.transform,
-						},
+					let cache_key = GlyphonCacheKey::Text(physical_glyph.cache_key);
+
+					if queue_missing_glyph_upload(
+						atlas,
+						font_system,
+						cache,
+						cache_key,
+						&mut missing_glyphs,
+						&mut unavailable_glyphs,
+						&mut pending_glyph_uploads,
 						|cache, font_system| -> Option<GetGlyphImageResult> {
 							let image = cache.get_image_uncached(font_system, physical_glyph.cache_key)?;
 
@@ -212,10 +208,36 @@ impl TextRenderer {
 								data: image.data,
 							})
 						},
-					)? {
-						self.glyph_vertices.push(glyph_to_render);
+					) {
+						glyphs_to_render.push(QueuedGlyph {
+							label_pos: Vec2::new(text_area.left, text_area.top),
+							x: physical_glyph.x,
+							y: physical_glyph.y,
+							line_y: run.line_y,
+							color,
+							cache_key,
+							transform: text_area.transform,
+							glyph_scale: 1.0,
+							scale_factor: text_area.scale,
+							bounds_min_x,
+							bounds_min_y,
+							bounds_max_x,
+							bounds_max_y,
+						});
 					}
 				}
+			}
+		}
+
+		upload_missing_glyphs(atlas, font_system, cache, pending_glyph_uploads)?;
+
+		for glyph in &glyphs_to_render {
+			if let Some(glyph_to_render) = prepare_glyph(&mut PrepareGlyphParams {
+				glyph,
+				atlas,
+				model_buffer: &mut self.model_buffer,
+			}) {
+				self.glyph_vertices.push(glyph_to_render);
 			}
 		}
 
@@ -254,31 +276,24 @@ impl TextRenderer {
 		let res = viewport.resolution();
 		self.model_buffer.upload(&atlas.common.gfx)?;
 
-		let cache = match self.pass.take() {
-			Some(p) if p.res == res => p,
-			_ => {
-				let descriptor_sets = vec![
-					atlas.color_atlas.image_descriptor.clone(),
-					atlas.mask_atlas.image_descriptor.clone(),
-					viewport.get_text_descriptor(&self.pipeline),
-					self.model_buffer.get_text_descriptor(&self.pipeline),
-				];
+		let descriptor_sets = vec![
+			atlas.color_atlas.image_descriptor.clone(),
+			atlas.mask_atlas.image_descriptor.clone(),
+			viewport.get_text_descriptor(&self.pipeline),
+			self.model_buffer.get_text_descriptor(&self.pipeline),
+		];
 
-				let pass = self.pipeline.inner.create_pass(
-					[res[0] as _, res[1] as _],
-					[0.0, 0.0],
-					self.vertex_buffer.clone(),
-					0..4,
-					0..self.glyph_vertices.len() as u32,
-					descriptor_sets,
-					vk_scissor,
-				)?;
-				CachedPass { pass, res }
-			}
-		};
+		let pass = self.pipeline.inner.create_pass(
+			[res[0] as _, res[1] as _],
+			[0.0, 0.0],
+			self.vertex_buffer.clone(),
+			0..4,
+			0..self.glyph_vertices.len() as u32,
+			descriptor_sets,
+			vk_scissor,
+		)?;
 
-		cmd_buf.run_ref(&cache.pass)?;
-		self.pass = Some(cache);
+		cmd_buf.run_ref(&pass)?;
 		Ok(())
 	}
 }
@@ -298,18 +313,28 @@ struct GetGlyphImageResult {
 	data: Vec<u8>,
 }
 
-struct PrepareGlyphParams<'a> {
+struct PendingGlyphUpload {
+	cache_key: GlyphonCacheKey,
+	image: GetGlyphImageResult,
+}
+
+struct AtlasGlyphUpload {
+	upload_index: usize,
+	atlas_id: AllocId,
+	atlas_with_island_min: [u32; 2],
+	size_with_island: [u32; 2],
+	size_with_island_area: usize,
+	atlas_glyph_min: [u32; 2],
+}
+
+struct QueuedGlyph {
 	label_pos: Vec2,
 	x: i32,
 	y: i32,
 	line_y: f32,
 	color: Color,
 	cache_key: GlyphonCacheKey,
-	atlas: &'a mut TextAtlas,
-	cache: &'a mut SwashCache,
-	font_system: &'a mut FontSystem,
-	model_buffer: &'a mut ModelBuffer,
-	transform: &'a Mat4,
+	transform: Mat4,
 	scale_factor: f32,
 	glyph_scale: f32,
 	bounds_min_x: i32,
@@ -318,102 +343,207 @@ struct PrepareGlyphParams<'a> {
 	bounds_max_y: i32,
 }
 
-fn prepare_glyph(
-	par: &mut PrepareGlyphParams,
+struct PrepareGlyphParams<'a> {
+	glyph: &'a QueuedGlyph,
+	atlas: &'a mut TextAtlas,
+	model_buffer: &'a mut ModelBuffer,
+}
+
+fn queue_missing_glyph_upload(
+	atlas: &mut TextAtlas,
+	font_system: &mut FontSystem,
+	cache: &mut SwashCache,
+	cache_key: GlyphonCacheKey,
+	missing_glyphs: &mut HashSet<GlyphonCacheKey>,
+	unavailable_glyphs: &mut HashSet<GlyphonCacheKey>,
+	pending_glyph_uploads: &mut Vec<PendingGlyphUpload>,
 	get_glyph_image: impl FnOnce(&mut SwashCache, &mut FontSystem) -> Option<GetGlyphImageResult>,
-) -> anyhow::Result<Option<GlyphVertex>> {
-	let gfx = par.atlas.common.gfx.clone();
-	let details = if let Some(details) = par.atlas.mask_atlas.glyph_cache.get(&par.cache_key) {
-		par.atlas.mask_atlas.glyphs_in_use.insert(par.cache_key);
-		details
-	} else if let Some(details) = par.atlas.color_atlas.glyph_cache.get(&par.cache_key) {
-		par.atlas.color_atlas.glyphs_in_use.insert(par.cache_key);
-		details
-	} else {
-		let Some(image) = (get_glyph_image)(par.cache, par.font_system) else {
-			return Ok(None);
+) -> bool {
+	if mark_glyph_in_use_if_cached(atlas, cache_key) {
+		return true;
+	}
+
+	if unavailable_glyphs.contains(&cache_key) {
+		return false;
+	}
+
+	if missing_glyphs.insert(cache_key) {
+		let Some(image) = get_glyph_image(cache, font_system) else {
+			unavailable_glyphs.insert(cache_key);
+			return false;
 		};
 
-		let should_rasterize = image.width > 0 && image.height > 0;
+		pending_glyph_uploads.push(PendingGlyphUpload { cache_key, image });
+	}
 
-		let (gpu_cache, atlas_id, inner) = if should_rasterize {
-			let mut inner = par.atlas.inner_for_content_mut(image.content_type);
+	true
+}
 
-			// Find a position in the packer
-			let allocation = loop {
-				if let Some(a) = inner.try_allocate(image.width as usize, image.height as usize) {
-					break a;
-				}
-				if !par.atlas.grow(par.font_system, par.cache, image.content_type)? {
-					anyhow::bail!(
-						"Atlas full. atlas: {:?} cache_key: {:?}",
-						image.content_type,
-						par.cache_key
-					);
-				}
+fn mark_glyph_in_use_if_cached(atlas: &mut TextAtlas, cache_key: GlyphonCacheKey) -> bool {
+	if atlas.mask_atlas.glyph_cache.get(&cache_key).is_some() {
+		atlas.mask_atlas.glyphs_in_use.insert(cache_key);
+		true
+	} else if atlas.color_atlas.glyph_cache.get(&cache_key).is_some() {
+		atlas.color_atlas.glyphs_in_use.insert(cache_key);
+		true
+	} else {
+		false
+	}
+}
 
-				inner = par.atlas.inner_for_content_mut(image.content_type);
-			};
+fn upload_missing_glyphs(
+	atlas: &mut TextAtlas,
+	font_system: &mut FontSystem,
+	cache: &mut SwashCache,
+	pending_glyph_uploads: Vec<PendingGlyphUpload>,
+) -> anyhow::Result<()> {
+	if pending_glyph_uploads.is_empty() {
+		return Ok(());
+	}
 
-			let atlas_with_island_min = allocation.rectangle.min;
-			let size_with_island = allocation.rectangle.size();
-			let atlas_glyph_min =
-				allocation.rectangle.min + size2(TEXT_ATLAS_ISLAND_PADDING_PX as i32, TEXT_ATLAS_ISLAND_PADDING_PX as i32);
+	let gfx = atlas.common.gfx.clone();
+	let mut rasterized_uploads = Vec::new();
+	let mut skipped_uploads = Vec::new();
 
-			let mut cmd_buf = gfx.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+	for upload in pending_glyph_uploads {
+		if upload.image.width > 0 && upload.image.height > 0 {
+			rasterized_uploads.push(upload);
+		} else {
+			skipped_uploads.push(upload);
+		}
+	}
 
-			// Set data to zeros for the whole glyph island
-			// TODO: use `vkCmdClearColorImage` with an image subresource (or xywh region?) to omit unnecessary allocation
-			let zero_bytes_data: Vec<u8> = vec![0x00; size_with_island.area() as usize * 4 /* RGBX */];
+	let mut atlas_uploads = Vec::new();
+
+	if !rasterized_uploads.is_empty() {
+		'allocate_all: loop {
+			atlas_uploads.clear();
+
+			for (upload_index, upload) in rasterized_uploads.iter().enumerate() {
+				let content_type = upload.image.content_type;
+
+				let allocation = loop {
+					if let Some(allocation) = {
+						let inner = atlas.inner_for_content_mut(content_type);
+						inner.try_allocate(upload.image.width as usize, upload.image.height as usize)
+					} {
+						break allocation;
+					}
+
+					if !atlas.grow(font_system, cache, content_type)? {
+						anyhow::bail!(
+							"Atlas full. atlas: {:?} cache_key: {:?}",
+							content_type,
+							upload.cache_key
+						);
+					}
+
+					// `grow` can rebuild the atlas allocator and move existing glyphs. Any
+					// allocations made for this batch before the grow are provisional, so
+					// discard them and recompute the batch offsets against the new atlas.
+					continue 'allocate_all;
+				};
+
+				let atlas_with_island_min = allocation.rectangle.min;
+				let size_with_island = allocation.rectangle.size();
+				let atlas_glyph_min =
+					allocation.rectangle.min + size2(TEXT_ATLAS_ISLAND_PADDING_PX as i32, TEXT_ATLAS_ISLAND_PADDING_PX as i32);
+
+				atlas_uploads.push(AtlasGlyphUpload {
+					upload_index,
+					atlas_id: allocation.id,
+					atlas_with_island_min: [atlas_with_island_min.x as u32, atlas_with_island_min.y as u32],
+					size_with_island: [size_with_island.width as u32, size_with_island.height as u32],
+					size_with_island_area: size_with_island.area() as usize,
+					atlas_glyph_min: [atlas_glyph_min.x as u32, atlas_glyph_min.y as u32],
+				});
+			}
+
+			break;
+		}
+
+		let mut cmd_buf = gfx.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+
+		for upload in &atlas_uploads {
+			let rasterized = &rasterized_uploads[upload.upload_index];
+			let inner = atlas.inner_for_content_mut(rasterized.image.content_type);
+
+			// Set data to zeros for the whole glyph island.
+			// TODO: use `vkCmdClearColorImage` with an image subresource (or xywh region?) to omit unnecessary allocation.
+			let zero_bytes_data: Vec<u8> = vec![0x00; upload.size_with_island_area * 4 /* RGBX */];
 			cmd_buf.update_image(
 				inner.image_view.image(),
 				&zero_bytes_data,
-				[atlas_with_island_min.x as u32, atlas_with_island_min.y as u32, 0],
-				Some([size_with_island.width as u32, size_with_island.height as u32, 1]),
+				[upload.atlas_with_island_min[0], upload.atlas_with_island_min[1], 0],
+				Some([upload.size_with_island[0], upload.size_with_island[1], 1]),
 			)?;
 
-			// Upload glyph itself
+			// Upload glyph itself.
 			cmd_buf.update_image(
 				inner.image_view.image(),
-				&image.data,
-				[atlas_glyph_min.x as u32, atlas_glyph_min.y as u32, 0],
-				Some([image.width.into(), image.height.into(), 1]),
+				&rasterized.image.data,
+				[upload.atlas_glyph_min[0], upload.atlas_glyph_min[1], 0],
+				Some([rasterized.image.width.into(), rasterized.image.height.into(), 1]),
 			)?;
+		}
 
-			cmd_buf.build_and_execute_now()?; //TODO: do not wait for fence here
+		cmd_buf.build_and_execute_now()?;
+	}
 
-			(
-				GpuCacheStatus::InAtlas {
-					x: atlas_glyph_min.x as u16,
-					y: atlas_glyph_min.y as u16,
-					content_type: image.content_type,
-				},
-				Some(allocation.id),
-				inner,
-			)
-		} else {
-			let inner = &mut par.atlas.color_atlas;
-			(GpuCacheStatus::SkipRasterization, None, inner)
-		};
+	for upload in atlas_uploads {
+		let rasterized = &rasterized_uploads[upload.upload_index];
+		let inner = atlas.inner_for_content_mut(rasterized.image.content_type);
 
-		inner.glyphs_in_use.insert(par.cache_key);
-		// Insert the glyph into the cache and return the details reference
-		inner.glyph_cache.get_or_insert(par.cache_key, || GlyphDetails {
-			width: image.width,
-			height: image.height,
-			gpu_cache,
-			atlas_id,
-			top: image.top,
-			left: image.left,
-		})
+		inner.glyphs_in_use.insert(rasterized.cache_key);
+		let _ = inner.glyph_cache.get_or_insert(rasterized.cache_key, || GlyphDetails {
+			width: rasterized.image.width,
+			height: rasterized.image.height,
+			gpu_cache: GpuCacheStatus::InAtlas {
+				x: upload.atlas_glyph_min[0] as u16,
+				y: upload.atlas_glyph_min[1] as u16,
+				content_type: rasterized.image.content_type,
+			},
+			atlas_id: Some(upload.atlas_id),
+			top: rasterized.image.top,
+			left: rasterized.image.left,
+		});
+	}
+
+	for upload in skipped_uploads {
+		let inner = &mut atlas.color_atlas;
+
+		inner.glyphs_in_use.insert(upload.cache_key);
+		let _ = inner.glyph_cache.get_or_insert(upload.cache_key, || GlyphDetails {
+			width: upload.image.width,
+			height: upload.image.height,
+			gpu_cache: GpuCacheStatus::SkipRasterization,
+			atlas_id: None,
+			top: upload.image.top,
+			left: upload.image.left,
+		});
+	}
+
+	Ok(())
+}
+
+fn prepare_glyph(par: &mut PrepareGlyphParams) -> Option<GlyphVertex> {
+	let glyph = par.glyph;
+	let details = if let Some(details) = par.atlas.mask_atlas.glyph_cache.get(&glyph.cache_key) {
+		par.atlas.mask_atlas.glyphs_in_use.insert(glyph.cache_key);
+		details
+	} else if let Some(details) = par.atlas.color_atlas.glyph_cache.get(&glyph.cache_key) {
+		par.atlas.color_atlas.glyphs_in_use.insert(glyph.cache_key);
+		details
+	} else {
+		return None;
 	};
 
-	let mut x = par.x + i32::from(details.left);
-	let mut y = (par.line_y * par.scale_factor).round() as i32 + par.y - i32::from(details.top);
+	let mut x = glyph.x + i32::from(details.left);
+	let mut y = (glyph.line_y * glyph.scale_factor).round() as i32 + glyph.y - i32::from(details.top);
 
 	let (mut atlas_x, mut atlas_y, content_type) = match details.gpu_cache {
 		GpuCacheStatus::InAtlas { x, y, content_type } => (x, y, content_type),
-		GpuCacheStatus::SkipRasterization => return Ok(None),
+		GpuCacheStatus::SkipRasterization => return None,
 	};
 
 	let mut glyph_width = i32::from(details.width);
@@ -421,79 +551,79 @@ fn prepare_glyph(
 
 	// Starts beyond right edge or ends beyond left edge
 	let max_x = x + glyph_width;
-	if x > par.bounds_max_x || max_x < par.bounds_min_x {
-		return Ok(None);
+	if x > glyph.bounds_max_x || max_x < glyph.bounds_min_x {
+		return None;
 	}
 
 	// Starts beyond bottom edge or ends beyond top edge
 	let max_y = y + glyph_height;
-	if y > par.bounds_max_y || max_y < par.bounds_min_y {
-		return Ok(None);
+	if y > glyph.bounds_max_y || max_y < glyph.bounds_min_y {
+		return None;
 	}
 
 	// Clip left edge
-	if x < par.bounds_min_x {
-		let right_shift = par.bounds_min_x - x;
+	if x < glyph.bounds_min_x {
+		let right_shift = glyph.bounds_min_x - x;
 
-		x = par.bounds_min_x;
-		glyph_width = max_x - par.bounds_min_x;
+		x = glyph.bounds_min_x;
+		glyph_width = max_x - glyph.bounds_min_x;
 		atlas_x += right_shift as u16;
 	}
 
 	// Clip right edge
-	if x + glyph_width > par.bounds_max_x {
-		glyph_width = par.bounds_max_x - x;
+	if x + glyph_width > glyph.bounds_max_x {
+		glyph_width = glyph.bounds_max_x - x;
 	}
 
 	// Clip top edge
-	if y < par.bounds_min_y {
-		let bottom_shift = par.bounds_min_y - y;
+	if y < glyph.bounds_min_y {
+		let bottom_shift = glyph.bounds_min_y - y;
 
-		y = par.bounds_min_y;
-		glyph_height = max_y - par.bounds_min_y;
+		y = glyph.bounds_min_y;
+		glyph_height = max_y - glyph.bounds_min_y;
 		atlas_y += bottom_shift as u16;
 	}
 
 	// Clip bottom edge
-	if y + glyph_height > par.bounds_max_y {
-		glyph_height = par.bounds_max_y - y;
+	if y + glyph_height > glyph.bounds_max_y {
+		glyph_height = glyph.bounds_max_y - y;
 	}
 
 	let mut model = Mat4::IDENTITY;
 
 	// top-left text transform
 	model *= Mat4::from_translation(Vec3::new(
-		par.label_pos.x / par.scale_factor,
-		par.label_pos.y / par.scale_factor,
+		glyph.label_pos.x / glyph.scale_factor,
+		glyph.label_pos.y / glyph.scale_factor,
 		0.0,
 	));
 
-	model *= *par.transform;
+	model *= glyph.transform;
 
 	// per-character transform
 	model *= Mat4::from_translation(Vec3::new(
-		((x as f32) - par.label_pos.x) / par.scale_factor,
-		((y as f32) - par.label_pos.y) / par.scale_factor,
+		((x as f32) - glyph.label_pos.x) / glyph.scale_factor,
+		((y as f32) - glyph.label_pos.y) / glyph.scale_factor,
 		0.0,
 	));
 
 	model *= glam::Mat4::from_scale(Vec3::new(
-		glyph_width as f32 / par.scale_factor,
-		glyph_height as f32 / par.scale_factor,
+		glyph_width as f32 / glyph.scale_factor,
+		glyph_height as f32 / glyph.scale_factor,
 		0.0,
 	));
 
 	let in_model_idx = par.model_buffer.register(&model);
 
-	Ok(Some(GlyphVertex {
+	Some(GlyphVertex {
 		in_model_idx,
 		in_rect_dim: [glyph_width as u16, glyph_height as u16],
 		in_uv: [atlas_x, atlas_y],
-		in_color: par.color.0,
+		in_color: glyph.color.0,
 		in_content_type: [
 			content_type as u16,
 			0, // unused (TODO!)
 		],
-		scale: par.glyph_scale,
-	}))
+		scale: glyph.glyph_scale,
+	})
 }
