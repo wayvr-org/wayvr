@@ -2,22 +2,22 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use cosmic_text::Buffer;
 use glam::{Mat4, Vec2, Vec3};
-use slotmap::{SlotMap, new_key_type};
+use slotmap::{new_key_type, SlotMap};
 use vulkano::pipeline::graphics::viewport;
 
 use crate::{
 	drawing::{self},
 	font_config,
-	gfx::{WGfx, cmd::GfxCommandBuffer},
-	renderer_vk::image::{ImagePipeline, ImageRenderer},
+	gfx::{cmd::GfxCommandBuffer, WGfx},
+	renderer_vk::image::{ImagePipeline, ImageRenderer, ImageViewCache},
 };
 
 use super::{
 	rect::{RectPipeline, RectRenderer},
 	text::{
-		DEFAULT_METRICS, SWASH_CACHE, TextArea, TextBounds,
 		text_atlas::{TextAtlas, TextPipeline},
 		text_renderer::TextRenderer,
+		TextArea, TextBounds, DEFAULT_METRICS, SWASH_CACHE,
 	},
 	viewport::Viewport,
 };
@@ -62,6 +62,7 @@ impl RendererPass<'_> {
 		viewport: &mut Viewport,
 		cmd_buf: &mut GfxCommandBuffer,
 		text_atlas: &mut TextAtlas,
+		image_view_cache: &mut ImageViewCache,
 	) -> anyhow::Result<()> {
 		if self.submitted {
 			return Ok(());
@@ -95,7 +96,9 @@ impl RendererPass<'_> {
 
 		self.submitted = true;
 		self.rect_renderer.render(gfx, viewport, &vk_scissor, cmd_buf)?;
-		self.image_renderer.render(gfx, viewport, &vk_scissor, cmd_buf)?;
+		self
+			.image_renderer
+			.render(gfx, viewport, &vk_scissor, cmd_buf, image_view_cache)?;
 
 		{
 			let mut font_system = font_system.system.lock();
@@ -169,6 +172,7 @@ pub struct Context {
 	pub dirty: bool,
 	pixel_scale: f32,
 	empty_text: Rc<RefCell<Buffer>>,
+	image_cache: ImageViewCache,
 }
 
 pub struct ContextDrawResult {
@@ -187,6 +191,7 @@ impl Context {
 			pixel_scale,
 			dirty: true,
 			empty_text: Rc::new(RefCell::new(Buffer::new_empty(DEFAULT_METRICS))),
+			image_cache: ImageViewCache::new(),
 		})
 	}
 
@@ -339,6 +344,7 @@ impl Context {
 				&mut self.viewport,
 				cmd_buf,
 				&mut atlas.text_atlas,
+				&mut self.image_cache,
 			)?;
 		}
 

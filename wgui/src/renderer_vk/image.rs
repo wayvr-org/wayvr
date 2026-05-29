@@ -4,7 +4,7 @@ use cosmic_text::SubpixelBin;
 use glam::Mat4;
 use smallvec::smallvec;
 use vulkano::{
-	buffer::{BufferContents, BufferUsage, Subbuffer},
+	buffer::{BufferContents, BufferUsage},
 	command_buffer::CommandBufferUsage,
 	format::Format,
 	image::view::ImageView,
@@ -14,10 +14,9 @@ use vulkano::{
 use crate::{
 	drawing::{Boundary, ImagePrimitive},
 	gfx::{
-		BLEND_ALPHA, WGfx,
 		cmd::GfxCommandBuffer,
-		pass::WGfxPass,
 		pipeline::{WGfxPipeline, WPipelineCreateInfo},
+		WGfx, BLEND_ALPHA,
 	},
 	renderer_vk::{
 		model_buffer::ModelBuffer,
@@ -65,24 +64,24 @@ impl ImagePipeline {
 	}
 }
 
+pub type ImageViewCache = HashMap<usize, CachedImageView>;
+
+pub struct CachedImageView {
+	view: Arc<ImageView>,
+	res: [u32; 2],
+}
+
 struct ImageVertexWithContent {
 	vert: ImageVertex,
 	content: CustomGlyphData,
 	content_key: usize, // identifies an image tag.
-}
-
-struct CachedPass {
-	content_id: usize,
-	vert_buffer: Subbuffer<[ImageVertex]>,
-	inner: WGfxPass<ImageVertex>,
-	res: [u32; 2],
+	skip_cache: bool,
 }
 
 pub struct ImageRenderer {
 	pipeline: ImagePipeline,
 	image_verts: Vec<ImageVertexWithContent>,
 	model_buffer: ModelBuffer,
-	cached_passes: HashMap<usize, CachedPass>,
 }
 
 impl ImageRenderer {
@@ -91,13 +90,7 @@ impl ImageRenderer {
 			model_buffer: ModelBuffer::new(&pipeline.gfx)?,
 			pipeline,
 			image_verts: vec![],
-			cached_passes: HashMap::new(),
 		})
-	}
-
-	pub fn begin(&mut self) {
-		self.image_verts.clear();
-		self.model_buffer.begin();
 	}
 
 	pub fn add_image(&mut self, boundary: Boundary, image: ImagePrimitive, transform: &Mat4) {
@@ -119,6 +112,7 @@ impl ImageRenderer {
 			},
 			content: image.content,
 			content_key: image.content_key,
+			skip_cache: image.skip_cache,
 		});
 	}
 
@@ -159,65 +153,58 @@ impl ImageRenderer {
 		viewport: &mut Viewport,
 		vk_scissor: &graphics::viewport::Scissor,
 		cmd_buf: &mut GfxCommandBuffer,
+		image_view_cache: &mut ImageViewCache,
 	) -> anyhow::Result<()> {
 		let res = viewport.resolution();
 		self.model_buffer.upload(gfx)?;
 
 		for img in &self.image_verts {
-			let pass = if let Some(x) = self.cached_passes.get_mut(&img.content_key) {
-				if x.content_id != img.content.id || x.res != res {
+			let image_view = if let Some(x) = image_view_cache.get_mut(&img.content_key) {
+				if img.skip_cache || x.res != res {
 					// image changed
 					let Some(image_view) = Self::upload_image(&self.pipeline.gfx, res, img)? else {
 						continue;
 					};
 
-					x.inner
-						.update_sampler(2, image_view, self.pipeline.gfx.texture_filter)?;
+					x.view = image_view;
+					x.res = res;
 				}
 
-				x
+				x.view.clone()
 			} else {
-				let vert_buffer = self.pipeline.gfx.empty_buffer(
-					BufferUsage::VERTEX_BUFFER | BufferUsage::TRANSFER_DST,
-					(std::mem::size_of::<ImageVertex>()) as _,
-				)?;
-
 				let Some(image_view) = Self::upload_image(&self.pipeline.gfx, res, img)? else {
 					continue;
 				};
 
-				let set0 = viewport.get_image_descriptor(&self.pipeline);
-				let set1 = self.model_buffer.get_image_descriptor(&self.pipeline);
-				let set2 = self
-					.pipeline
-					.inner
-					.uniform_sampler(2, image_view, self.pipeline.gfx.texture_filter)?;
-
-				let pass = self.pipeline.inner.create_pass(
-					[res[0] as _, res[1] as _],
-					[0.0, 0.0],
-					vert_buffer.clone(),
-					0..4,
-					0..1,
-					vec![set0, set1, set2],
-					vk_scissor,
-				)?;
-
-				self.cached_passes.insert(
-					img.content_key,
-					CachedPass {
-						content_id: img.content.id,
-						vert_buffer,
-						inner: pass,
-						res,
-					},
-				);
-				self.cached_passes.get_mut(&img.content_key).unwrap()
+				image_view_cache.insert(img.content_key, CachedImageView { view: image_view, res });
+				image_view_cache.get_mut(&img.content_key).unwrap().view.clone()
 			};
 
-			pass.vert_buffer.write()?[0..1].clone_from_slice(&[img.vert]);
+			let vert_buffer = self.pipeline.gfx.empty_buffer(
+				BufferUsage::VERTEX_BUFFER | BufferUsage::TRANSFER_DST,
+				(std::mem::size_of::<ImageVertex>()) as _,
+			)?;
 
-			cmd_buf.run_ref(&pass.inner)?;
+			let set0 = viewport.get_image_descriptor(&self.pipeline);
+			let set1 = self.model_buffer.get_image_descriptor(&self.pipeline);
+			let set2 = self
+				.pipeline
+				.inner
+				.uniform_sampler(2, image_view, self.pipeline.gfx.texture_filter)?;
+
+			let pass = self.pipeline.inner.create_pass(
+				[res[0] as _, res[1] as _],
+				[0.0, 0.0],
+				vert_buffer.clone(),
+				0..4,
+				0..1,
+				vec![set0, set1, set2],
+				vk_scissor,
+			)?;
+
+			vert_buffer.write()?[0..1].clone_from_slice(&[img.vert]);
+
+			cmd_buf.run_ref(&pass)?;
 		}
 
 		Ok(())

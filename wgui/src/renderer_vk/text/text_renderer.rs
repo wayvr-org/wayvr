@@ -1,26 +1,23 @@
 use crate::{
-	gfx::{cmd::GfxCommandBuffer, pass::WGfxPass},
+	gfx::cmd::GfxCommandBuffer,
 	renderer_vk::{model_buffer::ModelBuffer, text::text_atlas::TEXT_ATLAS_ISLAND_PADDING_PX, viewport::Viewport},
 };
 
 use super::{
-	ContentType, FontSystem, GlyphDetails, GpuCacheStatus, SwashCache, TextArea,
 	custom_glyph::{CustomGlyphCacheKey, RasterizeCustomGlyphRequest, RasterizedCustomGlyph},
 	text_atlas::{GlyphVertex, TextAtlas, TextPipeline},
+	ContentType, FontSystem, GlyphDetails, GpuCacheStatus, SwashCache, TextArea,
 };
 use cosmic_text::{Color, SubpixelBin, SwashContent};
-use etagere::size2;
+use etagere::{size2, AllocId};
 use glam::{Mat4, Vec2, Vec3};
+use std::collections::HashSet;
+
 use vulkano::{
 	buffer::{BufferUsage, Subbuffer},
 	command_buffer::CommandBufferUsage,
 	pipeline::graphics,
 };
-
-struct CachedPass {
-	pass: WGfxPass<GlyphVertex>,
-	res: [u32; 2],
-}
 
 /// A text renderer that uses cached glyphs to render text into an existing render pass.
 pub struct TextRenderer {
@@ -29,7 +26,6 @@ pub struct TextRenderer {
 	vertex_buffer_capacity: usize,
 	glyph_vertices: Vec<GlyphVertex>,
 	model_buffer: ModelBuffer,
-	pass: Option<CachedPass>,
 }
 
 impl TextRenderer {
@@ -49,7 +45,6 @@ impl TextRenderer {
 			vertex_buffer,
 			vertex_buffer_capacity: INITIAL_CAPACITY,
 			glyph_vertices: Vec::new(),
-			pass: None,
 		})
 	}
 

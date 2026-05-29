@@ -289,6 +289,7 @@ pub struct Rectangle {
 pub struct ImagePrimitive {
 	pub content: CustomGlyphData,
 	pub content_key: usize,
+	pub skip_cache: bool,
 
 	pub border: f32, // width in pixels
 	pub border_color: Color,

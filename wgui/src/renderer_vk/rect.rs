@@ -10,10 +10,9 @@ use vulkano::{
 use crate::{
 	drawing::{Boundary, Rectangle},
 	gfx::{
-		BLEND_ALPHA, WGfx,
 		cmd::GfxCommandBuffer,
-		pass::WGfxPass,
 		pipeline::{WGfxPipeline, WPipelineCreateInfo},
+		WGfx, BLEND_ALPHA,
 	},
 	renderer_vk::model_buffer::ModelBuffer,
 };
@@ -59,18 +58,12 @@ impl RectPipeline {
 	}
 }
 
-struct CachedPass {
-	pass: WGfxPass<RectVertex>,
-	res: [u32; 2],
-}
-
 pub struct RectRenderer {
 	pipeline: RectPipeline,
 	rect_vertices: Vec<RectVertex>,
 	vert_buffer: Subbuffer<[RectVertex]>,
 	vert_buffer_len: usize,
 	model_buffer: ModelBuffer,
-	pass: Option<CachedPass>,
 }
 
 impl RectRenderer {
@@ -88,13 +81,7 @@ impl RectRenderer {
 			rect_vertices: vec![],
 			vert_buffer,
 			vert_buffer_len: BUFFER_SIZE,
-			pass: None,
 		})
-	}
-
-	pub fn begin(&mut self) {
-		self.rect_vertices.clear();
-		self.model_buffer.begin();
 	}
 
 	pub fn add_rect(&mut self, boundary: Boundary, rectangle: Rectangle, transform: &Mat4) {
@@ -144,27 +131,20 @@ impl RectRenderer {
 		self.model_buffer.upload(gfx)?;
 		self.upload_verts()?;
 
-		let cache = match self.pass.take() {
-			Some(p) if p.res == res => p,
-			_ => {
-				let set0 = viewport.get_rect_descriptor(&self.pipeline);
-				let set1 = self.model_buffer.get_rect_descriptor(&self.pipeline);
-				let pass = self.pipeline.color_rect.create_pass(
-					[res[0] as _, res[1] as _],
-					[0.0, 0.0],
-					self.vert_buffer.clone(),
-					0..4,
-					0..self.rect_vertices.len() as _,
-					vec![set0, set1],
-					vk_scissor,
-				)?;
-				CachedPass { pass, res }
-			}
-		};
+		let set0 = viewport.get_rect_descriptor(&self.pipeline);
+		let set1 = self.model_buffer.get_rect_descriptor(&self.pipeline);
+		let pass = self.pipeline.color_rect.create_pass(
+			[res[0] as _, res[1] as _],
+			[0.0, 0.0],
+			self.vert_buffer.clone(),
+			0..4,
+			0..self.rect_vertices.len() as _,
+			vec![set0, set1],
+			vk_scissor,
+		)?;
 
 		self.rect_vertices.clear();
-		cmd_buf.run_ref(&cache.pass)?;
-		self.pass = Some(cache);
+		cmd_buf.run_ref(&pass)?;
 		Ok(())
 	}
 }

@@ -8,7 +8,7 @@ use crate::{
 	globals::Globals,
 	layout::WidgetID,
 	renderer_vk::text::custom_glyph::CustomGlyphData,
-	widget::{WidgetStateFlags, util::WLength},
+	widget::{util::WLength, WidgetStateFlags},
 };
 
 use super::{WidgetObj, WidgetState};
@@ -30,6 +30,7 @@ pub struct WidgetImage {
 	params: WidgetImageParams,
 	id: WidgetID,
 	content_key: usize,
+	dirty: bool,
 }
 
 impl WidgetImage {
@@ -40,6 +41,7 @@ impl WidgetImage {
 				params,
 				id: WidgetID::null(),
 				content_key: AUTO_INCREMENT.fetch_add(1, Ordering::Relaxed),
+				dirty: true,
 			}),
 		)
 	}
@@ -50,6 +52,7 @@ impl WidgetImage {
 		}
 
 		self.params.glyph_data = content;
+		self.dirty = true;
 		alterables.mark_dirty_and_redraw(self.id);
 	}
 
@@ -79,11 +82,13 @@ impl WidgetObj for WidgetImage {
 			ImagePrimitive {
 				content,
 				content_key: self.content_key,
+				skip_cache: self.dirty,
 				border: self.params.border,
 				border_color: self.params.border_color,
 				round_units,
 			},
 		));
+		self.dirty = false;
 	}
 
 	fn measure(
