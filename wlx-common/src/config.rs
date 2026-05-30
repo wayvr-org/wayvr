@@ -339,17 +339,20 @@ pub struct GeneralConfig {
 	#[serde(default = "def_false")]
 	pub space_rotate_unlocked: bool,
 
-	#[serde(default = "def_one")]
-	pub space_drag_gravity: f32,
+	#[serde(default = "def_false")]
+	pub space_gravity_enabled: bool,
 
 	#[serde(default = "def_one")]
-	pub space_drag_damping: f32,
+	pub space_gravity_gravity: f32,
 
 	#[serde(default = "def_one")]
-	pub space_drag_fling_strength: f32,
+	pub space_gravity_damping: f32,
 
 	#[serde(default = "def_one")]
-	pub space_drag_ground_friction: f32,
+	pub space_gravity_fling_strength: f32,
+
+	#[serde(default = "def_one")]
+	pub space_gravity_ground_friction: f32,
 
 	#[serde(default)]
 	pub alt_click_down: Vec<String>,

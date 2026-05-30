@@ -84,13 +84,7 @@ pub fn create_grab_help(app: &mut AppState) -> anyhow::Result<OverlayWindowConfi
         };
 
         for id in &all {
-            let display = if *id == show_id {
-                taffy::Display::Flex
-            } else {
-                taffy::Display::None
-            };
-
-            alterables.set_style(*id, StyleSetRequest::Display(display));
+            alterables.set_widget_visible(*id, *id == show_id);
         }
 
         panel.layout.process_alterables(alterables)?;

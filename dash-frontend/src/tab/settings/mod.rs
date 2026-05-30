@@ -44,27 +44,27 @@ mod tab_troubleshooting;
 
 #[derive(Clone)]
 enum TabNameEnum {
-	LookAndFeel,
-	Features,
-	SpaceDrag,
-	Controls,
-	Misc,
 	AutostartApps,
-	Troubleshooting,
+	Controls,
+	Features,
+	LookAndFeel,
+	Misc,
 	Skybox,
+	SpaceDrag,
+	Troubleshooting,
 }
 
 impl TabNameEnum {
 	fn from_string(s: &str) -> Option<Self> {
 		match s {
-			"look_and_feel" => Some(TabNameEnum::LookAndFeel),
-			"features" => Some(TabNameEnum::Features),
-			"controls" => Some(TabNameEnum::Controls),
-			"space_drag" => Some(TabNameEnum::SpaceDrag),
-			"misc" => Some(TabNameEnum::Misc),
 			"autostart_apps" => Some(TabNameEnum::AutostartApps),
-			"troubleshooting" => Some(TabNameEnum::Troubleshooting),
+			"controls" => Some(TabNameEnum::Controls),
+			"features" => Some(TabNameEnum::Features),
+			"look_and_feel" => Some(TabNameEnum::LookAndFeel),
+			"misc" => Some(TabNameEnum::Misc),
 			"skybox" => Some(TabNameEnum::Skybox),
+			"space_drag" => Some(TabNameEnum::SpaceDrag),
+			"troubleshooting" => Some(TabNameEnum::Troubleshooting),
 			_ => None,
 		}
 	}
@@ -72,18 +72,18 @@ impl TabNameEnum {
 
 #[derive(Clone)]
 enum Task {
-	UpdateBool(SettingType, bool),
-	UpdateFloat(SettingType, f32),
-	UpdateInt(SettingType, i32),
-	SettingUpdated(SettingType),
-	OpenContextMenu(Vec2, Vec<context_menu::Cell>),
 	ClearPipewireTokens,
 	ClearSavedState,
 	DeleteAllConfigs,
+	OpenContextMenu(Vec2, Vec<context_menu::Cell>),
+	RemoveAutostartApp(Rc<str>),
 	ResetPlayspace,
 	RestartSoftware,
-	RemoveAutostartApp(Rc<str>),
 	SetTab(TabNameEnum),
+	SettingUpdated(SettingType),
+	UpdateBool(SettingType, bool),
+	UpdateFloat(SettingType, f32),
+	UpdateInt(SettingType, i32),
 }
 
 struct SettingsMountParams<'a> {
@@ -93,8 +93,18 @@ struct SettingsMountParams<'a> {
 	feats: InterfaceFeats,
 }
 
+struct SettingUpdatedParams<'a> {
+	layout: &'a mut Layout,
+	config: &'a GeneralConfig,
+	setting_type: SettingType,
+}
+
 trait SettingsTab {
 	fn update(&mut self, _par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		Ok(())
+	}
+
+	fn setting_updated(&mut self, _sup: &mut SettingUpdatedParams) -> anyhow::Result<()> {
 		Ok(())
 	}
 }
@@ -206,12 +216,21 @@ impl<T> Tab<T> for TabSettings<T> {
 						changed = Some(ConfigChangeKind::OverlayConfig);
 					}
 				}
-				Task::SettingUpdated(setting) => match setting {
-					SettingType::UiAnimationSpeed | SettingType::UiGradientIntensity | SettingType::UiRoundMultiplier => {
-						// todo: currently, wayvr restart is required to apply these changes (WguiTheme is Rc)
+				Task::SettingUpdated(setting) => {
+					if let Some(tab) = &mut self.current_tab {
+						tab.setting_updated(&mut SettingUpdatedParams {
+							layout: &mut frontend.layout,
+							config: frontend.interface.general_config(data),
+							setting_type: setting,
+						})?;
 					}
-					_ => { /* do nothing */ }
-				},
+					match setting {
+						SettingType::UiAnimationSpeed | SettingType::UiGradientIntensity | SettingType::UiRoundMultiplier => {
+							// todo: currently, wayvr restart is required to apply these changes (WguiTheme is Rc)
+						}
+						_ => { /* do nothing */ }
+					}
+				}
 			}
 		}
 
@@ -250,7 +269,7 @@ impl<T> Tab<T> for TabSettings<T> {
 
 // Sorted alphabetically
 #[allow(clippy::enum_variant_names)]
-#[derive(Clone, Copy, AsRefStr, EnumString)]
+#[derive(Clone, Copy, Eq, PartialEq, AsRefStr, EnumString)]
 enum SettingType {
 	AllowSliding,
 	BlockGameInput,
@@ -261,6 +280,7 @@ enum SettingType {
 	Clock12h,
 	DoubleCursorFix,
 	FocusFollowsMouseMode,
+	GridOpacity,
 	HandsfreePointer,
 	HideGrabHelp,
 	HideUsername,
@@ -279,12 +299,13 @@ enum SettingType {
 	ScrollSpeed,
 	EnableWatch,
 	SetsOnWatch,
-	SpaceDragFlingStrength,
-	SpaceDragDamping,
-	SpaceDragGravity,
 	SpaceDragMultiplier,
-	SpaceDragGroundFriction,
 	SpaceDragUnlocked,
+	SpaceGravityDamping,
+	SpaceGravityEnabled,
+	SpaceGravityFlingStrength,
+	SpaceGravityGravity,
+	SpaceGravityGroundFriction,
 	SpaceRotateUnlocked,
 	UiAnimationSpeed,
 	UiGradientIntensity,
@@ -292,7 +313,6 @@ enum SettingType {
 	UprightScreenFix,
 	UsePassthrough,
 	UseSkybox,
-	GridOpacity,
 	WatchViewAngleMax,
 	WatchViewAngleMin,
 	XrClickSensitivity,
@@ -310,30 +330,31 @@ impl SettingType {
 
 	pub fn mut_bool(self, config: &mut GeneralConfig) -> &mut bool {
 		match self {
-			Self::InvertScrollDirectionX => &mut config.invert_scroll_direction_x,
-			Self::InvertScrollDirectionY => &mut config.invert_scroll_direction_y,
-			Self::NotificationsEnabled => &mut config.notifications_enabled,
-			Self::NotificationsSoundEnabled => &mut config.notifications_sound_enabled,
-			Self::KeyboardSoundEnabled => &mut config.keyboard_sound_enabled,
-			Self::UprightScreenFix => &mut config.upright_screen_fix,
-			Self::DoubleCursorFix => &mut config.double_cursor_fix,
-			Self::EnableWatch => &mut config.enable_watch,
-			Self::SetsOnWatch => &mut config.sets_on_watch,
-			Self::HideGrabHelp => &mut config.hide_grab_help,
 			Self::AllowSliding => &mut config.allow_sliding,
-			Self::FocusFollowsMouseMode => &mut config.focus_follows_mouse_mode,
-			Self::LeftHandedMouse => &mut config.left_handed_mouse,
 			Self::BlockGameInput => &mut config.block_game_input,
 			Self::BlockGameInputIgnoreWatch => &mut config.block_game_input_ignore_watch,
 			Self::BlockPosesOnKbdInteraction => &mut config.block_poses_on_kbd_interaction,
-			Self::UseSkybox => &mut config.use_skybox,
-			Self::UsePassthrough => &mut config.use_passthrough,
-			Self::ScreenRenderDown => &mut config.screen_render_down,
-			Self::SpaceDragUnlocked => &mut config.space_drag_unlocked,
-			Self::SpaceRotateUnlocked => &mut config.space_rotate_unlocked,
 			Self::Clock12h => &mut config.clock_12h,
+			Self::DoubleCursorFix => &mut config.double_cursor_fix,
+			Self::EnableWatch => &mut config.enable_watch,
+			Self::FocusFollowsMouseMode => &mut config.focus_follows_mouse_mode,
+			Self::HideGrabHelp => &mut config.hide_grab_help,
 			Self::HideUsername => &mut config.hide_username,
+			Self::InvertScrollDirectionX => &mut config.invert_scroll_direction_x,
+			Self::InvertScrollDirectionY => &mut config.invert_scroll_direction_y,
+			Self::KeyboardSoundEnabled => &mut config.keyboard_sound_enabled,
+			Self::LeftHandedMouse => &mut config.left_handed_mouse,
+			Self::NotificationsEnabled => &mut config.notifications_enabled,
+			Self::NotificationsSoundEnabled => &mut config.notifications_sound_enabled,
 			Self::OpaqueBackground => &mut config.opaque_background,
+			Self::ScreenRenderDown => &mut config.screen_render_down,
+			Self::SetsOnWatch => &mut config.sets_on_watch,
+			Self::SpaceDragUnlocked => &mut config.space_drag_unlocked,
+			Self::SpaceGravityEnabled => &mut config.space_gravity_enabled,
+			Self::SpaceRotateUnlocked => &mut config.space_rotate_unlocked,
+			Self::UprightScreenFix => &mut config.upright_screen_fix,
+			Self::UsePassthrough => &mut config.use_passthrough,
+			Self::UseSkybox => &mut config.use_skybox,
 			Self::XwaylandByDefault => &mut config.xwayland_by_default,
 			_ => panic!("Requested bool for non-bool SettingType"),
 		}
@@ -341,22 +362,22 @@ impl SettingType {
 
 	pub fn mut_f32(self, config: &mut GeneralConfig) -> &mut f32 {
 		match self {
+			Self::GridOpacity => &mut config.grid_opacity,
+			Self::LongPressDuration => &mut config.long_press_duration,
+			Self::PointerLerpFactor => &mut config.pointer_lerp_factor,
+			Self::ScrollSpeed => &mut config.scroll_speed,
+			Self::SpaceDragMultiplier => &mut config.space_drag_multiplier,
+			Self::SpaceGravityDamping => &mut config.space_gravity_damping,
+			Self::SpaceGravityFlingStrength => &mut config.space_gravity_fling_strength,
+			Self::SpaceGravityGravity => &mut config.space_gravity_gravity,
+			Self::SpaceGravityGroundFriction => &mut config.space_gravity_ground_friction,
 			Self::UiAnimationSpeed => &mut config.ui_animation_speed,
 			Self::UiGradientIntensity => &mut config.ui_gradient_intensity,
 			Self::UiRoundMultiplier => &mut config.ui_round_multiplier,
-			Self::ScrollSpeed => &mut config.scroll_speed,
-			Self::LongPressDuration => &mut config.long_press_duration,
-			Self::XrClickSensitivity => &mut config.xr_click_sensitivity,
-			Self::XrClickSensitivityRelease => &mut config.xr_click_sensitivity_release,
-			Self::SpaceDragFlingStrength => &mut config.space_drag_fling_strength,
-			Self::SpaceDragDamping => &mut config.space_drag_damping,
-			Self::SpaceDragGravity => &mut config.space_drag_gravity,
-			Self::SpaceDragMultiplier => &mut config.space_drag_multiplier,
-			Self::SpaceDragGroundFriction => &mut config.space_drag_ground_friction,
-			Self::PointerLerpFactor => &mut config.pointer_lerp_factor,
-			Self::GridOpacity => &mut config.grid_opacity,
 			Self::WatchViewAngleMax => &mut config.watch_view_angle_max,
 			Self::WatchViewAngleMin => &mut config.watch_view_angle_min,
+			Self::XrClickSensitivity => &mut config.xr_click_sensitivity,
+			Self::XrClickSensitivityRelease => &mut config.xr_click_sensitivity_release,
 			_ => panic!("Requested f32 for non-f32 SettingType"),
 		}
 	}
@@ -450,12 +471,13 @@ impl SettingType {
 			Self::ScrollSpeed => Ok("APP_SETTINGS.SCROLL_SPEED"),
 			Self::EnableWatch => Ok("APP_SETTINGS.ENABLE_WATCH"),
 			Self::SetsOnWatch => Ok("APP_SETTINGS.SETS_ON_WATCH"),
-			Self::SpaceDragFlingStrength => Ok("APP_SETTINGS.SPACE_DRAG_FLING_STRENGTH"),
-			Self::SpaceDragDamping => Ok("APP_SETTINGS.SPACE_DRAG_DAMPING"),
-			Self::SpaceDragGravity => Ok("APP_SETTINGS.SPACE_DRAG_GRAVITY"),
 			Self::SpaceDragMultiplier => Ok("APP_SETTINGS.SPACE_DRAG_MULTIPLIER"),
-			Self::SpaceDragGroundFriction => Ok("APP_SETTINGS.SPACE_DRAG_GROUND_FRICTION"),
 			Self::SpaceDragUnlocked => Ok("APP_SETTINGS.SPACE_DRAG_UNLOCKED"),
+			Self::SpaceGravityDamping => Ok("APP_SETTINGS.SPACE_GRAVITY_DAMPING"),
+			Self::SpaceGravityEnabled => Ok("APP_SETTINGS.ENABLED"),
+			Self::SpaceGravityFlingStrength => Ok("APP_SETTINGS.SPACE_GRAVITY_FLING_STRENGTH"),
+			Self::SpaceGravityGravity => Ok("APP_SETTINGS.SPACE_GRAVITY_GRAVITY"),
+			Self::SpaceGravityGroundFriction => Ok("APP_SETTINGS.SPACE_GRAVITY_GROUND_FRICTION"),
 			Self::SpaceRotateUnlocked => Ok("APP_SETTINGS.SPACE_ROTATE_UNLOCKED"),
 			Self::UiAnimationSpeed => Ok("APP_SETTINGS.ANIMATION_SPEED"),
 			Self::UiGradientIntensity => Ok("APP_SETTINGS.UI_GRADIENT_INTENSITY"),
@@ -484,13 +506,17 @@ impl SettingType {
 			Self::KeyboardMiddleClick => Some("APP_SETTINGS.KEYBOARD_MIDDLE_CLICK_HELP"),
 			Self::LeftHandedMouse => Some("APP_SETTINGS.LEFT_HANDED_MOUSE_HELP"),
 			Self::ScreenRenderDown => Some("APP_SETTINGS.SCREEN_RENDER_DOWN_HELP"),
+			Self::SpaceGravityDamping => Some("APP_SETTINGS.SPACE_GRAVITY_DAMPING_HELP"),
+			Self::SpaceGravityFlingStrength => Some("APP_SETTINGS.SPACE_GRAVITY_FLING_STRENGTH_HELP"),
+			Self::SpaceGravityGravity => Some("APP_SETTINGS.SPACE_GRAVITY_GRAVITY_HELP"),
+			Self::SpaceGravityGroundFriction => Some("APP_SETTINGS.SPACE_GRAVITY_GROUND_FRICTION_HELP"),
 			Self::UprightScreenFix => Some("APP_SETTINGS.UPRIGHT_SCREEN_FIX_HELP"),
 			Self::UsePassthrough => Some("APP_SETTINGS.USE_PASSTHROUGH_HELP"),
 			Self::UseSkybox => Some("APP_SETTINGS.USE_SKYBOX_HELP"),
+			Self::WatchViewAngleMax => Some("APP_SETTINGS.WATCH_VIEW_ANGLE_HELP"),
+			Self::WatchViewAngleMin => Some("APP_SETTINGS.WATCH_VIEW_ANGLE_HELP"),
 			Self::XrClickSensitivity => Some("APP_SETTINGS.XR_CLICK_SENSITIVITY_HELP"),
 			Self::XrClickSensitivityRelease => Some("APP_SETTINGS.XR_CLICK_SENSITIVITY_HELP"),
-			Self::WatchViewAngleMin => Some("APP_SETTINGS.WATCH_VIEW_ANGLE_HELP"),
-			Self::WatchViewAngleMax => Some("APP_SETTINGS.WATCH_VIEW_ANGLE_HELP"),
 			_ => None,
 		}
 	}

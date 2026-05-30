@@ -138,6 +138,17 @@ impl EventAlterables {
 		self.style_set_requests.push((widget_id, request));
 	}
 
+	pub fn set_widget_visible(&mut self, widget_id: WidgetID, visible: bool) {
+		self.style_set_requests.push((
+			widget_id,
+			StyleSetRequest::Display(if visible {
+				taffy::Display::Flex
+			} else {
+				taffy::Display::None
+			}),
+		));
+	}
+
 	pub fn mark_dirty(&mut self, widget_id: WidgetID) {
 		self.dirty_widgets.push(widget_id);
 	}

@@ -112,10 +112,7 @@ impl View {
 	fn fill_list(&mut self, layout: &mut Layout, games: Vec<steam_utils::RunningGame>) -> anyhow::Result<()> {
 		if games.is_empty() {
 			// hide self
-			layout.tasks.push(LayoutTask::SetWidgetStyle(
-				self.parent_id,
-				StyleSetRequest::Display(Display::None),
-			));
+			layout.tasks.push(LayoutTask::SetWidgetVisible(self.parent_id, false));
 			return Ok(());
 		}
 

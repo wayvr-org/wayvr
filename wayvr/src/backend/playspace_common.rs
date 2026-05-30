@@ -49,8 +49,12 @@ impl SpaceGravity {
         space_pos: Vec3A,
         dt: f32,
     ) {
-        self.velocity = hand_pos_diff * config.space_drag_fling_strength / dt;
-        self.space_pos = space_pos;
+        if config.space_gravity_enabled {
+            self.velocity = hand_pos_diff * config.space_gravity_fling_strength / dt;
+            self.space_pos = space_pos;
+        } else {
+            self.reset();
+        }
     }
 
     pub fn reset(&mut self) {
@@ -59,18 +63,18 @@ impl SpaceGravity {
     }
 
     pub fn update(&mut self, par: SpaceGravityUpdateParams) -> Option<SpaceGravityUpdateResult> {
-        if par.dragging {
+        if par.dragging || !par.config.space_gravity_enabled {
             return None;
         }
 
         let prev_pos = self.space_pos;
 
-        self.velocity.y += par.config.space_drag_gravity * par.dt;
+        self.velocity.y += par.config.space_gravity_gravity * par.dt;
 
         // terminal velocity
         self.velocity.y = self.velocity.y.min(200.0);
 
-        self.velocity *= (par.config.space_drag_damping).powf(par.dt * 10.0);
+        self.velocity *= (par.config.space_gravity_damping).powf(par.dt * 10.0);
 
         self.space_pos += self.velocity * par.dt;
 
@@ -80,7 +84,7 @@ impl SpaceGravity {
         /* at zero or below ground level */
         {
             // apply ground friction
-            self.velocity *= 1.0 - par.config.space_drag_ground_friction * par.dt * 10.0;
+            self.velocity *= 1.0 - par.config.space_gravity_ground_friction * par.dt * 10.0;
         }
 
         if self.velocity.length_squared() > 0.00003 {
