@@ -7,6 +7,7 @@ pub struct SpaceGravityUpdateParams<'a> {
     pub dt: f32,
     pub dragging: bool,
     pub config: &'a GeneralConfig,
+    pub floor_height: f32,
 }
 
 pub struct SpaceGravity {
@@ -78,10 +79,10 @@ impl SpaceGravity {
 
         self.space_pos += self.velocity * par.dt;
 
-        self.space_pos.y = self.space_pos.y.min(0.0);
+        self.space_pos.y = self.space_pos.y.min(par.floor_height);
 
-        if self.space_pos.y >= 0.0
-        /* at zero or below ground level */
+        if self.space_pos.y >= par.floor_height
+        /* at floor height or below */
         {
             // apply ground friction
             self.velocity *= 1.0 - par.config.space_gravity_ground_friction * par.dt * 10.0;

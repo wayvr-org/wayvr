@@ -165,6 +165,10 @@ const fn def_point3() -> f32 {
 	0.3
 }
 
+const fn def_zero() -> f32 {
+	0.0
+}
+
 const fn def_osc_port() -> u16 {
 	9000
 }
@@ -353,6 +357,9 @@ pub struct GeneralConfig {
 
 	#[serde(default = "def_one")]
 	pub space_gravity_ground_friction: f32,
+
+	#[serde(default = "def_zero")]
+	pub space_gravity_floor_height: f32,
 
 	#[serde(default)]
 	pub alt_click_down: Vec<String>,

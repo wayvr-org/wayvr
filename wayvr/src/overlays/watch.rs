@@ -4,9 +4,7 @@ use glam::{Affine3A, Quat, Vec3, vec3};
 use wgui::{
     assets::AssetPath,
     components::button::ComponentButton,
-    event::StyleSetRequest,
     parser::{Fetchable, ParseDocumentParams},
-    taffy,
 };
 use wlx_common::{
     common::LeftRight,

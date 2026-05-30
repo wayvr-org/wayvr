@@ -116,6 +116,8 @@
 		"SPACE_GRAVITY_GRAVITY_HELP": "Amount of downwards force. 0.0 - no gravity",
 		"SPACE_GRAVITY_GROUND_FRICTION": "Ground friction",
 		"SPACE_GRAVITY_GROUND_FRICTION_HELP": "Amount of friction slowing you down if you're touching the ground.\n0.0 - no friction (just like on ice), 1.0 - rough surface",
+		"SPACE_GRAVITY_FLOOR_HEIGHT": "Floor height",
+		"SPACE_GRAVITY_FLOOR_HEIGHT_HELP": "The Y position where the floor is. Gravity stops when you reach this height.",
 		"SPACE_ROTATE_UNLOCKED": "Allow space rotate on all axes",
 		"TROUBLESHOOTING": "Troubleshooting",
 		"UI_GRADIENT_INTENSITY": "UI Gradient intensity",

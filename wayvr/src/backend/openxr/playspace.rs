@@ -215,6 +215,7 @@ impl PlayspaceMover {
             dt: app.delta_time,
             dragging: self.drag.is_some(),
             config: &app.session.config,
+            floor_height: app.session.config.space_gravity_floor_height,
         }) {
             apply_offset(
                 Affine3A::from_translation(res.playspace_pos.into()),

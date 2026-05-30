@@ -33,7 +33,6 @@ use wgui::{
         self, CustomAttribsInfoOwned, Fetchable, ParseDocumentExtra, ParserState, parse_color_hex,
     },
     renderer_vk::{context::Context as WguiContext, text::custom_glyph::CustomGlyphData},
-    taffy,
     widget::{
         EventResult, image::WidgetImage, label::WidgetLabel, rectangle::WidgetRectangle,
         sprite::WidgetSprite,

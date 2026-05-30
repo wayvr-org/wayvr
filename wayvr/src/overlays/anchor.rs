@@ -1,8 +1,7 @@
 use glam::{Affine3A, Quat, Vec3};
 use std::sync::{Arc, LazyLock};
-use wgui::event::{EventAlterables, StyleSetRequest};
+use wgui::event::EventAlterables;
 use wgui::parser::Fetchable;
-use wgui::taffy;
 use wlx_common::windowing::{OverlayWindowState, Positioning};
 
 use crate::gui::panel::GuiPanel;

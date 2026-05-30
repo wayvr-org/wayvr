@@ -1,4 +1,4 @@
-use wgui::{event::StyleSetRequest, parser::Fetchable, taffy};
+use wgui::parser::Fetchable;
 use wlx_common::{common::LeftRight, windowing::Positioning};
 
 use crate::{

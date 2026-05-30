@@ -98,6 +98,14 @@ impl State {
 				1.0,
 				0.01,
 			)?;
+			options_slider_f32(
+				par.mp,
+				id_space_gravity_parent,
+				SettingType::SpaceGravityFloorHeight,
+				-5.0,
+				5.0,
+				0.1,
+			)?;
 		}
 
 		if par.feats.monado {
