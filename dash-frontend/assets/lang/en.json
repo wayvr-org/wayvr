@@ -73,9 +73,10 @@
 		"LONG_PRESS_DURATION": "Long press duration",
 		"LOOK_AND_FEEL": "Look & Feel",
 		"MISC": "Miscellaneous",
-		"NO_SKYMAPS_FOUND": "No skymaps found",
 		"NOTIFICATIONS_ENABLED": "Enable notifications",
 		"NOTIFICATIONS_SOUND_ENABLED": "Notification sounds",
+		"NOT_SUPPORTED": "Not supported",
+		"NO_SKYMAPS_FOUND": "No skymaps found",
 		"OPAQUE_BACKGROUND": "Opaque background",
 		"OPTION": {
 			"AUTO": "Automatic",

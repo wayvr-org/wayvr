@@ -1,12 +1,16 @@
 use wgui::{
 	assets::AssetPath,
+	i18n::Translation,
 	layout::{Layout, LayoutTask, WidgetID},
 	parser::{Fetchable, ParseDocumentParams},
 };
 
-use crate::tab::settings::{
-	SettingType, SettingsMountParams, SettingsTab,
-	macros::{options_category, options_checkbox, options_slider_f32},
+use crate::{
+	tab::settings::{
+		SettingType, SettingsMountParams, SettingsTab,
+		macros::{options_category, options_checkbox, options_slider_f32},
+	},
+	util::wgui_simple,
 };
 
 pub struct State {
@@ -62,7 +66,14 @@ impl State {
 				10.0,
 				0.5,
 			)?;
+		}
 
+		if par.feats.monado {
+			// openvr can only ever rotate yaw
+			options_checkbox(par.mp, id_common_options_parent, SettingType::SpaceRotateUnlocked)?;
+		}
+
+		if par.feats.monado {
 			/* space gravity section */
 			options_checkbox(par.mp, id_gravity_enabled_parent, SettingType::SpaceGravityEnabled)?;
 
@@ -106,11 +117,12 @@ impl State {
 				5.0,
 				0.1,
 			)?;
-		}
-
-		if par.feats.monado {
-			// openvr can only ever rotate yaw
-			options_checkbox(par.mp, id_common_options_parent, SettingType::SpaceRotateUnlocked)?;
+		} else {
+			wgui_simple::create_label(
+				par.mp.layout,
+				id_gravity_enabled_parent,
+				Translation::from_translation_key("APP_SETTINGS.NOT_SUPPORTED"),
+			)?;
 		}
 
 		set_visible(
