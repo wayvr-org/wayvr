@@ -72,15 +72,9 @@ impl ButtonPaneTabSwitcher {
             return;
         };
 
-        let display = if visible {
-            taffy::Display::Flex
-        } else {
-            taffy::Display::None
-        };
-
         common
             .alterables
-            .set_style(data.get_rect(), StyleSetRequest::Display(display));
+            .set_widget_visible(data.get_rect(), visible);
     }
 
     pub fn reset(&mut self, common: &mut CallbackDataCommon) {

@@ -44,6 +44,7 @@
 		"USE_SKYBOX_HELP": "Wyświetlaj niebo, jeśli nie ma aplikacji sceny lub passthrough",
 		"USE_PASSTHROUGH_HELP": "Pozwól na passthrough, jeśli runtime XR to obsługuje",
 		"SCREEN_RENDER_DOWN_HELP": "Pomaga redukować aliasing na ekranach o wysokiej rozdzielczości",
+		"ENABLE_WATCH": "Włącz zegarek",
 		"SETS_ON_WATCH": "Lista zestawów na zegarku",
 		"TROUBLESHOOTING": "Rozwiązywanie problemów",
 		"CLEAR_SAVED_STATE": "Wyczyść zapisany stan",

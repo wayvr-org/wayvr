@@ -1,0 +1,14 @@
+<layout>
+  <include src="../t_group_box.xml" />
+
+  <elements>
+    <div id="common_options_parent" flex_direction="column" gap="8"/>
+    <rectangle macro="group_box">
+      <GroupBoxTitle src_builtin="dashboard/gravity.svg" translation="APP_SETTINGS.SPACE_GRAVITY_GRAVITY" />
+      <div id="gravity_enabled_parent"/>
+      <div id="space_gravity_parent" flex_direction="column" gap="8">
+        <!-- filled-in at runtime -->
+      </div>
+    </rectangle>
+  </elements>
+</layout>

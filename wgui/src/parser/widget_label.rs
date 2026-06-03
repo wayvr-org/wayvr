@@ -36,10 +36,8 @@ pub fn parse_widget_label<'a>(
 					params.content = Translation::from_raw_text(value);
 				}
 			}
-			"translation" => {
-				if !value.is_empty() {
-					params.content = Translation::from_translation_key(value);
-				}
+			"translation" if !value.is_empty() => {
+				params.content = Translation::from_translation_key(value);
 			}
 			_ => {}
 		}

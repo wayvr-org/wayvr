@@ -238,16 +238,20 @@ impl OverlayBackend for ScreenBackend {
             }
 
             if let Some(pipeline) = self.pipeline.as_mut() {
-                if self.meta.is_some_and(|old| old.extent != meta.extent) {
-                    pipeline.set_extent(
+                if self.meta.is_some_and(|old| old.extent != meta.extent)
+                    || frame.format.transform != pipeline.transform()
+                {
+                    pipeline.set_layout(
                         app,
                         [meta.extent[0] as _, meta.extent[1] as _],
                         [0., 0.],
+                        frame.format.transform,
                     )?;
                     self.interaction_transform = Some(ui_transform(meta.extent));
                 }
             } else {
-                let pipeline = ScreenPipeline::new(&meta, app, stereo, [0., 0.])?;
+                let pipeline =
+                    ScreenPipeline::new(&meta, app, stereo, [0., 0.], frame.format.transform)?;
                 self.pipeline = Some(pipeline);
                 self.interaction_transform = Some(ui_transform(meta.extent));
             }

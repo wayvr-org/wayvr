@@ -267,7 +267,8 @@ where
                         // copy_with_damage seems to not work here
                         proxy.copy(&wl_buffer);
 
-                        frame_buffer = Some((WlxFrame::Implicit, BufData::Dma { wl_buffer }));
+                        frame_buffer =
+                            Some((WlxFrame::Implicit(transform), BufData::Dma { wl_buffer }));
                     } else if let Some(ScreenCopyEvent::Buffer {
                         shm_format,
                         width,

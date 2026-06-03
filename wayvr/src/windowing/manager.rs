@@ -288,6 +288,16 @@ where
                 self.sets_changed(app);
             }
             OverlayTask::SettingsChanged => {
+                if let Some(watch) = self.mut_by_id(self.watch_id) {
+                    if app.session.config.enable_watch != watch.config.active_state.is_some() {
+                        if watch.config.active_state.is_some() {
+                            watch.config.deactivate();
+                        } else {
+                            watch.config.activate(app);
+                        }
+                    }
+                }
+
                 for o in self.overlays.values_mut() {
                     let _ = o
                         .config

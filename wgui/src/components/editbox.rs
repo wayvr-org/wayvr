@@ -123,14 +123,7 @@ fn refresh_all(common: &mut CallbackDataCommon, data: &Data, state: &mut State) 
 	}
 
 	// Cursor
-	common.alterables.set_style(
-		data.id_rect_cursor,
-		StyleSetRequest::Display(if state.focused {
-			taffy::Display::Flex
-		} else {
-			taffy::Display::None
-		}),
-	);
+	common.alterables.set_widget_visible(data.id_rect_cursor, state.focused);
 
 	state.first_refresh = false;
 

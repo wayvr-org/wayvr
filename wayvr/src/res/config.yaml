@@ -85,6 +85,9 @@
 # The settings are here for reference only.
 # Probably don't include them in your config file.
 
+## The watch will be enabled
+#enable_watch: true
+
 ## The bottom of the watch will list sets instead of overlays.
 #sets_on_watch: false
 
@@ -116,6 +119,21 @@
 ## Monado/WiVRn only. When enabled, the space_rotate binding
 ## can rotate in any axis. Imagine horizon mode².
 #space_rotate_unlocked: false
+
+## Space gravity: downward acceleration speed
+#space_gravity_gravity: 2.0
+
+## Space gravity: velocity damping (0.98 = gentle slowdown, 0.5 = heavy drag)
+#space_gravity_damping: 0.98
+
+## Space gravity: multiplier for "throwing" yourself via space drag momentum
+#space_gravity_fling_strength: 1.0
+
+## Space gravity: floor height (Y position where gravity stops)
+#space_gravity_floor_height: 0.0
+
+## Space gravity: ground friction when touching the floor
+#space_gravity_ground_friction: 1.0
 
 ## Monado/WiVRn only. Use passthrough camera if the headset supports it.
 ## If disabled, the skybox will be shown.

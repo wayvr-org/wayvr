@@ -346,8 +346,8 @@ impl State {
 	}
 }
 
-const BODY_COLOR: drawing::Color = drawing::Color::new(0.6, 0.65, 0.7, 0.2);
-const BODY_BORDER_COLOR: drawing::Color = drawing::Color::new(0.4, 0.45, 0.5, 1.0);
+const BODY_COLOR: drawing::Color = drawing::Color::new(0.6, 0.65, 0.7, 0.1);
+const BODY_BORDER_COLOR: drawing::Color = drawing::Color::new(0.4, 0.45, 0.5, 0.6);
 const HANDLE_BORDER_COLOR: drawing::Color = drawing::Color::new(0.85, 0.85, 0.85, 1.0);
 const HANDLE_BORDER_COLOR_HOVERED: drawing::Color = drawing::Color::new(0.0, 0.0, 0.0, 1.0);
 const HANDLE_COLOR: drawing::Color = drawing::Color::new(1.0, 1.0, 1.0, 1.0);

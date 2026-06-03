@@ -3,7 +3,11 @@ use libmonado::{MndResult, Monado, Pose, ReferenceSpaceType};
 use wgui::log::LogErr;
 
 use crate::{
-    backend::{input::InputState, task::PlayspaceTask},
+    backend::{
+        input::InputState,
+        playspace_common::{self, SpaceGravity, SpaceGravityUpdateParams},
+        task::PlayspaceTask,
+    },
     state::AppState,
     windowing::manager::OverlayWindowManager,
 };
@@ -19,6 +23,7 @@ struct MoverData<T> {
 pub(super) struct PlayspaceMover {
     drag: Option<MoverData<Vec3A>>,
     rotate: Option<MoverData<Quat>>,
+    gravity: SpaceGravity,
 }
 
 impl PlayspaceMover {
@@ -35,6 +40,7 @@ impl PlayspaceMover {
         Ok(Self {
             drag: None,
             rotate: None,
+            gravity: SpaceGravity::new(),
         })
     }
 
@@ -140,21 +146,27 @@ impl PlayspaceMover {
         }
 
         if let Some(mut data) = self.drag.take() {
-            let pointer = &app.input_state.pointers[data.hand];
-            if !pointer.now.space_drag {
-                log::info!("End space drag");
-                return;
-            }
-
             let new_hand = data
                 .pose
                 .transform_point3a(app.input_state.pointers[data.hand].raw_pose.translation);
-
             let relative_pos = if app.session.config.space_drag_unlocked {
                 new_hand - data.hand_pose
             } else {
                 vec3a(0., new_hand.y - data.hand_pose.y, 0.)
             } * app.session.config.space_drag_multiplier;
+            let pointer = &app.input_state.pointers[data.hand];
+
+            if !pointer.now.space_drag {
+                self.gravity.mark_end_drag(
+                    &app.session.config,
+                    relative_pos,
+                    data.pose.translation,
+                    app.delta_time,
+                );
+
+                log::info!("End space drag");
+                return;
+            }
 
             if relative_pos.length_squared() > 1000.0 {
                 log::warn!("Space drag too fast, ignoring");
@@ -162,16 +174,7 @@ impl PlayspaceMover {
             }
 
             let overlay_offset = data.pose.inverse().transform_vector3a(relative_pos) * -1.0;
-
-            overlays.values_mut().for_each(|overlay| {
-                let Some(state) = overlay.config.active_state.as_mut() else {
-                    return;
-                };
-                if state.positioning.moves_with_space() {
-                    state.transform.translation += overlay_offset;
-                }
-                overlay.config.dirty = true;
-            });
+            playspace_common::shift_overlays(overlays, overlay_offset);
 
             data.pose.translation += relative_pos;
             data.hand_pose = new_hand;
@@ -207,6 +210,20 @@ impl PlayspaceMover {
                 }
             }
         }
+
+        if let Some(res) = self.gravity.update(SpaceGravityUpdateParams {
+            dt: app.delta_time,
+            dragging: self.drag.is_some(),
+            config: &app.session.config,
+            floor_height: app.session.config.space_gravity_floor_height,
+        }) {
+            apply_offset(
+                Affine3A::from_translation(res.playspace_pos.into()),
+                &mut monado.ipc,
+            );
+
+            playspace_common::shift_overlays(overlays, -res.playspace_pos_offset);
+        }
     }
 
     pub fn recenter(&mut self, input: &InputState, monado: &mut Monado) {
@@ -232,6 +249,8 @@ impl PlayspaceMover {
         let _ = monado
             .set_reference_space_offset(ReferenceSpaceType::Stage, pose)
             .inspect_err(|e| log::warn!("Could not recenter due to libmonado error: {e:?}"));
+
+        self.gravity.reset();
     }
 
     pub fn reset_offset(&mut self, monado: &mut Monado) {
@@ -244,6 +263,7 @@ impl PlayspaceMover {
             self.rotate = None;
         }
 
+        self.gravity.reset();
         apply_offset(Affine3A::IDENTITY, monado);
     }
 

@@ -1,4 +1,4 @@
-use wgui::{event::StyleSetRequest, parser::Fetchable, taffy};
+use wgui::parser::Fetchable;
 use wlx_common::{common::LeftRight, windowing::Positioning};
 
 use crate::{
@@ -47,26 +47,12 @@ pub fn new_pos_tab_handler(
             })
         }),
         Some(Box::new(move |common, state| {
-            let interpolation_disp = if state.has_lerp {
-                taffy::Display::Flex
-            } else {
-                taffy::Display::None
-            };
-
-            common.alterables.set_style(
-                interpolation_id,
-                StyleSetRequest::Display(interpolation_disp),
-            );
-
-            let align_to_hmd_disp = if state.has_align {
-                taffy::Display::Flex
-            } else {
-                taffy::Display::None
-            };
-
             common
                 .alterables
-                .set_style(align_to_hmd_id, StyleSetRequest::Display(align_to_hmd_disp));
+                .set_widget_visible(interpolation_id, state.has_lerp);
+            common
+                .alterables
+                .set_widget_visible(align_to_hmd_id, state.has_align);
         })),
     )
 }

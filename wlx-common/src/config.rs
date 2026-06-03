@@ -165,6 +165,10 @@ const fn def_point3() -> f32 {
 	0.3
 }
 
+const fn def_zero() -> f32 {
+	0.0
+}
+
 const fn def_osc_port() -> u16 {
 	9000
 }
@@ -273,6 +277,9 @@ pub struct GeneralConfig {
 	#[serde(default = "def_false")]
 	pub double_cursor_fix: bool,
 
+	#[serde(default = "def_true")]
+	pub enable_watch: bool,
+
 	#[serde(default = "def_false")]
 	pub sets_on_watch: bool,
 
@@ -335,6 +342,24 @@ pub struct GeneralConfig {
 
 	#[serde(default = "def_false")]
 	pub space_rotate_unlocked: bool,
+
+	#[serde(default = "def_false")]
+	pub space_gravity_enabled: bool,
+
+	#[serde(default = "def_one")]
+	pub space_gravity_gravity: f32,
+
+	#[serde(default = "def_one")]
+	pub space_gravity_damping: f32,
+
+	#[serde(default = "def_one")]
+	pub space_gravity_fling_strength: f32,
+
+	#[serde(default = "def_one")]
+	pub space_gravity_ground_friction: f32,
+
+	#[serde(default = "def_zero")]
+	pub space_gravity_floor_height: f32,
 
 	#[serde(default)]
 	pub alt_click_down: Vec<String>,

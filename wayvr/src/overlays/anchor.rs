@@ -1,8 +1,7 @@
 use glam::{Affine3A, Quat, Vec3};
 use std::sync::{Arc, LazyLock};
-use wgui::event::{EventAlterables, StyleSetRequest};
+use wgui::event::EventAlterables;
 use wgui::parser::Fetchable;
-use wgui::taffy;
 use wlx_common::windowing::{OverlayWindowState, Positioning};
 
 use crate::gui::panel::GuiPanel;
@@ -84,13 +83,7 @@ pub fn create_grab_help(app: &mut AppState) -> anyhow::Result<OverlayWindowConfi
         };
 
         for id in &all {
-            let display = if *id == show_id {
-                taffy::Display::Flex
-            } else {
-                taffy::Display::None
-            };
-
-            alterables.set_style(*id, StyleSetRequest::Display(display));
+            alterables.set_widget_visible(*id, *id == show_id);
         }
 
         panel.layout.process_alterables(alterables)?;

@@ -1,10 +1,9 @@
 use std::{
-    f32::consts::PI,
     os::fd::AsRawFd,
     sync::{Arc, OnceLock},
 };
 
-use glam::{Affine3A, Vec3};
+use glam::Affine3A;
 use smallvec::{SmallVec, smallvec};
 use vulkano::{
     buffer::{BufferUsage, Subbuffer},
@@ -55,6 +54,7 @@ pub struct ScreenPipeline {
     pipeline: Arc<WGfxPipeline<Vert2Uv>>,
     extentf: [f32; 2],
     offsetf: [f32; 2],
+    transform: wlx_frame::Transform,
     stereo: StereoMode,
 }
 
@@ -64,6 +64,7 @@ impl ScreenPipeline {
         app: &mut AppState,
         stereo: StereoMode,
         offsetf: [f32; 2],
+        transform: wlx_frame::Transform,
     ) -> anyhow::Result<Self> {
         let extentf = [meta.extent[0] as f32, meta.extent[1] as f32];
 
@@ -81,6 +82,7 @@ impl ScreenPipeline {
             pipeline,
             extentf,
             offsetf,
+            transform,
             stereo,
         };
         me.ensure_stereo(stereo);
@@ -94,6 +96,10 @@ impl ScreenPipeline {
 
         self.stereo = stereo;
         self.pass.clear(); // ensure_depth will repopulate
+    }
+
+    pub const fn transform(&self) -> wlx_frame::Transform {
+        self.transform
     }
 
     fn ensure_depth(&mut self, app: &mut AppState, depth: usize) -> anyhow::Result<()> {
@@ -111,20 +117,22 @@ impl ScreenPipeline {
         }
 
         for (eye, current) in self.pass.iter_mut().enumerate() {
-            let verts = stereo_mode_to_verts(self.stereo, eye);
+            let verts = stereo_mode_to_verts(self.stereo, eye, self.transform);
             current.buf_vert.write()?.copy_from_slice(&verts);
         }
         Ok(())
     }
 
-    pub fn set_extent(
+    pub fn set_layout(
         &mut self,
         app: &mut AppState,
         extentf: [f32; 2],
         offsetf: [f32; 2],
+        transform: wlx_frame::Transform,
     ) -> anyhow::Result<()> {
         self.extentf = extentf;
         self.offsetf = offsetf;
+        self.transform = transform;
         self.pass.clear();
 
         self.mouse = Self::create_mouse_pass(app, self.pipeline.clone(), extentf, offsetf)?;
@@ -241,13 +249,31 @@ impl ScreenPipeline {
     }
 }
 
-fn stereo_mode_to_verts(stereo: StereoMode, array_index: usize) -> [Vert2Uv; 4] {
+fn transform_uv(uv: [f32; 2], transform: wlx_frame::Transform) -> [f32; 2] {
+    let [u, v] = uv;
+    match transform {
+        wlx_frame::Transform::Normal | wlx_frame::Transform::Undefined => [u, v],
+        wlx_frame::Transform::Rotated90 => [v, 1.0 - u],
+        wlx_frame::Transform::Rotated180 => [1.0 - u, 1.0 - v],
+        wlx_frame::Transform::Rotated270 => [1.0 - v, u],
+        wlx_frame::Transform::Flipped => [1.0 - u, v],
+        wlx_frame::Transform::Flipped90 => [v, u],
+        wlx_frame::Transform::Flipped180 => [u, 1.0 - v],
+        wlx_frame::Transform::Flipped270 => [1.0 - v, 1.0 - u],
+    }
+}
+
+fn stereo_mode_to_verts(
+    stereo: StereoMode,
+    array_index: usize,
+    transform: wlx_frame::Transform,
+) -> [Vert2Uv; 4] {
     let eye = match stereo {
         StereoMode::RightLeft | StereoMode::BottomTop => (1 - array_index) as f32,
         _ => array_index as f32,
     };
 
-    match stereo {
+    let mut verts = match stereo {
         StereoMode::None => [
             Vert2Uv {
                 in_pos: [0., 0.],
@@ -302,7 +328,13 @@ fn stereo_mode_to_verts(stereo: StereoMode, array_index: usize) -> [Vert2Uv; 4] 
                 in_uv: [1., 0.5 + eye * 0.5],
             },
         ],
+    };
+
+    for vert in &mut verts {
+        vert.in_uv = transform_uv(vert.in_uv, transform);
     }
+
+    verts
 }
 
 static DMA_ALLOCATOR: OnceLock<Arc<dyn MemoryAllocator>> = OnceLock::new();
@@ -460,7 +492,7 @@ impl WlxCaptureOut {
         FrameMeta {
             clear: WGfxClearMode::DontCare,
             extent: extent_from_format(self.format, config),
-            transform: affine_from_format(&self.format),
+            transform: Affine3A::IDENTITY,
             format: self.image.format(),
             stereo,
         }
@@ -585,13 +617,14 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
                 mouse: frame.mouse,
             })
         }
-        WlxFrame::Implicit => {
+        WlxFrame::Implicit(transform) => {
             log::trace!("{}: New Implicit frame", me.name);
 
-            let Some((image, format)) = me.dma_exporter.as_ref().unwrap().get_current() else {
+            let Some((image, mut format)) = me.dma_exporter.as_ref().unwrap().get_current() else {
                 log::error!("{}: Implicit frame is missing!", me.name);
                 return None;
             };
+            format.transform = transform;
 
             Some(WlxCaptureOut {
                 image,
@@ -676,6 +709,14 @@ const fn receive_callback_dummy(_: &DummyDrmExporter, frame: WlxFrame) -> Option
 }
 
 fn extent_from_format(fmt: FrameFormat, config: &GeneralConfig) -> [u32; 2] {
+    let (width, height) = match fmt.transform {
+        wlx_frame::Transform::Rotated90
+        | wlx_frame::Transform::Rotated270
+        | wlx_frame::Transform::Flipped90
+        | wlx_frame::Transform::Flipped270 => (fmt.height, fmt.width),
+        _ => (fmt.width, fmt.height),
+    };
+
     // screens above a certain resolution will have severe aliasing
     let height_limit = if config.screen_render_down {
         u32::from(config.screen_max_height.min(2560))
@@ -683,34 +724,9 @@ fn extent_from_format(fmt: FrameFormat, config: &GeneralConfig) -> [u32; 2] {
         2560
     };
 
-    let h = fmt.height.min(height_limit);
-    let w = (fmt.width as f32 / fmt.height as f32 * h as f32) as u32;
+    let h = height.min(height_limit);
+    let w = (width as f32 / height as f32 * h as f32) as u32;
     [w, h]
-}
-
-fn affine_from_format(format: &FrameFormat) -> Affine3A {
-    const FLIP_X: Vec3 = Vec3 {
-        x: -1.0,
-        y: 1.0,
-        z: 1.0,
-    };
-
-    match format.transform {
-        wlx_frame::Transform::Rotated90 => Affine3A::from_rotation_z(-PI / 2.0),
-        wlx_frame::Transform::Rotated180 => Affine3A::from_rotation_z(PI),
-        wlx_frame::Transform::Rotated270 => Affine3A::from_rotation_z(PI / 2.0),
-        wlx_frame::Transform::Flipped => Affine3A::from_scale(FLIP_X),
-        wlx_frame::Transform::Flipped90 => {
-            Affine3A::from_scale(FLIP_X) * Affine3A::from_rotation_z(-PI / 2.0)
-        }
-        wlx_frame::Transform::Flipped180 => {
-            Affine3A::from_scale(FLIP_X) * Affine3A::from_rotation_z(PI)
-        }
-        wlx_frame::Transform::Flipped270 => {
-            Affine3A::from_scale(FLIP_X) * Affine3A::from_rotation_z(PI / 2.0)
-        }
-        _ => Affine3A::IDENTITY,
-    }
 }
 
 macro_rules! new_wlx_capture {

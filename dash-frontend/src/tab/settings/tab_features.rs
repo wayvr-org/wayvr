@@ -15,15 +15,6 @@ impl State {
 		options_checkbox(par.mp, c, SettingType::KeyboardSoundEnabled)?;
 		if !par.feats.openxr || par.feats.monado {
 			// monado or openvr
-			options_checkbox(par.mp, c, SettingType::SpaceDragUnlocked)?;
-			options_slider_f32(par.mp, c, SettingType::SpaceDragMultiplier, -10.0, 10.0, 0.5)?;
-		}
-		if par.feats.monado {
-			// openvr can only ever rotate yaw
-			options_checkbox(par.mp, c, SettingType::SpaceRotateUnlocked)?;
-		}
-		if !par.feats.openxr || par.feats.monado {
-			// monado or openvr
 			options_checkbox(par.mp, c, SettingType::BlockGameInput)?;
 			options_checkbox(par.mp, c, SettingType::BlockGameInputIgnoreWatch)?;
 		}

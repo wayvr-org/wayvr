@@ -33,7 +33,6 @@ use wgui::{
         self, CustomAttribsInfoOwned, Fetchable, ParseDocumentExtra, ParserState, parse_color_hex,
     },
     renderer_vk::{context::Context as WguiContext, text::custom_glyph::CustomGlyphData},
-    taffy,
     widget::{
         EventResult, image::WidgetImage, label::WidgetLabel, rectangle::WidgetRectangle,
         sprite::WidgetSprite,
@@ -552,15 +551,7 @@ pub fn apply_custom_command<T>(
                 .parser_state
                 .get_widget_id(element)
                 .context("No widget with such id.")?;
-
-            let display = if *visible {
-                taffy::Display::Flex
-            } else {
-                taffy::Display::None
-            };
-
-            com.alterables
-                .set_style(wid, wgui::event::StyleSetRequest::Display(display));
+            com.alterables.set_widget_visible(wid, *visible);
             com.alterables.mark_redraw();
         }
         ModifyPanelCommand::SetValue(value_str) => {

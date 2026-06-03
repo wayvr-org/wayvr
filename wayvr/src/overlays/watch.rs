@@ -4,9 +4,7 @@ use glam::{Affine3A, Quat, Vec3, vec3};
 use wgui::{
     assets::AssetPath,
     components::button::ComponentButton,
-    event::StyleSetRequest,
     parser::{Fetchable, ParseDocumentParams},
-    taffy,
 };
 use wlx_common::{
     common::LeftRight,
@@ -156,17 +154,17 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
             angle_fade: true,
             ..OverlayWindowState::default()
         },
-        show_on_spawn: true,
+        show_on_spawn: app.session.config.enable_watch,
         global: true,
         ..OverlayWindowConfig::from_backend(Box::new(panel))
     })
 }
 
 fn sets_or_overlays(panel: &mut GuiPanel<WatchState>, app: &mut AppState) {
-    let display = if app.session.config.sets_on_watch {
-        [taffy::Display::None, taffy::Display::Flex]
+    let visible = if app.session.config.sets_on_watch {
+        [false, true]
     } else {
-        [taffy::Display::Flex, taffy::Display::None]
+        [true, false]
     };
 
     let widget = [
@@ -184,6 +182,6 @@ fn sets_or_overlays(panel: &mut GuiPanel<WatchState>, app: &mut AppState) {
         panel
             .layout
             .alterables
-            .set_style(widget[i], StyleSetRequest::Display(display[i]));
+            .set_widget_visible(widget[i], visible[i]);
     }
 }

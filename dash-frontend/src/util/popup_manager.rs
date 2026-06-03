@@ -6,12 +6,11 @@ use std::{
 use wgui::{
 	assets::AssetPath,
 	components::button::ComponentButton,
-	event::{EventAlterables, StyleSetRequest},
+	event::EventAlterables,
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, LayoutTask, LayoutTasks, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState},
-	taffy::Display,
 	widget::label::WidgetLabel,
 };
 use wlx_common::config::GeneralConfig;
@@ -232,15 +231,7 @@ impl State {
 			let popup = popup.upgrade().unwrap(); // safe
 			let popup = popup.borrow_mut();
 			let mounted_popup = popup.mounted_popup.as_ref().unwrap(); // safe;
-
-			alterables.set_style(
-				mounted_popup.id_root,
-				StyleSetRequest::Display(if idx == self.popup_stack.len() - 1 {
-					Display::Flex
-				} else {
-					Display::None
-				}),
-			);
+			alterables.set_widget_visible(mounted_popup.id_root, idx == self.popup_stack.len() - 1);
 		}
 	}
 }

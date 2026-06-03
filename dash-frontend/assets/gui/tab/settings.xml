@@ -13,13 +13,13 @@
   </template>
 
   <template name="SliderSetting">
-    <label text="${text}" translation="${translation}" />
-    <Slider id="${id}" width="250" height="24" min_value="${min}" max_value="${max}" step="${step}" value="${value}" tooltip="${tooltip}" />
+    <Slider id="${id}" width="200" height="24" min_value="${min}" max_value="${max}" step="${step}" value="${value}" tooltip="${tooltip}" />
+    <label text="${text}" weight="bold" translation="${translation}" />
   </template>
 
   <template name="RangeSetting">
-    <label text="${text}" translation="${translation}" />
-    <Slider id="${id}" width="250" height="24" min_value="${min}" max_value="${max}" step="${step}" value="${value}" value2="${value2}" tooltip="${tooltip}" />
+    <Slider id="${id}" width="200" height="24" min_value="${min}" max_value="${max}" step="${step}" value="${value}" value2="${value2}" tooltip="${tooltip}" />
+    <label text="${text}" weight="bold" translation="${translation}" />
   </template>
 
   <template name="SelectSetting">
@@ -56,6 +56,7 @@
         <Tab name="skybox" translation="APP_SETTINGS.SKYBOX" sprite_src_builtin="dashboard/globe.svg" />
         <Tab name="features" translation="APP_SETTINGS.FEATURES" sprite_src_builtin="dashboard/options.svg" />
         <Tab name="controls" translation="APP_SETTINGS.CONTROLS" sprite_src_builtin="dashboard/controller.svg" />
+        <Tab name="space_drag" translation="APP_SETTINGS.SPACE_DRAG" sprite_src_builtin="dashboard/drag.svg" />
         <Tab name="misc" translation="APP_SETTINGS.MISC" sprite_src_builtin="dashboard/blocks.svg" />
         <Tab name="autostart_apps" translation="APP_SETTINGS.AUTOSTART_APPS" sprite_src_builtin="dashboard/apps.svg" />
         <Tab name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="dashboard/cpu.svg" />
