@@ -19,7 +19,7 @@ use wgui::{
     parser::Fetchable,
     widget::{EventResult, label::WidgetLabel},
 };
-use wlx_capture::frame::MouseMeta;
+use wlx_capture::frame::{MouseMeta, Transform};
 use wlx_common::{
     overlays::{BackendAttrib, BackendAttribValue, StereoMode},
     windowing::{OverlayWindowState, Positioning},
@@ -348,10 +348,11 @@ impl OverlayBackend for WvrWindowBackend {
 
                 if let Some(pipeline) = self.pipeline.as_mut() {
                     if self.inner_extent != inner_extent {
-                        pipeline.set_extent(
+                        pipeline.set_layout(
                             app,
                             [inner_extent[0] as _, inner_extent[1] as _],
                             [BORDER_SIZE as _, (BAR_SIZE + BORDER_SIZE) as _],
+                            Transform::Normal,
                         )?;
                         self.apply_extent(app, &meta)?;
                         self.inner_extent = inner_extent;
@@ -362,6 +363,7 @@ impl OverlayBackend for WvrWindowBackend {
                         app,
                         self.stereo.unwrap_or(StereoMode::None),
                         [BORDER_SIZE as _, (BAR_SIZE + BORDER_SIZE) as _],
+                        Transform::Normal,
                     )?;
                     self.apply_extent(app, &meta)?;
                     self.pipeline = Some(pipeline);
