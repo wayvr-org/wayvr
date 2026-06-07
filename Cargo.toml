@@ -32,6 +32,7 @@ vulkano = { version = "0.35.2", default-features = false, features = [
 ] }
 vulkano-shaders = "0.35.0"
 wayland-client = { version = "0.31.11" }
+wayland-protocols-misc = { version = "0.3.12" }
 xdg = "3.0.0"
 
 [patch.crates-io]

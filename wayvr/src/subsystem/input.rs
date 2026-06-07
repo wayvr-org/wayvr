@@ -1,10 +1,8 @@
-use super::hid::{self, HidProvider, VirtualKey};
+use super::hid::{self, VirtualKey};
 
-use crate::{
-    backend::wayvr::WvrServerState,
-    overlays::toast::Toast,
-    subsystem::hid::{DummyProvider, XkbKeymap},
-};
+use crate::subsystem::hid::provider::HidProvider;
+use crate::subsystem::hid::provider::dummy::DummyProvider;
+use crate::{backend::wayvr::WvrServerState, overlays::toast::Toast, subsystem::hid::XkbKeymap};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum KeyboardFocus {
@@ -20,26 +18,18 @@ pub struct HidWrapper {
 
 impl HidWrapper {
     pub fn new() -> (Self, Option<Toast>) {
-        let hid_result = hid::initialize();
-        let hid_provider: Box<dyn HidProvider>;
-        let error: Option<Toast>;
-        match hid_result {
-            Ok(uinput) => {
-                hid_provider = Box::new(uinput);
-                error = None;
-            }
-            Err(toast) => {
-                hid_provider = Box::new(DummyProvider {});
-                error = Some(toast);
-            }
-        }
+        let (provider, toast) = hid::provider::wl_virtual::initialize_wl_virtual()
+            .or_else(|_| hid::provider::uinput::initialize_uinput())
+            .map(|provider| (provider, None))
+            .unwrap_or_else(|toast| (Box::new(DummyProvider {}), Some(toast)));
+
         (
             Self {
                 keyboard_focus: KeyboardFocus::PhysicalScreen,
-                inner: hid_provider,
+                inner: provider,
                 keymap: None,
             },
-            error,
+            toast,
         )
     }
 

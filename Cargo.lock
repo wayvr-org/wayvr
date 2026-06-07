@@ -6569,6 +6569,7 @@ dependencies = [
  "vulkano",
  "vulkano-shaders",
  "wayland-client",
+ "wayland-protocols-misc",
  "wayvr-ipc",
  "wgui",
  "winit",
