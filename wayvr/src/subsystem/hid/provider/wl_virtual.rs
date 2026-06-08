@@ -28,7 +28,7 @@ pub struct WlVirtualProvider {
     virtual_pointer: ZwlrVirtualPointerV1,
     desktop_extent: Vec2,
     desktop_origin: Vec2,
-    _file: std::fs::File,
+    keymap_file: Option<std::fs::File>,
 
     virtual_keyboard: ZwpVirtualKeyboardV1,
     keyboard_mods_state: u8,
@@ -101,6 +101,14 @@ impl HidProvider for WlVirtualProvider {
         self.virtual_pointer.frame();
     }
 
+    fn set_desktop_extent(&mut self, extent: Vec2) {
+        self.desktop_extent = extent;
+    }
+
+    fn set_desktop_origin(&mut self, origin: Vec2) {
+        self.desktop_origin = origin;
+    }
+
     fn set_modifiers(&mut self, mods: u8) {
         const LOCKED: u8 = CAPS_LOCK | NUM_LOCK;
 
@@ -109,7 +117,8 @@ impl HidProvider for WlVirtualProvider {
             if changed & bit != 0 {
                 let down = mods & bit != 0;
                 if let Some(kc) = Self::modifier_keycode(bit) {
-                    self.virtual_keyboard.key(Self::now_ms(), kc - 8, down as u32);
+                    self.virtual_keyboard
+                        .key(Self::now_ms(), kc - 8, down as u32);
                 }
             }
         }
@@ -138,12 +147,25 @@ impl HidProvider for WlVirtualProvider {
         self._connection.flush().unwrap();
     }
 
-    fn set_desktop_extent(&mut self, extent: Vec2) {
-        self.desktop_extent = extent;
-    }
+    fn set_keymap(&mut self, keymap: &XkbKeymap) {
+        #[cfg(debug_assertions)]
+        log::trace!("Keyboard keymap: {:?}", keymap.inner.layouts().next().unwrap_or("Unknown"));
 
-    fn set_desktop_origin(&mut self, origin: Vec2) {
-        self.desktop_origin = origin;
+        let mut bytes = keymap
+            .inner
+            .get_as_string(KEYMAP_FORMAT_TEXT_V1)
+            .into_bytes();
+        bytes.push(0);
+        let fd = memfd_create("virtual-keyboard-keymap", MemfdFlags::CLOEXEC)
+            .expect("Failed to create memfd");
+
+        let mut file = std::fs::File::from(fd);
+        file.write_all(&bytes).expect("failed to write the keymap");
+
+        self.virtual_keyboard
+            .keymap(KeymapFormat::XkbV1 as u32, file.as_fd(), bytes.len() as u32);
+        self.queue.roundtrip(&mut self.state).unwrap();
+        self.keymap_file.replace(file);
     }
 
     fn commit(&mut self) {
@@ -153,10 +175,10 @@ impl HidProvider for WlVirtualProvider {
 
 impl WlVirtualProvider {
     pub fn try_new() -> anyhow::Result<Self> {
-        let mut state = KbState;
+        let state = KbState;
 
         let connection = wayland_client::Connection::connect_to_env()?;
-        let (globals, mut queue) = registry_queue_init::<KbState>(&connection)?;
+        let (globals, queue) = registry_queue_init::<KbState>(&connection)?;
         let qh = queue.handle();
         let seat: WlSeat = globals
             .bind(&qh, 4..=9, ())
@@ -174,31 +196,8 @@ impl WlVirtualProvider {
 
         let virtual_keyboard = keyboard_manager.create_virtual_keyboard(&seat, &qh, ());
 
-        let xkb_context = Context::new(CONTEXT_NO_FLAGS);
-        let xkb_keymap = Keymap::new_from_names(
-            &xkb_context,
-            "",
-            "",
-            "us",
-            "",
-            None,
-            KEYMAP_COMPILE_NO_FLAGS,
-        )
-        .expect("Failed to compile XKB keymap");
-
-        let mut bytes = xkb_keymap.get_as_string(KEYMAP_FORMAT_TEXT_V1).into_bytes();
-        bytes.push(0);
-        let fd = memfd_create("virtual-keyboard-keymap", MemfdFlags::CLOEXEC)
-            .expect("Failed to create memfd");
-
-        let mut file = std::fs::File::from(fd);
-        file.write_all(&bytes).expect("failed to write the keymap");
-
-        virtual_keyboard.keymap(KeymapFormat::XkbV1 as u32, file.as_fd(), bytes.len() as u32);
-        queue.roundtrip(&mut state)?;
-
-        Ok(Self {
-            _file: file,
+        let mut result = Self {
+            keymap_file: None,
             _connection: connection,
             queue,
             state,
@@ -207,7 +206,27 @@ impl WlVirtualProvider {
             desktop_extent: Vec2::ZERO,
             desktop_origin: Vec2::ZERO,
             keyboard_mods_state: 0,
-        })
+        };
+
+        result.set_keymap(&XkbKeymap {
+            inner: Self::default_keymap(),
+        });
+
+        Ok(result)
+    }
+
+    fn default_keymap() -> Keymap {
+        let xkb_context = Context::new(CONTEXT_NO_FLAGS);
+        Keymap::new_from_names(
+            &xkb_context,
+            "",
+            "",
+            "us",
+            "",
+            None,
+            KEYMAP_COMPILE_NO_FLAGS,
+        )
+        .expect("Failed to compile XKB keymap")
     }
 
     fn modifier_keycode(bit: u8) -> Option<u32> {

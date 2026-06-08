@@ -56,6 +56,7 @@ impl HidWrapper {
                 .inspect_err(|e| log::error!("Could not set WayVR keymap: {e:?}"));
         } else {
             self.keymap = Some(keymap.clone());
+            self.inner.set_keymap(&keymap);
         }
 
         log::info!(

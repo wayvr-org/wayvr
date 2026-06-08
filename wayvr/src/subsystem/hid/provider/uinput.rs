@@ -6,7 +6,7 @@ use strum::IntoEnumIterator;
 use input_linux::{AbsoluteAxis, AbsoluteInfo, AbsoluteInfoSetup, EventKind, InputId, Key, RelativeAxis, UInputHandle};
 use wlx_common::overlays::ToastTopic;
 use crate::overlays::toast::Toast;
-use crate::subsystem::hid::{get_time, new_event, MouseAction, MouseButtonAction, VirtualKey, WheelDelta, EV_ABS, EV_KEY, EV_REL, EV_SYN, MODS_TO_KEYS, MOUSE_EXTENT, MOUSE_LEFT, MOUSE_MIDDLE};
+use crate::subsystem::hid::{get_time, new_event, MouseAction, MouseButtonAction, VirtualKey, WheelDelta, XkbKeymap, EV_ABS, EV_KEY, EV_REL, EV_SYN, MODS_TO_KEYS, MOUSE_EXTENT, MOUSE_LEFT, MOUSE_MIDDLE};
 use crate::subsystem::hid::provider::HidProvider;
 
 pub struct UInputProvider {
@@ -171,6 +171,12 @@ impl HidProvider for UInputProvider {
             self.current_action.pos = None;
         }
     }
+    fn set_desktop_extent(&mut self, extent: Vec2) {
+        self.desktop_extent = extent;
+    }
+    fn set_desktop_origin(&mut self, origin: Vec2) {
+        self.desktop_origin = origin;
+    }
     fn set_modifiers(&mut self, modifiers: u8) {
         let changed = self.cur_modifiers ^ modifiers;
         for i in 0..8 {
@@ -183,6 +189,7 @@ impl HidProvider for UInputProvider {
         }
         self.cur_modifiers = modifiers;
     }
+
     fn send_key(&self, key: VirtualKey, down: bool) {
         #[cfg(debug_assertions)]
         log::trace!("send_key: {key:?} {down}");
@@ -196,13 +203,8 @@ impl HidProvider for UInputProvider {
             log::error!("send_key: {res}");
         }
     }
-    fn set_desktop_extent(&mut self, extent: Vec2) {
-        self.desktop_extent = extent;
-    }
 
-    fn set_desktop_origin(&mut self, origin: Vec2) {
-        self.desktop_origin = origin;
-    }
+    fn set_keymap(&mut self, _keymap: &XkbKeymap) {}
 
     fn commit(&mut self) {
         if let Some(pos) = self.current_action.pos.take() {
