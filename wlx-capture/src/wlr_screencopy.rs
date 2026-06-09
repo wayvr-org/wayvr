@@ -227,7 +227,9 @@ where
     let mut maybe_dmabuf = None;
 
     'receiver: loop {
+        let mut received_event = false;
         for event in rx.try_iter() {
+            received_event = true;
             match event {
                 ScreenCopyEvent::Buffer { .. } => {
                     log::trace!("{name}: ScreenCopy Buffer event received");
@@ -366,6 +368,10 @@ where
                     break 'receiver;
                 }
             };
+        }
+
+        if !received_event {
+            client.dispatch();
         }
     }
 
