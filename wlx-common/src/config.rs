@@ -76,15 +76,20 @@ pub enum AltModifier {
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, AsRefStr, EnumString, EnumProperty, VariantArray)]
 pub enum HandsfreePointer {
+	#[serde(alias = "none")]
 	#[strum(props(Translation = "APP_SETTINGS.OPTION.NONE"))]
 	None,
+	#[serde(alias = "hmd")]
 	#[strum(props(Translation = "APP_SETTINGS.OPTION.HMD_PINCH"))]
 	#[default]
 	Hmd,
+	#[serde(alias = "hmd_only")]
 	#[strum(props(Translation = "APP_SETTINGS.OPTION.HMD_ONLY"))]
 	HmdOnly,
+	#[serde(alias = "eye_tracking")]
 	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_PINCH"))]
 	EyeTracking,
+	#[serde(alias = "eye_tracking_only")]
 	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_ONLY"))]
 	EyeTrackingOnly,
 }

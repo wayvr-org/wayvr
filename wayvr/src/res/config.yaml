@@ -98,6 +98,17 @@
 ## Other values that were previously here are no longer supported.
 #capture_method: auto
 
+## Hands-Free pointer method. This is a permanent setting for the
+## Hands-Free mode options available in the Hands-Free submenu under the
+## virtual keyboard's settings hamburger menu. Note that VR controllers
+## will always work. Options:
+## `none`: No Hands-Free; only VR controllers
+## `hmd`: Head-Mounted Display, Pinch mode, and VR controllers
+## `hmd_only`: Only the Head-Mounted Display and VR controllers
+## `eye_tracking`: Eye Tracking (if supported), Pinch Mode, and VR controllers
+## `eye_tracking_only`: Eye Tracking (if supported) and VR controllers
+#handsfree_pointer: hmd
+
 ## Monado/WiVRn only. Do not send controller input to other VR apps
 ## while WayVR is being hovered. Either hand will block both hand inputs!
 #block_game_input: false
