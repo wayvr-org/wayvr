@@ -119,7 +119,10 @@ pub fn create_screens_wayland(wl: &mut WlxClient, app: &mut AppState) -> ScreenC
         {
             backend.logical_pos = vec2(output.logical_pos.0 as f32, output.logical_pos.1 as f32);
             backend.logical_size = vec2(output.logical_size.0 as f32, output.logical_size.1 as f32);
-            backend.mouse_transform_original = output.transform;
+            // The captured frame's orientation is corrected at render time (texture UV remap),
+            // so pointer hits land in the upright/logical space of the output. The compositor's
+            // logical coordinates are upright too, hence the mouse maps without rotation.
+            backend.mouse_transform_original = Transform::Normal;
             backend.apply_mouse_transform_with_override(Transform::Undefined);
 
             let window_config = create_screen_from_backend(
