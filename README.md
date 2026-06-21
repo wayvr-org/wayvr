@@ -27,6 +27,7 @@ There are multiple ways to install WayVR:
 1. AppImage: Download from [Releases](https://github.com/wayvr-org/wayvr/releases)
 1. AUR package: [wayvr](https://aur.archlinux.org/packages/wayvr) or [wayvr-git](https://aur.archlinux.org/packages/wayvr-git)
 1. Nix package: [wayvr](https://search.nixos.org/packages?channel=unstable&show=wayvr&query=wayvr) or [unstable package from nixpkgs-xr](https://github.com/nix-community/nixpkgs-xr)
+1. [Homebrew-XR](https://tangled.org/matrixfurry.com/homebrew-xr) package (for Bazzite, etc.): [wayvr](https://tangled.org/matrixfurry.com/homebrew-xr/#installing-applications)
 1. [Docs: Building from source](https://wayvr.org/docs/basics/building-from-source/).
 
 ### General Setup
