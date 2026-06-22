@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::os::fd::AsFd;
 use std::time::{SystemTime, UNIX_EPOCH};
+use anyhow::Context as _;
 use glam::Vec2;
 use input_linux::sys::{*};
 use smithay::reexports::rustix::fs::{memfd_create, MemfdFlags};
@@ -186,13 +187,13 @@ impl WlVirtualProvider {
 
         let pointer_manager: ZwlrVirtualPointerManagerV1 = globals
             .bind(&qh, 1..=1, ())
-            .expect("compositor doesn't support zwlr_virtual_pointer_v1");
+            .context("compositor doesn't support zwlr_virtual_pointer_v1")?;
 
         let virtual_pointer = pointer_manager.create_virtual_pointer(Some(&seat), &qh, ());
 
         let keyboard_manager: ZwpVirtualKeyboardManagerV1 = globals
             .bind(&qh, 1..=1, ())
-            .expect("compositor doesn't support zwp_virtual_keyboard_v1");
+            .context("compositor doesn't support zwp_virtual_keyboard_v1")?;
 
         let virtual_keyboard = keyboard_manager.create_virtual_keyboard(&seat, &qh, ());
 
