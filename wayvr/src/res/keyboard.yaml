@@ -38,7 +38,7 @@ main_layout:
     - ["Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Oem4", "Oem6", "Oem5", ~, "Delete", "End", "Next", ~, "KP_7", "KP_8", "KP_9", "KP_Add"]
     - ["XF86Favorites", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Oem1", "Oem7", "Return", ~, "KP_4", "KP_5", "KP_6", ~]
     - ["LShift", "Oem102", "Z", "X", "C", "V", "B", "N", "M", "Comma", "Period", "Oem2", "RShift", ~, "Up", ~, "KP_1", "KP_2", "KP_3", "KP_Enter"]
-    - ["LCtrl", "LSuper", "LAlt", "Space", "Meta", "RSuper", "Menu", "RCtrl", ~, "Left", "Down", "Right", ~, "KP_0", "KP_Decimal", ~]
+    - ["LCtrl", "LSuper", "LAlt", "Space", "Meta", "RSuper", "Menu", "RCtrl", ~, "Left", "Down", "Right", ~, "KP_0", "KP_Decimal", "MAP"]
 
 # Shell commands to be used in a layout.
 # Value is an array of string arguments.
@@ -50,6 +50,7 @@ exec_commands:
 # keyName must be a valid virtual key from the VirtualKey enum (see above)
 # DOWN|UP: can be omitted for an implicit "keyName DOWN, keyName UP"
 macros:
+    MAP: [ "killall", "-USR1", "wayvr"] # reloads keymap
     KILL: [ "LSuper DOWN", "LCtrl DOWN", "Escape", "LCtrl UP", "LSuper UP" ]
     COPY: [ "LCtrl DOWN", "C", "LCtrl UP" ]
     PASTE: [ "LCtrl DOWN", "V", "LCtrl UP" ]
