@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::Context;
-use glam::{Affine3A, Vec3, Vec3A};
+use glam::{Affine3A, Vec3};
 use slotmap::{Key, SecondaryMap, SlotMap};
 use wgui::log::LogErr;
 use wlx_common::{
@@ -33,7 +33,7 @@ use crate::{
         OverlayID, OverlaySelector,
         backend::{OverlayEventData, OverlayMeta},
         set::OverlayWindowSet,
-        snap_upright,
+        get_flat_hmd,
         window::{OverlayCategory, OverlayWindowData},
     },
 };
@@ -631,15 +631,13 @@ impl<T> OverlayWindowManager<T> {
         }
 
         if enabled {
-            self.wrappers
-                .wrap_edit_mode(id, &mut overlay.config, app)
-                .inspect_err(|e| log::error!("{e:?}"))
-                .unwrap(); // FIXME: unwrap
+            if let Err(e) = self.wrappers.wrap_edit_mode(id, &mut overlay.config, app) {
+                log::error!("Could not wrap edit mode for overlay {id:?}: {e:?}");
+            }
         } else {
-            self.wrappers
-                .unwrap_edit_mode(&mut overlay.config, app)
-                .inspect_err(|e| log::error!("{e:?}"))
-                .unwrap(); // FIXME: unwrap
+            if let Err(e) = self.wrappers.unwrap_edit_mode(&mut overlay.config, app) {
+                log::error!("Could not unwrap edit mode for overlay {id:?}: {e:?}");
+            }
         }
     }
 
@@ -799,6 +797,15 @@ impl<T> OverlayWindowManager<T> {
                     ws.overlays.insert(id, state);
                 }
             }
+            self.anchor_local = get_flat_hmd(&app.input_state.hmd).inverse() * app.anchor;
+        }
+
+        if self.current_set.is_none() {
+            if let Some(_new_set) = new_set {
+                let hmd = get_flat_hmd(&app.input_state.hmd);
+                app.anchor = hmd * self.anchor_local;
+                app.anchor_initialized = true;
+            }
         }
 
         if let Some(new_set) = new_set {
@@ -851,8 +858,9 @@ impl<T> OverlayWindowManager<T> {
 
     pub fn show_hide(&mut self, app: &mut AppState) {
         if self.current_set.is_none() {
-            let hmd = snap_upright(app.input_state.hmd, Vec3A::Y);
+            let hmd = get_flat_hmd(&app.input_state.hmd);
             app.anchor = hmd * self.anchor_local;
+            app.anchor_initialized = true;
 
             self.switch_to_set(app, Some(self.restore_set), false);
         } else {
