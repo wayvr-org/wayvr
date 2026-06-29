@@ -45,3 +45,24 @@ pub fn snap_upright(transform: Affine3A, up_dir: Vec3A) -> Affine3A {
         transform
     }
 }
+
+pub fn get_flat_hmd(hmd: &Affine3A) -> Affine3A {
+    let forward = -hmd.z_axis;
+    let forward_h = Vec3A::new(forward.x, 0.0, forward.z);
+    let forward_h = if forward_h.length_squared() > 1e-6 {
+        forward_h.normalize()
+    } else {
+        Vec3A::new(0.0, 0.0, -1.0)
+    };
+
+    let col_z = -forward_h;
+    let col_y = Vec3A::Y;
+    let col_x = col_y.cross(col_z).normalize();
+
+    Affine3A::from_cols(
+        col_x,
+        col_y,
+        col_z,
+        hmd.translation,
+    )
+}

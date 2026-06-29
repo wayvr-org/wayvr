@@ -51,6 +51,7 @@ pub struct AppState {
     pub screens: SmallVec<[ScreenMeta; 8]>,
     pub anchor: Affine3A,
     pub anchor_grabbed: bool,
+    pub anchor_initialized: bool,
 
     pub wgui_globals: WguiGlobals,
     pub wgui_theme: Rc<WguiTheme>,
@@ -170,6 +171,7 @@ impl AppState {
             screens: smallvec![],
             anchor: Affine3A::IDENTITY,
             anchor_grabbed: false,
+            anchor_initialized: false,
             wgui_globals: WguiGlobals::new(
                 assets,
                 &lang_provider,

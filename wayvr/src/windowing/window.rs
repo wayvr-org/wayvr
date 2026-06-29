@@ -8,7 +8,7 @@ use crate::{
     subsystem::input::KeyboardFocus,
     windowing::{
         backend::{FrameMeta, OverlayBackend, RenderResources, ShouldRender},
-        snap_upright,
+        snap_upright, get_flat_hmd,
     },
 };
 
@@ -218,19 +218,33 @@ impl OverlayWindowConfig {
             return;
         };
 
+        if self.category == OverlayCategory::Keyboard
+            || self.category == OverlayCategory::Screen
+            || self.category == OverlayCategory::WayVR
+        {
+            state.positioning = Positioning::Floating;
+            state.saved_transform = None;
+        }
+
         let cur_transform = state
             .saved_transform
             .unwrap_or(self.default_state.transform);
 
         let (parent_transform, align_to_hmd) = match state.positioning {
-            Positioning::Floating | Positioning::FollowHead { .. } => (app.input_state.hmd, false),
+            Positioning::Floating | Positioning::FollowHead { .. } => {
+                if hard_reset {
+                    (get_flat_hmd(&app.input_state.hmd), false)
+                } else {
+                    (app.input_state.hmd, false)
+                }
+            }
             Positioning::FollowHand {
                 hand, align_to_hmd, ..
             } => (app.input_state.pointers[hand as usize].pose, align_to_hmd),
             Positioning::Anchored => (app.anchor, false),
             Positioning::Static => {
                 if hard_reset {
-                    (app.input_state.hmd, false)
+                    (get_flat_hmd(&app.input_state.hmd), false)
                 } else {
                     return;
                 }
@@ -244,7 +258,12 @@ impl OverlayWindowConfig {
         state.transform = parent_transform * cur_transform;
 
         if align_to_hmd || (state.grabbable && hard_reset) {
-            realign(&mut state.transform, &app.input_state.hmd);
+            let hmd = if hard_reset {
+                get_flat_hmd(&app.input_state.hmd)
+            } else {
+                app.input_state.hmd
+            };
+            realign(&mut state.transform, &hmd);
         }
         self.dirty = true;
     }
@@ -252,6 +271,14 @@ impl OverlayWindowConfig {
 
 pub fn realign(transform: &mut Affine3A, hmd: &Affine3A) {
     let to_hmd = hmd.translation - transform.translation;
+    if to_hmd.length_squared() < 1e-6 {
+        log::warn!("realign: to_hmd is too short, using direct HMD alignment");
+        let scale = transform.x_axis.length();
+        let rot = Mat3A::from_quat(Quat::from_axis_angle(Vec3::Y, PI));
+        transform.matrix3 = Mat3A::from_cols(hmd.x_axis, hmd.y_axis, hmd.z_axis).mul_scalar(scale) * rot;
+        return;
+    }
+
     let up_dir: Vec3A;
 
     if hmd.x_axis.dot(Vec3A::Y).abs() > 0.2 {
@@ -300,3 +327,46 @@ pub fn save_transform(state: &mut OverlayWindowState, app: &mut AppState) {
 
     state.saved_transform = Some(parent_transform.inverse() * state.transform);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::windowing::get_flat_hmd;
+    use glam::{Affine3A, Quat, Vec3, Vec3A};
+
+    #[test]
+    fn test_get_flat_hmd_removes_pitch_roll() {
+        let translation = Vec3::new(1.0, 2.0, 3.0);
+        let rotation = Quat::from_euler(glam::EulerRot::YXZ, 0.5, 0.3, 0.2);
+        let hmd = Affine3A::from_rotation_translation(rotation, translation);
+
+        let flat_hmd = get_flat_hmd(&hmd);
+
+        assert_eq!(flat_hmd.translation, Vec3A::from(translation));
+        assert!((flat_hmd.y_axis - Vec3A::Y).length() < 1e-5);
+
+        assert!((flat_hmd.x_axis.length() - 1.0).abs() < 1e-5);
+        assert!((flat_hmd.y_axis.length() - 1.0).abs() < 1e-5);
+        assert!((flat_hmd.z_axis.length() - 1.0).abs() < 1e-5);
+        assert!(flat_hmd.x_axis.dot(flat_hmd.y_axis).abs() < 1e-5);
+        assert!(flat_hmd.y_axis.dot(flat_hmd.z_axis).abs() < 1e-5);
+        assert!(flat_hmd.z_axis.dot(flat_hmd.x_axis).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_realign_safety_guard() {
+        let hmd = Affine3A::from_translation(Vec3::new(0.5, 1.0, -1.0));
+        let mut transform = Affine3A::from_scale_rotation_translation(
+            Vec3::splat(1.5),
+            Quat::IDENTITY,
+            Vec3::new(0.5, 1.0, -1.0),
+        );
+
+        realign(&mut transform, &hmd);
+
+        assert!(transform.x_axis.x.is_finite());
+        assert!(transform.y_axis.y.is_finite());
+        assert!(transform.z_axis.z.is_finite());
+    }
+}
+
