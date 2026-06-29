@@ -27,6 +27,7 @@ use crate::{
     subsystem::notifications::NotificationManager,
     windowing::{
         backend::{RenderResources, RenderTarget, ShouldRender},
+        get_flat_hmd,
         manager::OverlayWindowManager,
     },
 };
@@ -276,6 +277,19 @@ pub fn openxr_run(
         app.input_state.pre_update();
         input_source.update(&xr_state, &mut app)?;
         app.input_state.post_update(&app.session);
+
+        let hmd_is_valid = app.input_state.hmd.translation.length_squared() > 1e-6;
+        if !app.anchor_initialized && hmd_is_valid {
+            log::info!("HMD tracking has started! Initializing app.anchor flat in front of user.");
+            let hmd = get_flat_hmd(&app.input_state.hmd);
+            let anchor_local = Affine3A::from_translation(Vec3::new(0.0, 0.0, -1.0));
+            app.anchor = hmd * anchor_local;
+            app.anchor_initialized = true;
+
+            for o in overlays.values_mut() {
+                o.config.reset(&mut app, true);
+            }
+        }
 
         if let Some(ref mut blocker) = blocker {
             blocker.update(&mut app);

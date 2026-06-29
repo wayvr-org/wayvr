@@ -105,13 +105,13 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
         category: OverlayCategory::Keyboard,
         default_state: OverlayWindowState {
             grabbable: true,
-            positioning: Positioning::Anchored,
+            positioning: Positioning::Floating,
             interactable: true,
             curvature: Some(0.15),
             transform: Affine3A::from_scale_rotation_translation(
                 Vec3::ONE * width,
                 Quat::from_rotation_x(-10f32.to_radians()),
-                vec3(0.0, -0.65, -0.5),
+                vec3(0.0, -0.4, -0.95),
             ),
             ..OverlayWindowState::default()
         },
