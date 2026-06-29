@@ -631,15 +631,13 @@ impl<T> OverlayWindowManager<T> {
         }
 
         if enabled {
-            self.wrappers
-                .wrap_edit_mode(id, &mut overlay.config, app)
-                .inspect_err(|e| log::error!("{e:?}"))
-                .unwrap(); // FIXME: unwrap
+            if let Err(e) = self.wrappers.wrap_edit_mode(id, &mut overlay.config, app) {
+                log::error!("Could not wrap edit mode for overlay {id:?}: {e:?}");
+            }
         } else {
-            self.wrappers
-                .unwrap_edit_mode(&mut overlay.config, app)
-                .inspect_err(|e| log::error!("{e:?}"))
-                .unwrap(); // FIXME: unwrap
+            if let Err(e) = self.wrappers.unwrap_edit_mode(&mut overlay.config, app) {
+                log::error!("Could not unwrap edit mode for overlay {id:?}: {e:?}");
+            }
         }
     }
 

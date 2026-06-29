@@ -13,7 +13,8 @@ pub fn new_stereo_tab_handler(
     // Fetch the checkbox component first, before creating the closure
     let checkbox = panel
         .parser_state
-        .fetch_component_as::<ComponentCheckbox>("stereo_full_frame_box")?;
+        .fetch_component_as::<ComponentCheckbox>("stereo_full_frame_box")
+        .ok();
 
     SpriteTabHandler::new(
         panel,
@@ -23,7 +24,9 @@ pub fn new_stereo_tab_handler(
             let stereo = *state;
 
             let translation = get_stereo_full_frame_translation(stereo);
-            checkbox.set_text(common, Translation::from_translation_key(translation));
+            if let Some(ref cb) = checkbox {
+                cb.set_text(common, Translation::from_translation_key(translation));
+            }
 
             Box::new(move |app, owc| {
                 owc.backend
