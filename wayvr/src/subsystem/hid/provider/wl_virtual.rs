@@ -186,7 +186,7 @@ impl WlVirtualProvider {
         let qh = queue.handle();
         let seat: WlSeat = globals
             .bind(&qh, 4..=9, ())
-            .unwrap_or_else(|_| panic!("{}", WlSeat::interface().name));
+            .context("compositor doesn't expose a compatible wl_seat (version 4..=9)")?;
 
         let pointer_manager: ZwlrVirtualPointerManagerV1 = globals
             .bind(&qh, 1..=1, ())
