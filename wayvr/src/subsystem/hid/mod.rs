@@ -1,5 +1,5 @@
 use glam::Vec2;
-use idmap::{idmap, IdMap};
+use idmap::{IdMap, idmap};
 use idmap_derive::IntegerId;
 use libc::{input_event, timeval};
 use serde::Deserialize;
@@ -10,9 +10,9 @@ use xkbcommon::xkb;
 #[cfg(feature = "wayland")]
 pub mod wayland;
 
+pub mod provider;
 #[cfg(feature = "x11")]
 mod x11;
-pub mod provider;
 
 #[derive(Debug)]
 pub struct WheelDelta {

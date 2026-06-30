@@ -1,6 +1,6 @@
-use glam::Vec2;
-use crate::subsystem::hid::{VirtualKey, WheelDelta, XkbKeymap};
 use crate::subsystem::hid::provider::HidProvider;
+use crate::subsystem::hid::{VirtualKey, WheelDelta, XkbKeymap};
+use glam::Vec2;
 
 pub struct DummyProvider;
 

@@ -150,7 +150,10 @@ impl HidProvider for WlVirtualProvider {
 
     fn set_keymap(&mut self, keymap: &XkbKeymap) {
         #[cfg(debug_assertions)]
-        log::trace!("Keyboard keymap: {:?}", keymap.inner.layouts().next().unwrap_or("Unknown"));
+        log::trace!(
+            "Keyboard keymap: {:?}",
+            keymap.inner.layouts().next().unwrap_or("Unknown")
+        );
 
         let mut bytes = keymap
             .inner

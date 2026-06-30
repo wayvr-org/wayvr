@@ -1,13 +1,19 @@
+use crate::overlays::toast::Toast;
+use crate::subsystem::hid::provider::HidProvider;
+use crate::subsystem::hid::{
+    EV_ABS, EV_KEY, EV_REL, EV_SYN, MODS_TO_KEYS, MOUSE_EXTENT, MOUSE_LEFT, MOUSE_MIDDLE,
+    MouseAction, MouseButtonAction, VirtualKey, WheelDelta, XkbKeymap, get_time, new_event,
+};
+use glam::Vec2;
+use input_linux::{
+    AbsoluteAxis, AbsoluteInfo, AbsoluteInfoSetup, EventKind, InputId, Key, RelativeAxis,
+    UInputHandle,
+};
 use std::fs::File;
 use std::intrinsics::transmute;
 use std::sync::atomic::AtomicBool;
-use glam::Vec2;
 use strum::IntoEnumIterator;
-use input_linux::{AbsoluteAxis, AbsoluteInfo, AbsoluteInfoSetup, EventKind, InputId, Key, RelativeAxis, UInputHandle};
 use wlx_common::overlays::ToastTopic;
-use crate::overlays::toast::Toast;
-use crate::subsystem::hid::{get_time, new_event, MouseAction, MouseButtonAction, VirtualKey, WheelDelta, XkbKeymap, EV_ABS, EV_KEY, EV_REL, EV_SYN, MODS_TO_KEYS, MOUSE_EXTENT, MOUSE_LEFT, MOUSE_MIDDLE};
-use crate::subsystem::hid::provider::HidProvider;
 
 pub struct UInputProvider {
     keyboard_handle: UInputHandle<File>,
@@ -238,7 +244,7 @@ Check if you're in input group, run: id -nG";
             String::with_capacity(0),
             String::from(UINPUT_DISABLED),
         )
-            .with_timeout(5.0));
+        .with_timeout(5.0));
     }
 
     if let Some(uinput) = UInputProvider::try_new() {
@@ -263,5 +269,5 @@ Check if you're in input group, run: id -nG";
         String::with_capacity(0),
         full_uinput_error,
     )
-        .with_timeout(30.0))
+    .with_timeout(30.0))
 }
