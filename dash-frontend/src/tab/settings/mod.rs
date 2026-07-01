@@ -548,7 +548,7 @@ impl SettingType {
 }
 
 // creates a simple div with horizontal, centered flow
-fn horiz_cell(layout: &mut Layout, parent: WidgetID) -> anyhow::Result<WidgetID> {
+pub fn horiz_cell(layout: &mut Layout, parent: WidgetID) -> anyhow::Result<WidgetID> {
 	let (pair, _) = layout.add_child(
 		parent,
 		WidgetDiv::create(),

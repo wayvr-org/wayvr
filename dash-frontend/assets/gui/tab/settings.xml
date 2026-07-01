@@ -31,6 +31,13 @@
     <RadioBox text="${text}" translation="${translation}" value="${value}" tooltip="${tooltip}" />
   </template>
 
+  <template name="ButtonText">
+    <Button id="${id}" height="32" tooltip="${translation}_HELP" padding="4" gap="8">
+      <sprite src_builtin="${icon}" height="24" width="24" />
+      <label align="left" translation="${translation}" weight="bold" min_width="200" />
+    </Button>
+  </template>
+
   <template name="DangerButton">
     <Button id="${id}" color="#AA3333" height="32" tooltip="${translation}_HELP" padding="4" gap="8">
       <sprite src_builtin="${icon}" height="24" width="24" />

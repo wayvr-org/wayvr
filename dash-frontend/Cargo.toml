@@ -16,6 +16,7 @@ http-body-util = "0.1.3"
 hyper = { version = "1.8.1", features = ["client", "http1", "http2"] }
 keyvalues-parser = { git = "https://codeberg.org/CosmicHarper/vdf-rs.git", rev = "fc6dcbea9eb13cacb98dea40063f6f56cde6e145" }
 log.workspace = true
+lz4_flex = { version = "0.13.1", features = ["frame"] }
 rust-embed.workspace = true
 serde = { workspace = true, features = ["rc"] }
 serde_json.workspace = true

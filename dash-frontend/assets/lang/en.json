@@ -38,6 +38,51 @@
 		"BLOCK_GAME_INPUT_IGNORE_WATCH_HELP": "Do not block input when watch is hovered",
 		"BLOCK_POSES_ON_KBD_INTERACTION": "Block poses when interacting with keyboard",
 		"BLOCK_POSES_ON_KBD_INTERACTION_HELP": "Blocks the game from receiving poses when the keyboard is hovered and 'Block game input' is enabled",
+		"BINDINGS": {
+			"COMP": {
+				"CLICK": "Click",
+				"FORCE": "Force",
+				"TOUCH": "Touch",
+				"VALUE": "Value",
+				"PROXIMITY": "Proximity",
+				"X_AXIS": "X axis",
+				"Y_AXIS": "Y axis"
+			},
+			"TYPE": {
+				"TRIGGER": "Trigger",
+				"TRACKPAD": "Trackpad",
+				"THUMBSTICK": "Thumbstick",
+				"JOYSTICK": "Joystick",
+				"SYSTEM": "System",
+				"THUMBREST": "Thumbrest",
+				"SHOULDER": "Shoulder",
+				"SQUEEZE": "Grip"
+			},
+			"CLICK": {
+				"ANY": "-",
+				"DOUBLE": "Double-click",
+				"TRIPLE": "Triple-click",
+				"TYPE": "Click count"
+			},
+			"ACTION": {
+				"CLICK": "Click*",
+				"GRAB": "Grab*",
+				"ALT_CLICK": "Custom shell exec (set alt_click in config)",
+				"SHOW_HIDE": "Show, hide, recenter*",
+				"TOGGLE_DASHBOARD": "Toggle dashboard",
+				"SPACE_DRAG": "Playspace drag",
+				"SPACE_ROTATE": "Playspace rotate",
+				"SPACE_RESET": "Playspace reset",
+				"CLICK_MODIFIER_RIGHT": "Right-click modifier",
+				"CLICK_MODIFIER_MIDDLE": "Middle-click modifier",
+				"MOVE_MOUSE": "Move mouse (if off by default)",
+				"SCROLL": "Scroll"
+			},
+			"LEFT": "Left",
+			"RIGHT": "Right",
+			"COMPONENT": "Actuation type",
+			"SUBPATH": "Actuating control"
+		},
 		"BROWSE_ONLINE_CATALOG": "Browse online catalog...",
 		"BROWSE_SKYMAPS": "Browse skymaps",
 		"CAPTURE_METHOD": "Wayland screen capture",
@@ -62,6 +107,8 @@
 		"HANDSFREE_POINTER_HELP": "Input to use when motion\ncontrollers are unavailable.\nLeft pinch is grab, right is click.",
 		"HIDE_GRAB_HELP": "Hide grab help",
 		"HIDE_USERNAME": "Hide username",
+		"INPUT_PROFILES": "Change Input Bindings",
+		"INPUT_PROFILES_HELP": "OpenXR controller input bindings",
 		"INVERT_SCROLL_DIRECTION_X": "Invert horizontal scroll direction",
 		"INVERT_SCROLL_DIRECTION_Y": "Invert vertical scroll direction",
 		"KEYBOARD_MIDDLE_CLICK": "Keyboard middle click",
@@ -134,7 +181,9 @@
 		"GRID_OPACITY_HELP": "Opacity of the floor grid when the skybox is enabled",
 		"XR_CLICK_SENSITIVITY": "XR trigger sensitivity",
 		"XR_CLICK_SENSITIVITY_HELP": "Press and release values for analog triggers",
-		"XWAYLAND_BY_DEFAULT": "Run apps in Compatibility mode by default"
+		"XWAYLAND_BY_DEFAULT": "Run apps in Compatibility mode by default",
+		"SAVE": "Save",
+		"CANCEL": "Cancel"
 	},
 	"APPLICATION_LAUNCHER": "Application launcher",
 	"APPLICATION_STARTED": "Application started",

@@ -7,8 +7,10 @@ use std::{
 use glam::{Affine3A, Quat, Vec3, bool};
 use libmonado::{self as mnd, DeviceLogic};
 use openxr::{self as xr, Quaternionf, Vector2f, Vector3f};
-use serde::{Deserialize, Serialize};
-use wlx_common::{config::HandsfreePointer, config_io};
+use wlx_common::{
+    config::HandsfreePointer,
+    openxr_actions::{OneOrMany, load_xr_input_profiles},
+};
 
 use crate::{
     backend::input::{Haptics, InputState, Pointer, TrackedDevice, TrackedDeviceRole},
@@ -647,7 +649,7 @@ macro_rules! add_custom_lr {
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 fn suggest_bindings(instance: &xr::Instance, hands: &[&OpenXrHandSource; 3]) {
-    let profiles = load_action_profiles();
+    let profiles = load_xr_input_profiles();
 
     for profile in profiles {
         log::warn!("Loading profile {}", &profile.profile);
@@ -722,68 +724,4 @@ fn suggest_bindings(instance: &xr::Instance, hands: &[&OpenXrHandSource; 3]) {
             );
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-enum OneOrMany<T> {
-    One(T),
-    Many(Vec<T>),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct OpenXrActionConfAction {
-    left: Option<OneOrMany<String>>,
-    right: Option<OneOrMany<String>>,
-    handsfree: Option<OneOrMany<String>>,
-    threshold: Option<[f32; 2]>,
-    double_click: Option<bool>,
-    triple_click: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct OpenXrActionConfProfile {
-    profile: String,
-    pose: Option<OpenXrActionConfAction>,
-    click: Option<OpenXrActionConfAction>,
-    grab: Option<OpenXrActionConfAction>,
-    alt_click: Option<OpenXrActionConfAction>,
-    show_hide: Option<OpenXrActionConfAction>,
-    toggle_dashboard: Option<OpenXrActionConfAction>,
-    space_drag: Option<OpenXrActionConfAction>,
-    space_rotate: Option<OpenXrActionConfAction>,
-    space_reset: Option<OpenXrActionConfAction>,
-    click_modifier_right: Option<OpenXrActionConfAction>,
-    click_modifier_middle: Option<OpenXrActionConfAction>,
-    move_mouse: Option<OpenXrActionConfAction>,
-    scroll: Option<OpenXrActionConfAction>,
-    haptic: Option<OpenXrActionConfAction>,
-}
-
-const DEFAULT_PROFILES: &str = include_str!("openxr_actions.json5");
-
-fn load_action_profiles() -> Vec<OpenXrActionConfProfile> {
-    let mut profiles: Vec<OpenXrActionConfProfile> =
-        serde_json5::from_str(DEFAULT_PROFILES).unwrap(); // want panic
-
-    let Some(conf) = config_io::load("openxr_actions.json5") else {
-        return profiles;
-    };
-
-    match serde_json5::from_str::<Vec<OpenXrActionConfProfile>>(&conf) {
-        Ok(override_profiles) => {
-            for new in override_profiles {
-                if let Some(i) = profiles.iter().position(|old| old.profile == new.profile) {
-                    profiles[i] = new;
-                } else {
-                    profiles.push(new);
-                }
-            }
-        }
-        Err(e) => {
-            log::error!("Failed to load openxr_actions.json5: {e}");
-        }
-    }
-
-    profiles
 }

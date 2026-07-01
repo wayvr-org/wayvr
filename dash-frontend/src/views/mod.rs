@@ -2,11 +2,13 @@ use wlx_common::{async_executor::AsyncExecutor, config::GeneralConfig, dash_inte
 
 pub mod app_launcher;
 pub mod audio_settings;
+pub mod bindings;
 pub mod dialog_box;
 pub mod download_file;
 pub mod game_cover;
 pub mod game_launcher;
 pub mod game_list;
+pub mod input_profiles;
 pub mod remote_skymap_downloader;
 pub mod remote_skymap_list;
 pub mod running_games_list;

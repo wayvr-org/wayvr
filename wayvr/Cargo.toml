@@ -36,6 +36,7 @@ regex.workspace = true
 rust-embed.workspace = true
 serde = { workspace = true, features = ["rc"] }
 serde_json.workspace = true
+serde_json5.workspace = true
 slotmap.workspace = true
 strum.workspace = true
 vulkano.workspace = true
@@ -68,7 +69,6 @@ ovr_overlay = { git = "https://github.com/galister/ovr_overlay_oyasumi", rev = "
 prost = { version = "0.14.3", optional = true }
 pure-rust-locales = "0.8.2"
 rosc = { version = "0.11.4", optional = true }
-serde_json5 = "0.2.1"
 serde_yaml = "0.9.34"
 signal-hook = "0.3.18"
 smallvec = "1.15.1"

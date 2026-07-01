@@ -66,3 +66,9 @@ pub fn load(filename: &str) -> Option<String> {
 
 	std::fs::read_to_string(path).ok()
 }
+
+pub fn save(filename: &str, content: &str) -> anyhow::Result<()> {
+	let path = get_config_file_path(filename);
+	std::fs::write(path, content)?;
+	Ok(())
+}

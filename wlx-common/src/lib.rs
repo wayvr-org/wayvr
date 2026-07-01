@@ -10,6 +10,7 @@ pub mod dash_interface_emulated;
 pub mod desktop_finder;
 mod handle;
 pub mod locale;
+pub mod openxr_actions;
 pub mod overlays;
 pub mod timestep;
 pub mod windowing;
