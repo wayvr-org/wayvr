@@ -7,7 +7,6 @@ readonly ALLOWED_PROFILES="$(
 /interaction_profiles/htc/vive_controller
 /interaction_profiles/htc/vive_cosmos_controller
 /interaction_profiles/htc/vive_focus3_controller
-/interaction_profiles/khr/simple_controller
 /interaction_profiles/ml/ml2_controller
 /interaction_profiles/microsoft/motion_controller
 /interaction_profiles/mndx/flipvr
