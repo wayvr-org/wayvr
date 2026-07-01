@@ -7,12 +7,10 @@ readonly ALLOWED_PROFILES="$(
 /interaction_profiles/htc/vive_controller
 /interaction_profiles/htc/vive_cosmos_controller
 /interaction_profiles/htc/vive_focus3_controller
-/interaction_profiles/khr/generic_controller
 /interaction_profiles/khr/simple_controller
 /interaction_profiles/ml/ml2_controller
 /interaction_profiles/microsoft/motion_controller
 /interaction_profiles/mndx/flipvr
-/interaction_profiles/mndx/hydra
 /interaction_profiles/mndx/pssense_controller_mndx
 /interaction_profiles/oculus/touch_controller
 /interaction_profiles/oppo/mr_controller_oppo

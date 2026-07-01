@@ -13,30 +13,50 @@ pub enum OneOrMany<T> {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct OpenXrInputAction {
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub left: Option<OneOrMany<String>>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub right: Option<OneOrMany<String>>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub handsfree: Option<OneOrMany<String>>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub threshold: Option<[f32; 2]>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub double_click: Option<bool>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub triple_click: Option<bool>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct OpenXrInputProfile {
 	pub profile: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub pose: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub click: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub grab: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub alt_click: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub show_hide: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub toggle_dashboard: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub space_drag: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub space_rotate: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub space_reset: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub click_modifier_right: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub click_modifier_middle: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub move_mouse: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub scroll: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub haptic: Option<OpenXrInputAction>,
 }
 
