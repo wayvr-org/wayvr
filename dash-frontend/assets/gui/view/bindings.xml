@@ -1,21 +1,30 @@
 <layout>
+  <include src="../t_group_box.xml" />
+
+  <!-- used at runtime [!!!] -->
   <include src="../t_dropdown_button.xml" />
 
   <!-- id, translation  -->
   <template name="ActionRow">
-    <div id="${id}" flex_direction="column" gap="4" width="100%" padding="6" round="6" color="#00000044" border="1" border_color="#FFFFFF33">
-      <label translation="${translation}" weight="bold" size="14" />
-    </div>
+    <rectangle macro="group_box" id="${id}">
+      <!-- top row -->
+      <div flex_direction="row" gap="8" align_items="center">
+        <sprite src_builtin="dashboard/controller.svg" width="24" height="24"/>
+        <label translation="${translation}" color="~color_accent" weight="bold" size="14" />
+      </div>
+      <!-- filled-in at runtime -->
+    </rectangle>
   </template>
 
   <elements>
-    <div flex_direction="column" gap="8" width="100%" align_items="center">
-      <label id="controller_type" text="OpenXR Bindings" weight="bold" size="18" />
-      <div id="list_parent" flex_direction="column" gap="6" width="100%"></div>
-      <div flex_direction="row" gap="4" align_self="end">
-        <Button id="btn_save" height="32" translation="APP_SETTINGS.SAVE" />
-        <Button id="btn_cancel" height="32" translation="APP_SETTINGS.CANCEL" />
+    <div flex_direction="column" gap="8" width="100%">
+      <div flex_direction="column" gap="8" align_items="center" overflow_y="scroll" width="100%" padding="16">
+        <div id="list_parent" flex_direction="column" gap="6" width="100%"></div>
       </div>
+      <rectangle color="#000000cc" flex_direction="row" gap="8" justify_content="end" padding="8">
+        <Button id="btn_cancel" sprite_src_builtin="dashboard/cancel.svg" min_width="100" height="32" translation="APP_SETTINGS.CANCEL" />
+        <Button id="btn_save" sprite_src_builtin="dashboard/check.svg" min_width="100" height="32" translation="APP_SETTINGS.SAVE" />
+      </rectangle>
     </div>
   </elements>
 </layout>

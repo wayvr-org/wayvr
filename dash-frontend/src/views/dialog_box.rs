@@ -123,5 +123,6 @@ pub fn mount_popup(popup: PopupHolder<View>, frontend_tasks: FrontendTasks, para
 				popup.set_view(data.handle, view, None);
 				Ok(popup.get_close_callback(data.layout))
 			}),
+			Default::default(), /* extra */
 		)));
 }

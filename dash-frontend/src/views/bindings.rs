@@ -1,5 +1,6 @@
 use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
+use glam::Vec2;
 use wgui::{
 	assets::AssetPath,
 	components::button::{ButtonClickEvent, ComponentButton},
@@ -22,7 +23,8 @@ use crate::{
 	tab::settings::horiz_cell,
 	util::{
 		openxr_bindings_schema::{ClickType, Component, IdentifierType, ParsedOpenXrInputPath, Profile, Side},
-		popup_manager::{MountPopupOnceParams, PopupHolder},
+		popup_manager::{MountPopupOnceParams, MountPopupOnceParamsExtra, PopupHolder, PopupPadding},
+		wgui_simple,
 	},
 	views::{ViewTrait, ViewUpdateParams},
 };
@@ -85,7 +87,7 @@ impl ViewTrait for View {
 		}
 
 		// Dropdown handling
-		if let TickResult::Action(name) = self.context_menu.tick(&mut par.layout, &mut self.parser_state)?
+		if let TickResult::Action(name) = self.context_menu.tick(par.layout, &mut self.parser_state)?
 			&& let (Some(action), Some(_), Some(action_name), Some(side), Some(value)) = {
 				let mut s = name.splitn(5, ';');
 				(s.next(), s.next(), s.next(), s.next(), s.next())
@@ -95,8 +97,8 @@ impl ViewTrait for View {
 
 			log::warn!("{action_name}");
 
-			let mut cur_profile = &mut self.profiles[self.cur_profile_idx];
-			let action_mut = get_action_mut(&mut cur_profile, action_name);
+			let cur_profile = &mut self.profiles[self.cur_profile_idx];
+			let action_mut = get_action_mut(cur_profile, action_name);
 			let side_mut = if side == "right" {
 				&mut action_mut.right
 			} else {
@@ -162,14 +164,6 @@ impl View {
 		let parser_state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
 		let list_parent = parser_state.fetch_widget(&params.layout.state, "list_parent")?.id;
 		let tasks = Tasks::new();
-
-		{
-			let mut title_label = parser_state.fetch_widget_as::<WidgetLabel>(&params.layout.state, "controller_type")?;
-			title_label.set_text_simple(
-				&mut params.globals.get(),
-				Translation::from_raw_text_rc(params.profile.title.clone()),
-			);
-		}
 
 		tasks.handle_button(
 			&parser_state.fetch_component_as::<ComponentButton>("btn_save")?,
@@ -267,7 +261,7 @@ pub fn mount_popup(
 	frontend_tasks
 		.clone()
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
-			Translation::from_translation_key("APP_SETTINGS.INPUT_PROFILES"),
+			Translation::from_raw_text_rc(profile.title.clone()),
 			Box::new(move |data| {
 				let close_callback = popup.get_close_callback(data.layout);
 				let view = View::new(Params {
@@ -282,6 +276,9 @@ pub fn mount_popup(
 				popup.set_view(data.handle, view, None);
 				Ok(popup.get_close_callback(data.layout))
 			}),
+			MountPopupOnceParamsExtra {
+				padding: PopupPadding::None,
+			},
 		)));
 }
 
@@ -367,16 +364,13 @@ fn input_controls_for_hand(
 		return Ok(()); // skip
 	}
 
-	let current = current
-		.map(|cur| ParsedOpenXrInputPath::try_from(cur).log_warn(cur).ok())
-		.flatten();
+	let current = current.and_then(|cur| ParsedOpenXrInputPath::try_from(cur).log_warn(cur).ok());
 
 	let parent = horiz_cell(mp.layout, parent)?;
 
 	let available_components = current
 		.as_ref()
-		.map(|par| profile.subpaths.get(&par.to_subpath()))
-		.flatten()
+		.and_then(|par| profile.subpaths.get(&par.to_subpath()))
 		.map(|subp| subp.get_effective_components())
 		.unwrap_or_default();
 
@@ -387,8 +381,7 @@ fn input_controls_for_hand(
 		.filter_map(|(key, _)| {
 			key
 				.strip_prefix("/input/")
-				.map(|ident| IdentifierType::try_from(ident).ok())
-				.flatten()
+				.and_then(|ident| IdentifierType::try_from(ident).ok())
 		})
 		.collect::<Rc<[IdentifierType]>>();
 
@@ -430,11 +423,16 @@ fn subpath_dropdown(
 
 	let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
 	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-	params.insert(
-		Rc::from("translation"),
-		Rc::from(format!("APP_SETTINGS.BINDINGS.{}", side.as_ref().to_uppercase())),
-	);
 	params.insert(Rc::from("tooltip"), Rc::from("APP_SETTINGS.BINDINGS.SUBPATH"));
+	params.insert(Rc::from("min_width"), Rc::from("100"));
+
+	// left/right hand icon
+	wgui_simple::create_icon(
+		mp.layout,
+		parent,
+		Vec2::new(32.0, 32.0),
+		AssetPath::BuiltIn(&format!("dashboard/hand_{}.svg", side.as_ref().to_lowercase())),
+	)?;
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "DropdownButton", mp.layout, parent, params)?;
@@ -508,6 +506,7 @@ fn component_dropdown(
 	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
 	params.insert(Rc::from("text"), Rc::from("・"));
 	params.insert(Rc::from("tooltip"), Rc::from("APP_SETTINGS.BINDINGS.COMPONENT"));
+	params.insert(Rc::from("min_width"), Rc::from("100"));
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "DropdownButton", mp.layout, parent, params)?;
@@ -561,6 +560,7 @@ fn clicks_dropdown(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, curr
 	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
 	params.insert(Rc::from("text"), Rc::from("・"));
 	params.insert(Rc::from("tooltip"), Rc::from("APP_SETTINGS.BINDINGS.CLICK.TYPE"));
+	params.insert(Rc::from("min_width"), Rc::from("100"));
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "DropdownButton", mp.layout, parent, params)?;

@@ -453,5 +453,6 @@ pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, entry: D
 				popup.set_view(data.handle, view, None);
 				Ok(popup.get_close_callback(data.layout))
 			}),
+			Default::default(), /* extra */
 		)));
 }

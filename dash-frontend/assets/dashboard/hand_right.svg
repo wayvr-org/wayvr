@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 384 383.99998"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="hand_right.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="8"
+     inkscape:cx="24"
+     inkscape:cy="15.9375"
+     inkscape:window-width="1920"
+     inkscape:window-height="1016"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <defs
+     id="defs1" />
+  <!-- Icon from Phosphor by Phosphor Icons - https://github.com/phosphor-icons/core/blob/main/LICENSE -->
+  <path
+     fill="currentColor"
+     d="M 30.079989,119.60999 V 210.54 c 0,46.2 36.85,84.55 83.000011,85.06 a 83.7,83.7 0 0 0 60.4,-24.59 c 21.81,-23.07 46.45,-79.4 46.45,-79.4 a 16,16 0 0 0 -6.53,-22.23 c -7.66,-4.00001 -17.1,-0.84 -21.4,6.62 l -21,36.44 a 6.09,6.09 0 0 1 -6,3.09 h -0.12 a 8.19,8.19 0 0 1 -6.8,-8.18 V 103.60999 a 16,16 0 0 0 -16.77,-16 c -8.61,0.4 -15.23,7.82 -15.23,16.43 V 167.61 a 8,8 0 0 1 -8.53,8 8.17,8.17 0 0 1 -7.47,-8.25 V 87.60999 A 16,16 0 0 0 93.309986,71.609992 c -8.609997,0.4 -15.229997,7.819999 -15.229997,16.429998 V 175.61 a 8,8 0 0 1 -8.53,8 8.17,8.17 0 0 1 -7.47,-8.25 v -55.30001 c 0,-8.61 -6.62,-16 -15.23,-16.43 a 16,16 0 0 0 -16.77,15.98"
+     id="path1" />
+  <path
+     d="m 301.74274,111.50919 q 27.32551,0 40.26918,10.4782 13.14912,10.27275 13.14912,31.22916 0,11.71094 -4.31456,19.51824 -4.31455,7.80729 -11.09457,12.53275 -6.57456,4.52001 -13.97094,7.19093 l 40.26918,65.7456 h -21.57277 l -35.54372,-60.60923 h -29.17461 v 60.60923 H 261.2681 V 111.50919 Z m -1.02728,16.02549 h -20.95641 v 54.44558 h 21.98369 q 17.87458,0 26.09278,-6.98547 8.2182,-7.19092 8.2182,-20.95642 0,-14.38185 -8.62911,-20.34004 -8.62911,-6.16365 -26.70915,-6.16365 z"
+     id="text1"
+     fill="currentColor"
+     aria-label="R" />
+</svg>

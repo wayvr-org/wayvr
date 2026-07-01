@@ -817,6 +817,9 @@ impl Layout {
 			event::StyleSetRequest::Margin(margin) => {
 				cur_style.margin = *margin;
 			}
+			event::StyleSetRequest::Padding(padding) => {
+				cur_style.padding = *padding;
+			}
 			event::StyleSetRequest::Width(val) => {
 				cur_style.size.width = *val;
 			}

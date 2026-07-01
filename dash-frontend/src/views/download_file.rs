@@ -261,5 +261,6 @@ pub fn mount_popup(
 				popup.set_view(data.handle, view, Some(on_view_close));
 				Ok(popup.get_close_callback(data.layout))
 			}),
+			Default::default(), /* extra */
 		)));
 }

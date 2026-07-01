@@ -80,12 +80,18 @@ fn create_input_profiles_button(
 
 impl State {
 	pub fn mount(par: SettingsMountParams) -> anyhow::Result<State> {
+		let tasks = Tasks::<Task>::new();
+		let popup = PopupHolder::<input_profiles::View>::default();
+
 		let c = options_category(
 			par.mp,
 			par.id_parent,
 			"APP_SETTINGS.CONTROLS",
 			"dashboard/controller.svg",
 		)?;
+		if par.feats.openxr {
+			create_input_profiles_button(par.mp, c, tasks.clone(), &popup)?;
+		}
 		options_dropdown::<wlx_common::config::AltModifier>(par.mp, c, &SettingType::KeyboardMiddleClick)?;
 		options_dropdown::<wlx_common::config::HandsfreePointer>(par.mp, c, &SettingType::HandsfreePointer)?;
 		options_checkbox(par.mp, c, SettingType::FocusFollowsMouseMode)?;
@@ -110,13 +116,6 @@ impl State {
 		}
 
 		options_slider_i32(par.mp, c, SettingType::ClickFreezeTimeMs, 0, 500, 50)?;
-
-		let tasks = Tasks::<Task>::new();
-		let popup = PopupHolder::<input_profiles::View>::default();
-
-		if par.feats.openxr {
-			create_input_profiles_button(par.mp, c, tasks.clone(), &popup)?;
-		}
 
 		Ok(State {
 			popup_input_profiles: popup,

@@ -8,16 +8,16 @@
     border_color="#FFFFFF66"
     justify_content="space_between" />
 
-  <!-- id, text, translation, tooltip -->
+  <!-- id, text, translation, tooltip, min_width -->
   <template name="DropdownButton">
     <label text="${text}" translation="${translation}" />
     <Button id="${id}" height="32" tooltip="${tooltip}" >
-      <div padding_left="8" padding_right="8" min_width="200">
+      <div padding_left="8" padding_right="8" min_width="${min_width}">
         <label id="${id}_value" weight="bold" />
       </div>
       <div gap="2">
         <div padding_top="4" padding_bottom="4">
-          <rectangle width="2" height="100%" color="#FFFFFF66" />
+          <rectangle width="2" height="100%" color="#FFFFFF1A" />
         </div>
         <sprite margin_left="-4" width="30" height="30" color="~color_text" src_builtin="dashboard/down.svg" />
       </div>

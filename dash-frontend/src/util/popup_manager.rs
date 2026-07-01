@@ -6,11 +6,12 @@ use std::{
 use wgui::{
 	assets::AssetPath,
 	components::button::ComponentButton,
-	event::EventAlterables,
+	event::{EventAlterables, StyleSetRequest},
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, LayoutTask, LayoutTasks, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState},
+	taffy::Rect,
 	widget::label::WidgetLabel,
 };
 use wlx_common::config::GeneralConfig;
@@ -187,19 +188,33 @@ pub struct PopupContentFuncData<'a> {
 type PopupClosedCallback = Box<dyn FnOnce()>;
 type OnContentCallback = Box<dyn FnOnce(PopupContentFuncData) -> anyhow::Result<PopupClosedCallback>>;
 
+#[derive(Clone, Default)]
+pub enum PopupPadding {
+	#[default]
+	Normal,
+	None,
+}
+
+#[derive(Default, Clone)]
+pub struct MountPopupOnceParamsExtra {
+	pub padding: PopupPadding,
+}
+
 // we need to implement Clone here, but the underlying function can be called only once.
 // on_content will be cleared after the first call
 #[derive(Clone)]
 pub struct MountPopupOnceParams {
 	title: Translation,
 	on_content: Rc<RefCell<Option<OnContentCallback>>>,
+	extra: MountPopupOnceParamsExtra,
 }
 
 impl MountPopupOnceParams {
-	pub fn new(title: Translation, on_content: OnContentCallback) -> Self {
+	pub fn new(title: Translation, on_content: OnContentCallback, extra: MountPopupOnceParamsExtra) -> Self {
 		Self {
 			title,
 			on_content: Rc::new(RefCell::new(Some(on_content))),
+			extra,
 		}
 	}
 }
@@ -257,6 +272,7 @@ impl PopupManager {
 		layout: &mut Layout,
 		frontend_tasks: &FrontendTasks,
 		popup_title: &Translation,
+		popup_padding: PopupPadding,
 	) -> anyhow::Result<(PopupHandle, WidgetID /* content widget ID */)> {
 		let doc_params = &ParseDocumentParams {
 			globals: globals.clone(),
@@ -267,6 +283,16 @@ impl PopupManager {
 
 		let id_root = state.get_widget_id("root")?;
 		let id_content = state.get_widget_id("content")?;
+
+		let padding = match popup_padding {
+			PopupPadding::Normal => 16.0,
+			PopupPadding::None => 0.0,
+		};
+
+		layout.tasks.push(LayoutTask::SetWidgetStyle(
+			id_content,
+			StyleSetRequest::Padding(Rect::length(padding)),
+		));
 
 		{
 			let mut label_title = state.fetch_widget_as::<WidgetLabel>(&layout.state, "popup_title")?;
@@ -330,7 +356,8 @@ impl PopupManager {
 			anyhow::bail!("mount_popup_once called more than once");
 		};
 
-		let (popup_handle, id_content) = self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title)?;
+		let (popup_handle, id_content) =
+			self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title, params.extra.padding)?;
 
 		// mount user-set popup content
 		let closed_callback = on_content_func(PopupContentFuncData {

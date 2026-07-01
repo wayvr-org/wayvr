@@ -107,6 +107,7 @@ impl Event {
 pub enum StyleSetRequest {
 	Display(taffy::Display),
 	Margin(taffy::Rect<taffy::LengthPercentageAuto>),
+	Padding(taffy::Rect<taffy::LengthPercentage>),
 	Width(taffy::Dimension),
 	Height(taffy::Dimension),
 	Size(taffy::Size<taffy::Dimension>),
