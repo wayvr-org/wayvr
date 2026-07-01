@@ -23,7 +23,6 @@ use crate::{
 #[derive(Clone)]
 enum Task {
 	SelectProfile(Rc<str>),
-	Cancel,
 }
 
 pub struct Params<'a> {
@@ -31,14 +30,12 @@ pub struct Params<'a> {
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
 	pub frontend_tasks: &'a FrontendTasks,
-	pub close_callback: Box<dyn FnOnce()>,
 }
 
 pub struct View {
 	tasks: Tasks<Task>,
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
-	close_callback: Option<Box<dyn FnOnce()>>,
 	bindings_popup: PopupHolder<bindings::View>,
 	bindings_file: openxr_bindings_schema::BindingsFile,
 }
@@ -64,11 +61,6 @@ impl ViewTrait for View {
 						profile.clone(),
 					);
 				}
-				Task::Cancel => {
-					if let Some(close_callback) = self.close_callback.take() {
-						close_callback();
-					}
-				}
 			}
 		}
 		Ok(())
@@ -89,11 +81,6 @@ impl View {
 
 		let tasks = Tasks::new();
 
-		tasks.handle_button(
-			&parser_state.fetch_component_as::<ComponentButton>("btn_cancel")?,
-			Task::Cancel,
-		);
-
 		let bindings_file = openxr_bindings_schema::BindingsFile::load_embedded();
 
 		for (idx, (profile_id, profile)) in bindings_file.profiles.iter().enumerate() {
@@ -102,9 +89,15 @@ impl View {
 
 			let mut cell_params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
 			cell_params.insert(Rc::from("id"), Rc::from(id.clone()));
-			cell_params.insert(Rc::from("text"), Rc::from(profile_name));
+			cell_params.insert(Rc::from("text"), profile_name);
 
-			parser_state.instantiate_template(doc_params, "ProfileButton", params.layout, list_parent, cell_params)?;
+			parser_state.instantiate_template(
+				doc_params,
+				"InputProfileButton",
+				params.layout,
+				list_parent,
+				cell_params,
+			)?;
 
 			let btn = parser_state.fetch_component_as::<ComponentButton>(&id)?;
 			let tasks_clone = tasks.clone();
@@ -121,7 +114,6 @@ impl View {
 			tasks,
 			frontend_tasks: params.frontend_tasks.clone(),
 			globals: params.globals.clone(),
-			close_callback: Some(params.close_callback),
 			bindings_popup: Default::default(),
 			bindings_file,
 		})
@@ -134,13 +126,11 @@ pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, popup: P
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
 			Translation::from_translation_key("APP_SETTINGS.INPUT_PROFILES"),
 			Box::new(move |data| {
-				let close_callback = popup.get_close_callback(data.layout);
 				let view = View::new(Params {
 					globals: globals.clone(),
 					layout: data.layout,
 					parent_id: data.id_content,
 					frontend_tasks: &frontend_tasks,
-					close_callback,
 				})?;
 
 				popup.set_view(data.handle, view, None);

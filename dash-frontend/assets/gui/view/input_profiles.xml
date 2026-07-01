@@ -1,15 +1,15 @@
 <layout>
-  <template name="ProfileButton">
-    <Button id="${id}" height="36" padding="4" gap="8" text="${text}" />
+  <!-- id, text -->
+  <template name="InputProfileButton">
+    <Button id="${id}" width="350" gap="8" justify_content="start" >
+      <sprite margin_left="8" src_builtin="dashboard/controller.svg" min_width="24" min_height="24"/>
+      <label text="${text}" weight="bold"/>
+    </Button>
   </template>
 
   <elements>
     <div flex_direction="column" gap="8" width="100%" align_items="center">
-      <div id="list_parent" flex_direction="column" gap="4" width="100%"></div>
-
-      <div flex_direction="row" gap="4" align_self="end">
-        <Button id="btn_cancel" height="32" translation="APP_SETTINGS.CANCEL" />
-      </div>
+      <div id="list_parent" flex_grow="1" flex_wrap="wrap" flex_direction="row" gap="4" width="100%" justify_content="center"></div>
     </div>
   </elements>
 </layout>

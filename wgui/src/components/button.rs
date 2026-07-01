@@ -437,8 +437,9 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 	let mut style = params.style;
 	let theme = &ess.layout.state.theme;
 
-	// force-override style
-	style.align_items = Some(AlignItems::Center);
+	if style.align_items.is_none() {
+		style.align_items = Some(AlignItems::Center);
+	}
 	if style.justify_content.is_none() {
 		style.justify_content = Some(JustifyContent::Center);
 	}
