@@ -1,7 +1,7 @@
 <layout>
   <!-- text: str -->
   <template name="Cell">
-    <Button id="button" text="${text}" tooltip_str="${tooltip_str}" weight="bold" border="0" padding="4" color="#FFFFFF00" />
+    <Button id="button" text="${text}" tooltip_str="${tooltip_str}" weight="bold" border="0" padding="4" color="#FFFFFF00" height="24" justify_content="start" />
   </template>
 
   <template name="Separator">

@@ -10,7 +10,7 @@ use crate::{
 	layout::Layout,
 	parser::{self, Fetchable, ParserState},
 	task::Tasks,
-	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra},
+	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra, WguiWindowPlacement},
 };
 
 #[derive(Clone)]
@@ -77,7 +77,7 @@ impl ContextMenu {
 		self.window.close();
 	}
 
-	fn open_process(
+	fn process_open(
 		&mut self,
 		params: OpenParams,
 		layout: &mut Layout,
@@ -91,14 +91,27 @@ impl ContextMenu {
 			Blueprint::Cells(cells) => cells,
 		};
 
+		let root_size = layout.state.get_widget_size(layout.content_root_widget);
+
+		let (window_pos, placement) = if params.position.y < root_size.y / 2.0 {
+			(params.position, WguiWindowPlacement::TopLeft)
+		} else {
+			// invert y axis (position.y is counted from the bottom)
+			(
+				Vec2::new(params.position.x, root_size.y - params.position.y),
+				WguiWindowPlacement::BottomLeft,
+			)
+		};
+
 		let globals = layout.state.globals.clone();
 
 		self.window.open(&mut WguiWindowParams {
 			layout,
-			position: params.position,
+			position: window_pos,
 			extra: WguiWindowParamsExtra {
 				with_decorations: false,
 				close_if_clicked_outside: true,
+				placement,
 				..Default::default()
 			},
 		})?;
@@ -144,7 +157,7 @@ impl ContextMenu {
 
 	pub fn tick(&mut self, layout: &mut Layout, parser_state: &mut ParserState) -> anyhow::Result<TickResult> {
 		if let Some(p) = self.pending_open.take() {
-			self.open_process(p, layout, parser_state)?;
+			self.process_open(p, layout, parser_state)?;
 			let _ = self.tasks.drain();
 			return Ok(TickResult::Opened);
 		}
