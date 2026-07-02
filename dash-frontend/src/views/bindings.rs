@@ -20,7 +20,9 @@ use wgui::{
 use wlx_common::{
 	config_io,
 	openxr_actions::{OneOrMany, OpenXrInputAction, OpenXrInputProfile, load_xr_input_profiles},
-	openxr_bindings_schema::{XrControllerProfile, XrInputComponent, XrInputSide, XrInputSubpathKind},
+	openxr_bindings_schema::{
+		DEFAULT_BUTTON_THRESHOLDS, XrControllerProfile, XrInputComponent, XrInputSide, XrInputSubpathKind,
+	},
 };
 
 use crate::{
@@ -39,7 +41,7 @@ enum Task {
 	Save,
 	Cancel,
 	OpenContextMenu(glam::Vec2, Vec<context_menu::Cell>),
-	UpdateThreshold(Rc<str>, XrInputSide, f32, f32),
+	UpdateThreshold(Rc<str>, XrInputSide, usize, f32),
 }
 
 pub struct Params<'a> {
@@ -88,17 +90,18 @@ impl ViewTrait for View {
 						blueprint: context_menu::Blueprint::Cells(cells),
 					});
 				}
-				Task::UpdateThreshold(action_name, side, lo, hi) => {
-					log::warn!("UpdateThreshold {action_name} {lo:.2} {hi:.2}");
-
+				Task::UpdateThreshold(action_name, side, i, val) => {
 					let cur_profile = &mut self.profiles[self.cur_profile_idx];
 					let action_mut = get_action_mut(cur_profile, &*action_name);
 
-					if matches!(side, XrInputSide::Right) {
-						action_mut.threshold_right = Some([lo, hi]);
+					let threshold = if matches!(side, XrInputSide::Right) {
+						action_mut.threshold_right.get_or_insert(DEFAULT_BUTTON_THRESHOLDS)
 					} else {
-						action_mut.threshold_left = Some([lo, hi]);
-					}
+						action_mut.threshold_left.get_or_insert(DEFAULT_BUTTON_THRESHOLDS)
+					};
+
+					threshold[i] = val;
+					log::warn!("UpdateThreshold {action_name} {side:?} {threshold:?}");
 				}
 			}
 		}
@@ -552,7 +555,7 @@ fn threshold_slider(
 	let id = mp.idx.to_string();
 	mp.idx += 1;
 
-	let current = current.unwrap_or([0.5, 0.7]);
+	let current = current.unwrap_or(DEFAULT_BUTTON_THRESHOLDS);
 
 	let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
 	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
@@ -571,9 +574,9 @@ fn threshold_slider(
 		let tasks = mp.tasks.clone();
 		move |_common, e| {
 			if matches!(e.index, wgui::components::slider::ValueIndex::Primary) {
-				tasks.push(Task::UpdateThreshold(action.clone(), side, e.value, current[1]));
+				tasks.push(Task::UpdateThreshold(action.clone(), side, 0, e.value));
 			} else {
-				tasks.push(Task::UpdateThreshold(action.clone(), side, current[0], e.value));
+				tasks.push(Task::UpdateThreshold(action.clone(), side, 1, e.value));
 			}
 		}
 	}));

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumProperty, EnumString};
 
+pub const DEFAULT_BUTTON_THRESHOLDS: [f32; 2] = [0.5, 0.7];
+
 pub struct XrControllerProfile {
 	pub display_name: &'static str,
 	pub profile_id: &'static str,

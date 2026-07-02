@@ -10,6 +10,7 @@ use openxr::{self as xr, Quaternionf, Vector2f, Vector3f};
 use wlx_common::{
     config::HandsfreePointer,
     openxr_actions::{OneOrMany, load_xr_input_profiles},
+    openxr_bindings_schema::DEFAULT_BUTTON_THRESHOLDS,
 };
 
 use crate::{
@@ -128,7 +129,7 @@ impl CustomClickAction {
             single,
             double,
             triple,
-            threshold: [0.5, 0.7],
+            threshold: DEFAULT_BUTTON_THRESHOLDS,
         })
     }
 
