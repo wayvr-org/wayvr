@@ -10,7 +10,7 @@ use input_linux::{
     UInputHandle,
 };
 use std::fs::File;
-use std::intrinsics::transmute;
+use std::mem::transmute;
 use std::sync::atomic::AtomicBool;
 use strum::IntoEnumIterator;
 use wlx_common::overlays::ToastTopic;
