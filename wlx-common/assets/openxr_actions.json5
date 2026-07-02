@@ -230,7 +230,11 @@
     move_mouse: {
       left: "/user/hand/left/input/trigger/value",
       right: "/user/hand/right/input/trigger/value",
-      threshold: [
+      threshold_left: [
+        0.1,
+        0.2
+      ],
+      threshold_right: [
         0.1,
         0.2
       ]
@@ -282,7 +286,11 @@
     move_mouse: {
       left: "/user/hand/left/input/trigger/value",
       right: "/user/hand/right/input/trigger/value",
-      threshold: [
+      threshold_left: [
+        0.1,
+        0.2
+      ],
+      threshold_right: [
         0.1,
         0.2
       ]
@@ -326,7 +334,11 @@
     move_mouse: {
       left: "/user/hand/left/input/trigger/value",
       right: "/user/hand/right/input/trigger/value",
-      threshold: [
+      threshold_left: [
+        0.1,
+        0.2
+      ],
+      threshold_right: [
         0.1,
         0.2
       ]
@@ -361,7 +373,11 @@
     move_mouse: {
       left: "/user/hand/left/input/trigger/value",
       right: "/user/hand/right/input/trigger/value",
-      threshold: [
+      threshold_left: [
+        0.1,
+        0.2
+      ],
+      threshold_right: [
         0.1,
         0.2
       ]
@@ -408,7 +424,11 @@
     move_mouse: {
       left: "/user/hand/left/input/trigger/value",
       right: "/user/hand/right/input/trigger/value",
-      threshold: [
+      threshold_left: [
+        0.1,
+        0.2
+      ],
+      threshold_right: [
         0.1,
         0.2
       ]

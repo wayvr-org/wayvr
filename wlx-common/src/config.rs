@@ -292,12 +292,6 @@ pub struct GeneralConfig {
 	#[serde(default)]
 	pub capture_method: CaptureMethod,
 
-	#[serde(default = "def_point7")]
-	pub xr_click_sensitivity: f32,
-
-	#[serde(default = "def_half")]
-	pub xr_click_sensitivity_release: f32,
-
 	#[serde(default = "def_true")]
 	pub allow_sliding: bool,
 

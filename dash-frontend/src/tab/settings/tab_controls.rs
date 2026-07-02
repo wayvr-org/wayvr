@@ -10,9 +10,7 @@ use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
 		SettingType, SettingsMountParams, SettingsTab,
-		macros::{
-			options_category, options_checkbox, options_dropdown, options_range_f32, options_slider_f32, options_slider_i32,
-		},
+		macros::{options_category, options_checkbox, options_dropdown, options_slider_f32, options_slider_i32},
 	},
 	views::{ViewUpdateParams, input_profiles},
 };
@@ -104,15 +102,6 @@ impl State {
 
 		if par.feats.openxr {
 			options_slider_f32(par.mp, c, SettingType::PointerLerpFactor, 0.1, 1.0, 0.1)?;
-			options_range_f32(
-				par.mp,
-				c,
-				SettingType::XrClickSensitivityRelease,
-				SettingType::XrClickSensitivity,
-				0.1,
-				0.9,
-				0.1,
-			)?;
 		}
 
 		options_slider_i32(par.mp, c, SettingType::ClickFreezeTimeMs, 0, 500, 50)?;

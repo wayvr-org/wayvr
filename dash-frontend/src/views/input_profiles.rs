@@ -17,7 +17,7 @@ use crate::{
 		openxr_controller_profiles::OPENXR_INPUT_PROFILES,
 		popup_manager::{MountPopupOnceParams, PopupHolder},
 	},
-	views::{self, bindings, ViewTrait, ViewUpdateParams},
+	views::{self, ViewTrait, ViewUpdateParams, bindings},
 };
 
 #[derive(Clone)]

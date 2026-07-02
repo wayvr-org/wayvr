@@ -316,8 +316,6 @@ enum SettingType {
 	UseSkybox,
 	WatchViewAngleMax,
 	WatchViewAngleMin,
-	XrClickSensitivity,
-	XrClickSensitivityRelease,
 	XwaylandByDefault,
 }
 
@@ -378,8 +376,6 @@ impl SettingType {
 			Self::UiRoundMultiplier => &mut config.ui_round_multiplier,
 			Self::WatchViewAngleMax => &mut config.watch_view_angle_max,
 			Self::WatchViewAngleMin => &mut config.watch_view_angle_min,
-			Self::XrClickSensitivity => &mut config.xr_click_sensitivity,
-			Self::XrClickSensitivityRelease => &mut config.xr_click_sensitivity_release,
 			_ => panic!("Requested f32 for non-f32 SettingType"),
 		}
 	}
@@ -490,8 +486,6 @@ impl SettingType {
 			Self::UseSkybox => Ok("APP_SETTINGS.USE_SKYBOX"),
 			Self::WatchViewAngleMax => Ok("APP_SETTINGS.WATCH_VIEW_ANGLE"),
 			Self::WatchViewAngleMin => Ok("APP_SETTINGS.WATCH_VIEW_ANGLE"),
-			Self::XrClickSensitivity => Ok("APP_SETTINGS.XR_CLICK_SENSITIVITY"),
-			Self::XrClickSensitivityRelease => Ok("APP_SETTINGS.XR_CLICK_SENSITIVITY"),
 			Self::XwaylandByDefault => Ok("APP_SETTINGS.XWAYLAND_BY_DEFAULT"),
 		}
 	}
@@ -519,8 +513,6 @@ impl SettingType {
 			Self::UseSkybox => Some("APP_SETTINGS.USE_SKYBOX_HELP"),
 			Self::WatchViewAngleMax => Some("APP_SETTINGS.WATCH_VIEW_ANGLE_HELP"),
 			Self::WatchViewAngleMin => Some("APP_SETTINGS.WATCH_VIEW_ANGLE_HELP"),
-			Self::XrClickSensitivity => Some("APP_SETTINGS.XR_CLICK_SENSITIVITY_HELP"),
-			Self::XrClickSensitivityRelease => Some("APP_SETTINGS.XR_CLICK_SENSITIVITY_HELP"),
 			_ => None,
 		}
 	}

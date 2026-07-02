@@ -181,8 +181,6 @@
 		"WATCH_VIEW_ANGLE_HELP": "Control how the watch fades away",
 		"GRID_OPACITY": "Floor grid opacity",
 		"GRID_OPACITY_HELP": "Opacity of the floor grid when the skybox is enabled",
-		"XR_CLICK_SENSITIVITY": "XR trigger sensitivity",
-		"XR_CLICK_SENSITIVITY_HELP": "Press and release values for analog triggers",
 		"XWAYLAND_BY_DEFAULT": "Run apps in Compatibility mode by default",
 		"SAVE": "Save",
 		"CANCEL": "Cancel"

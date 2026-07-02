@@ -20,7 +20,9 @@ pub struct OpenXrInputAction {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub handsfree: Option<OneOrMany<String>>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub threshold: Option<[f32; 2]>,
+	pub threshold_left: Option<[f32; 2]>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub threshold_right: Option<[f32; 2]>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub double_click: Option<bool>,
 	#[serde(skip_serializing_if = "Option::is_none")]

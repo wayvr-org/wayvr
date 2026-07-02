@@ -194,11 +194,6 @@
 #invert_scroll_direction_x: false
 #invert_scroll_direction_y: false
 
-## Press and release thresholds for grip & trigger
-## when using OpenXR (WiVRn, Monado)
-#xr_click_sensitivity: 0.7
-#xr_click_sensitivity_release: 0.5
-
 ## How many seconds to buttons need to be held
 ## before it's considered a long press
 #long_press_duration: 1.0

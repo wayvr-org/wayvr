@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumProperty, EnumString};
 use wgui::i18n::Translation;

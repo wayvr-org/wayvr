@@ -115,6 +115,7 @@ pub struct CustomClickAction {
     single: MultiClickHandler<0>,
     double: MultiClickHandler<1>,
     triple: MultiClickHandler<2>,
+    threshold: [f32; 2],
 }
 
 impl CustomClickAction {
@@ -127,18 +128,19 @@ impl CustomClickAction {
             single,
             double,
             triple,
+            threshold: [0.5, 0.7],
         })
     }
-    pub fn state(
-        &mut self,
-        before: bool,
-        state: &XrState,
-        session: &AppSession,
-    ) -> anyhow::Result<bool> {
+
+    pub fn set_threshold(&mut self, threshold: [f32; 2]) {
+        self.threshold = threshold;
+    }
+
+    pub fn state(&mut self, before: bool, state: &XrState) -> anyhow::Result<bool> {
         let threshold = if before {
-            session.config.xr_click_sensitivity_release
+            self.threshold[1]
         } else {
-            session.config.xr_click_sensitivity
+            self.threshold[0]
         };
 
         Ok(self.single.check(&state.session, threshold)?
@@ -171,14 +173,13 @@ impl OpenXrInputSource {
                 .instance()
                 .create_action_set("wayvr", "WayVR Actions", 0)?;
 
-        let left_source = OpenXrHandSource::new(&mut action_set, "left")?;
-        let right_source = OpenXrHandSource::new(&mut action_set, "right")?;
-        let fallback_source = OpenXrHandSource::new(&mut action_set, "handsfree")?;
+        let mut left_source = OpenXrHandSource::new(&mut action_set, "left")?;
+        let mut right_source = OpenXrHandSource::new(&mut action_set, "right")?;
+        let mut fallback_source = OpenXrHandSource::new(&mut action_set, "handsfree")?;
 
-        suggest_bindings(
-            &xr.instance,
-            &[&left_source, &right_source, &fallback_source],
-        );
+        let mut hands: [&mut OpenXrHandSource; 3] =
+            [&mut left_source, &mut right_source, &mut fallback_source];
+        suggest_bindings(&xr.instance, &mut hands);
 
         xr.session.attach_action_sets(&[&action_set])?;
 
@@ -381,7 +382,7 @@ impl OpenXrPointer {
             return Ok(());
         }
 
-        self.pointer_load_actions(pointer, xr, session)?;
+        self.pointer_load_actions(pointer, xr)?;
 
         Ok(())
     }
@@ -394,7 +395,7 @@ impl OpenXrPointer {
     ) -> anyhow::Result<()> {
         pointer.handsfree = false;
         self.pointer_load_pose(pointer, xr, session.config.pointer_lerp_factor)?;
-        self.pointer_load_actions(pointer, xr, session)?;
+        self.pointer_load_actions(pointer, xr)?;
 
         Ok(())
     }
@@ -431,15 +432,10 @@ impl OpenXrPointer {
         Ok(())
     }
 
-    fn pointer_load_actions(
-        &mut self,
-        pointer: &mut Pointer,
-        xr: &XrState,
-        session: &AppSession,
-    ) -> anyhow::Result<()> {
-        pointer.now.click = self.source.click.state(pointer.before.click, xr, session)?;
+    fn pointer_load_actions(&mut self, pointer: &mut Pointer, xr: &XrState) -> anyhow::Result<()> {
+        pointer.now.click = self.source.click.state(pointer.before.click, xr)?;
 
-        pointer.now.grab = self.source.grab.state(pointer.before.grab, xr, session)?;
+        pointer.now.grab = self.source.grab.state(pointer.before.grab, xr)?;
 
         let scroll = self
             .source
@@ -450,50 +446,44 @@ impl OpenXrPointer {
         pointer.now.scroll_x = scroll.x;
         pointer.now.scroll_y = scroll.y;
 
-        pointer.now.alt_click =
-            self.source
-                .alt_click
-                .state(pointer.before.alt_click, xr, session)?;
+        pointer.now.alt_click = self.source.alt_click.state(pointer.before.alt_click, xr)?;
 
-        pointer.now.show_hide =
-            self.source
-                .show_hide
-                .state(pointer.before.show_hide, xr, session)?;
+        pointer.now.show_hide = self.source.show_hide.state(pointer.before.show_hide, xr)?;
 
-        pointer.now.click_modifier_right =
-            self.source
-                .modifier_right
-                .state(pointer.before.click_modifier_right, xr, session)?;
+        pointer.now.click_modifier_right = self
+            .source
+            .modifier_right
+            .state(pointer.before.click_modifier_right, xr)?;
 
-        pointer.now.toggle_dashboard =
-            self.source
-                .toggle_dashboard
-                .state(pointer.before.toggle_dashboard, xr, session)?;
+        pointer.now.toggle_dashboard = self
+            .source
+            .toggle_dashboard
+            .state(pointer.before.toggle_dashboard, xr)?;
 
-        pointer.now.click_modifier_middle =
-            self.source
-                .modifier_middle
-                .state(pointer.before.click_modifier_middle, xr, session)?;
+        pointer.now.click_modifier_middle = self
+            .source
+            .modifier_middle
+            .state(pointer.before.click_modifier_middle, xr)?;
 
-        pointer.now.move_mouse =
-            self.source
-                .move_mouse
-                .state(pointer.before.move_mouse, xr, session)?;
+        pointer.now.move_mouse = self
+            .source
+            .move_mouse
+            .state(pointer.before.move_mouse, xr)?;
 
-        pointer.now.space_drag =
-            self.source
-                .space_drag
-                .state(pointer.before.space_drag, xr, session)?;
+        pointer.now.space_drag = self
+            .source
+            .space_drag
+            .state(pointer.before.space_drag, xr)?;
 
-        pointer.now.space_rotate =
-            self.source
-                .space_rotate
-                .state(pointer.before.space_rotate, xr, session)?;
+        pointer.now.space_rotate = self
+            .source
+            .space_rotate
+            .state(pointer.before.space_rotate, xr)?;
 
-        pointer.now.space_reset =
-            self.source
-                .space_reset
-                .state(pointer.before.space_reset, xr, session)?;
+        pointer.now.space_reset = self
+            .source
+            .space_reset
+            .state(pointer.before.space_reset, xr)?;
 
         Ok(())
     }
@@ -648,7 +638,20 @@ macro_rules! add_custom_lr {
 }
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-fn suggest_bindings(instance: &xr::Instance, hands: &[&OpenXrHandSource; 3]) {
+macro_rules! set_threshold_for {
+    ($hands:expr, $profile_action:expr, $field:ident) => {
+        if let Some(ref profile_action) = $profile_action {
+            if let Some(threshold) = profile_action.threshold_left {
+                $hands[0].$field.set_threshold(threshold);
+            }
+            if let Some(threshold) = profile_action.threshold_right {
+                $hands[1].$field.set_threshold(threshold);
+            }
+        }
+    };
+}
+
+fn suggest_bindings(instance: &xr::Instance, hands: &mut [&mut OpenXrHandSource; 3]) {
     let profiles = load_xr_input_profiles();
 
     for profile in profiles {
@@ -659,69 +662,83 @@ fn suggest_bindings(instance: &xr::Instance, hands: &[&OpenXrHandSource; 3]) {
             continue;
         };
 
-        let mut bindings: Vec<xr::Binding> = vec![];
-
-        add_custom_lr!(profile.pose, pose, hands, bindings, instance);
-        add_custom_lr!(profile.haptic, haptics, hands, bindings, instance);
-        add_custom_lr!(profile.scroll, scroll, hands, bindings, instance);
-
-        add_custom!(profile.click, click, hands, bindings, instance);
-
-        add_custom!(profile.alt_click, alt_click, hands, bindings, instance);
-
-        add_custom!(profile.grab, grab, hands, bindings, instance);
-
-        add_custom!(profile.show_hide, show_hide, hands, bindings, instance);
-
-        add_custom!(
-            profile.toggle_dashboard,
-            toggle_dashboard,
-            hands,
-            bindings,
-            instance
-        );
-
-        add_custom!(profile.space_drag, space_drag, hands, bindings, instance);
-
-        add_custom!(
-            profile.space_rotate,
-            space_rotate,
-            hands,
-            bindings,
-            instance
-        );
-
-        add_custom!(profile.space_reset, space_reset, hands, bindings, instance);
-
-        add_custom!(
-            profile.click_modifier_right,
-            modifier_right,
-            hands,
-            bindings,
-            instance
-        );
-
-        add_custom!(
-            profile.click_modifier_middle,
-            modifier_middle,
-            hands,
-            bindings,
-            instance
-        );
-
-        add_custom!(profile.move_mouse, move_mouse, hands, bindings, instance);
-
-        if instance
-            .suggest_interaction_profile_bindings(profile_path, &bindings)
-            .is_err()
         {
-            log::error!("Bad bindings for {}", &profile.profile[22..]);
-            log::error!("Verify config: ~/.config/wayvr/openxr_actions.json5");
-        } else {
-            log::debug!(
-                "Bindings for {} bound successfully.",
-                &profile.profile[22..]
+            let mut bindings: Vec<xr::Binding> = vec![];
+
+            add_custom_lr!(profile.pose, pose, hands, bindings, instance);
+            add_custom_lr!(profile.haptic, haptics, hands, bindings, instance);
+            add_custom_lr!(profile.scroll, scroll, hands, bindings, instance);
+
+            add_custom!(profile.click, click, hands, bindings, instance);
+
+            add_custom!(profile.alt_click, alt_click, hands, bindings, instance);
+
+            add_custom!(profile.grab, grab, hands, bindings, instance);
+
+            add_custom!(profile.show_hide, show_hide, hands, bindings, instance);
+
+            add_custom!(
+                profile.toggle_dashboard,
+                toggle_dashboard,
+                hands,
+                bindings,
+                instance
             );
+
+            add_custom!(profile.space_drag, space_drag, hands, bindings, instance);
+
+            add_custom!(
+                profile.space_rotate,
+                space_rotate,
+                hands,
+                bindings,
+                instance
+            );
+
+            add_custom!(profile.space_reset, space_reset, hands, bindings, instance);
+
+            add_custom!(
+                profile.click_modifier_right,
+                modifier_right,
+                hands,
+                bindings,
+                instance
+            );
+
+            add_custom!(
+                profile.click_modifier_middle,
+                modifier_middle,
+                hands,
+                bindings,
+                instance
+            );
+
+            add_custom!(profile.move_mouse, move_mouse, hands, bindings, instance);
+
+            if instance
+                .suggest_interaction_profile_bindings(profile_path, &bindings)
+                .is_err()
+            {
+                log::error!("Bad bindings for {}", &profile.profile[22..]);
+                log::error!("Verify config: ~/.config/wayvr/openxr_actions.json5");
+            } else {
+                log::debug!(
+                    "Bindings for {} bound successfully.",
+                    &profile.profile[22..]
+                );
+            }
         }
+
+        set_threshold_for!(hands, profile.click, click);
+        set_threshold_for!(hands, profile.alt_click, alt_click);
+        set_threshold_for!(hands, profile.grab, grab);
+        set_threshold_for!(hands, profile.show_hide, show_hide);
+        set_threshold_for!(hands, profile.toggle_dashboard, toggle_dashboard);
+        set_threshold_for!(hands, profile.space_drag, space_drag);
+        set_threshold_for!(hands, profile.space_rotate, space_rotate);
+        set_threshold_for!(hands, profile.space_reset, space_reset);
+        set_threshold_for!(hands, profile.click_modifier_right, modifier_right);
+        set_threshold_for!(hands, profile.click_modifier_middle, modifier_middle);
+        set_threshold_for!(hands, profile.move_mouse, move_mouse);
     }
 }

@@ -27,7 +27,7 @@ use crate::{
 	tab::settings::horiz_cell,
 	util::{
 		openxr_bindings_schema::{
-			BindingsDropdown, ClickType, Component, ControllerProfile, ParsedOpenXrInputPath, Side, SubpathKind, 
+			BindingsDropdown, ClickType, Component, ControllerProfile, ParsedOpenXrInputPath, Side, SubpathKind,
 		},
 		popup_manager::{MountPopupOnceParams, MountPopupOnceParamsExtra, PopupHolder, PopupPadding},
 		wgui_simple,
@@ -40,7 +40,7 @@ enum Task {
 	Save,
 	Cancel,
 	OpenContextMenu(glam::Vec2, Vec<context_menu::Cell>),
-	UpdateThreshold(Rc<str>, f32, f32),
+	UpdateThreshold(Rc<str>, Side, f32, f32),
 }
 
 pub struct Params<'a> {
@@ -89,11 +89,15 @@ impl ViewTrait for View {
 						blueprint: context_menu::Blueprint::Cells(cells),
 					});
 				}
-				Task::UpdateThreshold(action_name, lo, hi) => {
+				Task::UpdateThreshold(action_name, side, lo, hi) => {
 					let cur_profile = &mut self.profiles[self.cur_profile_idx];
 					let action_mut = get_action_mut(cur_profile, &*action_name);
 
-					action_mut.threshold = Some([lo, hi]);
+					if matches!(side, Side::Right) {
+						action_mut.threshold_right = Some([lo, hi]);
+					} else {
+						action_mut.threshold_left = Some([lo, hi]);
+					}
 				}
 			}
 		}
@@ -238,7 +242,13 @@ impl View {
 
 		for action in action_names {
 			let current = get_action_mut(&mut self.profiles[self.cur_profile_idx], action);
-			input_controls_for_action(&mut mp, self.list_parent, action.into(), &self.controller_profile, current)?;
+			input_controls_for_action(
+				&mut mp,
+				self.list_parent,
+				action.into(),
+				&self.controller_profile,
+				current,
+			)?;
 		}
 
 		Ok(())
@@ -253,27 +263,31 @@ impl View {
 		let action = cur_profile.pose.get_or_insert_default();
 
 		if action.left.is_none() && profile_left.is_some() {
-				let path = "/user/hand/left/input/aim/pose";
-				action.left = Some(OneOrMany::One(path.into()));
+			let path = "/user/hand/left/input/aim/pose";
+			action.left = Some(OneOrMany::One(path.into()));
 		}
 
 		if action.right.is_none() && profile_right.is_some() {
-				let path = "/user/hand/right/input/aim/pose";
-				action.right = Some(OneOrMany::One(path.into()));
+			let path = "/user/hand/right/input/aim/pose";
+			action.right = Some(OneOrMany::One(path.into()));
 		}
 
 		let action = cur_profile.haptic.get_or_insert_default();
 
-		let has_haptic = profile_left.map(|x| x.find_subpath(SubpathKind::Haptic).is_some()).unwrap_or_default();
+		let has_haptic = profile_left
+			.map(|x| x.find_subpath(SubpathKind::Haptic).is_some())
+			.unwrap_or_default();
 		if action.left.is_none() && has_haptic {
-				let path = "/user/hand/left/output/haptic";
-				action.left = Some(OneOrMany::One(path.into()));
+			let path = "/user/hand/left/output/haptic";
+			action.left = Some(OneOrMany::One(path.into()));
 		}
 
-		let has_haptic = profile_right.map(|x| x.find_subpath(SubpathKind::Haptic).is_some()).unwrap_or_default();
+		let has_haptic = profile_right
+			.map(|x| x.find_subpath(SubpathKind::Haptic).is_some())
+			.unwrap_or_default();
 		if action.right.is_none() && has_haptic {
-					let path = "/user/hand/right/output/haptic";
-					action.right = Some(OneOrMany::One(path.into()));
+			let path = "/user/hand/right/output/haptic";
+			action.right = Some(OneOrMany::One(path.into()));
 		}
 	}
 }
@@ -381,7 +395,7 @@ fn input_controls_for_action(
 		action.clone(),
 		click_type,
 		profile,
-		current.threshold,
+		current.threshold_left,
 	)?;
 
 	let current_right = current.right.as_ref().map(|x| match x {
@@ -397,7 +411,7 @@ fn input_controls_for_action(
 		action,
 		click_type,
 		profile,
-		current.threshold,
+		current.threshold_right,
 	)
 }
 
@@ -419,13 +433,19 @@ fn input_controls_for_hand(
 
 	let parent = horiz_cell(mp.layout, parent)?;
 
-		let available_components : Rc<[Component]> = current
+	let available_components: Rc<[Component]> = current
 		.as_ref()
 		.and_then(|par| user_path.find_subpath(par.subpath))
 		.map(|subp| subp.components)
-		.unwrap_or_default().into();
+		.unwrap_or_default()
+		.into();
 
-	let available_subpaths : Rc<[SubpathKind]> = user_path.paths.iter().filter(|x| !x.kind.get_bool("Hidden").unwrap_or_default()).map(|x| x.kind).collect();
+	let available_subpaths: Rc<[SubpathKind]> = user_path
+		.paths
+		.iter()
+		.filter(|x| !x.kind.get_bool("Hidden").unwrap_or_default())
+		.map(|x| x.kind)
+		.collect();
 
 	subpath_dropdown(
 		mp,
@@ -452,7 +472,7 @@ fn input_controls_for_hand(
 	if let Some(component) = current.as_ref().map(|x| x.component)
 		&& component.is_analog()
 	{
-		threshold_slider(mp, parent, action, threshold)?;
+		threshold_slider(mp, parent, action, side, threshold)?;
 	}
 
 	Ok(())
@@ -530,6 +550,7 @@ fn threshold_slider(
 	mp: &mut MacroParams,
 	parent: WidgetID,
 	action: Rc<str>,
+	side: Side,
 	current: Option<[f32; 2]>,
 ) -> anyhow::Result<()> {
 	let id = mp.idx.to_string();
@@ -554,9 +575,9 @@ fn threshold_slider(
 		let tasks = mp.tasks.clone();
 		move |_common, e| {
 			if matches!(e.index, wgui::components::slider::ValueIndex::Primary) {
-				tasks.push(Task::UpdateThreshold(action.clone(), e.value, current[1]));
+				tasks.push(Task::UpdateThreshold(action.clone(), side, e.value, current[1]));
 			} else {
-				tasks.push(Task::UpdateThreshold(action.clone(), current[0], e.value));
+				tasks.push(Task::UpdateThreshold(action.clone(), side, current[0], e.value));
 			}
 		}
 	}));
@@ -626,18 +647,23 @@ fn create_dropdown<B: 'static + BindingsDropdown>(
 	Ok(())
 }
 
-fn apply_subpath(side_mut: &mut Option<OneOrMany<String>>, side_str: &str, subpath_str: &str, profile: &ControllerProfile,) {
-		let (Ok(side), Ok(subpath)) = (Side::try_from(side_str), SubpathKind::try_from(subpath_str)) else {
-			return;
-		};
-		let Some(subpath_obj) = profile.find_userpath(side).and_then(|p| p.find_subpath(subpath)) else {
-			return;
-		};
+fn apply_subpath(
+	side_mut: &mut Option<OneOrMany<String>>,
+	side_str: &str,
+	subpath_str: &str,
+	profile: &ControllerProfile,
+) {
+	let (Ok(side), Ok(subpath)) = (Side::try_from(side_str), SubpathKind::try_from(subpath_str)) else {
+		return;
+	};
+	let Some(subpath_obj) = profile.find_userpath(side).and_then(|p| p.find_subpath(subpath)) else {
+		return;
+	};
 
-		let comp : Component = if let Some(first) = side_mut.as_ref().map(|x| match x {
-			OneOrMany::One(x) => x.as_str(),
-			OneOrMany::Many(x) => x.first().unwrap().as_str(),
-		}) {
+	let comp: Component = if let Some(first) = side_mut.as_ref().map(|x| match x {
+		OneOrMany::One(x) => x.as_str(),
+		OneOrMany::Many(x) => x.first().unwrap().as_str(),
+	}) {
 		let Ok(parsed) = ParsedOpenXrInputPath::try_from(first) else {
 			return;
 		};
@@ -647,34 +673,32 @@ fn apply_subpath(side_mut: &mut Option<OneOrMany<String>>, side_str: &str, subpa
 			parsed_compo = *subpath_obj.components.first().unwrap();
 		}
 		parsed_compo
-		} else {
+	} else {
 		*subpath_obj.components.first().unwrap()
 	};
 
 	let comp_str = comp.as_ref().to_lowercase();
 
-		*side_mut = Some(OneOrMany::One(format!(
-			"/user/hand/{side_str}/input/{subpath_str}/{comp_str}"
-		)));
+	*side_mut = Some(OneOrMany::One(format!(
+		"/user/hand/{side_str}/input/{subpath_str}/{comp_str}"
+	)));
 }
 
 fn apply_comp(side_mut: &mut Option<OneOrMany<String>>, side: &str, comp: &str) {
-		if side_mut.is_none() {
-			return;
-		}
+	if side_mut.is_none() {
+		return;
+	}
 
-		let first = match side_mut.as_ref().unwrap() {
-			OneOrMany::One(x) => x.as_str(),
-			OneOrMany::Many(x) => x.first().unwrap().as_str(),
-		};
+	let first = match side_mut.as_ref().unwrap() {
+		OneOrMany::One(x) => x.as_str(),
+		OneOrMany::Many(x) => x.first().unwrap().as_str(),
+	};
 
-		let Ok(parsed) = ParsedOpenXrInputPath::try_from(first) else {
-			return;
-		};
+	let Ok(parsed) = ParsedOpenXrInputPath::try_from(first) else {
+		return;
+	};
 
-		let subpath = parsed.subpath.as_ref().to_lowercase();
+	let subpath = parsed.subpath.as_ref().to_lowercase();
 
-		*side_mut = Some(OneOrMany::One(format!(
-			"/user/hand/{side}/input/{subpath}/{comp}"
-		)));
+	*side_mut = Some(OneOrMany::One(format!("/user/hand/{side}/input/{subpath}/{comp}")));
 }
