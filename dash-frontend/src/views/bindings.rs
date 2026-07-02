@@ -469,7 +469,7 @@ fn input_controls_for_hand(
 	clicks_dropdown(mp, parent, action.clone(), click_type)?;
 
 	if let Some(component) = current.as_ref().map(|x| x.component)
-		&& component.is_analog()
+		&& component.is_analog() && &*action != "scroll" // hax
 	{
 		threshold_slider(mp, parent, action, side, threshold)?;
 	}
