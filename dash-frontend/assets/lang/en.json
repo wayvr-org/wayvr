@@ -59,10 +59,10 @@
 				"SQUEEZE": "Grip"
 			},
 			"CLICK": {
-				"ANY": "-",
-				"DOUBLE": "Double-click",
-				"TRIPLE": "Triple-click",
-				"TYPE": "Click count"
+				"ANY": "Any",
+				"DOUBLE": "Double-tap",
+				"TRIPLE": "Triple-tap",
+				"TYPE": "Tap count"
 			},
 			"ACTION": {
 				"CLICK": "Click*",

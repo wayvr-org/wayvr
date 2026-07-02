@@ -22,7 +22,7 @@ use crate::{
 	frontend::{FrontendTask, FrontendTasks},
 	tab::settings::horiz_cell,
 	util::{
-		openxr_bindings_schema::{ClickType, Component, IdentifierType, ParsedOpenXrInputPath, Profile, Side},
+		openxr_bindings_schema::{BindingsDropdown, ClickType, Component, IdentifierType, ParsedOpenXrInputPath, Profile, Side},
 		popup_manager::{MountPopupOnceParams, MountPopupOnceParamsExtra, PopupHolder, PopupPadding},
 		wgui_simple,
 	},
@@ -418,11 +418,7 @@ fn subpath_dropdown(
 	available: Rc<[IdentifierType]>,
 	current: Option<IdentifierType>,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
-
 	let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
 	params.insert(Rc::from("tooltip"), Rc::from("APP_SETTINGS.BINDINGS.SUBPATH"));
 	params.insert(Rc::from("min_width"), Rc::from("100"));
 
@@ -434,55 +430,11 @@ fn subpath_dropdown(
 		AssetPath::BuiltIn(&format!("dashboard/hand_{}.svg", side.as_ref().to_lowercase())),
 	)?;
 
-	mp.parser_state
-		.instantiate_template(mp.doc_params, "DropdownButton", mp.layout, parent, params)?;
-
-	let title = current
+	let current_text = current
 		.map(|c| c.translation())
 		.unwrap_or_else(|| Translation::from_translation_key("APP_SETTINGS.OPTION.NONE"));
 
-	{
-		let mut label = mp
-			.parser_state
-			.fetch_widget_as::<WidgetLabel>(&mp.layout.state, &format!("{id}_value"))?;
-		label.set_text_simple(&mut mp.layout.state.globals.get(), title);
-	}
-
-	let btn = mp.parser_state.fetch_component_as::<ComponentButton>(&id)?;
-	btn.on_click(Rc::new({
-		let available = available.clone();
-		let tasks = mp.tasks.clone();
-		move |_common, e: ButtonClickEvent| {
-			let side = side.as_ref();
-			let mut cells = available
-				.iter()
-				.map(|item| {
-					let value = item.as_ref();
-					let title = item.translation();
-
-					context_menu::Cell {
-						action_name: Some(format!("subpath;{id};{action};{side};{value}").into()),
-						title,
-						tooltip: None,
-						attribs: vec![],
-					}
-				})
-				.collect::<Vec<_>>();
-
-			cells.insert(
-				0,
-				context_menu::Cell {
-					action_name: Some(format!("clear;{id};{action};{side};-").into()),
-					title: Translation::from_translation_key("APP_SETTINGS.OPTION.NONE"),
-					tooltip: None,
-					attribs: vec![],
-				},
-			);
-
-			tasks.push(Task::OpenContextMenu(e.mouse_pos_absolute.unwrap_or_default(), cells));
-			Ok(())
-		}
-	}));
+	create_dropdown(mp, parent, params, action, side, current_text, available)?;
 
 	Ok(())
 }
@@ -499,27 +451,46 @@ fn component_dropdown(
 		return Ok(false);
 	}
 
-	let id = mp.idx.to_string();
-	mp.idx += 1;
-
 	let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
 	params.insert(Rc::from("text"), Rc::from("・"));
 	params.insert(Rc::from("tooltip"), Rc::from("APP_SETTINGS.BINDINGS.COMPONENT"));
 	params.insert(Rc::from("min_width"), Rc::from("100"));
 
-	mp.parser_state
-		.instantiate_template(mp.doc_params, "DropdownButton", mp.layout, parent, params)?;
-
-	let title = current
+	let current_text = current
 		.map(|c| c.translation())
 		.unwrap_or_else(|| Translation::from_raw_text_rc(Default::default()));
 
+	create_dropdown(mp, parent, params, action, side, current_text, available)?;
+
+	Ok(true)
+}
+
+fn clicks_dropdown(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, current: ClickType) -> anyhow::Result<()> {
+	let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
+	params.insert(Rc::from("text"), Rc::from("・"));
+	params.insert(Rc::from("tooltip"), Rc::from("APP_SETTINGS.BINDINGS.CLICK.TYPE"));
+	params.insert(Rc::from("min_width"), Rc::from("100"));
+
+	let current_text = current.translation();
+	let available = [ClickType::Any, ClickType::Double, ClickType::Triple].into();
+	create_dropdown(mp, parent, params, action, Side::Left, current_text, available)?;
+
+	Ok(())
+}
+
+fn create_dropdown<B: 'static + BindingsDropdown>(mp: &mut MacroParams, parent: WidgetID, mut params: HashMap<Rc<str>, Rc<str>>, action: Rc<str>, side: Side, current_text: Translation, available: Rc<[B]>) -> anyhow::Result<()> {
+	let id = mp.idx.to_string();
+	mp.idx += 1;
+	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
+	
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "DropdownButton", mp.layout, parent, params)?;
+	
 	{
 		let mut label = mp
 			.parser_state
 			.fetch_widget_as::<WidgetLabel>(&mp.layout.state, &format!("{id}_value"))?;
-		label.set_text_simple(&mut mp.layout.state.globals.get(), title);
+		label.set_text_simple(&mut mp.layout.state.globals.get(), current_text);
 	}
 
 	let btn = mp.parser_state.fetch_component_as::<ComponentButton>(&id)?;
@@ -527,73 +498,35 @@ fn component_dropdown(
 		let tasks = mp.tasks.clone();
 		let available = available.clone();
 		move |_common, e: ButtonClickEvent| {
-			tasks.push(Task::OpenContextMenu(
-				e.mouse_pos_absolute.unwrap_or_default(),
-				available
+			let mut cells = available
 					.iter()
-					.filter_map(|item| {
-						let value = item.as_ref();
+					.map(|item| {
 						let title = item.translation();
-						let side = side.as_ref();
 
-						Some(context_menu::Cell {
-							action_name: Some(format!("comp;{id};{action};{side};{value}").into()),
+						context_menu::Cell {
+							action_name: Some(item.action_str(&*action, side)),
 							title,
 							tooltip: None,
 							attribs: vec![],
-						})
+						}
 					})
-					.collect(),
-			));
-			Ok(())
-		}
-	}));
+					.collect::<Vec<_>>();
 
-	Ok(true)
-}
+			if let Some(action_str) = B::clear_str(&*action, side)  {
+				cells.insert(
+					0,
+					context_menu::Cell {
+						action_name: Some(action_str),
+						title: Translation::from_translation_key("APP_SETTINGS.OPTION.NONE"),
+						tooltip: None,
+						attribs: vec![],
+					},
+				);
+			}
 
-fn clicks_dropdown(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, current: ClickType) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
-
-	let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
-	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-	params.insert(Rc::from("text"), Rc::from("・"));
-	params.insert(Rc::from("tooltip"), Rc::from("APP_SETTINGS.BINDINGS.CLICK.TYPE"));
-	params.insert(Rc::from("min_width"), Rc::from("100"));
-
-	mp.parser_state
-		.instantiate_template(mp.doc_params, "DropdownButton", mp.layout, parent, params)?;
-
-	let title = current.translation();
-
-	{
-		let mut label = mp
-			.parser_state
-			.fetch_widget_as::<WidgetLabel>(&mp.layout.state, &format!("{id}_value"))?;
-		label.set_text_simple(&mut mp.layout.state.globals.get(), title);
-	}
-
-	let btn = mp.parser_state.fetch_component_as::<ComponentButton>(&id)?;
-	btn.on_click(Rc::new({
-		let tasks = mp.tasks.clone();
-		move |_common, e: ButtonClickEvent| {
 			tasks.push(Task::OpenContextMenu(
 				e.mouse_pos_absolute.unwrap_or_default(),
-				[ClickType::Any, ClickType::Double, ClickType::Triple]
-					.iter()
-					.filter_map(|item| {
-						let value = item.as_ref();
-						let title = item.translation();
-
-						Some(context_menu::Cell {
-							action_name: Some(format!("click;{id};{action};-;{value}").into()),
-							title,
-							tooltip: None,
-							attribs: vec![],
-						})
-					})
-					.collect(),
+				cells,
 			));
 			Ok(())
 		}

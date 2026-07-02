@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io::Read, rc::Rc};
 
-use anyhow::{Context, bail};
+use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumProperty, EnumString};
 use wgui::i18n::Translation;
@@ -128,13 +128,22 @@ pub enum IdentifierType {
 	Squeeze,
 }
 
-impl IdentifierType {
-	pub fn translation(&self) -> Translation {
+impl BindingsDropdown for IdentifierType {
+	fn translation(&self) -> Translation {
 		self
 			.get_str("Translation")
 			.map(Translation::from_translation_key)
 			.or_else(|| self.get_str("Text").map(Translation::from_raw_text))
 			.unwrap_or_else(|| Translation::from_raw_text(self.as_ref()))
+	}
+	fn action_str(&self, action: &str, side: Side) -> Rc<str> {
+		let value = self.as_ref();
+		let side = side.as_ref();
+		format!("subpath;{action};{side};{value}").into()
+	}
+	fn clear_str(action: &str, side: Side) -> Option<Rc<str>> {
+		let side = side.as_ref();
+		Some(format!("subpath;{action};{side};-").into())
 	}
 }
 
@@ -167,13 +176,21 @@ pub enum Component {
 	Other,
 }
 
-impl Component {
-	pub fn translation(&self) -> Translation {
+impl BindingsDropdown for Component {
+	fn translation(&self) -> Translation {
 		self
 			.get_str("Translation")
 			.map(Translation::from_translation_key)
 			.or_else(|| self.get_str("Text").map(Translation::from_raw_text))
 			.unwrap_or_else(|| Translation::from_raw_text(self.as_ref()))
+	}
+	fn action_str(&self, action: &str, side: Side) -> Rc<str> {
+		let value = self.as_ref();
+		let side = side.as_ref();
+		format!("comp;{action};{side};{value}").into()
+	}
+	fn clear_str(_action: &str, _side: Side) -> Option<Rc<str>> {
+		None
 	}
 }
 
@@ -244,12 +261,25 @@ pub enum ClickType {
 	Triple,
 }
 
-impl ClickType {
-	pub fn translation(&self) -> Translation {
+impl BindingsDropdown for ClickType {
+	fn translation(&self) -> Translation {
 		self
 			.get_str("Translation")
 			.map(Translation::from_translation_key)
 			.or_else(|| self.get_str("Text").map(Translation::from_raw_text))
 			.unwrap_or_else(|| Translation::from_raw_text(self.as_ref()))
 	}
+	fn action_str(&self, action: &str, _side: Side) -> Rc<str> {
+		let value = self.as_ref();
+		format!("click;{action};-;{value}").into()
+	}
+	fn clear_str(_action: &str, _side: Side) -> Option<Rc<str>> {
+		None
+	}
+}
+
+pub trait BindingsDropdown {
+	fn translation(&self) -> Translation;
+	fn action_str(&self, action: &str, side: Side) -> Rc<str>;
+	fn clear_str(action: &str, side: Side) -> Option<Rc<str>>;
 }
