@@ -1,7 +1,6 @@
 pub mod cached_fetcher;
 pub mod networking;
-pub mod openxr_bindings_schema;
-pub mod openxr_controller_profiles;
+pub mod openxr_bindings;
 pub mod pactl_wrapper;
 pub mod popup_manager;
 pub mod steam_utils;

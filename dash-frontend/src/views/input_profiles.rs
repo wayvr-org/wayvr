@@ -9,20 +9,17 @@ use wgui::{
 	parser::{Fetchable, ParseDocumentParams},
 	task::Tasks,
 };
+use wlx_common::{openxr_bindings_schema::XrControllerProfile, openxr_controller_profiles::OPENXR_INPUT_PROFILES};
 
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
-	util::{
-		openxr_bindings_schema::ControllerProfile,
-		openxr_controller_profiles::OPENXR_INPUT_PROFILES,
-		popup_manager::{MountPopupOnceParams, PopupHolder},
-	},
+	util::popup_manager::{MountPopupOnceParams, PopupHolder},
 	views::{self, ViewTrait, ViewUpdateParams, bindings},
 };
 
 #[derive(Clone)]
 enum Task {
-	SelectProfile(&'static ControllerProfile),
+	SelectProfile(&'static XrControllerProfile),
 }
 
 pub struct Params<'a> {

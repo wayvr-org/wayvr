@@ -49,15 +49,21 @@
 				"Y_AXIS": "Y axis"
 			},
 			"TYPE": {
-				"TRIGGER": "Trigger",
-				"TRACKPAD": "Trackpad",
-				"THUMBSTICK": "Thumbstick",
+				"BUMPER": "Bumper",
+				"DPAD_UP": "D-pad Up",
+				"DPAD_DOWN": "D-pad Down",
+				"DPAD_LEFT": "D-pad Left",
+				"DPAD_RIGHT": "D-pad Right",
 				"JOYSTICK": "Joystick",
 				"MENU": "Menu",
+				"SHOULDER": "Shoulder",
+				"SQUEEZE": "Grip",
 				"SYSTEM": "System",
 				"THUMBREST": "Thumbrest",
-				"SHOULDER": "Shoulder",
-				"SQUEEZE": "Grip"
+				"THUMBSTICK": "Thumbstick",
+				"TRACKPAD": "Trackpad",
+				"TRIGGER": "Trigger",
+				"VIEW": "View"
 			},
 			"CLICK": {
 				"ANY": "Any",
