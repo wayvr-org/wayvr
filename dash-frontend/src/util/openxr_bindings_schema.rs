@@ -159,6 +159,8 @@ pub enum Component {
 	Touch,
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.COMP.VALUE"))]
 	Value,
+
+	/// Not an actual component but monado uses this instead of X/Y
 	Position,
 	Pose,
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.COMP.PROXIMITY"))]
@@ -166,14 +168,18 @@ pub enum Component {
 	Haptic,
 
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.COMP.X_AXIS"))]
-	/// Not an actual component, used to turn a 2D Position into a 1D Value
 	X,
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.COMP.Y_AXIS"))]
-	/// Not an actual component, used to turn a 2D Position into a 1D Value
 	Y,
 
 	#[serde(other)]
 	Other,
+}
+
+impl Component {
+	pub fn is_analog(&self) -> bool {
+		matches!(self, Component::Force | Component::Value | Component::X | Component::Y)
+	}
 }
 
 impl BindingsDropdown for Component {

@@ -4,6 +4,11 @@
   <!-- used at runtime [!!!] -->
   <include src="../t_dropdown_button.xml" />
 
+  <!-- id, min, max, step, value, value2, tooltip -->
+  <template name="ThresholdSlider">
+    <Slider id="${id}" width="200" height="24" min_value="${min}" max_value="${max}" step="${step}" value="${value}" value2="${value2}" tooltip="${tooltip}" />
+  </template>
+
   <!-- id, translation  -->
   <template name="ActionRow">
     <rectangle macro="group_box" id="${id}">

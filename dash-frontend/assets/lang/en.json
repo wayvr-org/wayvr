@@ -81,7 +81,8 @@
 			"LEFT": "Left",
 			"RIGHT": "Right",
 			"COMPONENT": "Actuation type",
-			"SUBPATH": "Actuating control"
+			"SUBPATH": "Actuating control",
+			"THRESHOLD": "Activate when above upper value\nDeactivate when below lower value"
 		},
 		"BROWSE_ONLINE_CATALOG": "Browse online catalog...",
 		"BROWSE_SKYMAPS": "Browse skymaps",

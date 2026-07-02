@@ -3,7 +3,7 @@ use std::{borrow::Cow, collections::HashMap, rc::Rc};
 use glam::Vec2;
 use wgui::{
 	assets::AssetPath,
-	components::button::{ButtonClickEvent, ComponentButton},
+	components::{button::{ButtonClickEvent, ComponentButton}, slider::ComponentSlider},
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
@@ -34,6 +34,7 @@ enum Task {
 	Save,
 	Cancel,
 	OpenContextMenu(glam::Vec2, Vec<context_menu::Cell>),
+	UpdateThreshold(Rc<str>, f32, f32)
 }
 
 pub struct Params<'a> {
@@ -83,14 +84,20 @@ impl ViewTrait for View {
 						blueprint: context_menu::Blueprint::Cells(cells),
 					});
 				}
+				Task::UpdateThreshold(action_name, lo, hi) => {
+					let cur_profile = &mut self.profiles[self.cur_profile_idx];
+					let action_mut = get_action_mut(cur_profile, &*action_name);
+
+					action_mut.threshold = Some([lo, hi]);
+				}
 			}
 		}
 
 		// Dropdown handling
 		if let TickResult::Action(name) = self.context_menu.tick(par.layout, &mut self.parser_state)?
-			&& let (Some(action), Some(_), Some(action_name), Some(side), Some(value)) = {
-				let mut s = name.splitn(5, ';');
-				(s.next(), s.next(), s.next(), s.next(), s.next())
+			&& let (Some(action), Some(action_name), Some(side), Some(value)) = {
+				let mut s = name.splitn(4, ';');
+				(s.next(), s.next(), s.next(), s.next())
 			} {
 			let side = side.to_lowercase();
 			let value = value.to_lowercase();
@@ -336,6 +343,7 @@ fn input_controls_for_action(
 		action.clone(),
 		click_type,
 		profile,
+		current.threshold,
 	)?;
 
 	let current_right = current.right.as_ref().map(|x| match x {
@@ -343,7 +351,7 @@ fn input_controls_for_action(
 		OneOrMany::Many(s) => s.first().unwrap().as_str(), // safe
 	});
 
-	input_controls_for_hand(mp, parent, current_right, Side::Right, action, click_type, profile)
+	input_controls_for_hand(mp, parent, current_right, Side::Right, action, click_type, profile, current.threshold)
 }
 
 fn input_controls_for_hand(
@@ -354,6 +362,7 @@ fn input_controls_for_hand(
 	action: Rc<str>,
 	click_type: ClickType,
 	profile: &Profile,
+	threshold: Option<[f32; 2]>,
 ) -> anyhow::Result<()> {
 	let subaction_path = match side {
 		Side::Left => "/user/hand/left",
@@ -405,7 +414,11 @@ fn input_controls_for_hand(
 		return Ok(());
 	}
 
-	clicks_dropdown(mp, parent, action, click_type)?;
+	clicks_dropdown(mp, parent, action.clone(), click_type)?;
+
+	if let Some(component) = current.as_ref().map(|x| x.component) && component.is_analog() {
+		threshold_slider(mp, parent, action, threshold)?;
+	}
 
 	Ok(())
 }
@@ -474,6 +487,39 @@ fn clicks_dropdown(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, curr
 	let current_text = current.translation();
 	let available = [ClickType::Any, ClickType::Double, ClickType::Triple].into();
 	create_dropdown(mp, parent, params, action, Side::Left, current_text, available)?;
+
+	Ok(())
+}
+
+fn threshold_slider(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, current: Option<[f32; 2]>) -> anyhow::Result<()> {
+	let id = mp.idx.to_string();
+	mp.idx += 1;
+
+	let current = current.unwrap_or([0.4, 0.6]);
+
+	let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
+	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
+	params.insert(Rc::from("tooltip"), Rc::from("APP_SETTINGS.BINDINGS.THRESHOLD"));
+	params.insert(Rc::from("value"), Rc::from(format!("{:.2}", current[0])));
+	params.insert(Rc::from("value2"), Rc::from(format!("{:.2}", current[1])));
+	params.insert(Rc::from("min"), Rc::from("0.0"));
+	params.insert(Rc::from("max"), Rc::from("1.0"));
+	params.insert(Rc::from("step"), Rc::from("0.1"));
+
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "ThresholdSlider", mp.layout, parent, params)?;
+	
+	let slider = mp.parser_state.fetch_component_as::<ComponentSlider>(&id)?;
+	slider.on_value_changed(Box::new({
+		let tasks = mp.tasks.clone();
+		move |_common, e| {
+			if matches!(e.index, wgui::components::slider::ValueIndex::Primary) {
+				tasks.push(Task::UpdateThreshold(action.clone(), e.value, current[1]));
+			} else {
+				tasks.push(Task::UpdateThreshold(action.clone(), current[0], e.value));
+			}
+		}
+	}));
 
 	Ok(())
 }
