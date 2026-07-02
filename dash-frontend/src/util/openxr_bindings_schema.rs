@@ -1,107 +1,41 @@
-use std::{collections::BTreeMap, io::Read, rc::Rc};
+use std::rc::Rc;
 
-use anyhow::{Context, bail};
+use anyhow::{bail, Context};
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumProperty, EnumString};
 use wgui::i18n::Translation;
 
-static BINDINGS_LZ4: &[u8] = include_bytes!("../../assets/bindings.json.lz4");
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BindingsFile {
-	#[serde(rename = "$schema")]
-	pub schema: Option<String>,
-
-	pub profiles: BTreeMap<String, Rc<Profile>>,
+pub struct ControllerProfile {
+	pub display_name: &'static str,
+	pub profile_id: &'static str,
+	pub user_paths: &'static [ControllerUserPath],
 }
 
-impl BindingsFile {
-	pub fn load_embedded() -> Self {
-		let mut decoder = lz4_flex::frame::FrameDecoder::new(BINDINGS_LZ4);
-		let mut json = Vec::new();
-		decoder.read_to_end(&mut json).unwrap(); // safe
-
-		serde_json::from_slice(&json).unwrap() // safe
+impl ControllerProfile {
+	pub fn find_userpath(&self, side: Side) -> Option<&ControllerUserPath> {
+		self.user_paths.iter().find(|x| x.hand == side)
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Profile {
-	pub title: Rc<str>,
-
-	#[serde(rename = "type")]
-	pub kind: ProfileType,
-
-	pub steamvr_controllertype: Option<String>,
-	pub monado_device: Option<String>,
-
-	#[serde(default)]
-	pub extended_by: Vec<String>,
-
-	#[serde(default)]
-	pub subaction_paths: Vec<String>,
-
-	#[serde(default)]
-	pub subpaths: BTreeMap<String, Subpath>,
+pub struct ControllerUserPath {
+	pub hand: Side,
+	pub paths: &'static [Subpath],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ProfileType {
-	TrackedController,
-
-	#[serde(other)]
-	Other,
+impl ControllerUserPath {
+	pub fn find_subpath(&self, subpath: SubpathKind) -> Option<&Subpath> {
+		self.paths.iter().find(|x| x.kind == subpath)
+	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subpath {
-	#[serde(rename = "type")]
-	pub kind: SubpathType,
-
-	pub localized_name: String,
-
-	#[serde(default)]
-	pub components: Vec<Component>,
-
-	pub side: Option<Side>,
-}
-
-impl Subpath {
-	pub fn get_effective_components(&self) -> Rc<[Component]> {
-		let mut v = vec![];
-		for c in self.components.iter() {
-			match c {
-				// position is not an openxr component, it's just a monado thing
-				Component::Position => {
-					v.push(Component::X);
-					v.push(Component::Y);
-				}
-				Component::Other => {}
-				other => v.push(*other),
-			}
-		}
-		v.into()
-	}
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum SubpathType {
-	Button,
-	Trigger,
-	Joystick,
-	Pose,
-	Trackpad,
-	Vibration,
-
-	#[serde(other)]
-	Other,
+	pub kind: SubpathKind,
+	pub components: &'static [Component],
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, EnumString, AsRefStr, EnumProperty)]
 #[strum(ascii_case_insensitive)]
-pub enum IdentifierType {
+pub enum SubpathKind {
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.TYPE.TRIGGER"))]
 	Trigger,
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.TYPE.TRACKPAD"))]
@@ -112,6 +46,12 @@ pub enum IdentifierType {
 	Joystick,
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.TYPE.SYSTEM"))]
 	System,
+	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.TYPE.MENU"))]
+	Menu,
+
+	Primary,
+	Secondary,
+
 	A,
 	B,
 	X,
@@ -126,9 +66,16 @@ pub enum IdentifierType {
 	Shoulder,
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.TYPE.SQUEEZE"))]
 	Squeeze,
+
+	#[strum(props(Hidden = true))]
+	Grip,
+	#[strum(props(Hidden = true))]
+	Aim,
+	#[strum(props(Hidden = true))]
+	Haptic,
 }
 
-impl BindingsDropdown for IdentifierType {
+impl BindingsDropdown for SubpathKind {
 	fn translation(&self) -> Translation {
 		self
 			.get_str("Translation")
@@ -143,7 +90,7 @@ impl BindingsDropdown for IdentifierType {
 	}
 	fn clear_str(action: &str, side: Side) -> Option<Rc<str>> {
 		let side = side.as_ref();
-		Some(format!("subpath;{action};{side};-").into())
+		Some(format!("clear;{action};{side};-").into())
 	}
 }
 
@@ -160,20 +107,16 @@ pub enum Component {
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.COMP.VALUE"))]
 	Value,
 
-	/// Not an actual component but monado uses this instead of X/Y
-	Position,
-	Pose,
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.COMP.PROXIMITY"))]
 	Proximity,
-	Haptic,
 
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.COMP.X_AXIS"))]
 	X,
 	#[strum(props(Translation = "APP_SETTINGS.BINDINGS.COMP.Y_AXIS"))]
 	Y,
 
-	#[serde(other)]
-	Other,
+	// below are hidden
+	Pose,
 }
 
 impl Component {
@@ -202,6 +145,7 @@ impl BindingsDropdown for Component {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, EnumString, AsRefStr)]
 #[serde(rename_all = "snake_case")]
+#[strum(ascii_case_insensitive)]
 pub enum Side {
 	Left,
 	Right,
@@ -210,14 +154,8 @@ pub enum Side {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ParsedOpenXrInputPath {
 	pub side: Side,
-	pub identifier: IdentifierType,
+	pub subpath: SubpathKind,
 	pub component: Component,
-}
-
-impl ParsedOpenXrInputPath {
-	pub fn to_subpath(&self) -> String {
-		format!("/input/{}", self.identifier.as_ref().to_lowercase())
-	}
 }
 
 impl<'a> TryFrom<&'a str> for ParsedOpenXrInputPath {
@@ -245,11 +183,11 @@ impl<'a> TryFrom<&'a str> for ParsedOpenXrInputPath {
 
 		let component = Component::try_from(component).context("bad component")?;
 
-		let identifier = IdentifierType::try_from(identifier).context("bad subpath")?;
+		let identifier = SubpathKind::try_from(identifier).context("bad subpath")?;
 
 		Ok(Self {
 			side,
-			identifier,
+			subpath: identifier,
 			component,
 		})
 	}

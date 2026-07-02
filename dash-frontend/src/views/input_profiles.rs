@@ -1,6 +1,5 @@
 use std::{collections::HashMap, rc::Rc};
 
-use anyhow::Context;
 use wgui::{
 	assets::AssetPath,
 	components::button::ComponentButton,
@@ -14,15 +13,16 @@ use wgui::{
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
 	util::{
-		openxr_bindings_schema,
+		openxr_bindings_schema::ControllerProfile,
+		openxr_controller_profiles::OPENXR_INPUT_PROFILES,
 		popup_manager::{MountPopupOnceParams, PopupHolder},
 	},
-	views::{self, ViewTrait, ViewUpdateParams, bindings},
+	views::{self, bindings, ViewTrait, ViewUpdateParams},
 };
 
 #[derive(Clone)]
 enum Task {
-	SelectProfile(Rc<str>),
+	SelectProfile(&'static ControllerProfile),
 }
 
 pub struct Params<'a> {
@@ -37,7 +37,6 @@ pub struct View {
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
 	bindings_popup: PopupHolder<bindings::View>,
-	bindings_file: openxr_bindings_schema::BindingsFile,
 }
 
 impl ViewTrait for View {
@@ -46,19 +45,12 @@ impl ViewTrait for View {
 
 		for task in self.tasks.drain() {
 			match task {
-				Task::SelectProfile(profile_id) => {
-					let profile = self
-						.bindings_file
-						.profiles
-						.get(&*profile_id)
-						.context("Selected non-existing profile. UI bug?")?;
-
+				Task::SelectProfile(profile) => {
 					views::bindings::mount_popup(
 						self.frontend_tasks.clone(),
 						self.globals.clone(),
 						self.bindings_popup.clone(),
-						profile_id.clone(),
-						profile.clone(),
+						profile,
 					);
 				}
 			}
@@ -81,15 +73,12 @@ impl View {
 
 		let tasks = Tasks::new();
 
-		let bindings_file = openxr_bindings_schema::BindingsFile::load_embedded();
-
-		for (idx, (profile_id, profile)) in bindings_file.profiles.iter().enumerate() {
+		for (idx, profile) in OPENXR_INPUT_PROFILES.iter().enumerate() {
 			let id = format!("profile_btn_{idx}");
-			let profile_name: Rc<str> = profile.title.clone();
 
 			let mut cell_params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
 			cell_params.insert(Rc::from("id"), Rc::from(id.clone()));
-			cell_params.insert(Rc::from("text"), profile_name);
+			cell_params.insert(Rc::from("text"), Rc::from(profile.display_name));
 
 			parser_state.instantiate_template(
 				doc_params,
@@ -102,9 +91,8 @@ impl View {
 			let btn = parser_state.fetch_component_as::<ComponentButton>(&id)?;
 			let tasks_clone = tasks.clone();
 			btn.on_click(Rc::new({
-				let profile_id: Rc<str> = profile_id.clone().into();
 				move |_common, _e| {
-					tasks_clone.push(Task::SelectProfile(profile_id.clone()));
+					tasks_clone.push(Task::SelectProfile(profile));
 					Ok(())
 				}
 			}));
@@ -115,7 +103,6 @@ impl View {
 			frontend_tasks: params.frontend_tasks.clone(),
 			globals: params.globals.clone(),
 			bindings_popup: Default::default(),
-			bindings_file,
 		})
 	}
 }
