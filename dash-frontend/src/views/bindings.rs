@@ -535,7 +535,7 @@ fn threshold_slider(
 	let id = mp.idx.to_string();
 	mp.idx += 1;
 
-	let current = current.unwrap_or([0.4, 0.6]);
+	let current = current.unwrap_or([0.5, 0.7]);
 
 	let mut params: HashMap<Rc<str>, Rc<str>> = HashMap::new();
 	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
