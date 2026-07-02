@@ -3,7 +3,10 @@ use std::{borrow::Cow, collections::HashMap, rc::Rc};
 use glam::Vec2;
 use wgui::{
 	assets::AssetPath,
-	components::{button::{ButtonClickEvent, ComponentButton}, slider::ComponentSlider},
+	components::{
+		button::{ButtonClickEvent, ComponentButton},
+		slider::ComponentSlider,
+	},
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
@@ -22,7 +25,9 @@ use crate::{
 	frontend::{FrontendTask, FrontendTasks},
 	tab::settings::horiz_cell,
 	util::{
-		openxr_bindings_schema::{BindingsDropdown, ClickType, Component, IdentifierType, ParsedOpenXrInputPath, Profile, Side},
+		openxr_bindings_schema::{
+			BindingsDropdown, ClickType, Component, IdentifierType, ParsedOpenXrInputPath, Profile, Side, SubpathType,
+		},
 		popup_manager::{MountPopupOnceParams, MountPopupOnceParamsExtra, PopupHolder, PopupPadding},
 		wgui_simple,
 	},
@@ -34,7 +39,7 @@ enum Task {
 	Save,
 	Cancel,
 	OpenContextMenu(glam::Vec2, Vec<context_menu::Cell>),
-	UpdateThreshold(Rc<str>, f32, f32)
+	UpdateThreshold(Rc<str>, f32, f32),
 }
 
 pub struct Params<'a> {
@@ -194,6 +199,8 @@ impl View {
 			close_callback: Some(params.close_callback),
 		};
 
+		me.ensure_pose_and_haptics();
+
 		me.refresh(params.layout)?;
 
 		Ok(me)
@@ -235,6 +242,71 @@ impl View {
 		}
 
 		Ok(())
+	}
+
+	fn ensure_pose_and_haptics(&mut self) {
+		let cur_profile = &mut self.profiles[self.cur_profile_idx];
+
+		if cur_profile.pose.is_none() {
+			let schema = &self.schema;
+			let mut aim_pose_name: Option<&str> = None;
+			let mut first_pose_name: Option<&str> = None;
+
+			for (key, subpath) in &schema.subpaths {
+				if subpath.kind != SubpathType::Pose {
+					continue;
+				}
+				let name = key.strip_prefix("/input/");
+				let Some(name) = name else { continue };
+				if first_pose_name.is_none() {
+					first_pose_name = Some(name);
+				}
+				if name == "aim" {
+					aim_pose_name = Some(name);
+				}
+			}
+
+			// no aim pose → use first one
+			if let Some(name) = aim_pose_name.or(first_pose_name) {
+				let pose_action = cur_profile.pose.get_or_insert_default();
+				if pose_action.left.is_none() {
+					let left_path = format!("/user/hand/left/input/{name}/pose");
+					pose_action.left = Some(OneOrMany::One(left_path));
+				}
+				if pose_action.right.is_none() {
+					let right_path = format!("/user/hand/right/input/{name}/pose");
+					pose_action.right = Some(OneOrMany::One(right_path));
+				}
+			}
+		}
+
+		if cur_profile.haptic.is_none() {
+			let schema = &self.schema;
+			let mut first_haptic_name: Option<&str> = None;
+
+			for (key, subpath) in &schema.subpaths {
+				if subpath.kind != SubpathType::Vibration {
+					continue;
+				}
+				let name = key.strip_prefix("/output/");
+				let Some(name) = name else { continue };
+				if first_haptic_name.is_none() {
+					first_haptic_name = Some(name);
+				}
+			}
+
+			if let Some(name) = first_haptic_name {
+				let haptic_action = cur_profile.haptic.get_or_insert_with(OpenXrInputAction::default);
+				if haptic_action.left.is_none() {
+					let left_path = format!("/user/hand/left/output/{name}");
+					haptic_action.left = Some(OneOrMany::One(left_path));
+				}
+				if haptic_action.right.is_none() {
+					let right_path = format!("/user/hand/right/output/{name}");
+					haptic_action.right = Some(OneOrMany::One(right_path));
+				}
+			}
+		}
 	}
 }
 
@@ -351,7 +423,16 @@ fn input_controls_for_action(
 		OneOrMany::Many(s) => s.first().unwrap().as_str(), // safe
 	});
 
-	input_controls_for_hand(mp, parent, current_right, Side::Right, action, click_type, profile, current.threshold)
+	input_controls_for_hand(
+		mp,
+		parent,
+		current_right,
+		Side::Right,
+		action,
+		click_type,
+		profile,
+		current.threshold,
+	)
 }
 
 fn input_controls_for_hand(
@@ -416,7 +497,9 @@ fn input_controls_for_hand(
 
 	clicks_dropdown(mp, parent, action.clone(), click_type)?;
 
-	if let Some(component) = current.as_ref().map(|x| x.component) && component.is_analog() {
+	if let Some(component) = current.as_ref().map(|x| x.component)
+		&& component.is_analog()
+	{
 		threshold_slider(mp, parent, action, threshold)?;
 	}
 
@@ -491,7 +574,12 @@ fn clicks_dropdown(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, curr
 	Ok(())
 }
 
-fn threshold_slider(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, current: Option<[f32; 2]>) -> anyhow::Result<()> {
+fn threshold_slider(
+	mp: &mut MacroParams,
+	parent: WidgetID,
+	action: Rc<str>,
+	current: Option<[f32; 2]>,
+) -> anyhow::Result<()> {
 	let id = mp.idx.to_string();
 	mp.idx += 1;
 
@@ -508,7 +596,7 @@ fn threshold_slider(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, cur
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "ThresholdSlider", mp.layout, parent, params)?;
-	
+
 	let slider = mp.parser_state.fetch_component_as::<ComponentSlider>(&id)?;
 	slider.on_value_changed(Box::new({
 		let tasks = mp.tasks.clone();
@@ -524,14 +612,22 @@ fn threshold_slider(mp: &mut MacroParams, parent: WidgetID, action: Rc<str>, cur
 	Ok(())
 }
 
-fn create_dropdown<B: 'static + BindingsDropdown>(mp: &mut MacroParams, parent: WidgetID, mut params: HashMap<Rc<str>, Rc<str>>, action: Rc<str>, side: Side, current_text: Translation, available: Rc<[B]>) -> anyhow::Result<()> {
+fn create_dropdown<B: 'static + BindingsDropdown>(
+	mp: &mut MacroParams,
+	parent: WidgetID,
+	mut params: HashMap<Rc<str>, Rc<str>>,
+	action: Rc<str>,
+	side: Side,
+	current_text: Translation,
+	available: Rc<[B]>,
+) -> anyhow::Result<()> {
 	let id = mp.idx.to_string();
 	mp.idx += 1;
 	params.insert(Rc::from("id"), Rc::from(id.as_ref()));
-	
+
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "DropdownButton", mp.layout, parent, params)?;
-	
+
 	{
 		let mut label = mp
 			.parser_state
@@ -545,20 +641,20 @@ fn create_dropdown<B: 'static + BindingsDropdown>(mp: &mut MacroParams, parent: 
 		let available = available.clone();
 		move |_common, e: ButtonClickEvent| {
 			let mut cells = available
-					.iter()
-					.map(|item| {
-						let title = item.translation();
+				.iter()
+				.map(|item| {
+					let title = item.translation();
 
-						context_menu::Cell {
-							action_name: Some(item.action_str(&*action, side)),
-							title,
-							tooltip: None,
-							attribs: vec![],
-						}
-					})
-					.collect::<Vec<_>>();
+					context_menu::Cell {
+						action_name: Some(item.action_str(&*action, side)),
+						title,
+						tooltip: None,
+						attribs: vec![],
+					}
+				})
+				.collect::<Vec<_>>();
 
-			if let Some(action_str) = B::clear_str(&*action, side)  {
+			if let Some(action_str) = B::clear_str(&*action, side) {
 				cells.insert(
 					0,
 					context_menu::Cell {
@@ -570,10 +666,7 @@ fn create_dropdown<B: 'static + BindingsDropdown>(mp: &mut MacroParams, parent: 
 				);
 			}
 
-			tasks.push(Task::OpenContextMenu(
-				e.mouse_pos_absolute.unwrap_or_default(),
-				cells,
-			));
+			tasks.push(Task::OpenContextMenu(e.mouse_pos_absolute.unwrap_or_default(), cells));
 			Ok(())
 		}
 	}));

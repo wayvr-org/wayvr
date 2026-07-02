@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io::Read, rc::Rc};
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumProperty, EnumString};
 use wgui::i18n::Translation;
@@ -85,7 +85,7 @@ impl Subpath {
 	}
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum SubpathType {
 	Button,
