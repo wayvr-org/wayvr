@@ -100,6 +100,7 @@ pub struct InitParams<'a, T> {
 pub enum SoundType {
 	Startup,
 	Launch,
+	Save,
 }
 
 #[derive(Clone)]
@@ -216,6 +217,7 @@ impl<T: 'static> Frontend<T> {
 		let path = match sound_type {
 			SoundType::Startup => "sound/startup.mp3",
 			SoundType::Launch => "sound/app_start.mp3",
+			SoundType::Save => "sound/save.mp3",
 		};
 
 		// try loading a custom sound; if one doesn't exist (or it failed to load), use the built-in asset

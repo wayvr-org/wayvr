@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 
 struct DesktopEntryOwned {
+	app_id: String,
 	exec_path: String,
 	exec_args: String,
 	app_name: String,
@@ -28,6 +29,7 @@ struct DesktopEntryOwned {
 pub struct DesktopEntry {
 	pub exec_path: Rc<str>,
 	pub exec_args: Rc<str>,
+	pub app_id: Rc<str>,
 	pub app_name: Rc<str>,
 	pub icon_path: Option<Rc<str>>,
 	pub categories: Vec<Rc<str>>,
@@ -36,6 +38,7 @@ pub struct DesktopEntry {
 impl From<DesktopEntryOwned> for DesktopEntry {
 	fn from(value: DesktopEntryOwned) -> Self {
 		Self {
+			app_id: value.app_id.into(),
 			exec_path: value.exec_path.into(),
 			exec_args: value.exec_args.into(),
 			app_name: value.app_name.into(),
@@ -242,8 +245,9 @@ impl DesktopFinder {
 				known_files.insert(file_name.to_string());
 
 				entries.insert(
-					app_id,
+					app_id.clone(),
 					DesktopEntryOwned {
+						app_id,
 						app_name: String::from(app_name),
 						exec_path: String::from(exec_path),
 						exec_args: exec_args.join(" "),

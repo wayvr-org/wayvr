@@ -298,5 +298,8 @@
 	"TARGET_PATH": "Target path",
 	"TERMINATE_PROCESS": "Terminate process",
 	"VERSION": "Version",
-	"WIDTH": "Width"
+	"WIDTH": "Width",
+	"SAVED_TO_FAVOURITES": "Saved to favourites",
+	"EMPTY": "Empty",
+	"PINNED_APPS": "Pinned applications"
 }

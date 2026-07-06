@@ -1,9 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, rc::Rc, sync::Arc};
 
 use chrono::Offset;
 use idmap::IdMap;
 use serde::{Deserialize, Serialize};
-use strum::{AsRefStr, EnumProperty, EnumString, VariantArray};
+use strum::{AsRefStr, EnumProperty, EnumString, VariantArray, VariantNames};
 use wayvr_ipc::packet_client::WvrProcessLaunchParams;
 use wgui::drawing::{self, HsvColor};
 
@@ -149,6 +149,44 @@ pub struct SerializedWindowSet {
 
 	#[serde(default)]
 	pub hidden_overlays: SerializedWindowStates,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
+pub enum AppPosMode {
+	Floating,
+	Anchored,
+	Static,
+}
+#[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
+pub enum AppOrientationMode {
+	Wide,
+	SemiWide,
+	Square,
+	SemiTall,
+	Tall,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
+pub enum AppCompositorMode {
+	Cage,
+	Native,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
+pub enum AppResMode {
+	Res1440,
+	Res1080,
+	Res720,
+	Res480,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PinnedApp {
+	pub app_id: Rc<str>, // desktop entry app id, for example "libreoffice-draw"
+	pub compositor_mode: AppCompositorMode,
+	pub pos_mode: AppPosMode,
+	pub orientation_mode: AppOrientationMode,
+	pub res_mode: AppResMode,
 }
 
 pub const fn def_pw_tokens() -> PwTokenMap {
@@ -400,6 +438,9 @@ pub struct GeneralConfig {
 
 	#[serde(default)]
 	pub autostart_apps: Vec<WvrProcessLaunchParams>,
+
+	#[serde(default)]
+	pub pinned_apps: Vec<PinnedApp>,
 
 	#[serde(default)]
 	pub last_set: u32,

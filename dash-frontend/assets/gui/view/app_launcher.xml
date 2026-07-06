@@ -18,7 +18,7 @@
       <rectangle macro="group_box" id="icon_parent" padding="16" color="#0033aa66" color2="#00000022" gradient="vertical" justify_content="center">
 
       </rectangle>
-      <div flex_direction="column" gap="8" flex_grow="1" max_width="720">
+      <div flex_direction="column" gap="8" flex_grow="1">
         <label id="label_title" weight="bold" size="32" overflow="hidden" />
         <Subtext label_id="label_exec" overflow="hidden" />
         <Separator />
@@ -51,9 +51,13 @@
           <RadioBox translation="APP_LAUNCHER.POS.STATIC" value="Static" tooltip_str="APP_LAUNCHER.POS.STATIC_HELP" />
         </RadioGroup -->
         <Separator />
-        <div flex_direction="row" justify_content="space_between" gap="16">
-          <CheckBox id="cb_autostart" translation="APP_LAUNCHER.AUTOSTART" />
-          <Button id="btn_launch" align_self="baseline" color="#44ce22FF" padding_top="4" padding_bottom="4" round="8" padding_right="12" min_height="40">
+        <CheckBox id="cb_autostart" translation="APP_LAUNCHER.AUTOSTART" align_self="baseline"/>
+        <div flex_direction="row" justify_content="end" gap="8" margin_top="8">
+          <Button id="btn_pin" color="#ce4477" padding_left="8" padding_right="8" round="8" min_height="40">
+            <sprite src_builtin="dashboard/heart_plus.svg" width="32" height="32" />
+            <label text="Add to favourites" weight="bold" size="17" shadow="#00000099" />
+          </Button>
+          <Button id="btn_launch" color="#44ce22" padding_left="8" padding_right="8" rround="8" min_height="40">
             <sprite src_builtin="dashboard/play.svg" width="32" height="32" />
             <label translation="APP_LAUNCHER.LAUNCH" weight="bold" size="17" shadow="#00000099" />
           </Button>

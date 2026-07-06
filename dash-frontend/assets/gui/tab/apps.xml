@@ -1,5 +1,6 @@
 <layout>
   <include src="../theme.xml" />
+  <include src="../t_group_box.xml" />
 
   <template name="AppEntry">
     <Button
@@ -39,6 +40,15 @@
       </rectangle>
     </div>
     -->
+    <rectangle macro="group_box">
+      <div align_items="center" gap="8">
+        <sprite src_builtin="dashboard/heart_plus.svg" min_width="24" min_height="24"/>
+        <label translation="PINNED_APPS"/>
+      </div>
+      <div id="pinned_apps_parent" flex_direction="row" flex_wrap="wrap" gap="4">
+        <!-- filled-in at runtime -->
+      </div>
+    </rectangle>
     <div
       id="app_list_parent"
       flex_direction="row"

@@ -78,11 +78,12 @@ pub trait DashInterface<T> {
 	fn get_feats(&mut self, data: &mut T) -> InterfaceFeats;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum ConfigChangeKind {
 	OverlayConfig,
 	EnvironmentBlend,
 	/// Marks the config for saving but doesn't notify any components
+	#[default]
 	Other,
 }
 

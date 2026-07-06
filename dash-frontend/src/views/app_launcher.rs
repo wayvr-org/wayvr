@@ -1,6 +1,5 @@
 use std::{collections::HashMap, rc::Rc, str::FromStr};
-
-use strum::{AsRefStr, EnumString, VariantNames};
+use strum::VariantNames;
 use wayvr_ipc::packet_client::{PositionMode, WvrProcessLaunchParams};
 use wgui::{
 	assets::AssetPath,
@@ -12,7 +11,11 @@ use wgui::{
 	task::Tasks,
 	widget::label::WidgetLabel,
 };
-use wlx_common::{config::GeneralConfig, dash_interface::BoxDashInterface, desktop_finder::DesktopEntry};
+use wlx_common::{
+	config::{AppCompositorMode, AppOrientationMode, AppPosMode, AppResMode, GeneralConfig, PinnedApp},
+	dash_interface::BoxDashInterface,
+	desktop_finder::DesktopEntry,
+};
 
 use crate::{
 	frontend::{FrontendTask, FrontendTasks, SoundType},
@@ -20,51 +23,22 @@ use crate::{
 	views::{ViewTrait, ViewUpdateParams},
 };
 
-#[derive(Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
-enum PosMode {
-	Floating,
-	Anchored,
-	Static,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
-enum ResMode {
-	Res1440,
-	Res1080,
-	Res720,
-	Res480,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
-enum OrientationMode {
-	Wide,
-	SemiWide,
-	Square,
-	SemiTall,
-	Tall,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
-enum CompositorMode {
-	Cage,
-	Native,
-}
-
 #[derive(Clone)]
 enum Task {
-	SetCompositor(CompositorMode),
-	SetRes(ResMode),
-	SetOrientation(OrientationMode),
+	SetCompositor(AppCompositorMode),
+	SetRes(AppResMode),
+	SetOrientation(AppOrientationMode),
 	SetAutoStart(bool),
 	Launch,
+	PinApp,
 }
 
 struct LaunchParams<'a, T> {
 	application: &'a DesktopEntry,
-	compositor_mode: CompositorMode,
-	pos_mode: PosMode,
-	res_mode: ResMode,
-	orientation_mode: OrientationMode,
+	compositor_mode: AppCompositorMode,
+	pos_mode: AppPosMode,
+	res_mode: AppResMode,
+	orientation_mode: AppOrientationMode,
 	globals: &'a WguiGlobals,
 	frontend_tasks: &'a FrontendTasks,
 	interface: &'a mut BoxDashInterface<T>,
@@ -88,14 +62,15 @@ pub struct View {
 	#[allow(dead_code)]
 	radio_orientation: Rc<ComponentRadioGroup>,
 
-	compositor_mode: CompositorMode,
-	pos_mode: PosMode,
-	res_mode: ResMode,
-	orientation_mode: OrientationMode,
+	compositor_mode: AppCompositorMode,
+	pos_mode: AppPosMode,
+	res_mode: AppResMode,
+	orientation_mode: AppOrientationMode,
 
 	auto_start: bool,
 
-	on_launched: Option<Box<dyn FnOnce()>>,
+	on_close_request: Option<Box<dyn FnOnce()>>,
+	on_app_pinned: Option<Box<dyn Fn()>>,
 }
 
 pub struct Params<'a> {
@@ -105,7 +80,8 @@ pub struct Params<'a> {
 	pub parent_id: WidgetID,
 	pub config: &'a GeneralConfig,
 	pub frontend_tasks: &'a FrontendTasks,
-	pub on_launched: Box<dyn FnOnce()>,
+	pub on_close_request: Box<dyn FnOnce()>,
+	pub on_app_pinned: Box<dyn Fn()>,
 }
 
 impl ViewTrait for View {
@@ -131,6 +107,7 @@ impl View {
 		let cb_autostart = state.fetch_component_as::<ComponentCheckbox>("cb_autostart")?;
 
 		let btn_launch = state.fetch_component_as::<ComponentButton>("btn_launch")?;
+		let btn_pin = state.fetch_component_as::<ComponentButton>("btn_pin")?;
 
 		{
 			let mut label_exec = state.fetch_widget_as::<WidgetLabel>(&params.layout.state, "label_exec")?;
@@ -144,6 +121,7 @@ impl View {
 		let tasks = Tasks::new();
 
 		tasks.handle_button(&btn_launch, Task::Launch);
+		tasks.handle_button(&btn_pin, Task::PinApp);
 
 		let id_icon_parent = state.get_widget_id("icon_parent")?;
 
@@ -161,24 +139,24 @@ impl View {
 		}
 
 		let compositor_mode = if params.config.xwayland_by_default {
-			CompositorMode::Cage
+			AppCompositorMode::Cage
 		} else {
-			CompositorMode::Native
+			AppCompositorMode::Native
 		};
 		radio_compositor.set_value_simple(compositor_mode.as_ref())?;
 		tasks.push(Task::SetCompositor(compositor_mode));
 
-		let res_mode = ResMode::Res1080;
+		let res_mode = AppResMode::Res1080;
 		// TODO: configurable defaults ?
 		//radio_res.set_value(res_mode.as_ref())?;
 		//tasks.push(Task::SetRes(res_mode));
 
-		let orientation_mode = OrientationMode::Wide;
+		let orientation_mode = AppOrientationMode::Wide;
 		// TODO: configurable defaults ?
 		//radio_orientation.set_value(orientation_mode.as_ref())?;
 		//tasks.push(Task::SetOrientation(orientation_mode));
 
-		let pos_mode = PosMode::Anchored;
+		let pos_mode = AppPosMode::Anchored;
 		// TODO: configurable defaults ?
 		//radio_pos.set_value(pos_mode.as_ref())?;
 		//tasks.push(Task::SetPos(pos_mode));
@@ -189,11 +167,11 @@ impl View {
 			let tasks = tasks.clone();
 			Box::new(move |_, ev| {
 				if let Some(mode) = ev.value.and_then(|v| {
-					CompositorMode::from_str(&v)
+					AppCompositorMode::from_str(&v)
 						.inspect_err(|_| {
 							log::error!(
 								"Invalid value for compositor: '{v}'. Valid values are: {:?}",
-								ResMode::VARIANTS
+								AppResMode::VARIANTS
 							)
 						})
 						.ok()
@@ -208,11 +186,11 @@ impl View {
 			let tasks = tasks.clone();
 			Box::new(move |_, ev| {
 				if let Some(mode) = ev.value.and_then(|v| {
-					ResMode::from_str(&v)
+					AppResMode::from_str(&v)
 						.inspect_err(|_| {
 							log::error!(
 								"Invalid value for resolution: '{v}'. Valid values are: {:?}",
-								ResMode::VARIANTS
+								AppResMode::VARIANTS
 							)
 						})
 						.ok()
@@ -246,11 +224,11 @@ impl View {
 			let tasks = tasks.clone();
 			Box::new(move |_, ev| {
 				if let Some(mode) = ev.value.and_then(|v| {
-					OrientationMode::from_str(&v)
+					AppOrientationMode::from_str(&v)
 						.inspect_err(|_| {
 							log::error!(
 								"Invalid value for orientation: '{v}'. Valid values are: {:?}",
-								OrientationMode::VARIANTS
+								AppOrientationMode::VARIANTS
 							)
 						})
 						.ok()
@@ -290,7 +268,8 @@ impl View {
 			entry: params.entry,
 			frontend_tasks: params.frontend_tasks.clone(),
 			globals: params.globals.clone(),
-			on_launched: Some(params.on_launched),
+			on_close_request: Some(params.on_close_request),
+			on_app_pinned: Some(params.on_app_pinned),
 		})
 	}
 
@@ -307,11 +286,44 @@ impl View {
 					Task::SetOrientation(mode) => self.orientation_mode = mode,
 					Task::SetAutoStart(auto_start) => self.auto_start = auto_start,
 					Task::Launch => self.action_launch(interface, data),
+					Task::PinApp => {
+						self.action_pin_app(interface.general_config(data));
+						interface.config_changed(data, Default::default());
+					}
 				}
 			}
 		}
 
 		Ok(())
+	}
+
+	fn close(&mut self) {
+		if let Some(c) = self.on_close_request.take() {
+			c();
+		}
+	}
+
+	fn action_pin_app(&mut self, config: &mut GeneralConfig) {
+		self
+			.frontend_tasks
+			.push(FrontendTask::PushToast(Translation::from_translation_key(
+				"SAVED_TO_FAVOURITES",
+			)));
+		self.frontend_tasks.push(FrontendTask::PlaySound(SoundType::Save));
+
+		config.pinned_apps.push(PinnedApp {
+			app_id: self.entry.app_id.clone(),
+			compositor_mode: self.compositor_mode,
+			pos_mode: self.pos_mode,
+			orientation_mode: self.orientation_mode,
+			res_mode: self.res_mode,
+		});
+
+		if let Some(c) = &self.on_app_pinned {
+			c();
+		}
+
+		self.close();
 	}
 
 	fn action_launch<T>(&mut self, interface: &mut BoxDashInterface<T>, data: &mut T) {
@@ -326,7 +338,7 @@ impl View {
 			auto_start: self.auto_start,
 			interface,
 			data,
-			on_launched: self.on_launched.take(),
+			on_launched: self.on_close_request.take(),
 		});
 	}
 
@@ -347,7 +359,7 @@ impl View {
 	fn launch<T>(mut params: LaunchParams<T>) -> anyhow::Result<()> {
 		let mut env = Vec::<String>::new();
 
-		if params.compositor_mode == CompositorMode::Native {
+		if params.compositor_mode == AppCompositorMode::Native {
 			// This list could be larger, feel free to expand it
 			env.push("QT_QPA_PLATFORM=wayland".into());
 			env.push("GDK_BACKEND=wayland".into());
@@ -357,19 +369,19 @@ impl View {
 		}
 
 		let args = match params.compositor_mode {
-			CompositorMode::Cage => format!("-- {} {}", params.application.exec_path, params.application.exec_args),
-			CompositorMode::Native => params.application.exec_args.to_string(),
+			AppCompositorMode::Cage => format!("-- {} {}", params.application.exec_path, params.application.exec_args),
+			AppCompositorMode::Native => params.application.exec_args.to_string(),
 		};
 
 		let exec = match params.compositor_mode {
-			CompositorMode::Cage => "cage".to_string(),
-			CompositorMode::Native => params.application.exec_path.to_string(),
+			AppCompositorMode::Cage => "cage".to_string(),
+			AppCompositorMode::Native => params.application.exec_path.to_string(),
 		};
 
 		let pos_mode = match params.pos_mode {
-			PosMode::Floating => PositionMode::Float,
-			PosMode::Anchored => PositionMode::Anchor,
-			PosMode::Static => PositionMode::Static,
+			AppPosMode::Floating => PositionMode::Float,
+			AppPosMode::Anchored => PositionMode::Anchor,
+			AppPosMode::Static => PositionMode::Static,
 		};
 
 		let mut userdata = HashMap::new();
@@ -408,20 +420,20 @@ impl View {
 		Ok(())
 	}
 
-	fn calculate_resolution(res_mode: ResMode, orientation_mode: OrientationMode) -> [u32; 2] {
+	fn calculate_resolution(res_mode: AppResMode, orientation_mode: AppOrientationMode) -> [u32; 2] {
 		let total_pixels = match res_mode {
-			ResMode::Res1440 => 2560 * 1440,
-			ResMode::Res1080 => 1920 * 1080,
-			ResMode::Res720 => 1280 * 720,
-			ResMode::Res480 => 854 * 480,
+			AppResMode::Res1440 => 2560 * 1440,
+			AppResMode::Res1080 => 1920 * 1080,
+			AppResMode::Res720 => 1280 * 720,
+			AppResMode::Res480 => 854 * 480,
 		};
 
 		let (ratio_w, ratio_h) = match orientation_mode {
-			OrientationMode::Wide => (16, 9),
-			OrientationMode::SemiWide => (3, 2),
-			OrientationMode::Square => (1, 1),
-			OrientationMode::SemiTall => (2, 3),
-			OrientationMode::Tall => (9, 16),
+			AppOrientationMode::Wide => (16, 9),
+			AppOrientationMode::SemiWide => (3, 2),
+			AppOrientationMode::Square => (1, 1),
+			AppOrientationMode::SemiTall => (2, 3),
+			AppOrientationMode::Tall => (9, 16),
 		};
 
 		let k = ((total_pixels as f64) / (ratio_w * ratio_h) as f64).sqrt();
@@ -433,13 +445,19 @@ impl View {
 	}
 }
 
-pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, entry: DesktopEntry, popup: PopupHolder<View>) {
+pub fn mount_popup(
+	frontend_tasks: FrontendTasks,
+	globals: WguiGlobals,
+	entry: DesktopEntry,
+	popup: PopupHolder<View>,
+	on_app_pinned: Box<dyn Fn()>,
+) {
 	frontend_tasks
 		.clone()
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
 			Translation::from_raw_text(&entry.app_name),
 			Box::new(move |data| {
-				let on_launched = popup.get_close_callback(data.layout);
+				let on_close_request = popup.get_close_callback(data.layout);
 				let view = View::new(Params {
 					entry: entry.clone(),
 					globals: &globals,
@@ -447,7 +465,8 @@ pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, entry: D
 					parent_id: data.id_content,
 					frontend_tasks: &frontend_tasks,
 					config: data.config,
-					on_launched,
+					on_close_request,
+					on_app_pinned,
 				})?;
 
 				popup.set_view(data.handle, view, None);
