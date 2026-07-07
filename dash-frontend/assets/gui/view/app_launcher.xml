@@ -1,8 +1,8 @@
 <layout>
   <template name="Subtext">
-    <div flex_direction="row" gap="8">
-      <label weight="bold" text="${title}" />
-      <label id="${label_id}" />
+    <div flex_direction="row" gap="8" max_width="100%">
+      <label weight="bold" text="${title}" wrap="1" />
+      <label id="${label_id}" wrap="1" />
     </div>
   </template>
 
@@ -15,12 +15,10 @@
 
   <elements>
     <div flex_direction="row" gap="16" flex_grow="1">
-      <rectangle macro="group_box" id="icon_parent" padding="16" color="#0033aa66" color2="#00000022" gradient="vertical" justify_content="center">
-
-      </rectangle>
+      <rectangle macro="group_box" id="icon_parent" padding="16" color="#0033aa66" color2="#00000022" gradient="vertical" justify_content="center"/>
       <div flex_direction="column" gap="8" flex_grow="1">
         <label id="label_title" weight="bold" size="32" overflow="hidden" />
-        <Subtext label_id="label_exec" overflow="hidden" />
+        <Subtext label_id="label_exec"/>
         <Separator />
         <RadioGroup id="radio_compositor" flex_direction="row" gap="16">
           <RadioBox translation="APP_LAUNCHER.MODE.NATIVE" value="Native" checked="1" />
@@ -30,14 +28,14 @@
         <label translation="APP_LAUNCHER.RES_TITLE" />
         <RadioGroup id="radio_res" flex_direction="row" gap="16">
           <RadioBox text="1440p" value="Res1440" />
-          <RadioBox text="1080p" value="Res1080" checked="1" />
+          <RadioBox text="1080p" value="Res1080"/>
           <RadioBox text="720p" value="Res720" />
           <RadioBox text="480p" value="Res480" />
         </RadioGroup>
         <Separator />
         <label translation="APP_LAUNCHER.ASPECT_TITLE" />
         <RadioGroup id="radio_orientation" flex_direction="row" gap="16">
-          <RadioBox translation="APP_LAUNCHER.ASPECT.WIDE" value="Wide" tooltip_str="16:9" checked="1" />
+          <RadioBox translation="APP_LAUNCHER.ASPECT.WIDE" value="Wide" tooltip_str="16:9"/>
           <RadioBox translation="APP_LAUNCHER.ASPECT.SEMI_WIDE" value="SemiWide" tooltip_str="3:2" />
           <RadioBox translation="APP_LAUNCHER.ASPECT.SQUARE" value="Square" tooltip_str="1:1" />
           <RadioBox translation="APP_LAUNCHER.ASPECT.SEMI_TALL" value="SemiTall" tooltip_str="2:3" />
@@ -52,12 +50,16 @@
         </RadioGroup -->
         <Separator />
         <CheckBox id="cb_autostart" translation="APP_LAUNCHER.AUTOSTART" align_self="baseline"/>
-        <div flex_direction="row" justify_content="end" gap="8" margin_top="8">
-          <Button id="btn_pin" color="#ce4477" padding_left="8" padding_right="8" round="8" min_height="40">
-            <sprite src_builtin="dashboard/heart_plus.svg" width="32" height="32" />
-            <label text="Add to favourites" weight="bold" size="17" shadow="#00000099" />
+        <div flex_direction="row" align_items="end" justify_content="center" gap="8" margin_top="8">
+          <Button id="btn_unpin" color="#997777" padding_left="8" padding_right="8" round="8" min_height="40">
+            <sprite src_builtin="dashboard/heart_minus.svg" width="32" height="32" />
+            <label translation="REMOVE_FROM_FAVOURITES" weight="bold" size="17" shadow="#00000099" />
           </Button>
-          <Button id="btn_launch" color="#44ce22" padding_left="8" padding_right="8" rround="8" min_height="40">
+          <Button id="btn_pin" color="#ce4477" padding_left="8" padding_right="8" round="8" min_height="40" tooltip="ADD_TO_FAVOURITES_HINT">
+            <sprite src_builtin="dashboard/heart_plus.svg" width="32" height="32" />
+            <label translation="ADD_TO_FAVOURITES" weight="bold" size="17" shadow="#00000099" />
+          </Button>
+          <Button id="btn_launch" color="#44ce22" padding_left="8" padding_right="8" round="8" min_width="200" min_height="40">
             <sprite src_builtin="dashboard/play.svg" width="32" height="32" />
             <label translation="APP_LAUNCHER.LAUNCH" weight="bold" size="17" shadow="#00000099" />
           </Button>

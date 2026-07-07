@@ -182,7 +182,9 @@
 			"REMOVE_UNUSED_MODELS": "Estás desactivando la función de voz a texto.\n¿Te gustaría eliminar los modelos de Whisper descargados para liberar espacio?"
 		},
 		"WHISPER_MODEL": "Modelo de voz a texto",
-		"WHISPER_MODEL_HELP": "Modelo de Whisper a utilizar.\nLos modelos más grandes producen\nresultados más precisos, pero consumen más VRAM."
+		"WHISPER_MODEL_HELP": "Modelo de Whisper a utilizar.\nLos modelos más grandes producen\nresultados más precisos, pero consumen más VRAM.",
+		"DEFAULT_OVERLAY_SCALE": "Tamaño de la superposición predeterminado",
+		"DEFAULT_OVERLAY_SCALE_HELP": "Genera nuevas capas de superposición con esta escala."
 	},
 	"HELLO": "¡Hola!",
 	"AUDIO": {
@@ -296,5 +298,11 @@
 		"WATCH": "Watch",
 		"WORKING_SET": "Set de trabajo"
 	},
-	"DOWNLOAD": "Descargar"
+	"DOWNLOAD": "Descargar",
+	"SAVED_TO_FAVOURITES": "Guardado en favoritos",
+	"ADD_TO_FAVOURITES": "Añadir a favoritos",
+	"ADD_TO_FAVOURITES_HINT": "Guarda el ajuste preestablecido y ánclalo al cajón de aplicaciones",
+	"REMOVE_FROM_FAVOURITES": "Eliminar de favoritos",
+	"EMPTY": "Vacío",
+	"PINNED_APPS": "Aplicaciones ancladas"
 }

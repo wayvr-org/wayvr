@@ -203,7 +203,9 @@
 			"REMOVE_UNUSED_MODELS": "您正在关闭语音转文本功能。\n是否删除已下载的 Whisper 模型以释放空间？"
 		},
 		"WHISPER_MODEL": "语音转文本模型",
-		"WHISPER_MODEL_HELP": "要使用的 Whisper 模型。\n模型越大，结果越准确，\n但消耗的显存 (VRAM) 越多。"
+		"WHISPER_MODEL_HELP": "要使用的 Whisper 模型。\n模型越大，结果越准确，\n但消耗的显存 (VRAM) 越多。",
+		"DEFAULT_OVERLAY_SCALE": "默认叠加层大小",
+		"DEFAULT_OVERLAY_SCALE_HELP": "以该比例生成新的叠加层。"
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",
 	"APPLICATION_STARTED": "应用已启动",
@@ -296,5 +298,11 @@
 		"WATCH": "Watch",
 		"WORKING_SET": "工作集"
 	},
-	"DOWNLOAD": "下载"
+	"DOWNLOAD": "下载",
+	"SAVED_TO_FAVOURITES": "已保存至收藏夹",
+	"ADD_TO_FAVOURITES": "添加到收藏",
+	"ADD_TO_FAVOURITES_HINT": "保存预设并将其固定到应用抽屉",
+	"REMOVE_FROM_FAVOURITES": "从收藏中移除",
+	"EMPTY": "空",
+	"PINNED_APPS": "已固定应用程序"
 }

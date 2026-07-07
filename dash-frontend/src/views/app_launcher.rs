@@ -3,7 +3,9 @@ use strum::VariantNames;
 use wayvr_ipc::packet_client::{PositionMode, WvrProcessLaunchParams};
 use wgui::{
 	assets::AssetPath,
-	components::{button::ComponentButton, checkbox::ComponentCheckbox, radio_group::ComponentRadioGroup},
+	components::{
+		ComponentTrait, button::ComponentButton, checkbox::ComponentCheckbox, radio_group::ComponentRadioGroup,
+	},
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
@@ -31,6 +33,7 @@ enum Task {
 	SetAutoStart(bool),
 	Launch,
 	PinApp,
+	UnpinApp,
 }
 
 struct LaunchParams<'a, T> {
@@ -67,10 +70,12 @@ pub struct View {
 	res_mode: AppResMode,
 	orientation_mode: AppOrientationMode,
 
+	pinned_app: Option<PinnedApp>,
+
 	auto_start: bool,
 
 	on_close_request: Option<Box<dyn FnOnce()>>,
-	on_app_pinned: Option<Box<dyn Fn()>>,
+	on_app_pins_changed: Option<Box<dyn Fn()>>,
 }
 
 pub struct Params<'a> {
@@ -81,7 +86,8 @@ pub struct Params<'a> {
 	pub config: &'a GeneralConfig,
 	pub frontend_tasks: &'a FrontendTasks,
 	pub on_close_request: Box<dyn FnOnce()>,
-	pub on_app_pinned: Box<dyn Fn()>,
+	pub on_app_pins_changed: Box<dyn Fn()>,
+	pub pinned_app: Option<PinnedApp>,
 }
 
 impl ViewTrait for View {
@@ -108,6 +114,7 @@ impl View {
 
 		let btn_launch = state.fetch_component_as::<ComponentButton>("btn_launch")?;
 		let btn_pin = state.fetch_component_as::<ComponentButton>("btn_pin")?;
+		let btn_unpin = state.fetch_component_as::<ComponentButton>("btn_unpin")?;
 
 		{
 			let mut label_exec = state.fetch_widget_as::<WidgetLabel>(&params.layout.state, "label_exec")?;
@@ -121,7 +128,16 @@ impl View {
 		let tasks = Tasks::new();
 
 		tasks.handle_button(&btn_launch, Task::Launch);
-		tasks.handle_button(&btn_pin, Task::PinApp);
+
+		if params.pinned_app.is_some() {
+			// "Unpin app"
+			tasks.handle_button(&btn_unpin, Task::UnpinApp);
+			params.layout.remove_widget(btn_pin.base().get_id());
+		} else {
+			// "Pin app"
+			tasks.handle_button(&btn_pin, Task::PinApp);
+			params.layout.remove_widget(btn_unpin.base().get_id());
+		}
 
 		let id_icon_parent = state.get_widget_id("icon_parent")?;
 
@@ -138,28 +154,35 @@ impl View {
 			)?;
 		}
 
-		let compositor_mode = if params.config.xwayland_by_default {
-			AppCompositorMode::Cage
-		} else {
-			AppCompositorMode::Native
+		let compositor_mode = match &params.pinned_app {
+			Some(pinned_app) => pinned_app.compositor_mode,
+			None => {
+				if params.config.xwayland_by_default {
+					AppCompositorMode::Cage
+				} else {
+					AppCompositorMode::Native
+				}
+			}
 		};
-		radio_compositor.set_value_simple(compositor_mode.as_ref())?;
-		tasks.push(Task::SetCompositor(compositor_mode));
 
-		let res_mode = AppResMode::Res1080;
 		// TODO: configurable defaults ?
-		//radio_res.set_value(res_mode.as_ref())?;
-		//tasks.push(Task::SetRes(res_mode));
-
-		let orientation_mode = AppOrientationMode::Wide;
-		// TODO: configurable defaults ?
-		//radio_orientation.set_value(orientation_mode.as_ref())?;
-		//tasks.push(Task::SetOrientation(orientation_mode));
-
+		let mut res_mode = AppResMode::Res1080;
+		let mut orientation_mode = AppOrientationMode::Wide;
 		let pos_mode = AppPosMode::Anchored;
-		// TODO: configurable defaults ?
-		//radio_pos.set_value(pos_mode.as_ref())?;
-		//tasks.push(Task::SetPos(pos_mode));
+
+		if let Some(pinned_app) = &params.pinned_app {
+			res_mode = pinned_app.res_mode;
+			orientation_mode = pinned_app.orientation_mode;
+		}
+
+		// update radios
+		{
+			let mut common = params.layout.common();
+			// TODO: pos_mode is disabled as for now
+			radio_compositor.set_value(&mut common, compositor_mode.as_ref())?;
+			radio_res.set_value(&mut common, res_mode.as_ref())?;
+			radio_orientation.set_value(&mut common, orientation_mode.as_ref())?;
+		}
 
 		let auto_start = false;
 
@@ -269,7 +292,8 @@ impl View {
 			frontend_tasks: params.frontend_tasks.clone(),
 			globals: params.globals.clone(),
 			on_close_request: Some(params.on_close_request),
-			on_app_pinned: Some(params.on_app_pinned),
+			on_app_pins_changed: Some(params.on_app_pins_changed),
+			pinned_app: params.pinned_app,
 		})
 	}
 
@@ -290,6 +314,10 @@ impl View {
 						self.action_pin_app(interface.general_config(data));
 						interface.config_changed(data, Default::default());
 					}
+					Task::UnpinApp => {
+						self.action_unpin_app(interface.general_config(data));
+						interface.config_changed(data, Default::default());
+					}
 				}
 			}
 		}
@@ -301,6 +329,20 @@ impl View {
 		if let Some(c) = self.on_close_request.take() {
 			c();
 		}
+	}
+
+	fn action_unpin_app(&mut self, config: &mut GeneralConfig) {
+		let Some(pinned_app) = &self.pinned_app else {
+			unreachable!();
+		};
+		self.frontend_tasks.push(FrontendTask::PlaySound(SoundType::Save));
+		config.pinned_apps.retain(|p| p != pinned_app);
+
+		if let Some(c) = &self.on_app_pins_changed {
+			c();
+		}
+
+		self.close();
 	}
 
 	fn action_pin_app(&mut self, config: &mut GeneralConfig) {
@@ -319,7 +361,7 @@ impl View {
 			res_mode: self.res_mode,
 		});
 
-		if let Some(c) = &self.on_app_pinned {
+		if let Some(c) = &self.on_app_pins_changed {
 			c();
 		}
 
@@ -450,7 +492,8 @@ pub fn mount_popup(
 	globals: WguiGlobals,
 	entry: DesktopEntry,
 	popup: PopupHolder<View>,
-	on_app_pinned: Box<dyn Fn()>,
+	on_app_pins_changed: Box<dyn Fn()>,
+	pinned_app: Option<PinnedApp>,
 ) {
 	frontend_tasks
 		.clone()
@@ -466,7 +509,8 @@ pub fn mount_popup(
 					frontend_tasks: &frontend_tasks,
 					config: data.config,
 					on_close_request,
-					on_app_pinned,
+					on_app_pins_changed,
+					pinned_app,
 				})?;
 
 				popup.set_view(data.handle, view, None);

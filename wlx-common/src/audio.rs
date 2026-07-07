@@ -32,10 +32,11 @@ pub struct SamplePlayer {
 
 fn audio_thread(receiver: Receiver<AudioThreadMessage>) {
 	log::debug!("audio_thread starting");
-	let Ok(stream) = rodio::DeviceSinkBuilder::open_default_sink() else {
+	let Ok(mut stream) = rodio::DeviceSinkBuilder::open_default_sink() else {
 		log::error!("Failed to open audio stream. Audio will not work.");
 		return;
 	};
+	stream.log_on_drop(false);
 
 	while let Ok(msg) = receiver.recv() {
 		match msg {

@@ -203,7 +203,9 @@
 			"REMOVE_UNUSED_MODELS": "Stai disattivando la funzione di sintesi vocale.\nDesideri rimuovere i modelli Whisper scaricati per liberare spazio?"
 		},
 		"WHISPER_MODEL": "Modello di sintesi vocale (speech-to-text)",
-		"WHISPER_MODEL_HELP": "Modello Whisper da utilizzare.\nI modelli più grandi producono risultati\npiù accurati, ma consumano più VRAM."
+		"WHISPER_MODEL_HELP": "Modello Whisper da utilizzare.\nI modelli più grandi producono risultati\npiù accurati, ma consumano più VRAM.",
+		"DEFAULT_OVERLAY_SCALE": "Dimensioni overlay predefinite",
+		"DEFAULT_OVERLAY_SCALE_HELP": "Genera nuovi overlay con questa scala."
 	},
 	"APPLICATION_LAUNCHER": "Lanciatore applicazioni",
 	"APPLICATION_STARTED": "Applicazione avviata",
@@ -296,5 +298,11 @@
 		"WATCH": "Watch",
 		"WORKING_SET": "Set di lavoro"
 	},
-	"DOWNLOAD": "Scarica"
+	"DOWNLOAD": "Scarica",
+	"SAVED_TO_FAVOURITES": "Salvato nei preferiti",
+	"ADD_TO_FAVOURITES": "Aggiungi ai preferiti",
+	"ADD_TO_FAVOURITES_HINT": "Salva il preset e fissalo al cassetto delle app",
+	"REMOVE_FROM_FAVOURITES": "Rimuovi dai preferiti",
+	"EMPTY": "Vuoto",
+	"PINNED_APPS": "Applicazioni fissate"
 }

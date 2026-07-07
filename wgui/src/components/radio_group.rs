@@ -86,17 +86,6 @@ impl ComponentRadioGroup {
 		self.state.borrow().selected.as_ref().and_then(|b| b.get_value())
 	}
 
-	pub fn set_value_simple(&self, value: &str) -> anyhow::Result<()> {
-		let mut state = self.state.borrow_mut();
-		for radio_box in &state.radio_boxes {
-			if radio_box.get_value().is_some_and(|box_val| &*box_val == value) {
-				state.selected = Some(radio_box.clone());
-				return Ok(());
-			}
-		}
-		anyhow::bail!("No RadioBox found with value '{value}'")
-	}
-
 	pub fn set_value(&self, common: &mut CallbackDataCommon, value: &str) -> anyhow::Result<()> {
 		let mut state = self.state.borrow_mut();
 		let mut selected = None;

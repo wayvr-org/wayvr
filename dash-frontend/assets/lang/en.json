@@ -300,6 +300,9 @@
 	"VERSION": "Version",
 	"WIDTH": "Width",
 	"SAVED_TO_FAVOURITES": "Saved to favourites",
+	"ADD_TO_FAVOURITES": "Add to favourites",
+	"ADD_TO_FAVOURITES_HINT": "Save preset and pin it to the app drawer",
+	"REMOVE_FROM_FAVOURITES": "Remove from favourites",
 	"EMPTY": "Empty",
 	"PINNED_APPS": "Pinned applications"
 }

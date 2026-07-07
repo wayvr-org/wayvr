@@ -151,13 +151,13 @@ pub struct SerializedWindowSet {
 	pub hidden_overlays: SerializedWindowStates,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
 pub enum AppPosMode {
 	Floating,
 	Anchored,
 	Static,
 }
-#[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
 pub enum AppOrientationMode {
 	Wide,
 	SemiWide,
@@ -166,13 +166,13 @@ pub enum AppOrientationMode {
 	Tall,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
 pub enum AppCompositorMode {
 	Cage,
 	Native,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Eq, PartialEq, EnumString, VariantNames, AsRefStr)]
 pub enum AppResMode {
 	Res1440,
 	Res1080,
@@ -180,7 +180,7 @@ pub enum AppResMode {
 	Res480,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct PinnedApp {
 	pub app_id: Rc<str>, // desktop entry app id, for example "libreoffice-draw"
 	pub compositor_mode: AppCompositorMode,

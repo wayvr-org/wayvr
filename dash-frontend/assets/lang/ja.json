@@ -182,7 +182,9 @@
 			"REMOVE_UNUSED_MODELS": "文字起こし機能をオフにします。\n空き容量を増やすために、ダウンロード済みのモデルファイルを削除しますか？"
 		},
 		"WHISPER_MODEL": "文字起こしモデル",
-		"WHISPER_MODEL_HELP": "使用するWhisperモデル。\nモデルが大きいほど精度は向上しますが、\nVRAMの消費量が増加します。"
+		"WHISPER_MODEL_HELP": "使用するWhisperモデル。\nモデルが大きいほど精度は向上しますが、\nVRAMの消費量が増加します。",
+		"DEFAULT_OVERLAY_SCALE": "デフォルトのオーバーレイサイズ",
+		"DEFAULT_OVERLAY_SCALE_HELP": "新しいオーバーレイをこのスケールで生成します。"
 	},
 	"HELLO": "こんにちは！",
 	"AUDIO": {
@@ -296,5 +298,11 @@
 		"WATCH": "Watch",
 		"WORKING_SET": "ワーキングセット"
 	},
-	"DOWNLOAD": "ダウンロード"
+	"DOWNLOAD": "ダウンロード",
+	"SAVED_TO_FAVOURITES": "お気に入りに保存しました",
+	"ADD_TO_FAVOURITES": "お気に入りに追加",
+	"ADD_TO_FAVOURITES_HINT": "プリセットを保存してアプリドロワーにピン留めします",
+	"REMOVE_FROM_FAVOURITES": "お気に入りから削除",
+	"EMPTY": "空",
+	"PINNED_APPS": "ピン留めされたアプリケーション"
 }

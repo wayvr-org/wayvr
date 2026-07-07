@@ -8,7 +8,7 @@ use wgui::{
 	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
 	task::Tasks,
 };
-use wlx_common::desktop_finder::DesktopEntry;
+use wlx_common::{config::PinnedApp, desktop_finder::DesktopEntry};
 
 use crate::{
 	frontend::{Frontend, FrontendTasks},
@@ -68,10 +68,11 @@ fn find_entry_from_app_name<'a>(app_id: &str, entries: &'a [DesktopEntry]) -> Op
 impl<T> TabApps<T> {
 	fn refresh_pinned_apps(&self, state: &mut State, frontend: &mut Frontend<T>, data: &mut T) -> anyhow::Result<()> {
 		frontend.layout.remove_children(self.pinned_apps_parent);
+		let globals = frontend.globals.clone();
 
 		let mut stale_entries = Vec::<Rc<str>>::new();
 
-		let mut pinned_desktop_entries = Vec::<&DesktopEntry>::new();
+		let mut pinned_desktop_entries = Vec::<(PinnedApp, &DesktopEntry)>::new();
 
 		// collect pinned desktop entries
 		{
@@ -82,7 +83,7 @@ impl<T> TabApps<T> {
 					continue;
 				};
 
-				pinned_desktop_entries.push(desktop_entry);
+				pinned_desktop_entries.push((pinned_app.clone(), desktop_entry));
 			}
 			// cleanup:
 			// remove non-existent app ids from pinned apps
@@ -105,14 +106,31 @@ impl<T> TabApps<T> {
 		}
 
 		// mount pinned desktop entries
-		for desktop_entry in pinned_desktop_entries {
-			mount_entry(
+		for (pinned_app, desktop_entry) in pinned_desktop_entries {
+			let tooltip_string = format!(
+				"{}\n{}\n{}",
+				pinned_app.compositor_mode.as_ref(),
+				pinned_app.orientation_mode.as_ref(),
+				pinned_app.res_mode.as_ref()
+			);
+
+			let button = mount_entry(
 				frontend,
 				&mut state.parser_state,
 				&doc_params(frontend.globals.clone()),
 				self.pinned_apps_parent,
 				desktop_entry,
+				Some(tooltip_string),
 			)?;
+
+			button.on_click(on_app_click(
+				frontend.tasks.clone(),
+				self.tasks.clone(),
+				globals.clone(),
+				desktop_entry.clone(),
+				self.state.clone(),
+				Some(pinned_app.clone()),
+			));
 		}
 
 		Ok(())
@@ -134,6 +152,7 @@ fn on_app_click(
 	globals: WguiGlobals,
 	entry: DesktopEntry,
 	state: Rc<RefCell<State>>,
+	pinned_app: Option<PinnedApp>,
 ) -> ButtonClickCallback {
 	Rc::new(move |_common, _evt| {
 		views::app_launcher::mount_popup(
@@ -142,6 +161,7 @@ fn on_app_click(
 			entry.clone(),
 			state.borrow_mut().view_launcher.clone(),
 			tasks.make_callback_box(Task::RefreshPinnedApps),
+			pinned_app.clone(),
 		);
 		Ok(())
 	})
@@ -317,9 +337,14 @@ fn mount_entry<T>(
 	doc_params: &ParseDocumentParams,
 	id_parent: WidgetID,
 	entry: &DesktopEntry,
+	tooltip: Option<String>,
 ) -> anyhow::Result<Rc<ComponentButton>> {
 	{
 		let mut params = TemplateParams::new();
+
+		if let Some(tooltip) = tooltip {
+			params.insert_str("tooltip", tooltip);
+		};
 
 		// entry icon
 		params.insert_rc(
@@ -383,6 +408,7 @@ impl AppList {
 					&doc_params(globals.clone()),
 					self.list_parent.id,
 					&entry,
+					None,
 				)?;
 
 				button.on_click(on_app_click(
@@ -391,6 +417,7 @@ impl AppList {
 					globals.clone(),
 					entry.clone(),
 					rc_state.clone(),
+					None,
 				));
 			} else {
 				break;

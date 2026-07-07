@@ -182,7 +182,9 @@
 			"REMOVE_UNUSED_MODELS": "Sie schalten die Sprache-zu-Text-Funktion aus.\nMöchten Sie die heruntergeladenen Whisper-Modelle entfernen, um Speicherplatz freizugeben?"
 		},
 		"WHISPER_MODEL": "Sprach-zu-Text-Modell",
-		"WHISPER_MODEL_HELP": "Zu verwendendes Whisper-Modell.\nGrößere Modelle liefern genauere\nErgebnisse, verbrauchen jedoch mehr VRAM."
+		"WHISPER_MODEL_HELP": "Zu verwendendes Whisper-Modell.\nGrößere Modelle liefern genauere\nErgebnisse, verbrauchen jedoch mehr VRAM.",
+		"DEFAULT_OVERLAY_SCALE": "Standardgröße des Overlays",
+		"DEFAULT_OVERLAY_SCALE_HELP": "Neue Overlays werden in dieser Skalierung erstellt."
 	},
 	"HELLO": "Hallo!",
 	"AUDIO": {
@@ -296,5 +298,11 @@
 		"WATCH": "Watch",
 		"WORKING_SET": "Arbeits-Set"
 	},
-	"DOWNLOAD": "Herunterladen"
+	"DOWNLOAD": "Herunterladen",
+	"SAVED_TO_FAVOURITES": "Zu Favoriten hinzugefügt",
+	"ADD_TO_FAVOURITES": "Zu Favoriten hinzufügen",
+	"ADD_TO_FAVOURITES_HINT": "Voreinstellung speichern und an den App-Drawer anheften",
+	"REMOVE_FROM_FAVOURITES": "Aus Favoriten entfernen",
+	"EMPTY": "Leer",
+	"PINNED_APPS": "Angepinnte Anwendungen"
 }

@@ -177,7 +177,9 @@
 			"REMOVE_UNUSED_MODELS": "Wyłączasz funkcję zamiany mowy na tekst.\nCzy chcesz usunąć pobrane modele Whisper, aby zwolnić miejsce?"
 		},
 		"WHISPER_MODEL": "Model mowy na tekst",
-		"WHISPER_MODEL_HELP": "Model Whisper do wykorzystania.\nWiększe modele dają dokładniejsze\nwyniki, ale zużywają więcej pamięci VRAM."
+		"WHISPER_MODEL_HELP": "Model Whisper do wykorzystania.\nWiększe modele dają dokładniejsze\nwyniki, ale zużywają więcej pamięci VRAM.",
+		"DEFAULT_OVERLAY_SCALE": "Domyślny rozmiar nakładki",
+		"DEFAULT_OVERLAY_SCALE_HELP": "Twórz nowe nakładki w tej skali."
 	},
 	"APPLICATION_LAUNCHER": "Uruchamiacz aplikacji",
 	"APPLICATIONS": "Aplikacje",
@@ -296,5 +298,11 @@
 		"WATCH": "Watch",
 		"WORKING_SET": "Aktywny zestaw"
 	},
-	"DOWNLOAD": "Pobierz"
+	"DOWNLOAD": "Pobierz",
+	"SAVED_TO_FAVOURITES": "Dodano do ulubionych",
+	"ADD_TO_FAVOURITES": "Dodaj do ulubionych",
+	"ADD_TO_FAVOURITES_HINT": "Zapisz ustawienie i przypnij je do szuflady aplikacji",
+	"REMOVE_FROM_FAVOURITES": "Usuń z ulubionych",
+	"EMPTY": "Puste",
+	"PINNED_APPS": "Przypięte aplikacje"
 }
