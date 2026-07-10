@@ -1,5 +1,7 @@
 .~lock.*
+/.direnv
 /target
+/result
 .gdb_history
 .vscode
 .cargo
