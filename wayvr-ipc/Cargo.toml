@@ -12,6 +12,7 @@ anyhow.workspace = true
 async-channel.workspace = true
 async-io.workspace = true
 bytes.workspace = true
+interprocess.workspace = true
 log.workspace = true
 serde.workspace = true
 smallvec.workspace = true

@@ -1,10 +1,11 @@
 use bytes::BufMut;
+use interprocess::local_socket::{self, ToNsName};
 use serde::Serialize;
 use smallvec::SmallVec;
 use smol::io::AsyncReadExt;
 use smol::io::AsyncWriteExt;
 use smol::lock::Mutex;
-use smol::net::unix::UnixStream;
+use std::os::unix::net::UnixStream as StdUnixStream;
 use std::sync::{Arc, Weak};
 
 use crate::{
@@ -65,6 +66,24 @@ pub type WayVRClientWeak = Weak<Mutex<WayVRClient>>;
 type ReceiverMutex = Arc<Mutex<smol::net::unix::UnixStream>>;
 type SenderMutex = Arc<Mutex<smol::net::unix::UnixStream>>;
 
+fn interprocess_stream_to_async(
+	stream: local_socket::Stream,
+) -> anyhow::Result<smol::net::unix::UnixStream> {
+	use std::os::unix::io::OwnedFd;
+
+	let uds_stream: interprocess::os::unix::uds_local_socket::Stream = match stream {
+		local_socket::Stream::UdSocket(s) => s,
+		#[allow(unreachable_patterns)]
+		_ => anyhow::bail!("Unsupported socket type"),
+	};
+
+	let owned_fd: OwnedFd = uds_stream.into();
+	let std_stream = StdUnixStream::from(owned_fd);
+
+	smol::net::unix::UnixStream::try_from(std_stream)
+		.map_err(|e| anyhow::anyhow!("Failed to wrap socket for async I/O: {}", e))
+}
+
 async fn client_runner(client: WayVRClientMutex) -> anyhow::Result<()> {
 	loop {
 		WayVRClient::tick(client.clone()).await?;
@@ -118,14 +137,17 @@ impl WayVRClient {
 	pub async fn new(client_name: &str) -> anyhow::Result<WayVRClientMutex> {
 		let printname = "/tmp/wayvr_ipc.sock";
 
-		let stream = match UnixStream::connect(printname).await {
-			Ok(c) => c,
-			Err(e) => {
-				anyhow::bail!("Failed to connect to the WayVR IPC: {}", e)
-			}
-		};
-		let receiver = Arc::new(Mutex::new(stream.clone()));
-		let sender = Arc::new(Mutex::new(stream));
+		let name = printname
+			.to_ns_name::<local_socket::GenericNamespaced>()
+			.map_err(|e| anyhow::anyhow!("Failed to create socket name: {}", e))?;
+		let opts = local_socket::ConnectOptions::new().name(name);
+		let ip_stream = opts
+			.connect_sync()
+			.map_err(|e| anyhow::anyhow!("Failed to connect to the WayVR IPC: {}", e))?;
+
+		let async_stream = interprocess_stream_to_async(ip_stream)?;
+		let receiver = Arc::new(Mutex::new(async_stream.clone()));
+		let sender = Arc::new(Mutex::new(async_stream));
 
 		let (cancel_tx, cancel_rx) = async_channel::bounded(1);
 

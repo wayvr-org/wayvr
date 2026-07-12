@@ -6514,6 +6514,7 @@ dependencies = [
  "async-channel",
  "async-io",
  "bytes",
+ "interprocess",
  "log",
  "serde",
  "serde_json",
