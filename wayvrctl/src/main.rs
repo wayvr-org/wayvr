@@ -22,37 +22,38 @@ use crate::helper::{
 mod helper;
 mod types;
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> ExitCode {
+fn main() -> ExitCode {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
     let args = Args::parse();
 
-    let mut state = WayVRClientState {
-        wayvr_client: WayVRClient::new(&format!("wayvrctl-{}", process::id()))
-            .await
-            .inspect_err(|e| {
-                log::error!("Failed to initialize WayVR connection: {e:?}");
-                process::exit(1);
-            })
-            .unwrap(),
-        serial_generator: ipc::SerialGenerator::new(),
-        pretty_print: args.pretty,
-    };
+    smol::block_on(async move {
+        let mut state = WayVRClientState {
+            wayvr_client: WayVRClient::new(&format!("wayvrctl-{}", process::id()))
+                .await
+                .inspect_err(|e| {
+                    log::error!("Failed to initialize WayVR connection: {e:?}");
+                    process::exit(1);
+                })
+                .unwrap(),
+            serial_generator: ipc::SerialGenerator::new(),
+            pretty_print: args.pretty,
+        };
 
-    let maybe_err = if let Subcommands::Batch { fail_fast } = args.command {
-        run_batch(&mut state, fail_fast).await
-    } else {
-        run_once(&mut state, args).await
-    };
+        let maybe_err = if let Subcommands::Batch { fail_fast } = args.command {
+            run_batch(&mut state, fail_fast).await
+        } else {
+            run_once(&mut state, args).await
+        };
 
-    if let Err(e) = maybe_err {
-        log::error!("{e:?}");
-        return ExitCode::FAILURE;
-    } else {
-        std::thread::sleep(Duration::from_millis(20));
-    }
+        if let Err(e) = maybe_err {
+            log::error!("{e:?}");
+            return ExitCode::FAILURE;
+        } else {
+            std::thread::sleep(Duration::from_millis(20));
+        }
 
-    ExitCode::SUCCESS
+        ExitCode::SUCCESS
+    })
 }
 
 async fn run_batch(state: &mut WayVRClientState, fail_fast: bool) -> anyhow::Result<()> {

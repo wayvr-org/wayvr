@@ -1,16 +1,11 @@
 use bytes::BufMut;
-use interprocess::local_socket::{
-	self, GenericNamespaced,
-	tokio::{Stream, prelude::*},
-};
 use serde::Serialize;
 use smallvec::SmallVec;
+use smol::io::AsyncReadExt;
+use smol::io::AsyncWriteExt;
+use smol::lock::Mutex;
+use smol::net::unix::UnixStream;
 use std::sync::{Arc, Weak};
-use tokio::{
-	io::{AsyncReadExt, AsyncWriteExt},
-	sync::Mutex,
-};
-use tokio_util::sync::CancellationToken;
 
 use crate::{
 	gen_id,
@@ -43,10 +38,10 @@ type SignalFunc = Box<dyn FnMut(&packet_server::PacketServer) -> bool + Send>;
 pub struct WayVRClient {
 	receiver: ReceiverMutex,
 	sender: SenderMutex,
-	cancel_token: CancellationToken,
+	cancel_tx: async_channel::Sender<()>,
 	exiting: bool,
 	queued_packets: QueuedPacketVec,
-	pub auth: Option<AuthInfo>, // Some if authenticated
+	pub auth: Option<AuthInfo>,
 	pub on_signal: Option<SignalFunc>,
 }
 
@@ -67,8 +62,8 @@ pub async fn send_packet(sender: &SenderMutex, data: &[u8]) -> anyhow::Result<()
 pub type WayVRClientMutex = Arc<Mutex<WayVRClient>>;
 pub type WayVRClientWeak = Weak<Mutex<WayVRClient>>;
 
-type ReceiverMutex = Arc<Mutex<local_socket::tokio::RecvHalf>>;
-type SenderMutex = Arc<Mutex<local_socket::tokio::SendHalf>>;
+type ReceiverMutex = Arc<Mutex<smol::net::unix::UnixStream>>;
+type SenderMutex = Arc<Mutex<smol::net::unix::UnixStream>>;
 
 async fn client_runner(client: WayVRClientMutex) -> anyhow::Result<()> {
 	loop {
@@ -79,7 +74,7 @@ async fn client_runner(client: WayVRClientMutex) -> anyhow::Result<()> {
 type Payload = SmallVec<[u8; 64]>;
 
 async fn read_payload(
-	conn: &mut local_socket::tokio::RecvHalf,
+	conn: &mut smol::net::unix::UnixStream,
 	size: u32,
 ) -> anyhow::Result<Payload> {
 	let mut payload = Payload::new();
@@ -122,32 +117,29 @@ impl WayVRClient {
 
 	pub async fn new(client_name: &str) -> anyhow::Result<WayVRClientMutex> {
 		let printname = "/tmp/wayvr_ipc.sock";
-		let name = printname.to_ns_name::<GenericNamespaced>()?;
 
-		let stream = match Stream::connect(name).await {
+		let stream = match UnixStream::connect(printname).await {
 			Ok(c) => c,
 			Err(e) => {
 				anyhow::bail!("Failed to connect to the WayVR IPC: {}", e)
 			}
 		};
-		let (receiver, sender) = stream.split();
+		let receiver = Arc::new(Mutex::new(stream.clone()));
+		let sender = Arc::new(Mutex::new(stream));
 
-		let receiver = Arc::new(Mutex::new(receiver));
-		let sender = Arc::new(Mutex::new(sender));
-
-		let cancel_token = CancellationToken::new();
+		let (cancel_tx, cancel_rx) = async_channel::bounded(1);
 
 		let client = Arc::new(Mutex::new(Self {
 			receiver,
 			sender: sender.clone(),
+			cancel_tx,
 			exiting: false,
-			cancel_token: cancel_token.clone(),
 			queued_packets: QueuedPacketVec::new(),
 			auth: None,
 			on_signal: None,
 		}));
 
-		WayVRClient::start_runner(client.clone(), cancel_token);
+		WayVRClient::start_runner(client.clone(), cancel_rx);
 
 		// Send handshake to the server
 		send_packet(
@@ -163,17 +155,31 @@ impl WayVRClient {
 		Ok(client)
 	}
 
-	fn start_runner(client: WayVRClientMutex, cancel_token: CancellationToken) {
-		tokio::spawn(async move {
-			tokio::select! {
-					_ = cancel_token.cancelled() => {
-							log::info!("Exiting IPC runner gracefully");
+	fn start_runner(client: WayVRClientMutex, cancel_rx: async_channel::Receiver<()>) {
+		smol::spawn(async move {
+			let cancel_fut = async {
+				cancel_rx
+					.recv()
+					.await
+					.map_err(|_| anyhow::anyhow!("cancelled"))
+			};
+
+			let result = smol::future::race(client_runner(client.clone()), cancel_fut).await;
+
+			match result {
+				Ok(()) => {
+					log::info!("IPC Runner completed");
+				}
+				Err(e) => {
+					if e.to_string() == "cancelled" {
+						log::info!("Exiting IPC runner gracefully");
+					} else {
+						log::info!("IPC Runner failed: {:?}", e);
 					}
-					e = client_runner(client.clone()) => {
-							log::info!("IPC Runner failed: {:?}", e);
-					}
+				}
 			}
-		});
+		})
+		.detach();
 	}
 
 	async fn tick(client_mtx: WayVRClientMutex) -> anyhow::Result<()> {
@@ -185,7 +191,9 @@ impl WayVRClient {
 		// read packet
 		let packet = {
 			let mut receiver = receiver.lock().await;
-			let packet_size = receiver.read_u32().await?;
+			let mut size_buf = [0u8; 4];
+			receiver.read_exact(&mut size_buf).await?;
+			let packet_size = u32::from_be_bytes(size_buf);
 			log::trace!("packet size {}", packet_size);
 			if packet_size > 128 * 1024 {
 				anyhow::bail!("packet size too large (> 128 KiB)");
@@ -442,6 +450,6 @@ impl WayVRClient {
 impl Drop for WayVRClient {
 	fn drop(&mut self) {
 		self.exiting = true;
-		self.cancel_token.cancel();
+		let _ = self.cancel_tx.try_send(());
 	}
 }

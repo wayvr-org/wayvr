@@ -15,7 +15,7 @@ clap.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tokio.workspace = true
+smol.workspace = true
 
 env_logger = "0.11.11"
 shell-words = "1.1.1"

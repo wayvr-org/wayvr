@@ -9,17 +9,17 @@ repository = "https://github.com/wlx-team/wayvr"
 
 [dependencies]
 anyhow.workspace = true
+async-channel.workspace = true
+async-io.workspace = true
 bytes.workspace = true
 log.workspace = true
 serde.workspace = true
 smallvec.workspace = true
 
 # client-only deps
-interprocess = { workspace = true, features = ["tokio"], optional = true }
 serde_json.workspace = true
-tokio = { workspace = true, features = ["macros"], optional = true }
-tokio-util = { version = "0.7.18", optional = true }
+smol = { workspace = true, optional = true }
 
 [features]
 default = ["client"]
-client = ["dep:interprocess", "dep:tokio", "dep:tokio-util"]
+client = ["dep:smol"]

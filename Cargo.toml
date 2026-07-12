@@ -14,6 +14,8 @@ members = [
 
 [workspace.dependencies]
 anyhow = "1.0.100"
+async-channel = "2.3"
+async-io = "2.1"
 bytes = { version = "1.11.1" }
 chrono = "0.4.42"
 clap = { version = "4.5.53", features = ["derive"] }
@@ -34,7 +36,6 @@ slotmap = "1.1.1"
 smallvec = "1.15.2"
 smol = "2.0.2"
 strum = { version = "0.27.2", features = ["derive"] }
-tokio = "1.48.0"  # TODO: switch to smol for ipc
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 uuid = { version = "1.19.0", features = ["fast-rng", "serde", "v4"] }
 vulkano = {

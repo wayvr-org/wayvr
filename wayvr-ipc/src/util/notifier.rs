@@ -1,25 +1,29 @@
-use std::sync::Arc;
-
-use tokio::sync::Notify;
+use async_channel::{Receiver, Sender};
 
 // Copyable wrapped Notify struct for easier usage
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct Notifier {
-	notifier: Arc<Notify>,
+	sender: Sender<()>,
+	receiver: Receiver<()>,
 }
 
 impl Notifier {
 	pub fn new() -> Self {
-		Self {
-			notifier: Arc::new(Notify::new()),
-		}
+		let (sender, receiver) = async_channel::bounded(1);
+		Self { sender, receiver }
 	}
 
 	pub fn notify(&self) {
-		self.notifier.notify_waiters();
+		let _ = self.sender.try_send(());
 	}
 
 	pub async fn wait(&self) {
-		self.notifier.notified().await;
+		let _ = self.receiver.recv().await;
+	}
+}
+
+impl Default for Notifier {
+	fn default() -> Self {
+		Self::new()
 	}
 }
