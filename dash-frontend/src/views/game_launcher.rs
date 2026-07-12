@@ -75,8 +75,8 @@ impl ViewTrait for View {
 }
 
 impl View {
-	async fn fetch_details(executor: AsyncExecutor, tasks: Tasks<Task>, app_id: AppID) {
-		let Some(details) = cached_fetcher::get_app_details_json(executor, app_id).await else {
+	async fn fetch_details(tasks: Tasks<Task>, app_id: AppID) {
+		let Some(details) = cached_fetcher::get_app_details_json(app_id).await else {
 			return;
 		};
 
@@ -103,7 +103,7 @@ impl View {
 		let tasks = Tasks::new();
 
 		// fetch details from the web
-		let fut = View::fetch_details(params.executor.clone(), tasks.clone(), params.manifest.app_id.clone());
+		let fut = View::fetch_details(tasks.clone(), params.manifest.app_id.clone());
 		params.executor.spawn(fut).detach();
 
 		let id_cover_art_parent = state.get_widget_id("cover_art_parent")?;

@@ -20,3 +20,4 @@ tracing-subscriber.workspace = true
 vulkano.workspace = true
 vulkano-shaders.workspace = true
 winit.workspace = true
+ureq = "3.3.0"

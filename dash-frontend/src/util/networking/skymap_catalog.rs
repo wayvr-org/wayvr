@@ -1,7 +1,7 @@
 use crate::util::networking::{self, WAYVR_SKYMAPS_ROOT, http_client};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use wlx_common::{async_executor::AsyncExecutor, config_io};
+use wlx_common::config_io;
 pub type SkymapUuid = uuid::Uuid;
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
@@ -160,10 +160,10 @@ impl SkymapCatalog {
 	}
 }
 
-pub async fn request_catalog(executor: &AsyncExecutor) -> anyhow::Result<SkymapCatalog> {
+pub async fn request_catalog() -> anyhow::Result<SkymapCatalog> {
 	log::info!("Fetching skymap list");
 
-	let res = http_client::get_simple(executor, &format!("{}/catalog.json", networking::WAYVR_SKYMAPS_ROOT)).await?;
+	let res = http_client::get_simple(&format!("{}/catalog.json", networking::WAYVR_SKYMAPS_ROOT)).await?;
 	let catalog = res.into_json::<SkymapCatalog>()?;
 	catalog.validate()?;
 

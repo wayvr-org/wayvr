@@ -61,12 +61,8 @@ const GAME_COVER_SIZE_X: f32 = 140.0;
 const GAME_COVER_SIZE_Y: f32 = 210.0;
 
 impl View {
-	async fn request_cover_image(
-		executor: AsyncExecutor,
-		manifest: steam_utils::AppManifest,
-		on_loaded: Box<dyn FnOnce(CoverArt)>,
-	) {
-		let cover_art = match cached_fetcher::request_image(executor, manifest.app_id.clone()).await {
+	async fn request_cover_image(manifest: steam_utils::AppManifest, on_loaded: Box<dyn FnOnce(CoverArt)>) {
+		let cover_art = match cached_fetcher::request_image(manifest.app_id.clone()).await {
 			Ok(cover_art) => cover_art,
 			Err(e) => {
 				log::error!("request_cover_image failed: {:?}", e);
@@ -285,7 +281,6 @@ impl View {
 		params
 			.executor
 			.spawn(View::request_cover_image(
-				params.executor.clone(),
 				params.manifest.clone(),
 				Box::new(params.on_loaded),
 			))

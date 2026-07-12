@@ -119,8 +119,8 @@ impl ViewTrait for View {
 }
 
 impl View {
-	async fn skymap_catalog_request_wrapper(tasks: Tasks<Task>, executor: AsyncExecutor) {
-		let res = networking::skymap_catalog::request_catalog(&executor).await;
+	async fn skymap_catalog_request_wrapper(tasks: Tasks<Task>) {
+		let res = networking::skymap_catalog::request_catalog().await;
 		tasks.push(Task::SetSkymapCatalog(Rc::new(res)))
 	}
 
@@ -131,7 +131,7 @@ impl View {
 			with_text: true,
 		})?;
 		let tasks = Tasks::<Task>::new();
-		let fut = View::skymap_catalog_request_wrapper(tasks.clone(), par.executor.clone());
+		let fut = View::skymap_catalog_request_wrapper(tasks.clone());
 		par.executor.spawn(fut).detach();
 		Ok(Self {
 			id_parent: par.parent_id,
@@ -147,15 +147,10 @@ impl View {
 		})
 	}
 
-	async fn request_skymap_preview(
-		globals: WguiGlobals,
-		executor: AsyncExecutor,
-		entry: SkymapCatalogEntry,
-		tasks: Tasks<Task>,
-	) {
+	async fn request_skymap_preview(globals: WguiGlobals, entry: SkymapCatalogEntry, tasks: Tasks<Task>) {
 		tasks.push(Task::SetSkymapPreview((
 			entry.uuid,
-			networking::image_fetch::fetch_to_glyph_data(&globals, &executor, &entry.files.get_url_preview())
+			networking::image_fetch::fetch_to_glyph_data(&globals, &entry.files.get_url_preview())
 				.await
 				.ok(),
 		)));
@@ -192,12 +187,7 @@ impl View {
 		let id_list = parser_state.fetch_widget(&layout.state, "list")?.id;
 
 		for entry in &catalog.entries {
-			let task = View::request_skymap_preview(
-				self.globals.clone(),
-				self.executor.clone(),
-				entry.clone(),
-				self.tasks.clone(),
-			);
+			let task = View::request_skymap_preview(self.globals.clone(), entry.clone(), self.tasks.clone());
 
 			let skymap_uuid = entry.uuid;
 

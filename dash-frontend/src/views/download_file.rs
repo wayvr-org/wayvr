@@ -69,13 +69,7 @@ impl ViewTrait for View {
 					if let Some(on_downloaded) = self.on_downloaded.take() {
 						self
 							.executor
-							.spawn(View::download(
-								self.tasks.clone(),
-								self.executor.clone(),
-								url,
-								path,
-								on_downloaded,
-							))
+							.spawn(View::download(self.tasks.clone(), url, path, on_downloaded))
 							.detach();
 					}
 				}
@@ -189,36 +183,11 @@ impl View {
 
 	async fn download(
 		tasks: Tasks<Task>,
-		executor: AsyncExecutor,
 		url: String,
 		target_path: PathBuf,
 		on_downloaded: Box<dyn FnOnce()>,
 	) -> Option<()> {
 		tasks.push(Task::SetStatusText(String::from("Connecting to the server...")));
-
-		// start downloading from the server with progress reporting
-		let res = handle_async_result(
-			"Download failed",
-			&tasks,
-			http_client::get(http_client::GetParams {
-				executor: &executor,
-				url: &url,
-				on_progress: Some(Box::new({
-					let tasks = tasks.clone();
-					move |data: ProgressFuncData| {
-						tasks.push(Task::SetStatusText(format!(
-							"{}/{} KiB ({}%)",
-							data.bytes_downloaded / 1024,
-							data.file_size / 1024,
-							(data.bytes_downloaded as f32 / data.file_size as f32 * 100.0).round()
-						)))
-					}
-				})),
-			})
-			.await,
-		)?;
-
-		tasks.push(Task::SetStatusText(String::from("Writing to file...")));
 
 		// create parent directory if it doesn't exist yet
 		if let Some(parent) = target_path.parent() {
@@ -229,10 +198,28 @@ impl View {
 			)?;
 		}
 
+		// start downloading from the server with progress reporting
 		handle_async_result(
-			"File write failed",
+			"Download failed",
 			&tasks,
-			smol::fs::write(target_path, res.data).await,
+			http_client::download_to_file(
+				http_client::GetParams {
+					url: &url,
+					on_progress: Some(Box::new({
+						let tasks = tasks.clone();
+						move |data: ProgressFuncData| {
+							tasks.push(Task::SetStatusText(format!(
+								"{}/{} MiB ({}%)",
+								data.bytes_downloaded / 1024 / 1024,
+								data.file_size / 1024 / 1024,
+								(data.bytes_downloaded as f32 / data.file_size as f32 * 100.0).round()
+							)))
+						}
+					})),
+				},
+				&target_path,
+			)
+			.await,
 		)?;
 
 		tasks.push(Task::SetStatusText(String::from("Download finished")));
