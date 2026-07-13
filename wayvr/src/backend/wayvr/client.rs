@@ -1,4 +1,5 @@
 use std::{
+    ffi::OsStr,
     io::Read,
     os::unix::net::UnixStream,
     path::PathBuf,
@@ -97,7 +98,7 @@ impl WayVRCompositor {
     ) -> anyhow::Result<Self> {
         let (wayland_env, listener) = create_wayland_listener()?;
 
-        let xwayland_satellite = Command::new("xwayland-satellite")
+        let xwayland_satellite = Command::new(bundled_executable("xwayland-satellite"))
             .arg(wayland_env.display_num_string())
             .env("WAYLAND_DISPLAY", wayland_env.wayland_display_num_string())
             .spawn()
@@ -391,4 +392,12 @@ fn accumulate_discrete_scroll(acc: &mut f32, delta_v120: i32) -> i32 {
     }
 
     steps
+}
+
+/// Runs executable from APPDIR, falling back to PATH
+fn bundled_executable(name: impl AsRef<std::path::Path>) -> PathBuf {
+    match std::env::var_os("APPDIR") {
+        Some(appdir) => PathBuf::from(appdir).join("usr").join("bin").join(name),
+        None => PathBuf::from(name.as_ref()),
+    }
 }

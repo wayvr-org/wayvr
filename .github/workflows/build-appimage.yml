@@ -29,6 +29,9 @@ jobs:
       - name: Cargo Build
         run: |
           ../.github/workflows/scripts/appimage_build_wlx.sh
+      - name: Build xwayland-satellite
+        run: |
+          ../.github/workflows/scripts/appimage_build_satellite.sh
       - name: Package AppImage
         run: |
           ../.github/workflows/scripts/appimage_package.sh
