@@ -65,7 +65,7 @@ use crate::{
         task::{OverlayTask, SpawnPos, TaskContainer, TaskType, ToggleMode},
         wayvr::{
             image_importer::ImageImporter,
-            input_capture::InputCapture,
+            input_capture::{InputCapture, SEAT_NAME},
             process::{KillSignal, Process},
         },
     },
@@ -178,7 +178,7 @@ impl WvrServerState {
         let shm = ShmState::new::<Application>(&dh, Vec::new());
         let data_device = DataDeviceState::new::<Application>(&dh);
         let primary_selection_state = PrimarySelectionState::new::<Application>(&dh);
-        let mut seat = seat_state.new_wl_seat(&dh, "wayvr");
+        let mut seat = seat_state.new_wl_seat(&dh, SEAT_NAME);
 
         let ext_data_control_state = selection_ext::DataControlState::new::<Application, _>(
             &dh,
@@ -797,6 +797,18 @@ impl WvrServerState {
                 input_capture::CapturedEvent::UngrabbedAll => {
                     self.manager.release_all_keys();
                     self.has_input_focus = false;
+                }
+                input_capture::CapturedEvent::KeyCombo(key_combo) => {
+                    match key_combo {
+                        input_capture::KeyCombo::AltF4 => {
+                            if let Some(hover) = self.wm.mouse.as_mut() {
+                                let window_handle = hover.hover_window;
+                                self.close_window(window_handle);
+                            }
+                        }
+                        input_capture::KeyCombo::AltTab => {}
+                        input_capture::KeyCombo::CtrlAltDel => { /* not exposed to us */ }
+                    }
                 }
             }
         }

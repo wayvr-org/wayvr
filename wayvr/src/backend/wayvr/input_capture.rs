@@ -24,11 +24,19 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const IGNORE_PREFIX: &str = "WayVR";
+pub const SEAT_NAME: &str = "wayvr";
 
-const SEAT_NAME: &str = "seat0";
+const IGNORE_PREFIX: &str = "WayVR";
 const WATCHDOG_TIMEOUT: Duration = Duration::from_millis(5000);
 const POLL_TIMEOUT_MS: i32 = 20;
+
+#[derive(Debug, Clone, Copy)]
+pub enum KeyCombo {
+    AltF4,
+    AltTab,
+    /// Always consumed by InputCapture internally
+    CtrlAltDel,
+}
 
 #[derive(Debug, Clone)]
 pub enum CapturedEvent {
@@ -49,6 +57,7 @@ pub enum CapturedEvent {
         vertical_v120: i32,
     },
     UngrabbedAll,
+    KeyCombo(KeyCombo),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -519,9 +528,16 @@ fn process_libinput_event(
 
             if pressed {
                 state.pressed_keys.insert(code);
-                if emergency_chord_active(&state.pressed_keys) {
-                    log::info!("Ctrl+Alt+Del pressed, ungrabbing all input devices");
-                    return ProcessResult::EmergencyUngrab;
+
+                match check_key_combo(&state.pressed_keys) {
+                    Some(KeyCombo::CtrlAltDel) => {
+                        log::info!("Ctrl+Alt+Del pressed, ungrabbing all input devices");
+                        return ProcessResult::EmergencyUngrab;
+                    }
+                    Some(key_combo) if emit => {
+                        let _ = event_tx.send(CapturedEvent::KeyCombo(key_combo));
+                    }
+                    _ => {}
                 }
             } else {
                 state.pressed_keys.remove(&code);
@@ -785,14 +801,26 @@ fn mouse_buttons() -> [KeyCode; 8] {
     ]
 }
 
-fn emergency_chord_active(pressed: &HashSet<u16>) -> bool {
-    let ctrl =
-        pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
-
+fn check_key_combo(pressed: &HashSet<u16>) -> Option<KeyCombo> {
     let alt =
         pressed.contains(&KeyCode::KEY_LEFTALT.0) || pressed.contains(&KeyCode::KEY_RIGHTALT.0);
 
-    ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0)
+    if alt && pressed.contains(&KeyCode::KEY_F4.0) {
+        return Some(KeyCombo::AltF4);
+    }
+
+    if alt && pressed.contains(&KeyCode::KEY_TAB.0) {
+        return Some(KeyCombo::AltTab);
+    }
+
+    let ctrl =
+        pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
+
+    if ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0) {
+        return Some(KeyCombo::CtrlAltDel);
+    }
+
+    None
 }
 
 fn io_errno(error: io::Error) -> i32 {
