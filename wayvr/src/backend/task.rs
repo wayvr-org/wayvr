@@ -104,6 +104,11 @@ pub enum SpawnPos {
     Parent(OverlaySelector),
 }
 
+pub enum GlobalChange {
+    Settings,
+    Keyboard,
+}
+
 pub type ModifyOverlayTask = dyn FnOnce(&mut AppState, &mut OverlayWindowConfig) + Send;
 pub type CreateOverlayTask = dyn FnOnce(&mut AppState) -> Option<OverlayWindowConfig> + Send;
 pub enum OverlayTask {
@@ -118,8 +123,7 @@ pub enum OverlayTask {
     ToggleDashboard,
     ShowHide,
     CleanupMirrors,
-    SettingsChanged,
-    KeyboardChanged,
+    GlobalChange(GlobalChange),
     Modify(OverlaySelector, Box<ModifyOverlayTask>),
     Spawn(OverlaySelector, SpawnPos, Box<CreateOverlayTask>),
     ModifyPanel(ModifyPanelTask),

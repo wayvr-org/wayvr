@@ -5,6 +5,7 @@
   <elements>
     <div flex_grow="1" height="48">
       <rectangle
+        id="rect"
         flex_grow="1" height="48"
         padding="8" border="2"
         round="8"
@@ -13,7 +14,7 @@
         color="background"
         border_color="outline"
       >
-        <label id="label_title" margin_left="8" color="on_background" size="22" weight="bold" />
+        <label id="title" text="~title" margin_left="8" color="on_background" size="22" weight="bold" />
         <div gap="4">
           <Button macro="window_button" _release="::EditToggle">
             <sprite macro="window_button_icon" src="watch/edit.svg" />

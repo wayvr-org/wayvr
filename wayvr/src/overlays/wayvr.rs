@@ -4,24 +4,29 @@ use glam::{Affine2, Affine3A, Quat, Vec3, vec2, vec3};
 use slotmap::Key;
 use smithay::{
     desktop::PopupManager,
+    input::pointer::CursorImageStatus,
     reexports::wayland_server::Resource,
     utils::{Logical, Size},
-    wayland::{compositor::with_states, shell::xdg::XdgPopupSurfaceData},
+    wayland::{
+        compositor::with_states,
+        shell::xdg::{XdgPopupSurfaceData, XdgToplevelSurfaceData},
+    },
 };
 use vulkano::{
     buffer::BufferUsage, image::view::ImageView, pipeline::graphics::color_blend::AttachmentBlend,
 };
 use wayvr_ipc::packet_client::PositionMode;
 use wgui::{
+    color::{WguiColor, WguiColorName},
     components::button::ComponentButton,
-    event::EventCallback,
+    event::{CallbackDataCommon, EventCallback},
     gfx::{
         cmd::WGfxClearMode,
         pipeline::{WGfxPipeline, WPipelineCreateInfo},
     },
     i18n::Translation,
     parser::Fetchable,
-    widget::{EventResult, label::WidgetLabel},
+    widget::{EventResult, label::WidgetLabel, rectangle::WidgetRectangle},
 };
 use wlx_capture::frame::{MouseMeta, Transform};
 use wlx_common::{
@@ -35,7 +40,7 @@ use crate::{
         input::{self, HoverResult},
         task::{OverlayTask, TaskType},
         wayvr::{
-            self, PointerFocusTarget, SurfaceBufWithImage,
+            self, PointerFocusTarget, SurfaceBufWithImage, WvrServerState,
             hit_test::{
                 PopupRoot, RenderedSurface, WvrHitContext, WvrHitTarget,
                 collect_rendered_surface_tree, collect_rendered_surface_tree_at,
@@ -65,6 +70,7 @@ use crate::{
 
 #[derive(Clone)]
 pub enum WvrCommand {
+    ReloadTitle,
     CloseWindow,
     KillProcess(KillSignal),
 }
@@ -154,6 +160,7 @@ pub struct WvrWindowBackend {
     overlay_id: OverlayID,
     scale: (f32, f32),
     resizable: bool,
+    had_focus: bool,
 }
 
 impl WvrWindowBackend {
@@ -220,19 +227,10 @@ impl WvrWindowBackend {
             NewGuiPanelParams {
                 resize_to_parent: true,
                 on_custom_attrib: Some(on_custom_attrib),
+                extra_vars: [("title".into(), name.as_ref().into())].into(),
                 ..Default::default()
             },
         )?;
-
-        {
-            let mut title = panel
-                .parser_state
-                .fetch_widget_as::<WidgetLabel>(&panel.layout.state, "label_title")?;
-            title.set_text_simple(
-                &mut app.wgui_globals.get(),
-                Translation::from_raw_text(&name),
-            );
-        }
 
         panel.update_layout(app)?;
 
@@ -267,6 +265,7 @@ impl WvrWindowBackend {
             overlay_id: OverlayID::null(),
             scale,
             resizable,
+            had_focus: false,
         })
     }
 
@@ -347,6 +346,67 @@ impl WvrWindowBackend {
         self.panel.update_layout(app)?;
 
         Ok(())
+    }
+
+    fn update_title(&mut self, new_title: Rc<str>) {
+        let mut common = CallbackDataCommon {
+            state: &self.panel.layout.state,
+            alterables: &mut self.panel.layout.alterables,
+        };
+
+        if let Ok(mut title) = self
+            .panel
+            .parser_state
+            .fetch_widget_as::<WidgetLabel>(&self.panel.layout.state, "title")
+        {
+            title.set_text(&mut common, Translation::from_raw_text_rc(new_title));
+        }
+    }
+
+    fn update_decor(&mut self, wvr_server: &mut WvrServerState) {
+        let now_focused = wvr_server
+            .get_focused_window()
+            .is_some_and(|w| w == self.window);
+
+        if now_focused == self.had_focus {
+            return;
+        }
+
+        self.had_focus = now_focused;
+
+        let mut common = CallbackDataCommon {
+            state: &self.panel.layout.state,
+            alterables: &mut self.panel.layout.alterables,
+        };
+
+        const COLORS: [(WguiColor, WguiColor); 2] = [
+            (
+                WguiColorName::Outline.to_wgui_color(),
+                WguiColorName::OnBackground.to_wgui_color(),
+            ),
+            (
+                WguiColorName::Tertiary.to_wgui_color(),
+                WguiColorName::Tertiary.to_wgui_color(),
+            ),
+        ];
+
+        let (rect_col, label_col) = COLORS[now_focused as usize];
+
+        if let Ok(mut rect) = self
+            .panel
+            .parser_state
+            .fetch_widget_as::<WidgetRectangle>(&self.panel.layout.state, "rect")
+        {
+            rect.set_border_color(&mut common, rect_col);
+        }
+
+        if let Ok(mut title) = self
+            .panel
+            .parser_state
+            .fetch_widget_as::<WidgetLabel>(&self.panel.layout.state, "title")
+        {
+            title.set_color(&mut common, label_col, true);
+        }
     }
 
     fn mouse_index_from_mode(mode: input::PointerMode) -> Option<wayvr::MouseIndex> {
@@ -468,7 +528,6 @@ impl OverlayBackend for WvrWindowBackend {
 
         let surface_id = toplevel.wl_surface().id();
         let surfaces = collect_rendered_surface_tree(toplevel.wl_surface());
-        let should_render_panel = self.panel.should_render(app)?;
 
         let mut popup_roots = Vec::new();
         let mut popups = Vec::new();
@@ -505,6 +564,8 @@ impl OverlayBackend for WvrWindowBackend {
         let mut tree_dirty = false;
 
         if let Some(wvr_server) = app.wvr_server.as_mut() {
+            self.update_decor(wvr_server);
+
             let state = &mut wvr_server.manager.state;
             tree_dirty |= state.take_redraw_request(&surface_id);
             tree_dirty |= state.has_pending_frame_callbacks(&surface_id);
@@ -518,6 +579,7 @@ impl OverlayBackend for WvrWindowBackend {
             }
         }
 
+        let should_render_panel = self.panel.should_render(app)?;
         let force_render = tree_dirty || mem::take(&mut self.just_resumed);
 
         let hit_surfaces = surfaces.clone();
@@ -600,8 +662,8 @@ impl OverlayBackend for WvrWindowBackend {
             .as_ref()
             .filter(|m| m.hover_window == self.window)
             .map(|m| MouseMeta {
-                x: (m.x as f32) / (inner_extent[0] as f32),
-                y: (m.y as f32) / (inner_extent[1] as f32),
+                x: (m.pos.x as f32) / (inner_extent[0] as f32),
+                y: (m.pos.y as f32) / (inner_extent[1] as f32),
             });
 
         let dirty = self.mouse != mouse || rendered_surfaces_dirty(&self.popups, &popups);
@@ -666,13 +728,20 @@ impl OverlayBackend for WvrWindowBackend {
             callback_surfaces.push(&popup.surface_id);
         }
 
-        if let Some(mouse) = self.mouse.as_ref() {
-            self.pipeline.as_mut().unwrap().render_mouse(mouse, rdr)?;
-        }
-
         // frame callbacks for toplevel + subsurf + popup
         if let Some(wvr_server) = app.wvr_server.as_mut() {
             let state = &mut wvr_server.manager.state;
+
+            match state.cursor_image {
+                CursorImageStatus::Hidden => {}
+                CursorImageStatus::Named(_) | CursorImageStatus::Surface(_) => {
+                    // FIXME: properly render surface?
+                    if let Some(mouse) = self.mouse.as_ref() {
+                        self.pipeline.as_mut().unwrap().render_mouse(mouse, rdr)?;
+                    }
+                }
+            }
+
             if let Some(window) = wvr_server.wm.windows.get(&self.window) {
                 let surface_id = window.toplevel.wl_surface().id();
                 state.send_frame_callbacks_for_surface_id(&surface_id);
@@ -702,6 +771,24 @@ impl OverlayBackend for WvrWindowBackend {
                 self.overlay_id = oid;
                 let wvr_server = app.wvr_server.as_mut().unwrap(); //never None
                 wvr_server.overlay_added(oid, self.window);
+            }
+            OverlayEventData::WvrCommand(WvrCommand::ReloadTitle) => {
+                let wvr_server = app.wvr_server.as_mut().unwrap(); //never None
+                if let Some(window) = wvr_server.wm.windows.get(&self.window) {
+                    let title = with_states(window.toplevel.wl_surface(), |states| {
+                        states
+                            .data_map
+                            .get::<XdgToplevelSurfaceData>()
+                            .unwrap()
+                            .lock()
+                            .unwrap()
+                            .title
+                            .clone()
+                    });
+                    if let Some(title) = title {
+                        self.update_title(title.into());
+                    }
+                }
             }
             OverlayEventData::WvrCommand(WvrCommand::CloseWindow) => {
                 app.wvr_server.as_mut().unwrap().close_window(self.window);

@@ -9,7 +9,7 @@ use crate::{
     KEYMAP_CHANGE,
     backend::{
         input::{HoverResult, PointerHit},
-        task::{OverlayTask, TaskType},
+        task::{GlobalChange, OverlayTask, TaskType},
     },
     gui::panel::{GuiPanel, overlay_list::OverlayList, set_list::SetList},
     overlays::keyboard::builder::create_keyboard_panel,
@@ -184,7 +184,9 @@ impl KeyboardBackend {
             self.internal_switch_keymap(new_key);
         }
         app.tasks
-            .enqueue(TaskType::Overlay(OverlayTask::KeyboardChanged));
+            .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
+                GlobalChange::Keyboard,
+            )));
         Ok(true)
     }
 

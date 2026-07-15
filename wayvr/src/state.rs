@@ -105,9 +105,15 @@ impl AppState {
         let session = AppSession::load();
         let wvr_signals = SyncEventQueue::new();
 
-        let wvr_server = WvrServerState::new(gfx.clone(), &gfx_extras, wvr_signals.clone())
-            .log_err("Could not initialize WayVR Server")
-            .ok();
+        let wvr_server = {
+            let mut maybe_wvr = WvrServerState::new(gfx.clone(), &gfx_extras, wvr_signals.clone())
+                .log_err("Could not initialize WayVR Server")
+                .ok();
+            if let Some(wvr) = maybe_wvr.as_mut() {
+                wvr.config_changed(&session.config);
+            }
+            maybe_wvr
+        };
 
         let (hid_provider, mut hid_error) = HidWrapper::new(session.config.input_emulation_method);
 

@@ -24,8 +24,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const SEAT_NAME: &str = "wayvr";
-
 const IGNORE_PREFIX: &str = "WayVR";
 const WATCHDOG_TIMEOUT: Duration = Duration::from_millis(5000);
 const POLL_TIMEOUT_MS: i32 = 20;
@@ -51,6 +49,8 @@ pub enum CapturedEvent {
     PointerMotion {
         dx: f64,
         dy: f64,
+        dx_raw: f64,
+        dy_raw: f64,
     },
     PointerAxis {
         horizontal_v120: i32,
@@ -319,10 +319,10 @@ fn worker_main(
     };
 
     let mut libinput = Libinput::new_with_udev(interface);
-    if libinput.udev_assign_seat(SEAT_NAME).is_err() {
+    if libinput.udev_assign_seat("seat0").is_err() {
         let _ = init_tx.send(Err(io::Error::new(
             io::ErrorKind::Other,
-            format!("failed to assign libinput seat {SEAT_NAME:?}"),
+            format!("failed to assign libinput seat"),
         )));
         return;
     }
@@ -550,9 +550,16 @@ fn process_libinput_event(
         Event::Pointer(PointerEvent::Motion(event)) if emit => {
             let dx = event.dx();
             let dy = event.dy();
+            let dx_raw = event.dx_unaccelerated();
+            let dy_raw = event.dy_unaccelerated();
             if (dx != 0.0 || dy != 0.0)
                 && event_tx
-                    .send(CapturedEvent::PointerMotion { dx, dy })
+                    .send(CapturedEvent::PointerMotion {
+                        dx,
+                        dy,
+                        dx_raw,
+                        dy_raw,
+                    })
                     .is_err()
             {
                 return ProcessResult::ReceiverGone;
@@ -805,6 +812,9 @@ fn check_key_combo(pressed: &HashSet<u16>) -> Option<KeyCombo> {
     let alt =
         pressed.contains(&KeyCode::KEY_LEFTALT.0) || pressed.contains(&KeyCode::KEY_RIGHTALT.0);
 
+    let ctrl =
+        pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
+
     if alt && pressed.contains(&KeyCode::KEY_F4.0) {
         return Some(KeyCombo::AltF4);
     }
@@ -812,9 +822,6 @@ fn check_key_combo(pressed: &HashSet<u16>) -> Option<KeyCombo> {
     if alt && pressed.contains(&KeyCode::KEY_TAB.0) {
         return Some(KeyCombo::AltTab);
     }
-
-    let ctrl =
-        pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
 
     if ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0) {
         return Some(KeyCombo::CtrlAltDel);

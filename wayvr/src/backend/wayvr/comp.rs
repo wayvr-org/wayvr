@@ -5,7 +5,7 @@ use smithay::desktop::{
     PopupKeyboardGrab, PopupKind, PopupManager, PopupPointerGrab, PopupUngrabStrategy,
     find_popup_root_surface, get_popup_toplevel_coords,
 };
-use smithay::input::pointer::Focus;
+use smithay::input::pointer::{CursorImageStatus, Focus};
 use smithay::input::{Seat, SeatHandler, SeatState};
 use smithay::output::Output;
 use smithay::reexports::rustix::fs::{OFlags, fcntl_setfl};
@@ -24,6 +24,7 @@ use smithay::wayland::dmabuf::{
 };
 use smithay::wayland::fractional_scale::with_fractional_scale;
 use smithay::wayland::output::OutputHandler;
+use smithay::wayland::relative_pointer::RelativePointerManagerState;
 use smithay::wayland::selection::data_device::{
     ClientDndGrabHandler, DataDeviceHandler, DataDeviceState, ServerDndGrabHandler,
     set_data_device_focus, set_data_device_selection,
@@ -45,8 +46,8 @@ use smithay::wayland::viewporter::ViewporterState;
 use smithay::{
     delegate_compositor, delegate_data_control, delegate_data_device, delegate_dmabuf,
     delegate_ext_data_control, delegate_kde_decoration, delegate_output,
-    delegate_primary_selection, delegate_seat, delegate_shm, delegate_single_pixel_buffer,
-    delegate_viewporter, delegate_xdg_decoration, delegate_xdg_shell,
+    delegate_primary_selection, delegate_relative_pointer, delegate_seat, delegate_shm,
+    delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_decoration, delegate_xdg_shell,
 };
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -80,6 +81,8 @@ pub struct Application {
     #[allow(dead_code)]
     pub xdg_decoration_state: XdgDecorationState,
     pub kde_decoration_state: KdeDecorationState,
+    #[allow(dead_code)]
+    pub relative_pointer_state: RelativePointerManagerState,
     pub wayvr_tasks: SyncEventQueue<WayVRTask>,
     pub popup_manager: PopupManager,
     #[allow(dead_code)]
@@ -87,6 +90,7 @@ pub struct Application {
     pub display_handle: DisplayHandle,
     pub redraw_requests: HashSet<ObjectId>,
     pub pending_frame_callbacks: HashMap<ObjectId, Vec<wl_callback::WlCallback>>,
+    pub cursor_image: CursorImageStatus,
 }
 
 impl Application {
@@ -334,11 +338,8 @@ impl SeatHandler for Application {
         set_primary_focus(dh, seat, client);
     }
 
-    fn cursor_image(
-        &mut self,
-        _seat: &Seat<Self>,
-        _image: smithay::input::pointer::CursorImageStatus,
-    ) {
+    fn cursor_image(&mut self, _seat: &Seat<Self>, image: CursorImageStatus) {
+        self.cursor_image = image;
     }
 }
 
@@ -581,6 +582,13 @@ impl XdgShellHandler for Application {
                 .send(WayVRTask::MinimizeRequest(client.id(), surface.clone()));
         }
     }
+
+    fn title_changed(&mut self, surface: ToplevelSurface) {
+        if let Some(client) = surface.wl_surface().client() {
+            self.wayvr_tasks
+                .send(WayVRTask::TitleChange(client.id(), surface.clone()));
+        }
+    }
 }
 
 impl ShmHandler for Application {
@@ -683,6 +691,7 @@ delegate_ext_data_control!(Application);
 delegate_xdg_decoration!(Application);
 delegate_kde_decoration!(Application);
 delegate_single_pixel_buffer!(Application);
+delegate_relative_pointer!(Application);
 
 const fn wl_transform_to_frame_transform(
     transform: wl_output::Transform,

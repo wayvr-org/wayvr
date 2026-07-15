@@ -16,7 +16,7 @@ use wlx_common::{
 
 use crate::{
     FRAME_COUNTER,
-    backend::task::{CreateOverlayTask, OverlayTask, SpawnPos, ToggleMode},
+    backend::task::{CreateOverlayTask, GlobalChange, OverlayTask, SpawnPos, ToggleMode},
     config::save_state,
     overlays::{
         anchor::{create_anchor, create_grab_help},
@@ -307,7 +307,7 @@ where
                 self.restore_set = 0;
                 self.sets_changed(app);
             }
-            OverlayTask::SettingsChanged => {
+            OverlayTask::GlobalChange(GlobalChange::Settings) => {
                 if let Some(watch) = self.mut_by_id(self.watch_id)
                     && app.session.config.enable_watch != watch.config.active_state.is_some()
                 {
@@ -326,7 +326,7 @@ where
                         .log_err("Could not notify SettingsChanged");
                 }
             }
-            OverlayTask::KeyboardChanged => {
+            OverlayTask::GlobalChange(GlobalChange::Keyboard) => {
                 self.overlays_changed(app)?;
                 self.sets_changed(app);
             }

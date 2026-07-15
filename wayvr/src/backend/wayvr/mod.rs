@@ -16,7 +16,7 @@ use slotmap::SecondaryMap;
 use smallvec::SmallVec;
 use smithay::{
     desktop::PopupManager,
-    input::{SeatState, keyboard::XkbConfig},
+    input::{SeatState, keyboard::XkbConfig, pointer::CursorImageStatus},
     output::{Mode, Output},
     reexports::{
         wayland_protocols_misc::server_decoration::server::org_kde_kwin_server_decoration_manager as kde_decoration,
@@ -30,6 +30,7 @@ use smithay::{
     wayland::{
         compositor::{self, SurfaceData, with_states},
         dmabuf::{DmabufFeedbackBuilder, DmabufState},
+        relative_pointer::RelativePointerManagerState,
         selection::{
             data_device::DataDeviceState, ext_data_control as selection_ext,
             primary_selection::PrimarySelectionState, wlr_data_control as selection_wlr,
@@ -65,19 +66,19 @@ use crate::{
         task::{OverlayTask, SpawnPos, TaskContainer, TaskType, ToggleMode},
         wayvr::{
             image_importer::ImageImporter,
-            input_capture::{InputCapture, SEAT_NAME},
+            input_capture::InputCapture,
             process::{KillSignal, Process},
         },
     },
     graphics::{ExtentExt, WGfxExtras},
     ipc::{event_queue::SyncEventQueue, ipc_server, signal::WayVRSignal},
-    overlays::wayvr::create_wl_window_overlay,
+    overlays::wayvr::{WvrCommand, create_wl_window_overlay},
     state::AppState,
     subsystem::{
         dbus::DbusConnector,
         hid::{MODS_TO_KEYS, WheelDelta},
     },
-    windowing::{OverlayID, OverlaySelector},
+    windowing::{OverlayID, OverlaySelector, backend::OverlayEventData},
 };
 
 pub use hit_test::{WvrHitContext, WvrHitTarget, build_hit_context};
@@ -117,6 +118,7 @@ pub enum WayVRTask {
     NewToplevel(ClientId, ToplevelSurface),
     DropToplevel(ClientId, ToplevelSurface),
     MinimizeRequest(ClientId, ToplevelSurface),
+    TitleChange(ClientId, ToplevelSurface),
     NewExternalProcess(ExternalProcessRequest),
     ProcessTerminationRequest(process::ProcessHandle, KillSignal),
     CloseWindowRequest(window::WindowHandle),
@@ -158,7 +160,7 @@ pub enum TickTask {
 
 const KEY_REPEAT_DELAY: i32 = 200;
 const KEY_REPEAT_RATE: i32 = 50;
-const WAYVR_SCREEN_RES: [i32; 2] = [2560, 2560];
+const WAYVR_SCREEN_RES: [i32; 2] = [2560, 1440];
 
 impl WvrServerState {
     pub fn new(
@@ -178,7 +180,7 @@ impl WvrServerState {
         let shm = ShmState::new::<Application>(&dh, Vec::new());
         let data_device = DataDeviceState::new::<Application>(&dh);
         let primary_selection_state = PrimarySelectionState::new::<Application>(&dh);
-        let mut seat = seat_state.new_wl_seat(&dh, SEAT_NAME);
+        let mut seat = seat_state.new_wl_seat(&dh, "wayvr");
 
         let ext_data_control_state = selection_ext::DataControlState::new::<Application, _>(
             &dh,
@@ -194,6 +196,7 @@ impl WvrServerState {
         let xdg_decoration_state = XdgDecorationState::new::<Application>(&dh);
         let kde_decoration_state =
             KdeDecorationState::new::<Application>(&dh, kde_decoration::Mode::Server);
+        let relative_pointer_state = RelativePointerManagerState::new::<Application>(&dh);
         let viewporter = ViewporterState::new::<Application>(&dh);
 
         let dummy_milli_hz = 60000; /* refresh rate in millihertz */
@@ -277,12 +280,14 @@ impl WvrServerState {
             ext_data_control_state,
             xdg_decoration_state,
             kde_decoration_state,
+            relative_pointer_state,
             wayvr_tasks: tasks.clone(),
             dmabuf_state,
             popup_manager: PopupManager::default(),
             viewporter,
             redraw_requests: HashSet::new(),
             pending_frame_callbacks: HashMap::new(),
+            cursor_image: CursorImageStatus::default_named(),
         };
 
         Ok(Self {
@@ -564,6 +569,29 @@ impl WvrServerState {
                         }
                     }
                 }
+                WayVRTask::TitleChange(client_id, toplevel) => {
+                    for client in &wvr_server.manager.clients {
+                        if client.client.id() != client_id {
+                            continue;
+                        }
+                        let Some(window_handle) = wvr_server.wm.find_window_handle(&toplevel)
+                        else {
+                            log::warn!("MinimizeRequest: Couldn't find matching window handle");
+                            continue;
+                        };
+                        if let Some(oid) = wvr_server.window_to_overlay.get(&window_handle) {
+                            app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                                OverlaySelector::Id(*oid),
+                                Box::new(|app, owc| {
+                                    let _ = owc.backend.notify(
+                                        app,
+                                        OverlayEventData::WvrCommand(WvrCommand::ReloadTitle),
+                                    );
+                                }),
+                            )));
+                        }
+                    }
+                }
                 WayVRTask::ProcessTerminationRequest(process_handle, signal) => {
                     if let Some(process) = wvr_server.processes.get_mut(&process_handle) {
                         process.kill(signal);
@@ -728,6 +756,7 @@ impl WvrServerState {
         };
 
         let mut mouse_delta = DVec2::ZERO;
+        let mut mouse_delta_raw = DVec2::ZERO;
 
         for ev in input_capture.drain_events() {
             match ev {
@@ -738,61 +767,29 @@ impl WvrServerState {
                     let Some(mouse_index) = Self::button_to_mouse_index(button) else {
                         continue;
                     };
-                    let Some(ref hover) = self.wm.mouse else {
-                        continue;
-                    };
-                    let Some(window) = self.wm.windows.get(&hover.hover_window) else {
-                        continue;
-                    };
-                    let toplevel = window.toplevel.wl_surface().clone();
-                    let inner_extent = with_states(&toplevel, |states| {
-                        SurfaceBufWithImage::get_from_surface(states)
-                            .map(|s| s.image.extent_u32arr())
-                            .unwrap_or([1, 1])
-                    });
-                    let Some(hit_ctx) = build_hit_context(
-                        &toplevel,
-                        &self.manager.state.popup_manager,
-                        inner_extent,
-                    ) else {
-                        continue;
-                    };
-                    let pos = Vec2::new(hover.x as f32, hover.y as f32);
-                    let target = hit_ctx.hit_target_at(pos);
-                    let focus_target = self.hit_target_to_focus(
-                        target.unwrap_or(WvrHitTarget::Toplevel { pos }),
-                        hover.hover_window,
-                        pos,
-                    );
-                    let click_freeze = 0;
-                    self.send_mouse_button(
-                        focus_target,
-                        pos,
-                        hover.hover_window,
-                        mouse_index,
-                        pressed,
-                        click_freeze,
-                    );
+                    self.manager.send_pointer_button(mouse_index, pressed);
                 }
-                input_capture::CapturedEvent::PointerMotion { dx, dy } => {
+                input_capture::CapturedEvent::PointerMotion {
+                    dx,
+                    dy,
+                    dx_raw,
+                    dy_raw,
+                } => {
                     mouse_delta += DVec2 { x: dx, y: dy };
+                    mouse_delta_raw += DVec2 {
+                        x: dx_raw,
+                        y: dy_raw,
+                    };
                 }
                 input_capture::CapturedEvent::PointerAxis {
                     horizontal_v120,
                     vertical_v120,
                 } => {
-                    let Some(ref hover) = self.wm.mouse else {
-                        continue;
-                    };
                     let delta = WheelDelta {
                         x: horizontal_v120 as f32,
                         y: vertical_v120 as f32,
                     };
-                    self.send_mouse_scroll(
-                        hover.hover_window,
-                        Vec2::new(hover.x as f32, hover.y as f32),
-                        delta,
-                    );
+                    self.manager.send_pointer_axis_wheel_raw(delta);
                 }
                 input_capture::CapturedEvent::UngrabbedAll => {
                     self.manager.release_all_keys();
@@ -806,7 +803,7 @@ impl WvrServerState {
                                 self.close_window(window_handle);
                             }
                         }
-                        input_capture::KeyCombo::AltTab => {}
+                        input_capture::KeyCombo::AltTab => self.alt_tab(),
                         input_capture::KeyCombo::CtrlAltDel => { /* not exposed to us */ }
                     }
                 }
@@ -818,10 +815,6 @@ impl WvrServerState {
                 let Some(ref hover) = self.wm.mouse else {
                     break 'mouse_update;
                 };
-
-                let new_x = hover.x as f64 + mouse_delta.x;
-                let new_y = hover.y as f64 + mouse_delta.y;
-                let new_pos = Vec2::new(new_x as f32, new_y as f32);
 
                 let Some(window) = self.wm.windows.get(&hover.hover_window) else {
                     break 'mouse_update;
@@ -837,15 +830,36 @@ impl WvrServerState {
                 else {
                     break 'mouse_update;
                 };
-                let target = hit_ctx.hit_target_at(new_pos);
+
+                let new_x = (hover.pos.x + mouse_delta.x).clamp(0., inner_extent[0] as f64);
+                let new_y = (hover.pos.y + mouse_delta.y).clamp(0., inner_extent[1] as f64);
+                let new_pos = DVec2::new(new_x, new_y);
+                let new_pos_f32 = Vec2::new(new_x as f32, new_y as f32);
+
+                let target = hit_ctx.hit_target_at(new_pos_f32);
                 let focus_target = self.hit_target_to_focus(
-                    target.unwrap_or(WvrHitTarget::Toplevel { pos: new_pos }),
+                    target.unwrap_or(WvrHitTarget::Toplevel { pos: new_pos_f32 }),
                     hover.hover_window,
-                    new_pos,
+                    new_pos_f32,
                 );
-                self.send_mouse_move(focus_target, new_pos, hover.hover_window);
+                self.send_mouse_move_relative(
+                    focus_target,
+                    new_pos,
+                    mouse_delta,
+                    mouse_delta_raw,
+                    hover.hover_window,
+                );
             }
         }
+    }
+
+    fn alt_tab(&mut self) {
+        let mut windows: Vec<_> = self.wm.windows.iter().collect();
+        if windows.is_empty() {
+            return;
+        }
+
+        //TODO
     }
 
     fn button_to_mouse_index(button: u32) -> Option<MouseIndex> {
@@ -880,57 +894,25 @@ impl WvrServerState {
         }
 
         self.has_input_focus = has_focus;
-    }
-
-    pub fn send_mouse_move(
-        &mut self,
-        target: PointerFocusTarget,
-        global_pos: Vec2,
-        hover_window: window::WindowHandle,
-    ) {
-        if self.mouse_freeze > Instant::now() {
-            return;
+        if !has_focus {
+            self.wm.mouse = None;
         }
-
-        let focus = match target {
-            PointerFocusTarget::Surface { surface, origin } => Some((surface, origin)),
-            PointerFocusTarget::Toplevel => {
-                let surface = self
-                    .wm
-                    .windows
-                    .get(&hover_window)
-                    .map(|x| x.toplevel.wl_surface().clone());
-
-                surface.clone().map(|surface| (surface, Vec2::ZERO))
-            }
-            PointerFocusTarget::None => None,
-        };
-
-        self.manager.send_mouse_move(focus, global_pos);
-
-        self.mouse_freeze = Instant::now() + Duration::from_millis(1);
-
-        self.wm.mouse = Some(window::MouseState {
-            hover_window,
-            x: global_pos.x as u32,
-            y: global_pos.y as u32,
-        });
     }
 
-    pub fn send_mouse_button(
+    pub fn get_focused_window(&self) -> Option<window::WindowHandle> {
+        if !self.has_input_focus {
+            return None;
+        }
+        self.wm.mouse.as_ref().map(|x| x.hover_window)
+    }
+
+    fn get_mouse_focus(
         &mut self,
         target: PointerFocusTarget,
-        global_pos: Vec2,
         hover_window: window::WindowHandle,
-        index: MouseIndex,
         pressed: bool,
-        click_freeze: i32,
-    ) {
-        if pressed {
-            self.mouse_freeze = Instant::now() + Duration::from_millis(click_freeze.max(0) as u64);
-        }
-
-        let (focus, focus_keyboard) = match target {
+    ) -> (Option<(WlSurface, Vec2)>, Option<WlSurface>) {
+        match target {
             PointerFocusTarget::Surface { surface, origin } => (Some((surface, origin)), None),
             PointerFocusTarget::Toplevel => {
                 let surface = self
@@ -952,7 +934,76 @@ impl WvrServerState {
                     .map(|x| x.toplevel.wl_surface().clone());
                 (None, pressed.then_some(surface).flatten())
             }
+        }
+    }
+
+    fn get_mouse_relative(&self, global_pos: DVec2, hover_window: window::WindowHandle) -> DVec2 {
+        let Some(ref mouse) = self.wm.mouse else {
+            return DVec2::ZERO;
         };
+        if hover_window != mouse.hover_window {
+            // don't twitch if we just switched windows
+            return DVec2::ZERO;
+        }
+        global_pos - mouse.pos
+    }
+
+    fn send_mouse_move_relative(
+        &mut self,
+        target: PointerFocusTarget,
+        global_pos: DVec2,
+        delta: DVec2,
+        delta_unaccel: DVec2,
+        hover_window: window::WindowHandle,
+    ) {
+        let (focus, _) = self.get_mouse_focus(target, hover_window, false);
+
+        self.manager
+            .send_mouse_move(focus, global_pos, delta, delta_unaccel);
+        self.mouse_freeze = Instant::now() + Duration::from_millis(1);
+        self.wm.mouse = Some(window::MouseState {
+            hover_window,
+            pos: global_pos,
+        });
+    }
+
+    pub fn send_mouse_move(
+        &mut self,
+        target: PointerFocusTarget,
+        global_pos: Vec2,
+        hover_window: window::WindowHandle,
+    ) {
+        if self.mouse_freeze > Instant::now() {
+            return;
+        }
+
+        let global_pos = DVec2::from(global_pos);
+
+        let (focus, _) = self.get_mouse_focus(target, hover_window, false);
+        let linear_delta = self.get_mouse_relative(global_pos, hover_window);
+        self.manager
+            .send_mouse_move(focus, global_pos, linear_delta, linear_delta);
+        self.mouse_freeze = Instant::now() + Duration::from_millis(1);
+        self.wm.mouse = Some(window::MouseState {
+            hover_window,
+            pos: global_pos,
+        });
+    }
+
+    pub fn send_mouse_button(
+        &mut self,
+        target: PointerFocusTarget,
+        global_pos: Vec2,
+        hover_window: window::WindowHandle,
+        index: MouseIndex,
+        pressed: bool,
+        click_freeze: i32,
+    ) {
+        if pressed {
+            self.mouse_freeze = Instant::now() + Duration::from_millis(click_freeze.max(0) as u64);
+        }
+
+        let (focus, focus_keyboard) = self.get_mouse_focus(target, hover_window, pressed);
 
         if focus_keyboard.is_some() {
             self.manager.seat_keyboard.set_focus(
@@ -960,16 +1011,19 @@ impl WvrServerState {
                 focus_keyboard,
                 self.manager.serial_counter.next_serial(),
             );
+
+            self.wm.keyboard_focus = Some(hover_window);
         }
 
-        self.manager.send_mouse_move(focus, global_pos);
+        let global_pos = DVec2::from(global_pos);
+        let linear_delta = self.get_mouse_relative(global_pos, hover_window);
 
+        self.manager
+            .send_mouse_move(focus, global_pos, linear_delta, linear_delta);
         self.wm.mouse = Some(window::MouseState {
             hover_window,
-            x: global_pos.x.max(0.0) as u32,
-            y: global_pos.y.max(0.0) as u32,
+            pos: global_pos,
         });
-
         self.manager.send_pointer_button(index, pressed);
     }
 
@@ -979,13 +1033,13 @@ impl WvrServerState {
         global_pos: Vec2,
         delta: WheelDelta,
     ) {
+        let global_pos = DVec2::from(global_pos);
         self.wm.mouse = Some(window::MouseState {
             hover_window,
-            x: global_pos.x.max(0.0) as u32,
-            y: global_pos.y.max(0.0) as u32,
+            pos: global_pos,
         });
 
-        self.manager.send_pointer_axis_wheel(delta);
+        self.manager.send_pointer_axis_wheel_accumulated(delta);
     }
 
     pub fn send_key(&mut self, virtual_key: u32, down: bool) {

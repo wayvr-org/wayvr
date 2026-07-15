@@ -7,12 +7,12 @@ use std::{
 };
 
 use anyhow::Context;
-use glam::Vec2;
+use glam::{DVec2, Vec2};
 use smithay::{
     backend::input::{Axis, AxisSource, ButtonState, Keycode},
     input::{
         keyboard::KeyboardHandle,
-        pointer::{AxisFrame, ButtonEvent, MotionEvent, PointerHandle},
+        pointer::{AxisFrame, ButtonEvent, MotionEvent, PointerHandle, RelativeMotionEvent},
     },
     reexports::wayland_server::{self, protocol::wl_surface::WlSurface},
     utils::{Logical, Point, SerialCounter},
@@ -262,8 +262,16 @@ impl WayVRCompositor {
             .context("Failed to set keymap")
     }
 
-    pub fn send_mouse_move(&mut self, focus: Option<(WlSurface, Vec2)>, global_pos: Vec2) {
+    pub fn send_mouse_move(
+        &mut self,
+        focus: Option<(WlSurface, Vec2)>,
+        global_pos: DVec2,
+        delta: DVec2,
+        delta_unaccel: DVec2,
+    ) {
         let location: Point<f64, Logical> = (global_pos.x as f64, global_pos.y as f64).into();
+        let delta: Point<f64, Logical> = (delta.x, delta.y).into();
+        let delta_unaccel: Point<f64, Logical> = (delta_unaccel.x, delta_unaccel.y).into();
 
         let focus = focus.map(|(surface, origin)| {
             let focus_location: Point<f64, Logical> = (origin.x as f64, origin.y as f64).into();
@@ -273,11 +281,20 @@ impl WayVRCompositor {
 
         self.seat_pointer.motion(
             &mut self.state,
-            focus,
+            focus.clone(),
             &MotionEvent {
                 location,
                 serial: self.serial_counter.next_serial(),
                 time: super::time::get_millis() as u32,
+            },
+        );
+        self.seat_pointer.relative_motion(
+            &mut self.state,
+            focus,
+            &RelativeMotionEvent {
+                delta,
+                delta_unaccel,
+                utime: super::time::get_millis(),
             },
         );
 
@@ -312,7 +329,44 @@ impl WayVRCompositor {
         self.seat_pointer.frame(&mut self.state);
     }
 
-    pub fn send_pointer_axis_wheel(&mut self, delta: super::WheelDelta) {
+    pub fn send_pointer_axis_wheel_raw(&mut self, delta: super::WheelDelta) {
+        let time = super::time::get_millis() as u32;
+
+        let v120_x = delta.x as i32;
+        let v120_y = delta.y as i32;
+
+        if v120_x == 0 && v120_y == 0 {
+            return;
+        }
+
+        // 15 logical axis units for one wheel detent of 120 v120 units
+        const AXIS_VALUE_PER_DETENT: f64 = 15.0;
+
+        let mut frame = AxisFrame::new(time).source(AxisSource::Wheel);
+
+        if v120_x != 0 {
+            frame = frame
+                .value(
+                    Axis::Horizontal,
+                    f64::from(v120_x) / 120.0 * AXIS_VALUE_PER_DETENT,
+                )
+                .v120(Axis::Horizontal, v120_x);
+        }
+
+        if v120_y != 0 {
+            frame = frame
+                .value(
+                    Axis::Vertical,
+                    f64::from(v120_y) / 120.0 * AXIS_VALUE_PER_DETENT,
+                )
+                .v120(Axis::Vertical, v120_y);
+        }
+
+        self.seat_pointer.axis(&mut self.state, frame);
+        self.seat_pointer.frame(&mut self.state);
+    }
+
+    pub fn send_pointer_axis_wheel_accumulated(&mut self, delta: super::WheelDelta) {
         let time = super::time::get_millis() as u32;
 
         let multiplier = 32.0;

@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use glam::DVec2;
 use smithay::utils::{Logical, Size};
 use smithay::wayland::shell::xdg::ToplevelSurface;
 use wayvr_ipc::packet_server;
@@ -107,14 +108,14 @@ impl Window {
 #[derive(Debug)]
 pub struct MouseState {
     pub hover_window: WindowHandle,
-    pub x: u32,
-    pub y: u32,
+    pub pos: DVec2,
 }
 
 #[derive(Debug)]
 pub struct WindowManager {
     pub windows: WindowVec,
     pub mouse: Option<MouseState>,
+    pub keyboard_focus: Option<WindowHandle>,
 }
 
 impl WindowManager {
@@ -122,6 +123,7 @@ impl WindowManager {
         Self {
             windows: WindowVec::new(),
             mouse: None,
+            keyboard_focus: None,
         }
     }
 

@@ -37,7 +37,7 @@ use crate::{
     backend::{
         XrBackend,
         input::{Haptics, HoverResult, PointerHit, PointerMode},
-        task::{OverlayTask, PlayspaceTask, TaskType, ToggleMode},
+        task::{GlobalChange, OverlayTask, PlayspaceTask, TaskType, ToggleMode},
         wayvr::{
             process::{KillSignal, ProcessHandle},
             window::WindowHandle,
@@ -538,9 +538,12 @@ impl DashInterface<AppState> for DashInterfaceLive {
         data.session.config_dirty = true;
 
         match kind {
-            ConfigChangeKind::OverlayConfig => data
-                .tasks
-                .enqueue(TaskType::Overlay(OverlayTask::SettingsChanged)),
+            ConfigChangeKind::OverlayConfig => {
+                data.tasks
+                    .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
+                        GlobalChange::Settings,
+                    )))
+            }
             ConfigChangeKind::EnvironmentBlend => {
                 #[cfg(feature = "openxr")]
                 {
