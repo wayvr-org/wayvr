@@ -17,9 +17,7 @@
 			"TITLE": "Modalità a mani libere",
 			"NONE": "Disattivato",
 			"HMD": "HMD + pizzico",
-			"EYE_TRACKING": "Occhio + pizzico",
-			"HMD_ONLY": "Solo HMD",
-			"EYE_ONLY": "Solo occhi"
+			"EYE_TRACKING": "Occhio + pizzico"
 		}
 	},
 	"DEFAULT": "Predefinito",

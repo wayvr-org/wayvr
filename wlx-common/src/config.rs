@@ -90,6 +90,24 @@ pub enum HandsfreePointer {
 	EyeTrackingOnly,
 }
 
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, AsRefStr, EnumString, EnumProperty, VariantArray)]
+pub enum HandsfreeAltTab {
+	#[strum(props(Translation = "APP_SETTINGS.OPTION.HMD_ONLY"))]
+	#[default]
+	Hmd,
+	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_ONLY"))]
+	EyeTracking,
+}
+
+impl From<HandsfreeAltTab> for HandsfreePointer {
+	fn from(value: HandsfreeAltTab) -> Self {
+		match value {
+			HandsfreeAltTab::Hmd => HandsfreePointer::HmdOnly,
+			HandsfreeAltTab::EyeTracking => HandsfreePointer::EyeTrackingOnly,
+		}
+	}
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChromaKeyParams {
 	pub hsv_min: [f32; 3],
@@ -449,6 +467,9 @@ pub struct GeneralConfig {
 
 	#[serde(default)]
 	pub handsfree_pointer: HandsfreePointer,
+
+	#[serde(default)]
+	pub handsfree_alt_tab: HandsfreeAltTab,
 
 	#[serde(default = "def_one")]
 	pub grid_opacity: f32,

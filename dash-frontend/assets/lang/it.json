@@ -76,8 +76,6 @@
 			"NONE": "Nessuno",
 			"HMD_PINCH": "HMD + pizzico",
 			"EYE_PINCH": "Occhio + pizzico",
-			"EYE_ONLY": "Solo occhio",
-			"HMD_ONLY": "Solo HMD",
 			"NONE_INPUT_HELP": "Non emulare mouse e tastiera.\nNon sarà possibile interagire con gli schermi.",
 			"UINPUT": "Emulazione dispositivo",
 			"UINPUT_HELP": "Utilizza il modulo uinput per emulare un dispositivo.\nL'utente deve far parte del gruppo input.\nRisultato ottimale su quasi tutti i desktop.",

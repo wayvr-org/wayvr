@@ -17,9 +17,7 @@
 			"TITLE": "ハンズフリーモード",
 			"NONE": "オフ",
 			"HMD": "HMD + ピンチ",
-			"EYE_TRACKING": "視線 + ピンチ",
-			"HMD_ONLY": "HMDのみ",
-			"EYE_ONLY": "目のみ"
+			"EYE_TRACKING": "視線 + ピンチ"
 		}
 	},
 	"WATCH": {

@@ -74,8 +74,6 @@
 			"NONE": "Keine",
 			"HMD_PINCH": "HMD + Kneifen",
 			"EYE_PINCH": "Auge + Kneifen",
-			"EYE_ONLY": "Nur Auge",
-			"HMD_ONLY": "Nur HMD",
 			"NONE_INPUT_HELP": "Maus und Tastatur nicht emulieren.\nEs wird nicht möglich sein, mit Displays zu interagieren.",
 			"UINPUT": "Gerätesimulation",
 			"UINPUT_HELP": "Verwendet das uinput-Modul, um ein Gerät zu emulieren.\nIhr Benutzer muss in der Gruppe „input“ sein.\nBekannt dafür, auf den meisten Desktops gut zu funktionieren.",

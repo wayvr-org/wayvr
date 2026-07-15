@@ -76,8 +76,6 @@
 			"NONE": "无",
 			"HMD_PINCH": "HMD + 捏合",
 			"EYE_PINCH": "眼睛 + 捏合",
-			"EYE_ONLY": "仅眼球",
-			"HMD_ONLY": "仅限头显",
 			"NONE_INPUT_HELP": "不模拟鼠标和键盘。\n将无法与屏幕进行交互。",
 			"UINPUT": "设备模拟",
 			"UINPUT_HELP": "使用 uinput 模块来模拟设备。\n您的用户必须处于 input 用户组中。\n已知在大多数桌面上运行良好。",

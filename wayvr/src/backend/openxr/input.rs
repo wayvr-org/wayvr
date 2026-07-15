@@ -211,7 +211,7 @@ impl OpenXrInputSource {
         );
     }
 
-    pub fn update(&mut self, xr: &XrState, state: &mut AppState) -> anyhow::Result<()> {
+    pub fn update(&mut self, xr: &XrState, app: &mut AppState) -> anyhow::Result<()> {
         xr.session.sync_actions(&[(&self.action_set).into()])?;
 
         let loc = xr.view.locate(&xr.stage, xr.predicted_display_time)?;
@@ -221,7 +221,7 @@ impl OpenXrInputSource {
             .location_flags
             .contains(xr::SpaceLocationFlags::ORIENTATION_VALID)
         {
-            state.input_state.hmd.matrix3 = hmd.matrix3;
+            app.input_state.hmd.matrix3 = hmd.matrix3;
         } else {
             hmd_tracked = false;
         }
@@ -230,26 +230,39 @@ impl OpenXrInputSource {
             .location_flags
             .contains(xr::SpaceLocationFlags::POSITION_VALID)
         {
-            state.input_state.hmd.translation = hmd.translation;
+            app.input_state.hmd.translation = hmd.translation;
         } else {
             hmd_tracked = false;
         }
 
         let mut any_tracked = false;
-        for i in 0..2 {
-            let pointer = &mut state.input_state.pointers[i];
-            self.pointers[i].update(pointer, xr, &state.session)?;
-            any_tracked |= pointer.tracked;
+        let old_handsfree = app.session.config.handsfree_pointer;
+
+        if app.input_state.picking_focus {
+            app.session.config.handsfree_pointer = app.session.config.handsfree_alt_tab.into();
+
+            let ptr1 = &mut app.input_state.pointers[1];
+            ptr1.before = ptr1.now;
+            ptr1.now = PointerState::default();
+            ptr1.tracked = false
+        } else {
+            for i in 0..2 {
+                let pointer = &mut app.input_state.pointers[i];
+                self.pointers[i].update(pointer, xr, &app.session)?;
+                any_tracked |= pointer.tracked;
+            }
         }
         if !any_tracked {
             self.handsfree_pointer.update_handsfree(
-                &mut state.input_state.pointers[0],
+                &mut app.input_state.pointers[0],
                 xr,
-                &state.session,
+                &app.session,
                 hmd,
                 hmd_tracked,
-                &state.input_state.handsfree_state,
+                &app.input_state.handsfree_state,
             )?;
+
+            app.session.config.handsfree_pointer = old_handsfree;
         }
 
         Ok(())

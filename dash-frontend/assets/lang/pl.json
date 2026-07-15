@@ -69,8 +69,6 @@
 			"NONE": "Brak",
 			"HMD_PINCH": "HMD + ściśnięcie placami",
 			"EYE_PINCH": "Ściśnięcie palcami + oko",
-			"EYE_ONLY": "Tylko oko",
-			"HMD_ONLY": "Tylko HMD",
 			"NONE_INPUT_HELP": "Nie emuluj myszy ani klawiatury.\nBrak możliwości interakcji z ekranami.",
 			"UINPUT": "Emulacja urządzenia",
 			"UINPUT_HELP": "Używa modułu uinput do emulowania urządzenia.\nTwoje konto użytkownika musi należeć do grupy input.\nWiadomo, że działa dobrze na większości komputerów stacjonarnych.",

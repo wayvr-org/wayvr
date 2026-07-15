@@ -13,7 +13,10 @@ use crate::{
     },
     overlays::screen::capture::MyFirstDmaExporter,
     state::AppState,
-    subsystem::hid::{MOUSE_LEFT, MOUSE_MIDDLE, MOUSE_RIGHT, WheelDelta},
+    subsystem::{
+        hid::{MOUSE_LEFT, MOUSE_MIDDLE, MOUSE_RIGHT, WheelDelta},
+        input::InputFocus,
+    },
     windowing::backend::{
         FrameMeta, OverlayBackend, OverlayEventData, RenderResources, ShouldRender, ui_transform,
     },
@@ -298,6 +301,12 @@ impl OverlayBackend for ScreenBackend {
     fn on_hover(&mut self, app: &mut AppState, hit: &PointerHit) -> HoverResult {
         #[cfg(debug_assertions)]
         log::trace!("Hover: {:?}", hit.uv);
+
+        if app.input_state.picking_focus {
+            app.hid_provider
+                .set_input_focus(app.wvr_server.as_mut(), InputFocus::PhysicalScreen);
+        }
+
         if can_move()
             && (!app.session.config.focus_follows_mouse_mode
                 || app.input_state.pointers[hit.pointer].now.move_mouse)

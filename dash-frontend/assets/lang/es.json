@@ -74,8 +74,6 @@
 			"NONE": "Ninguno",
 			"HMD_PINCH": "HMD + pellizco",
 			"EYE_PINCH": "Ojo + pellizco",
-			"EYE_ONLY": "Solo ojo",
-			"HMD_ONLY": "Solo HMD",
 			"NONE_INPUT_HELP": "No emular ratón y teclado.\nNo podrá interactuar con las pantallas.",
 			"UINPUT": "Emulación de dispositivo",
 			"UINPUT_HELP": "Utiliza el módulo uinput para emular un dispositivo.\nSu usuario debe estar en el grupo input.\nSe sabe que funciona bien en la mayoría de los escritorios.",

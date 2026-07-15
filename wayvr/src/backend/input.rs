@@ -64,6 +64,7 @@ pub struct InputState {
     pub pointers: [Pointer; 2],
     pub devices: Vec<TrackedDevice>,
     pub handsfree_state: PointerState,
+    pub picking_focus: bool,
     processes: Vec<Child>,
 }
 
@@ -76,6 +77,7 @@ impl InputState {
             devices: Vec::new(),
             processes: Vec::new(),
             handsfree_state: PointerState::default(),
+            picking_focus: false,
         }
     }
 

@@ -97,6 +97,7 @@ impl State {
 		}
 		options_dropdown::<wlx_common::config::AltModifier>(par.mp, c, &SettingType::KeyboardMiddleClick)?;
 		options_dropdown::<wlx_common::config::HandsfreePointer>(par.mp, c, &SettingType::HandsfreePointer)?;
+		options_dropdown::<wlx_common::config::HandsfreeAltTab>(par.mp, c, &SettingType::HandsfreeAltTab)?;
 		options_checkbox(par.mp, c, SettingType::FocusFollowsMouseMode)?;
 		options_checkbox(par.mp, c, SettingType::LeftHandedMouse)?;
 		options_checkbox(par.mp, c, SettingType::AllowSliding)?;

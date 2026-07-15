@@ -30,8 +30,13 @@ const POLL_TIMEOUT_MS: i32 = 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum KeyCombo {
+    Super1,
+    Super2,
+    Super3,
+    Super4,
     AltF4,
     AltTab,
+    AltShiftTab,
     /// Always consumed by InputCapture internally
     CtrlAltDel,
 }
@@ -123,18 +128,9 @@ impl InputCapture {
     /// Exclusively grabs every currently detected keyboard and mouse.
     /// Newly connected matching devices are grabbed automatically.
     pub fn set_grabbed(&self, grabbed: bool) -> anyhow::Result<()> {
-        let (response_tx, response_rx) = mpsc::sync_channel(1);
-
         self.command_tx
-            .send(Command::SetGrabbed {
-                grabbed,
-                response_tx,
-            })
+            .try_send(Command::SetGrabbed(grabbed))
             .map_err(|error| anyhow::anyhow!("worker thread unreachable: {error}"))?;
-
-        response_rx
-            .recv()
-            .map_err(|error| anyhow::anyhow!("worker thread unreachable: {error}"))??;
 
         Ok(())
     }
@@ -146,7 +142,7 @@ impl InputCapture {
         }
 
         self.command_tx
-            .send(Command::SetPointerAccel { accel, speed })
+            .try_send(Command::SetPointerAccel { accel, speed })
             .map_err(|error| anyhow::anyhow!("worker thread unreachable: {error}"))?;
 
         Ok(())
@@ -164,14 +160,8 @@ impl Drop for InputCapture {
 
 enum Command {
     ResetWatchdog,
-    SetGrabbed {
-        grabbed: bool,
-        response_tx: SyncSender<io::Result<()>>,
-    },
-    SetPointerAccel {
-        accel: bool,
-        speed: f32,
-    },
+    SetGrabbed(bool),
+    SetPointerAccel { accel: bool, speed: f32 },
     Shutdown,
 }
 
@@ -345,11 +335,8 @@ fn worker_main(
     'worker: loop {
         loop {
             match command_rx.try_recv() {
-                Ok(Command::SetGrabbed {
-                    grabbed: requested,
-                    response_tx,
-                }) => {
-                    let result = if requested {
+                Ok(Command::SetGrabbed(requested)) => {
+                    let _ = if requested {
                         match restricted_state.borrow_mut().set_grabbed(true) {
                             Ok(()) => {
                                 grabbed = true;
@@ -391,8 +378,6 @@ fn worker_main(
                         pointer_accel,
                         &event_tx,
                     );
-
-                    let _ = response_tx.send(result);
                 }
                 Ok(Command::SetPointerAccel { accel, speed }) => {
                     pointer_accel = PointerAccelConfig { accel, speed };
@@ -542,7 +527,15 @@ fn process_libinput_event(
             }
 
             // emit press/release whenever a combo's complete state changes.
-            for combo in [KeyCombo::AltF4, KeyCombo::AltTab] {
+            for combo in [
+                KeyCombo::AltF4,
+                KeyCombo::AltShiftTab,
+                KeyCombo::AltTab,
+                KeyCombo::Super1,
+                KeyCombo::Super2,
+                KeyCombo::Super3,
+                KeyCombo::Super4,
+            ] {
                 let combo_pressed = key_combo_is_pressed(combo, &state.pressed_keys);
                 let was_pressed = state.active_combos.contains(&combo);
 
@@ -840,10 +833,21 @@ fn key_combo_is_pressed(combo: KeyCombo, pressed: &HashSet<u16>) -> bool {
     let ctrl =
         pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
 
+    let meta =
+        pressed.contains(&KeyCode::KEY_LEFTMETA.0) || pressed.contains(&KeyCode::KEY_RIGHTMETA.0);
+
+    let shift =
+        pressed.contains(&KeyCode::KEY_LEFTSHIFT.0) || pressed.contains(&KeyCode::KEY_RIGHTSHIFT.0);
+
     match combo {
         KeyCombo::AltF4 => alt && pressed.contains(&KeyCode::KEY_F4.0),
+        KeyCombo::AltShiftTab => alt && shift && pressed.contains(&KeyCode::KEY_TAB.0),
         KeyCombo::AltTab => alt && pressed.contains(&KeyCode::KEY_TAB.0),
         KeyCombo::CtrlAltDel => ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0),
+        KeyCombo::Super1 => meta && pressed.contains(&KeyCode::KEY_1.0),
+        KeyCombo::Super2 => meta && pressed.contains(&KeyCode::KEY_2.0),
+        KeyCombo::Super3 => meta && pressed.contains(&KeyCode::KEY_3.0),
+        KeyCombo::Super4 => meta && pressed.contains(&KeyCode::KEY_4.0),
     }
 }
 

@@ -845,11 +845,17 @@ impl OverlayBackend for WvrWindowBackend {
                     self.panel_hovered = false;
                 }
 
+                if app.input_state.picking_focus {
+                    app.hid_provider
+                        .set_input_focus(app.wvr_server.as_mut(), InputFocus::WayVR);
+                }
+
                 let wvr_server = app.wvr_server.as_mut().unwrap();
                 wvr_server.send_mouse_move(
                     PointerFocusTarget::Surface { surface, origin },
                     global_pos,
                     self.window,
+                    app.input_state.picking_focus,
                 );
 
                 HoverResult::consume()
@@ -860,8 +866,18 @@ impl OverlayBackend for WvrWindowBackend {
                     self.panel_hovered = false;
                 }
 
+                if app.input_state.picking_focus {
+                    app.hid_provider
+                        .set_input_focus(app.wvr_server.as_mut(), InputFocus::WayVR);
+                }
+
                 let wvr_server = app.wvr_server.as_mut().unwrap();
-                wvr_server.send_mouse_move(PointerFocusTarget::Toplevel, pos, self.window);
+                wvr_server.send_mouse_move(
+                    PointerFocusTarget::Toplevel,
+                    pos,
+                    self.window,
+                    app.input_state.picking_focus,
+                );
 
                 HoverResult::consume()
             }

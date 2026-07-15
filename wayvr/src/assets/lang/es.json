@@ -17,9 +17,7 @@
 			"TITLE": "Modo manos libres",
 			"NONE": "Desactivado",
 			"HMD": "HMD + pellizco",
-			"EYE_TRACKING": "Ojo + pellizco",
-			"HMD_ONLY": "Solo HMD",
-			"EYE_ONLY": "Solo ojos"
+			"EYE_TRACKING": "Ojo + pellizco"
 		}
 	},
 	"WATCH": {

@@ -315,6 +315,7 @@ pub(crate) enum SettingType {
 	EnableWatch,
 	FocusFollowsMouseMode,
 	GridOpacity,
+	HandsfreeAltTab,
 	HandsfreePointer,
 	HideGrabHelp,
 	HideUsername,
@@ -443,6 +444,9 @@ impl SettingType {
 				config.keyboard_middle_click_mode =
 					wlx_common::config::AltModifier::from_str(value).expect("Invalid enum value!")
 			}
+			Self::HandsfreeAltTab => {
+				config.handsfree_alt_tab = wlx_common::config::HandsfreeAltTab::from_str(value).expect("Invalid enum value!")
+			}
 			Self::HandsfreePointer => {
 				config.handsfree_pointer = wlx_common::config::HandsfreePointer::from_str(value).expect("Invalid enum value!")
 			}
@@ -459,6 +463,7 @@ impl SettingType {
 			Self::InputEmulationMethod => Self::get_enum_title_inner(config.input_emulation_method),
 			Self::KeyboardMiddleClick => Self::get_enum_title_inner(config.keyboard_middle_click_mode),
 			Self::HandsfreePointer => Self::get_enum_title_inner(config.handsfree_pointer),
+			Self::HandsfreeAltTab => Self::get_enum_title_inner(config.handsfree_alt_tab),
 			Self::Language => match &config.language {
 				Some(lang) => Self::get_enum_title_inner(*lang),
 				None => Translation::from_translation_key("APP_SETTINGS.OPTION.AUTO"),
@@ -500,6 +505,7 @@ impl SettingType {
 			Self::DoubleCursorFix => Ok("APP_SETTINGS.DOUBLE_CURSOR_FIX"),
 			Self::FocusFollowsMouseMode => Ok("APP_SETTINGS.FOCUS_FOLLOWS_MOUSE_MODE"),
 			Self::GridOpacity => Ok("APP_SETTINGS.GRID_OPACITY"),
+			Self::HandsfreeAltTab => Ok("APP_SETTINGS.HANDSFREE_ALT_TAB"),
 			Self::HandsfreePointer => Ok("APP_SETTINGS.HANDSFREE_POINTER"),
 			Self::HideGrabHelp => Ok("APP_SETTINGS.HIDE_GRAB_HELP"),
 			Self::HideUsername => Ok("APP_SETTINGS.HIDE_USERNAME"),
@@ -553,6 +559,7 @@ impl SettingType {
 			Self::DefaultOverlayScale => Some("APP_SETTINGS.DEFAULT_OVERLAY_SCALE_HELP"),
 			Self::DoubleCursorFix => Some("APP_SETTINGS.DOUBLE_CURSOR_FIX_HELP"),
 			Self::GridOpacity => Some("APP_SETTINGS.GRID_OPACITY_HELP"),
+			Self::HandsfreeAltTab => Some("APP_SETTINGS.HANDSFREE_ALT_TAB_HELP"),
 			Self::HandsfreePointer => Some("APP_SETTINGS.HANDSFREE_POINTER_HELP"),
 			Self::InputEmulationMethod => Some("APP_SETTINGS.INPUT_EMULATION_METHOD_HELP"),
 			Self::KeyboardMiddleClick => Some("APP_SETTINGS.KEYBOARD_MIDDLE_CLICK_HELP"),

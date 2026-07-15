@@ -17,9 +17,7 @@
 			"TITLE": "免提模式",
 			"NONE": "关闭",
 			"HMD": "HMD + 捏合",
-			"EYE_TRACKING": "眼动 + 捏合",
-			"HMD_ONLY": "仅 HMD",
-			"EYE_ONLY": "仅限眼睛"
+			"EYE_TRACKING": "眼动 + 捏合"
 		}
 	},
 	"DEFAULT": "默认",

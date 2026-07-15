@@ -63,6 +63,7 @@ use xkbcommon::xkb;
 
 use crate::{
     backend::{
+        input::InputState,
         task::{OverlayTask, SpawnPos, TaskContainer, TaskType, ToggleMode},
         wayvr::{
             image_importer::ImageImporter,
@@ -636,7 +637,7 @@ impl WvrServerState {
             wvr_server.manager.cleanup_handles();
         }
 
-        wvr_server.process_input_capture();
+        wvr_server.process_input_capture(&mut app.input_state, &mut app.tasks);
 
         wvr_server.ticks += 1;
 
@@ -747,7 +748,11 @@ impl WvrServerState {
         self.manager.seat_pointer.is_grabbed()
     }
 
-    pub fn process_input_capture(&mut self) {
+    pub fn process_input_capture(
+        &mut self,
+        input_state: &mut InputState,
+        tasks: &mut TaskContainer,
+    ) {
         if !self.has_input_focus {
             return;
         }
@@ -803,7 +808,22 @@ impl WvrServerState {
                             self.close_window(window_handle);
                         }
                     }
-                    input_capture::KeyCombo::AltTab => self.alt_tab(pressed),
+                    input_capture::KeyCombo::AltTab => input_state.picking_focus = pressed,
+                    input_capture::KeyCombo::AltShiftTab => {
+                        input_state.handsfree_state.grab = pressed
+                    }
+                    input_capture::KeyCombo::Super1 => {
+                        tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(0)))
+                    }
+                    input_capture::KeyCombo::Super2 => {
+                        tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(1)))
+                    }
+                    input_capture::KeyCombo::Super3 => {
+                        tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(2)))
+                    }
+                    input_capture::KeyCombo::Super4 => {
+                        tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(3)))
+                    }
                     _ => {}
                 },
             }
@@ -852,15 +872,6 @@ impl WvrServerState {
         }
     }
 
-    fn alt_tab(&mut self, pressed: bool) {
-        let mut windows: Vec<_> = self.wm.windows.iter().collect();
-        if windows.is_empty() {
-            return;
-        }
-
-        //TODO
-    }
-
     fn button_to_mouse_index(button: u32) -> Option<MouseIndex> {
         match button {
             272 => Some(MouseIndex::Left),
@@ -877,7 +888,7 @@ impl WvrServerState {
 
         let res = input_capture
             .set_grabbed(has_focus)
-            .log_err("Could not grab input.");
+            .log_err("Could not set input grab");
 
         if res.is_ok() && !self.grab_toast_sent {
             self.grab_toast_sent = true;
@@ -971,6 +982,7 @@ impl WvrServerState {
         target: PointerFocusTarget,
         global_pos: Vec2,
         hover_window: window::WindowHandle,
+        force_focus: bool,
     ) {
         if self.mouse_freeze > Instant::now() {
             return;
@@ -978,7 +990,17 @@ impl WvrServerState {
 
         let global_pos = DVec2::from(global_pos);
 
-        let (focus, _) = self.get_mouse_focus(target, hover_window, false);
+        let (focus, focus_keyboard) = self.get_mouse_focus(target, hover_window, force_focus);
+        if focus_keyboard.is_some() {
+            self.manager.seat_keyboard.set_focus(
+                &mut self.manager.state,
+                focus_keyboard,
+                self.manager.serial_counter.next_serial(),
+            );
+
+            self.wm.keyboard_focus = Some(hover_window);
+        }
+
         let linear_delta = self.get_mouse_relative(global_pos, hover_window);
         self.manager
             .send_mouse_move(focus, global_pos, linear_delta, linear_delta);

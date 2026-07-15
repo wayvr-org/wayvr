@@ -11,10 +11,10 @@
 		"EDIT_MODE_TOGGLE": "Toggle edit mode",
 		"FORCE_CLOSE_APP": "Force close app",
 		"HANDSFREE": {
-			"EYE_ONLY": "Eye only",
+			"EYE_ONLY": "Eye laser",
 			"EYE_TRACKING": "Eye + pinch",
 			"HMD": "HMD + pinch",
-			"HMD_ONLY": "HMD only",
+			"HMD_ONLY": "HMD laser",
 			"NONE": "Off",
 			"TITLE": "Handsfree mode"
 		},

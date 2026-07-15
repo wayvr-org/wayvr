@@ -17,9 +17,7 @@
 			"TITLE": "Tryb wolnych rąk",
 			"NONE": "Wyłączone",
 			"HMD": "HMD + uszczypnięcie",
-			"EYE_TRACKING": "Oko + uszczypnięcie",
-			"HMD_ONLY": "Tylko HMD",
-			"EYE_ONLY": "Tylko oczy"
+			"EYE_TRACKING": "Oko + uszczypnięcie"
 		}
 	},
 	"WATCH": {

@@ -9,8 +9,8 @@ use wayvr_ipc::packet_client::WvrProcessLaunchParams;
 use wlx_common::{
     astr_containers::AStrMap,
     config::{
-        AltModifier, CaptureMethod, ChromaKeyParams, GeneralConfig, HandsfreePointer,
-        InputEmulationMethod, SerializedWindowSet, SerializedWindowStates,
+        AltModifier, CaptureMethod, ChromaKeyParams, GeneralConfig, HandsfreeAltTab,
+        HandsfreePointer, InputEmulationMethod, SerializedWindowSet, SerializedWindowStates,
     },
     config_io,
     locale::Language,
@@ -180,6 +180,7 @@ pub struct AutoSettings {
     pub keyboard_middle_click_mode: AltModifier,
     pub autostart_apps: Vec<WvrProcessLaunchParams>,
     pub handsfree_pointer: HandsfreePointer,
+    pub handsfree_alt_tab: HandsfreeAltTab,
     pub language: Option<Language>,
     pub chroma_key_params: ChromaKeyParams,
     pub input_emulation_method: InputEmulationMethod,
@@ -248,6 +249,7 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         keyboard_middle_click_mode: config.keyboard_middle_click_mode,
         autostart_apps: config.autostart_apps.clone(),
         handsfree_pointer: config.handsfree_pointer,
+        handsfree_alt_tab: config.handsfree_alt_tab,
         language: config.language,
         chroma_key_params: config.chroma_key_params.clone(),
         input_emulation_method: config.input_emulation_method,

@@ -17,9 +17,7 @@
 			"TITLE": "Freihändig-Modus",
 			"NONE": "Aus",
 			"HMD": "HMD + Kneifen",
-			"EYE_TRACKING": "Auge + Kneifen",
-			"HMD_ONLY": "Nur HMD",
-			"EYE_ONLY": "Nur Augen"
+			"EYE_TRACKING": "Auge + Kneifen"
 		}
 	},
 	"WATCH": {
