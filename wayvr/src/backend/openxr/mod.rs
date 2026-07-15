@@ -473,6 +473,9 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
         app.tasks.retrieve_due(&mut due_tasks);
         while let Some(task) = due_tasks.pop_front() {
             match task {
+                TaskType::Global(task) => {
+                    task(&mut app);
+                }
                 TaskType::Input(task) => {
                     app.input_state.handle_task(task);
                 }

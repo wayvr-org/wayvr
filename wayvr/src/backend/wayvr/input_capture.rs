@@ -34,9 +34,8 @@ pub enum KeyCombo {
     Super2,
     Super3,
     Super4,
+    SuperTab,
     AltF4,
-    AltTab,
-    AltShiftTab,
     /// Always consumed by InputCapture internally
     CtrlAltDel,
 }
@@ -61,7 +60,8 @@ pub enum CapturedEvent {
         horizontal_v120: i32,
         vertical_v120: i32,
     },
-    UngrabbedAll,
+    Grabbed,
+    Ungrabbed,
     KeyCombo {
         combo: KeyCombo,
         pressed: bool,
@@ -326,6 +326,7 @@ fn worker_main(
     }
 
     let mut grabbed = false;
+    let mut pending_grab = false;
     let mut watchdog = Instant::now() + WATCHDOG_TIMEOUT;
     let mut emergency_ungrab = false;
     let mut pointer_accel = PointerAccelConfig::default();
@@ -336,6 +337,8 @@ fn worker_main(
         loop {
             match command_rx.try_recv() {
                 Ok(Command::SetGrabbed(requested)) => {
+                    pending_grab = false;
+
                     let _ = if requested {
                         match restricted_state.borrow_mut().set_grabbed(true) {
                             Ok(()) => {
@@ -409,9 +412,10 @@ fn worker_main(
                 &event_tx,
             );
             grabbed = false;
+            pending_grab = false;
             emergency_ungrab = false;
 
-            if event_tx.send(CapturedEvent::UngrabbedAll).is_err() {
+            if event_tx.send(CapturedEvent::Ungrabbed).is_err() {
                 break 'worker;
             }
             continue;
@@ -459,6 +463,8 @@ fn worker_main(
             match process_libinput_event(
                 event,
                 grabbed,
+                true,
+                &mut pending_grab,
                 &event_tx,
                 &mut runtime_devices,
                 &mut pointer_devices,
@@ -470,6 +476,27 @@ fn worker_main(
                     break;
                 }
                 ProcessResult::ReceiverGone => break 'worker,
+            }
+        }
+
+        if !grabbed && pending_grab && all_keyboard_keys_released(&runtime_devices) {
+            pending_grab = false;
+
+            match restricted_state.borrow_mut().set_grabbed(true) {
+                Ok(()) => {
+                    grabbed = true;
+                    watchdog = Instant::now() + WATCHDOG_TIMEOUT;
+
+                    // should not be needed but sanity
+                    clear_transient_state(&mut runtime_devices);
+
+                    if event_tx.send(CapturedEvent::Grabbed).is_err() {
+                        break 'worker;
+                    }
+                }
+                Err(error) => {
+                    log::warn!("Could not grab input devices after Super+Tab: {error}");
+                }
             }
         }
 
@@ -485,7 +512,7 @@ fn worker_main(
             grabbed = false;
             emergency_ungrab = false;
 
-            if event_tx.send(CapturedEvent::UngrabbedAll).is_err() {
+            if event_tx.send(CapturedEvent::Ungrabbed).is_err() {
                 break 'worker;
             }
         }
@@ -494,7 +521,9 @@ fn worker_main(
 
 fn process_libinput_event(
     event: Event,
-    emit: bool,
+    grabbed: bool,
+    allow_deferred_grab: bool,
+    pending_grab: &mut bool,
     event_tx: &Sender<CapturedEvent>,
     runtime_devices: &mut HashMap<LibinputDevice, RuntimeDeviceState>,
     pointer_devices: &mut HashSet<LibinputDevice>,
@@ -504,7 +533,7 @@ fn process_libinput_event(
         Event::Device(event) => {
             handle_device_event(event, runtime_devices, pointer_devices, pointer_accel);
         }
-        Event::Keyboard(KeyboardEvent::Key(event)) if emit => {
+        Event::Keyboard(KeyboardEvent::Key(event)) => {
             let code_u32 = event.key();
             let Ok(code) = u16::try_from(code_u32) else {
                 log::warn!("Ignoring out-of-range Linux key code {code_u32}");
@@ -521,16 +550,26 @@ fn process_libinput_event(
                 state.pressed_keys.remove(&code);
             }
 
+            if !grabbed {
+                // while ungrabbed, SuperTab will arm an automatic grab
+                if allow_deferred_grab
+                    && key_combo_is_pressed(KeyCombo::SuperTab, &state.pressed_keys)
+                {
+                    *pending_grab = true;
+                }
+
+                return ProcessResult::Continue;
+            }
+
             if pressed && key_combo_is_pressed(KeyCombo::CtrlAltDel, &state.pressed_keys) {
                 log::info!("Ctrl+Alt+Del pressed, ungrabbing all input devices");
                 return ProcessResult::EmergencyUngrab;
             }
 
-            // emit press/release whenever a combo's complete state changes.
+            // while grabbed, these combos get emitted as normal
             for combo in [
+                KeyCombo::SuperTab,
                 KeyCombo::AltF4,
-                KeyCombo::AltShiftTab,
-                KeyCombo::AltTab,
                 KeyCombo::Super1,
                 KeyCombo::Super2,
                 KeyCombo::Super3,
@@ -564,7 +603,7 @@ fn process_libinput_event(
                 return ProcessResult::ReceiverGone;
             }
         }
-        Event::Pointer(PointerEvent::Motion(event)) if emit => {
+        Event::Pointer(PointerEvent::Motion(event)) if grabbed => {
             let dx = event.dx();
             let dy = event.dy();
             let dx_raw = event.dx_unaccelerated();
@@ -582,7 +621,7 @@ fn process_libinput_event(
                 return ProcessResult::ReceiverGone;
             }
         }
-        Event::Pointer(PointerEvent::Button(event)) if emit => {
+        Event::Pointer(PointerEvent::Button(event)) if grabbed => {
             let pressed = event.button_state() == ButtonState::Pressed;
             if event_tx
                 .send(CapturedEvent::PointerButton {
@@ -594,7 +633,7 @@ fn process_libinput_event(
                 return ProcessResult::ReceiverGone;
             }
         }
-        Event::Pointer(PointerEvent::ScrollWheel(event)) if emit => {
+        Event::Pointer(PointerEvent::ScrollWheel(event)) if grabbed => {
             let horizontal = if event.has_axis(Axis::Horizontal) {
                 event.scroll_value_v120(Axis::Horizontal)
             } else {
@@ -680,10 +719,14 @@ fn drain_pending_libinput_events(
     event_tx: &Sender<CapturedEvent>,
 ) {
     let _ = libinput.dispatch();
+
+    let mut ignored = false;
     for event in libinput {
         let _ = process_libinput_event(
             event,
             false,
+            false,
+            &mut ignored,
             event_tx,
             runtime_devices,
             pointer_devices,
@@ -836,14 +879,10 @@ fn key_combo_is_pressed(combo: KeyCombo, pressed: &HashSet<u16>) -> bool {
     let meta =
         pressed.contains(&KeyCode::KEY_LEFTMETA.0) || pressed.contains(&KeyCode::KEY_RIGHTMETA.0);
 
-    let shift =
-        pressed.contains(&KeyCode::KEY_LEFTSHIFT.0) || pressed.contains(&KeyCode::KEY_RIGHTSHIFT.0);
-
     match combo {
         KeyCombo::AltF4 => alt && pressed.contains(&KeyCode::KEY_F4.0),
-        KeyCombo::AltShiftTab => alt && shift && pressed.contains(&KeyCode::KEY_TAB.0),
-        KeyCombo::AltTab => alt && pressed.contains(&KeyCode::KEY_TAB.0),
         KeyCombo::CtrlAltDel => ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0),
+        KeyCombo::SuperTab => meta && pressed.contains(&KeyCode::KEY_TAB.0),
         KeyCombo::Super1 => meta && pressed.contains(&KeyCode::KEY_1.0),
         KeyCombo::Super2 => meta && pressed.contains(&KeyCode::KEY_2.0),
         KeyCombo::Super3 => meta && pressed.contains(&KeyCode::KEY_3.0),
@@ -860,4 +899,12 @@ fn with_device_context(action: &str, path: &Path, error: io::Error) -> io::Error
         error.kind(),
         format!("failed to {action} {}: {error}", path.display()),
     )
+}
+
+fn all_keyboard_keys_released(
+    runtime_devices: &HashMap<LibinputDevice, RuntimeDeviceState>,
+) -> bool {
+    runtime_devices
+        .values()
+        .all(|state| state.pressed_keys.is_empty())
 }

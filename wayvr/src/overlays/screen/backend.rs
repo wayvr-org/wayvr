@@ -9,7 +9,7 @@ use wlx_capture::{WlxCapture, frame::Transform};
 use crate::{
     backend::{
         XrBackend,
-        input::{HoverResult, PointerHit, PointerMode},
+        input::{self, HoverResult, PointerHit, PointerMode},
     },
     overlays::screen::capture::MyFirstDmaExporter,
     state::AppState,
@@ -302,7 +302,9 @@ impl OverlayBackend for ScreenBackend {
         #[cfg(debug_assertions)]
         log::trace!("Hover: {:?}", hit.uv);
 
-        if app.input_state.picking_focus {
+        let pick_now = app.input_state.picking_focus.is_picking();
+        if pick_now {
+            app.input_state.picking_focus = input::FocusPickState::None;
             app.hid_provider
                 .set_input_focus(app.wvr_server.as_mut(), InputFocus::PhysicalScreen);
         }

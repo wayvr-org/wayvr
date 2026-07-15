@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use glam::{Affine3A, Quat, Vec3, bool};
+use glam::{Affine3A, FloatExt, Quat, Vec3, bool};
 use libmonado::{self as mnd, DeviceLogic};
 use openxr::{self as xr, Quaternionf, Vector2f, Vector3f};
 use wlx_common::{
@@ -238,13 +238,18 @@ impl OpenXrInputSource {
         let mut any_tracked = false;
         let old_handsfree = app.session.config.handsfree_pointer;
 
-        if app.input_state.picking_focus {
+        if !app.input_state.picking_focus.is_none() {
             app.session.config.handsfree_pointer = app.session.config.handsfree_alt_tab.into();
+
+            app.input_state.handsfree_state.scroll_x =
+                app.input_state.handsfree_state.scroll_x.lerp(0.0, 0.7);
+            app.input_state.handsfree_state.scroll_y =
+                app.input_state.handsfree_state.scroll_y.lerp(0.0, 0.7);
 
             let ptr1 = &mut app.input_state.pointers[1];
             ptr1.before = ptr1.now;
             ptr1.now = PointerState::default();
-            ptr1.tracked = false
+            ptr1.tracked = false;
         } else {
             for i in 0..2 {
                 let pointer = &mut app.input_state.pointers[i];
@@ -399,6 +404,7 @@ impl OpenXrPointer {
             // input from wayvrctl
             pointer.now.click = handsfree_state.click;
             pointer.now.grab = handsfree_state.grab;
+            pointer.now.grab_float = handsfree_state.grab_float;
             pointer.now.click_modifier_right = handsfree_state.click_modifier_right;
             pointer.now.click_modifier_middle = handsfree_state.click_modifier_middle;
             pointer.now.scroll_y = handsfree_state.scroll_y;

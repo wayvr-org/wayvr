@@ -845,7 +845,9 @@ impl OverlayBackend for WvrWindowBackend {
                     self.panel_hovered = false;
                 }
 
-                if app.input_state.picking_focus {
+                let pick_now = app.input_state.picking_focus.is_picking();
+                if pick_now {
+                    app.input_state.picking_focus = input::FocusPickState::None;
                     app.hid_provider
                         .set_input_focus(app.wvr_server.as_mut(), InputFocus::WayVR);
                 }
@@ -855,7 +857,7 @@ impl OverlayBackend for WvrWindowBackend {
                     PointerFocusTarget::Surface { surface, origin },
                     global_pos,
                     self.window,
-                    app.input_state.picking_focus,
+                    pick_now,
                 );
 
                 HoverResult::consume()
@@ -866,7 +868,9 @@ impl OverlayBackend for WvrWindowBackend {
                     self.panel_hovered = false;
                 }
 
-                if app.input_state.picking_focus {
+                let pick_now = app.input_state.picking_focus.is_picking();
+                if pick_now {
+                    app.input_state.picking_focus = input::FocusPickState::None;
                     app.hid_provider
                         .set_input_focus(app.wvr_server.as_mut(), InputFocus::WayVR);
                 }
@@ -876,7 +880,7 @@ impl OverlayBackend for WvrWindowBackend {
                     PointerFocusTarget::Toplevel,
                     pos,
                     self.window,
-                    app.input_state.picking_focus,
+                    pick_now,
                 );
 
                 HoverResult::consume()

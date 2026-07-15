@@ -77,12 +77,13 @@ use crate::{
     state::AppState,
     subsystem::{
         dbus::DbusConnector,
-        hid::{MODS_TO_KEYS, WheelDelta},
+        hid::{self, MODS_TO_KEYS, WheelDelta},
+        input::{HidWrapper, InputFocus},
     },
     windowing::{OverlayID, OverlaySelector, backend::OverlayEventData},
 };
 
-pub use hit_test::{WvrHitContext, WvrHitTarget, build_hit_context};
+pub use hit_test::{WvrHitTarget, build_hit_context};
 
 #[derive(Debug, Clone)]
 pub struct WaylandEnv {
@@ -322,6 +323,7 @@ impl WvrServerState {
             input_state: &app.input_state,
             tasks: &mut tasks,
             signals: &app.wayvr_signals,
+            hid_wrapper: &mut app.hid_provider,
         });
 
         // Tick all child processes
@@ -637,7 +639,11 @@ impl WvrServerState {
             wvr_server.manager.cleanup_handles();
         }
 
-        wvr_server.process_input_capture(&mut app.input_state, &mut app.tasks);
+        wvr_server.process_input_capture(
+            &mut app.input_state,
+            &mut app.tasks,
+            &mut app.hid_provider,
+        );
 
         wvr_server.ticks += 1;
 
@@ -752,10 +758,8 @@ impl WvrServerState {
         &mut self,
         input_state: &mut InputState,
         tasks: &mut TaskContainer,
+        hid_wrapper: &mut HidWrapper,
     ) {
-        if !self.has_input_focus {
-            return;
-        }
         let Some(input_capture) = self.input_capture.as_mut() else {
             return;
         };
@@ -766,13 +770,47 @@ impl WvrServerState {
         for ev in input_capture.drain_events() {
             match ev {
                 input_capture::CapturedEvent::Key { code, pressed } => {
-                    self.manager.send_key((code as u32) + 8, pressed);
+                    let vk = (code as u32) + 8;
+                    if input_state.picking_focus.is_aiming() {
+                        if (hid::VirtualKey::Q as u32) == vk {
+                            input_state.handsfree_state.grab = pressed;
+                            input_state.handsfree_state.grab_float = pressed;
+                        }
+                        if (hid::VirtualKey::A as u32) == vk {
+                            input_state.handsfree_state.grab = pressed;
+                        }
+                        if (hid::VirtualKey::W as u32) == vk {
+                            input_state.handsfree_state.click = pressed;
+                        }
+                        if (hid::VirtualKey::E as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleEditMode));
+                        }
+                        if (hid::VirtualKey::D as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleDashboard));
+                        }
+                    } else {
+                        self.manager.send_key(vk, pressed);
+                    }
                 }
                 input_capture::CapturedEvent::PointerButton { button, pressed } => {
                     let Some(mouse_index) = Self::button_to_mouse_index(button) else {
                         continue;
                     };
-                    self.manager.send_pointer_button(mouse_index, pressed);
+                    if input_state.picking_focus.is_aiming() {
+                        match mouse_index {
+                            MouseIndex::Left => input_state.handsfree_state.click = pressed,
+                            MouseIndex::Right => {
+                                input_state.handsfree_state.click = pressed;
+                                input_state.handsfree_state.click_modifier_right = pressed;
+                            }
+                            MouseIndex::Center if pressed => {
+                                tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleEditMode));
+                            }
+                            _ => {}
+                        }
+                    } else {
+                        self.manager.send_pointer_button(mouse_index, pressed);
+                    }
                 }
                 input_capture::CapturedEvent::PointerMotion {
                     dx,
@@ -794,9 +832,16 @@ impl WvrServerState {
                         x: horizontal_v120 as f32,
                         y: vertical_v120 as f32,
                     };
-                    self.manager.send_pointer_axis_wheel_raw(delta);
+                    if input_state.picking_focus.is_aiming() {
+                        input_state.handsfree_state.scroll_y = (vertical_v120 as f32) * -0.12;
+                    } else {
+                        self.manager.send_pointer_axis_wheel_raw(delta);
+                    }
                 }
-                input_capture::CapturedEvent::UngrabbedAll => {
+                input_capture::CapturedEvent::Grabbed => {
+                    hid_wrapper.set_input_focus(Some(self), InputFocus::WayVR);
+                }
+                input_capture::CapturedEvent::Ungrabbed => {
                     self.manager.release_all_keys();
                     self.has_input_focus = false;
                     self.wm.keyboard_focus = None;
@@ -808,20 +853,33 @@ impl WvrServerState {
                             self.close_window(window_handle);
                         }
                     }
-                    input_capture::KeyCombo::AltTab => input_state.picking_focus = pressed,
-                    input_capture::KeyCombo::AltShiftTab => {
-                        input_state.handsfree_state.grab = pressed
+                    input_capture::KeyCombo::SuperTab => {
+                        if pressed {
+                            input_state.picking_focus = super::input::FocusPickState::Aiming;
+                        } else {
+                            input_state.picking_focus = super::input::FocusPickState::Picking;
+
+                            tasks.enqueue_at(
+                                TaskType::Global(Box::new(|app| {
+                                    app.input_state.picking_focus =
+                                        super::input::FocusPickState::None;
+
+                                    let _ = std::mem::take(&mut app.input_state.handsfree_state);
+                                })),
+                                Instant::now() + Duration::from_millis(33),
+                            );
+                        }
                     }
-                    input_capture::KeyCombo::Super1 => {
+                    input_capture::KeyCombo::Super1 if pressed => {
                         tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(0)))
                     }
-                    input_capture::KeyCombo::Super2 => {
+                    input_capture::KeyCombo::Super2 if pressed => {
                         tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(1)))
                     }
-                    input_capture::KeyCombo::Super3 => {
+                    input_capture::KeyCombo::Super3 if pressed => {
                         tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(2)))
                     }
-                    input_capture::KeyCombo::Super4 => {
+                    input_capture::KeyCombo::Super4 if pressed => {
                         tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(3)))
                     }
                     _ => {}
@@ -881,6 +939,7 @@ impl WvrServerState {
         }
     }
 
+    /// Use HidWrapper::set_input_focus instead!!!
     pub fn set_input_focus(&mut self, has_focus: bool) {
         let Some(input_capture) = self.input_capture.as_mut() else {
             return;
@@ -982,7 +1041,7 @@ impl WvrServerState {
         target: PointerFocusTarget,
         global_pos: Vec2,
         hover_window: window::WindowHandle,
-        force_focus: bool,
+        picking_focus: bool,
     ) {
         if self.mouse_freeze > Instant::now() {
             return;
@@ -990,7 +1049,7 @@ impl WvrServerState {
 
         let global_pos = DVec2::from(global_pos);
 
-        let (focus, focus_keyboard) = self.get_mouse_focus(target, hover_window, force_focus);
+        let (focus, focus_keyboard) = self.get_mouse_focus(target, hover_window, picking_focus);
         if focus_keyboard.is_some() {
             self.manager.seat_keyboard.set_focus(
                 &mut self.manager.state,

@@ -7,7 +7,7 @@ use glam::{Affine3A, Vec2, Vec3A, Vec3Swizzles};
 
 use idmap_derive::IntegerId;
 use smallvec::{SmallVec, smallvec};
-use strum::AsRefStr;
+use strum::{AsRefStr, EnumIs};
 use wayvr_ipc::packet_client::{HandsfreeAction, HandsfreeParams};
 use wlx_common::common::LeftRight;
 use wlx_common::windowing::{OverlayWindowState, Positioning};
@@ -58,13 +58,22 @@ pub enum TrackedDeviceRole {
     Tracker,
 }
 
+#[derive(Debug, Clone, Copy, EnumIs)]
+pub enum FocusPickState {
+    None,
+    /// aiming to pick the focus
+    Aiming,
+    /// picking the focus. this will be consumed on valid on_hover
+    Picking,
+}
+
 pub struct InputState {
     pub hmd: Affine3A,
     pub ipd: f32,
     pub pointers: [Pointer; 2],
     pub devices: Vec<TrackedDevice>,
     pub handsfree_state: PointerState,
-    pub picking_focus: bool,
+    pub picking_focus: FocusPickState,
     processes: Vec<Child>,
 }
 
@@ -77,7 +86,7 @@ impl InputState {
             devices: Vec::new(),
             processes: Vec::new(),
             handsfree_state: PointerState::default(),
-            picking_focus: false,
+            picking_focus: FocusPickState::None,
         }
     }
 
@@ -210,6 +219,9 @@ fn debug_print_hand(hand: &Pointer) {
         if hand.now.grab != hand.before.grab {
             log::debug!("Hand {}: grab {}", hand.idx, hand.now.grab);
         }
+        if hand.now.grab_float != hand.before.grab_float {
+            log::debug!("Hand {}: grab {}", hand.idx, hand.now.grab);
+        }
         if hand.now.alt_click != hand.before.alt_click {
             log::debug!("Hand {}: alt_click {}", hand.idx, hand.now.alt_click);
         }
@@ -316,6 +328,7 @@ pub struct PointerState {
     pub scroll_y: f32,
     pub click: bool,
     pub grab: bool,
+    pub grab_float: bool,
     pub alt_click: bool,
     pub show_hide: bool,
     pub toggle_dashboard: bool,
@@ -411,6 +424,7 @@ fn populate_lines(
 
 fn update_focus(app: &mut AppState, overlay_input_focus: Option<InputFocus>) {
     if let Some(f) = &overlay_input_focus
+        && app.input_state.picking_focus.is_none()
         && app
             .hid_provider
             .set_input_focus(app.wvr_server.as_mut(), *f)
@@ -538,8 +552,11 @@ where
 
     let hovered_state = hovered.config.active_state.as_mut().unwrap();
 
+    let grab_float = pointer.now.grab_float;
+    let grab_start = pointer.now.grab && !pointer.before.grab;
+
     // grab
-    if pointer.now.grab && !pointer.before.grab && hovered_state.grabbable {
+    if grab_start && hovered_state.grabbable {
         update_focus(app, hovered.config.input_focus);
         start_grab(
             idx,
@@ -549,6 +566,7 @@ where
             hovered_state,
             app,
             edit_mode,
+            grab_float,
         );
         log::debug!("Hand {}: grabbed {}", hit.pointer, hovered.config.name);
         return (
@@ -762,15 +780,19 @@ fn start_grab(
     state: &mut OverlayWindowState,
     app: &mut AppState,
     edit_mode: bool,
+    grab_float: bool,
 ) {
     let pointer = &mut app.input_state.pointers[idx];
 
     // Grab anchor if:
     // - grabbed overlay is Anchored
     // - not in editmode
+    // - not using grab_float
     // - grabbing with one hand. (grabbing with the 2nd hand will grab the individual overlay instead)
-    let grab_anchor =
-        !edit_mode && !app.anchor_grabbed && matches!(state.positioning, Positioning::Anchored);
+    let grab_anchor = !edit_mode
+        && !grab_float
+        && !app.anchor_grabbed
+        && matches!(state.positioning, Positioning::Anchored);
 
     let relative_grab_transform = if grab_anchor {
         app.anchor

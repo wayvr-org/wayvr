@@ -130,8 +130,11 @@ pub enum OverlayTask {
     Drop(OverlaySelector),
 }
 
+pub type GlobalTask = dyn FnOnce(&mut AppState) + Send;
+
 #[allow(dead_code)]
 pub enum TaskType {
+    Global(Box<GlobalTask>),
     Input(InputTask),
     Overlay(OverlayTask),
     Playspace(PlayspaceTask),

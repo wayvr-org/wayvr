@@ -1,5 +1,6 @@
 use crate::backend::wayvr::{self, WvrServerState};
 
+use crate::subsystem::input::{HidWrapper, InputFocus};
 use crate::{
     backend::input::InputState,
     ipc::{event_queue::SyncEventQueue, signal::WayVRSignal},
@@ -86,6 +87,7 @@ pub struct TickParams<'a> {
     pub tasks: &'a mut Vec<wayvr::TickTask>,
     pub signals: &'a SyncEventQueue<WayVRSignal>,
     pub input_state: &'a InputState,
+    pub hid_wrapper: &'a mut HidWrapper,
 }
 
 pub fn gen_args_vec(input: &str) -> Vec<&str> {
@@ -335,7 +337,14 @@ impl Connection {
     }
 
     fn handle_wvr_input_capture(params: &mut TickParams, grab: bool) {
-        params.wvr_server.set_input_focus(grab);
+        let val = if grab {
+            InputFocus::WayVR
+        } else {
+            InputFocus::PhysicalScreen
+        };
+        params
+            .hid_wrapper
+            .set_input_focus(Some(params.wvr_server), val);
     }
 
     fn handle_wlx_device_haptics(

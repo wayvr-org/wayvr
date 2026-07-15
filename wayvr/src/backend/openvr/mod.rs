@@ -219,6 +219,9 @@ pub fn openvr_run(args: &Args) -> Result<(), BackendError> {
 
         while let Some(task) = due_tasks.pop_front() {
             match task {
+                TaskType::Global(task) => {
+                    task(&mut app);
+                }
                 TaskType::Input(task) => {
                     app.input_state.handle_task(task);
                 }
