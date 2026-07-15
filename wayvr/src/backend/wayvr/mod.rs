@@ -1,6 +1,7 @@
 pub mod client;
 mod comp;
 mod handle;
+pub mod hit_test;
 mod image_importer;
 mod input_capture;
 pub mod process;
@@ -68,7 +69,7 @@ use crate::{
             process::{KillSignal, Process},
         },
     },
-    graphics::WGfxExtras,
+    graphics::{ExtentExt, WGfxExtras},
     ipc::{event_queue::SyncEventQueue, ipc_server, signal::WayVRSignal},
     overlays::wayvr::create_wl_window_overlay,
     state::AppState,
@@ -78,6 +79,8 @@ use crate::{
     },
     windowing::{OverlayID, OverlaySelector},
 };
+
+pub use hit_test::{WvrHitContext, WvrHitTarget, build_hit_context};
 
 #[derive(Debug, Clone)]
 pub struct WaylandEnv {
@@ -675,6 +678,35 @@ impl WvrServerState {
         self.window_to_overlay.get(&window).copied()
     }
 
+    pub fn hit_target_to_focus(
+        &self,
+        target: WvrHitTarget,
+        hover_window: window::WindowHandle,
+        _default_pos: Vec2,
+    ) -> PointerFocusTarget {
+        match target {
+            WvrHitTarget::Panel(_) => PointerFocusTarget::None,
+            WvrHitTarget::Toplevel { .. } => self
+                .wm
+                .windows
+                .get(&hover_window)
+                .map(|w| {
+                    let surface = w.toplevel.wl_surface().clone();
+                    PointerFocusTarget::Surface {
+                        surface,
+                        origin: glam::Vec2::ZERO,
+                    }
+                })
+                .unwrap_or(PointerFocusTarget::Toplevel),
+            WvrHitTarget::Surface {
+                surface, origin, ..
+            } => PointerFocusTarget::Surface { surface, origin },
+            WvrHitTarget::Popup {
+                surface, origin, ..
+            } => PointerFocusTarget::Surface { surface, origin },
+        }
+    }
+
     pub fn pointer_is_grabbed(&self) -> bool {
         self.manager.seat_pointer.is_grabbed()
     }
@@ -687,23 +719,114 @@ impl WvrServerState {
             return;
         };
 
-        #[allow(unused_variables)] //TODO: remove this
         for ev in input_capture.drain_events() {
             match ev {
                 input_capture::CapturedEvent::Key { code, pressed } => {
                     self.manager.send_key((code as u32) + 8, pressed);
                 }
-                input_capture::CapturedEvent::PointerButton { button, pressed } => {}
-                input_capture::CapturedEvent::PointerMotion { dx, dy } => {}
+                input_capture::CapturedEvent::PointerButton { button, pressed } => {
+                    let Some(mouse_index) = Self::button_to_mouse_index(button) else {
+                        continue;
+                    };
+                    let Some(ref hover) = self.wm.mouse else {
+                        continue;
+                    };
+                    let Some(window) = self.wm.windows.get(&hover.hover_window) else {
+                        continue;
+                    };
+                    let toplevel = window.toplevel.wl_surface().clone();
+                    let inner_extent = with_states(&toplevel, |states| {
+                        SurfaceBufWithImage::get_from_surface(states)
+                            .map(|s| s.image.extent_u32arr())
+                            .unwrap_or([1, 1])
+                    });
+                    let Some(hit_ctx) = build_hit_context(
+                        &toplevel,
+                        &self.manager.state.popup_manager,
+                        inner_extent,
+                    ) else {
+                        continue;
+                    };
+                    let pos = Vec2::new(hover.x as f32, hover.y as f32);
+                    let target = hit_ctx.hit_target_at(pos);
+                    let focus_target = self.hit_target_to_focus(
+                        target.unwrap_or(WvrHitTarget::Toplevel { pos }),
+                        hover.hover_window,
+                        pos,
+                    );
+                    let click_freeze = 0;
+                    self.send_mouse_button(
+                        focus_target,
+                        pos,
+                        hover.hover_window,
+                        mouse_index,
+                        pressed,
+                        click_freeze,
+                    );
+                }
+                input_capture::CapturedEvent::PointerMotion { dx, dy } => {
+                    let Some(ref hover) = self.wm.mouse else {
+                        continue;
+                    };
+                    let new_x = hover.x as f64 + dx;
+                    let new_y = hover.y as f64 + dy;
+                    let new_pos = Vec2::new(new_x as f32, new_y as f32);
+
+                    let Some(window) = self.wm.windows.get(&hover.hover_window) else {
+                        continue;
+                    };
+                    let toplevel = window.toplevel.wl_surface().clone();
+                    let inner_extent = with_states(&toplevel, |states| {
+                        SurfaceBufWithImage::get_from_surface(states)
+                            .map(|s| s.image.extent_u32arr())
+                            .unwrap_or([1, 1])
+                    });
+                    let Some(hit_ctx) = build_hit_context(
+                        &toplevel,
+                        &self.manager.state.popup_manager,
+                        inner_extent,
+                    ) else {
+                        continue;
+                    };
+                    let target = hit_ctx.hit_target_at(new_pos);
+                    let focus_target = self.hit_target_to_focus(
+                        target.unwrap_or(WvrHitTarget::Toplevel { pos: new_pos }),
+                        hover.hover_window,
+                        new_pos,
+                    );
+                    self.send_mouse_move(focus_target, new_pos, hover.hover_window);
+                }
                 input_capture::CapturedEvent::PointerAxis {
                     horizontal_v120,
                     vertical_v120,
-                } => {}
+                } => {
+                    let Some(ref hover) = self.wm.mouse else {
+                        continue;
+                    };
+                    let delta = WheelDelta {
+                        x: horizontal_v120 as f32,
+                        y: vertical_v120 as f32,
+                    };
+                    self.send_mouse_scroll(
+                        hover.hover_window,
+                        Vec2::new(hover.x as f32, hover.y as f32),
+                        delta,
+                    );
+                }
                 input_capture::CapturedEvent::UngrabbedAll => {
                     self.manager.release_all_keys();
                     self.has_input_focus = false;
                 }
             }
+        }
+    }
+
+    fn button_to_mouse_index(button: u32) -> Option<MouseIndex> {
+        match button {
+            272 => Some(MouseIndex::Left),
+            273 => Some(MouseIndex::Right),
+            274 => Some(MouseIndex::Center),
+            _ => None,
         }
     }
 

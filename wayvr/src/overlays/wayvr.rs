@@ -1,18 +1,13 @@
-use glam::{Affine2, Affine3A, Quat, Vec2, Vec3, vec2, vec3};
+use std::{mem, ops::RangeInclusive, rc::Rc, sync::Arc};
+
+use glam::{Affine2, Affine3A, Quat, Vec3, vec2, vec3};
 use slotmap::Key;
 use smithay::{
     desktop::PopupManager,
-    reexports::wayland_server::{Resource, backend::ObjectId, protocol::wl_surface::WlSurface},
-    utils::{Logical, Point, Size},
-    wayland::{
-        compositor::{
-            SUBSURFACE_ROLE, SubsurfaceCachedState, SurfaceAttributes, TraversalAction,
-            with_states, with_surface_tree_upward,
-        },
-        shell::xdg::XdgPopupSurfaceData,
-    },
+    reexports::wayland_server::Resource,
+    utils::{Logical, Size},
+    wayland::{compositor::with_states, shell::xdg::XdgPopupSurfaceData},
 };
-use std::{mem, ops::RangeInclusive, sync::Arc};
 use vulkano::{
     buffer::BufferUsage, image::view::ImageView, pipeline::graphics::color_blend::AttachmentBlend,
 };
@@ -40,7 +35,13 @@ use crate::{
         input::{self, HoverResult},
         task::{OverlayTask, TaskType},
         wayvr::{
-            self, PointerFocusTarget, SurfaceBufWithImage, process::KillSignal,
+            self, PointerFocusTarget, SurfaceBufWithImage,
+            hit_test::{
+                PopupRoot, RenderedSurface, WvrHitContext, WvrHitTarget,
+                collect_rendered_surface_tree, collect_rendered_surface_tree_at,
+                rendered_surfaces_dirty,
+            },
+            process::KillSignal,
             window::WindowHandle,
         },
     },
@@ -126,38 +127,6 @@ pub fn create_wl_window_overlay(
     })
 }
 
-#[derive(Clone)]
-struct PopupRoot {
-    surface: WlSurface,
-    surface_origin: Vec2,
-}
-
-#[derive(Clone)]
-struct RenderedSurface {
-    surface: WlSurface,
-    surface_id: ObjectId,
-    image: Arc<ImageView>,
-    pos: Vec2,
-    size: Vec2,
-}
-
-enum WvrHitTarget {
-    Panel(input::PointerHit),
-    Toplevel {
-        pos: Vec2,
-    },
-    Surface {
-        surface: WlSurface,
-        global_pos: Vec2,
-        origin: Vec2,
-    },
-    Popup {
-        surface: WlSurface,
-        global_pos: Vec2,
-        origin: Vec2,
-    },
-}
-
 pub struct WvrWindowBackend {
     name: Arc<str>,
     icon: Arc<str>,
@@ -166,9 +135,9 @@ pub struct WvrWindowBackend {
     popup_outside_button: Option<wayvr::MouseIndex>,
     interaction_transform: Option<Affine2>,
     window: WindowHandle,
-    popups: Vec<RenderedSurface>,
-    popup_roots: Vec<PopupRoot>,
-    surfaces: Vec<RenderedSurface>,
+    popups: Rc<[RenderedSurface]>,
+    surfaces: Rc<[RenderedSurface]>,
+    hit_context: Option<WvrHitContext>,
     just_resumed: bool,
     meta: Option<FrameMeta>,
     mouse: Option<MouseMeta>,
@@ -272,9 +241,9 @@ impl WvrWindowBackend {
             icon,
             pipeline: None,
             window,
-            popups: vec![],
-            popup_roots: vec![],
-            surfaces: vec![],
+            popups: Default::default(),
+            surfaces: Default::default(),
+            hit_context: None,
             subsurface_pipeline,
             popup_outside_button: None,
             interaction_transform: None,
@@ -378,83 +347,6 @@ impl WvrWindowBackend {
         self.panel.update_layout(app)?;
 
         Ok(())
-    }
-
-    fn transformed_uv_from_hit(&self, hit: &input::PointerHit) -> Vec2 {
-        self.mouse_transform.transform_point2(hit.uv)
-    }
-
-    fn client_pos_from_transformed_uv(&self, transformed: Vec2) -> Vec2 {
-        vec2(
-            transformed.x * self.inner_extent[0] as f32,
-            transformed.y * self.inner_extent[1] as f32,
-        )
-    }
-
-    fn unclamped_client_pos_from_hit(&self, hit: &input::PointerHit) -> Vec2 {
-        let transformed = self.transformed_uv_from_hit(hit);
-        self.client_pos_from_transformed_uv(transformed)
-    }
-
-    fn is_inside_client_area(&self, transformed: Vec2) -> bool {
-        self.uv_range.contains(&transformed.x) && self.uv_range.contains(&transformed.y)
-    }
-
-    fn panel_hit_from_hit(&self, hit: &input::PointerHit) -> Option<input::PointerHit> {
-        let meta = self.meta.as_ref()?;
-
-        let panel_height = meta.extent[1].checked_sub(self.inner_extent[1])?;
-        if panel_height == 0 {
-            return None;
-        }
-
-        let mut hit2 = *hit;
-        hit2.uv.y *= meta.extent[1] as f32 / panel_height as f32;
-
-        Some(hit2)
-    }
-
-    fn popup_hit_at_client_pos(&self, pos: Vec2) -> Option<(WlSurface, Vec2)> {
-        self.popup_roots.iter().find_map(|popup| {
-            surface_tree_input_hit_test(&popup.surface, popup.surface_origin, pos, true)
-        })
-    }
-
-    fn hit_target(&self, hit: &input::PointerHit) -> Option<WvrHitTarget> {
-        let transformed = self.transformed_uv_from_hit(hit);
-        let client_pos = self.client_pos_from_transformed_uv(transformed);
-
-        // popups are checked before the panel/client bounds.
-        if let Some((surface, surface_origin)) = self.popup_hit_at_client_pos(client_pos) {
-            return Some(WvrHitTarget::Popup {
-                surface,
-                global_pos: client_pos,
-                origin: surface_origin,
-            });
-        }
-
-        if !self.is_inside_client_area(transformed) {
-            return self.panel_hit_from_hit(hit).map(WvrHitTarget::Panel);
-        }
-
-        let hit_surface = self
-            .surfaces
-            .iter()
-            .rev()
-            .find(|s| surface_accepts_input(s, client_pos));
-
-        if let Some(surface) = hit_surface {
-            return Some(WvrHitTarget::Surface {
-                surface: surface.surface.clone(),
-                global_pos: client_pos,
-                origin: surface.pos,
-            });
-        }
-
-        let clamped = transformed.clamp(Vec2::ZERO, Vec2::ONE);
-        let pos = self.client_pos_from_transformed_uv(clamped);
-
-        Some(WvrHitTarget::Toplevel { pos })
     }
 
     fn mouse_index_from_mode(mode: input::PointerMode) -> Option<wayvr::MouseIndex> {
@@ -610,27 +502,26 @@ impl OverlayBackend for WvrWindowBackend {
             ));
         }
 
-        self.popup_roots = popup_roots;
-
         let mut tree_dirty = false;
 
         if let Some(wvr_server) = app.wvr_server.as_mut() {
             let state = &mut wvr_server.manager.state;
             tree_dirty |= state.take_redraw_request(&surface_id);
             tree_dirty |= state.has_pending_frame_callbacks(&surface_id);
-            for surface in &surfaces {
+            for surface in surfaces.iter() {
                 tree_dirty |= state.take_redraw_request(&surface.surface_id);
                 tree_dirty |= state.has_pending_frame_callbacks(&surface.surface_id);
             }
-            for popup in &popups {
+            for popup in popups.iter() {
                 tree_dirty |= state.take_redraw_request(&popup.surface_id);
                 tree_dirty |= state.has_pending_frame_callbacks(&popup.surface_id);
             }
         }
 
-        self.surfaces = surfaces;
-
         let force_render = tree_dirty || mem::take(&mut self.just_resumed);
+
+        let hit_surfaces = surfaces.clone();
+        self.surfaces = surfaces;
 
         let Some(surf) = with_states(toplevel.wl_surface(), SurfaceBufWithImage::get_from_surface)
         else {
@@ -663,6 +554,16 @@ impl OverlayBackend for WvrWindowBackend {
 
         let inner_extent = meta.extent;
         self.sync_committed_toplevel_size(app, inner_extent)?;
+
+        let hit_context = WvrHitContext {
+            surfaces: hit_surfaces,
+            popup_roots: popup_roots.into(),
+            mouse_transform: self.mouse_transform,
+            uv_range: self.uv_range.clone(),
+            inner_extent,
+            panel_height: BORDER_SIZE * 2 + BAR_SIZE,
+        };
+        self.hit_context = Some(hit_context);
 
         meta.extent[0] += BORDER_SIZE * 2;
         meta.extent[1] += BORDER_SIZE * 2 + BAR_SIZE;
@@ -707,7 +608,7 @@ impl OverlayBackend for WvrWindowBackend {
         if !self.scrolling {
             self.mouse = mouse;
         }
-        self.popups = popups;
+        self.popups = popups.into();
         self.meta = Some(meta);
 
         if force_render {
@@ -755,12 +656,12 @@ impl OverlayBackend for WvrWindowBackend {
             .unwrap()
             .render_screen(image, app, rdr)?;
 
-        for surface in &self.surfaces {
+        for surface in self.surfaces.iter() {
             self.render_subsurface(app, rdr, surface)?;
             callback_surfaces.push(&surface.surface_id);
         }
 
-        for popup in &self.popups {
+        for popup in self.popups.iter() {
             self.render_subsurface(app, rdr, popup)?;
             callback_surfaces.push(&popup.surface_id);
         }
@@ -776,10 +677,10 @@ impl OverlayBackend for WvrWindowBackend {
                 let surface_id = window.toplevel.wl_surface().id();
                 state.send_frame_callbacks_for_surface_id(&surface_id);
             }
-            for surface in &self.surfaces {
+            for surface in self.surfaces.iter() {
                 state.send_frame_callbacks_for_surface_id(&surface.surface_id);
             }
-            for popup in &self.popups {
+            for popup in self.popups.iter() {
                 state.send_frame_callbacks_for_surface_id(&popup.surface_id);
             }
         }
@@ -833,7 +734,11 @@ impl OverlayBackend for WvrWindowBackend {
             return HoverResult::consume();
         }
 
-        match self.hit_target(hit) {
+        let Some(ref ctx) = self.hit_context else {
+            return HoverResult::default();
+        };
+
+        match ctx.hit_target(hit) {
             Some(WvrHitTarget::Panel(hit2)) => {
                 self.panel_hovered = true;
                 self.panel.on_hover(app, &hit2)
@@ -889,8 +794,12 @@ impl OverlayBackend for WvrWindowBackend {
             return;
         };
 
-        let target = self.hit_target(hit);
-        let outside_pos = self.unclamped_client_pos_from_hit(hit);
+        let Some(ref ctx) = self.hit_context else {
+            return;
+        };
+
+        let target = ctx.hit_target(hit);
+        let outside_pos = ctx.unclamped_client_pos_from_hit(hit);
         let click_freeze = app.session.config.click_freeze_time_ms;
 
         // if the press was consumed to dismiss a popup, consume the matching release too.
@@ -981,7 +890,11 @@ impl OverlayBackend for WvrWindowBackend {
     }
 
     fn on_scroll(&mut self, app: &mut state::AppState, hit: &input::PointerHit, delta: WheelDelta) {
-        let target = self.hit_target(hit);
+        let Some(ref ctx) = self.hit_context else {
+            return;
+        };
+
+        let target = ctx.hit_target(hit);
         self.scrolling = true;
 
         match target {
@@ -1057,162 +970,6 @@ impl OverlayBackend for WvrWindowBackend {
             _ => false,
         }
     }
-}
-
-fn rendered_surfaces_dirty(old: &[RenderedSurface], new: &[RenderedSurface]) -> bool {
-    if old.len() != new.len() {
-        return true;
-    }
-
-    old.iter().zip(new).any(|(a, b)| {
-        a.surface_id != b.surface_id
-            || a.pos != b.pos
-            || a.size != b.size
-            || *a.image.image() != *b.image.image()
-    })
-}
-
-fn surface_location(states: &smithay::wayland::compositor::SurfaceData) -> Point<i32, Logical> {
-    if states.role == Some(SUBSURFACE_ROLE) {
-        let mut guard = states.cached_state.get::<SubsurfaceCachedState>();
-        guard.current().location
-    } else {
-        (0, 0).into()
-    }
-}
-
-fn collect_rendered_surface_tree_at(
-    root: &WlSurface,
-    initial_pos: Point<i32, Logical>,
-    include_root: bool,
-) -> Vec<RenderedSurface> {
-    let mut out = Vec::new();
-    let root_id = root.id();
-
-    with_surface_tree_upward(
-        root,
-        initial_pos,
-        |_, states, parent_pos| {
-            let pos = *parent_pos + surface_location(states);
-
-            // Do not skip even if this surface has no buffer;
-            // children may still have buffers.
-            TraversalAction::DoChildren(pos)
-        },
-        |surface, states, parent_pos| {
-            if !include_root && surface.id() == root_id {
-                return;
-            }
-
-            let pos = *parent_pos + surface_location(states);
-
-            if let Some(surf) = SurfaceBufWithImage::get_from_surface(states) {
-                let extent = surf.image.extent_f32();
-                let scale = surf.scale.max(1) as f32;
-
-                out.push(RenderedSurface {
-                    surface: surface.clone(),
-                    surface_id: surface.id(),
-                    image: surf.image,
-                    pos: vec2(pos.x as f32, pos.y as f32),
-                    size: vec2(extent[0] / scale, extent[1] / scale),
-                });
-            }
-        },
-        |_, _, _| true,
-    );
-
-    out
-}
-
-fn collect_rendered_surface_tree(root: &WlSurface) -> Vec<RenderedSurface> {
-    collect_rendered_surface_tree_at(root, Point::<i32, Logical>::from((0, 0)), false)
-}
-
-fn surface_accepts_input(surface: &RenderedSurface, global_pos: Vec2) -> bool {
-    let local = global_pos - surface.pos;
-
-    if local.x < 0.0 || local.y < 0.0 || local.x >= surface.size.x || local.y >= surface.size.y {
-        return false;
-    }
-
-    with_states(&surface.surface, |states| {
-        let mut guard = states.cached_state.get::<SurfaceAttributes>();
-        let attrs = guard.current();
-
-        match attrs.input_region.as_ref() {
-            None => true,
-            Some(region) => {
-                let point =
-                    Point::<i32, Logical>::from((local.x.floor() as i32, local.y.floor() as i32));
-                region.contains(point)
-            }
-        }
-    })
-}
-
-fn surface_accepts_input_states(
-    states: &smithay::wayland::compositor::SurfaceData,
-    local: Vec2,
-) -> bool {
-    if local.x < 0.0 || local.y < 0.0 {
-        return false;
-    }
-
-    let mut guard = states.cached_state.get::<SurfaceAttributes>();
-    let attrs = guard.current();
-
-    let point = Point::<i32, Logical>::from((local.x.floor() as i32, local.y.floor() as i32));
-
-    // explicit input region wins, even if no render buffer
-    if let Some(region) = attrs.input_region.as_ref() {
-        return region.contains(point);
-    }
-
-    // fallback for normal rendered surfaces
-    if let Some(surf) = SurfaceBufWithImage::get_from_surface(states) {
-        let extent = surf.image.extent_f32();
-        let scale = surf.scale.max(1) as f32;
-
-        return local.x < extent[0] / scale && local.y < extent[1] / scale;
-    }
-
-    false
-}
-fn surface_tree_input_hit_test(
-    root: &WlSurface,
-    root_origin: Vec2,
-    global_pos: Vec2,
-    include_root: bool,
-) -> Option<(WlSurface, Vec2)> {
-    let mut hit = None;
-    let root_id = root.id();
-
-    with_surface_tree_upward(
-        root,
-        Point::<i32, Logical>::from((root_origin.x as i32, root_origin.y as i32)),
-        |_, states, parent_pos| {
-            let pos = *parent_pos + surface_location(states);
-            TraversalAction::DoChildren(pos)
-        },
-        |surface, states, parent_pos| {
-            if !include_root && surface.id() == root_id {
-                return;
-            }
-
-            let pos = *parent_pos + surface_location(states);
-            let surface_origin = vec2(pos.x as f32, pos.y as f32);
-            let local = global_pos - surface_origin;
-
-            if surface_accepts_input_states(states, local) {
-                // with_surface_tree_upward visits bottom-to-top, so later hits win
-                hit = Some((surface.clone(), surface_origin));
-            }
-        },
-        |_, _, _| true,
-    );
-
-    hit
 }
 
 fn overlay_scale_from_extent(size: [u32; 2]) -> (f32, f32) {
