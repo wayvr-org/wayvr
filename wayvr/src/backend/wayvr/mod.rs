@@ -794,19 +794,18 @@ impl WvrServerState {
                 input_capture::CapturedEvent::UngrabbedAll => {
                     self.manager.release_all_keys();
                     self.has_input_focus = false;
+                    self.wm.keyboard_focus = None;
                 }
-                input_capture::CapturedEvent::KeyCombo(key_combo) => {
-                    match key_combo {
-                        input_capture::KeyCombo::AltF4 => {
-                            if let Some(hover) = self.wm.mouse.as_mut() {
-                                let window_handle = hover.hover_window;
-                                self.close_window(window_handle);
-                            }
+                input_capture::CapturedEvent::KeyCombo { combo, pressed } => match combo {
+                    input_capture::KeyCombo::AltF4 if pressed => {
+                        if let Some(hover) = self.wm.mouse.as_mut() {
+                            let window_handle = hover.hover_window;
+                            self.close_window(window_handle);
                         }
-                        input_capture::KeyCombo::AltTab => self.alt_tab(),
-                        input_capture::KeyCombo::CtrlAltDel => { /* not exposed to us */ }
                     }
-                }
+                    input_capture::KeyCombo::AltTab => self.alt_tab(),
+                    _ => {}
+                },
             }
         }
 
@@ -903,7 +902,7 @@ impl WvrServerState {
         if !self.has_input_focus {
             return None;
         }
-        self.wm.mouse.as_ref().map(|x| x.hover_window)
+        self.wm.keyboard_focus.clone()
     }
 
     fn get_mouse_focus(

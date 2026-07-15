@@ -28,7 +28,7 @@ const IGNORE_PREFIX: &str = "WayVR";
 const WATCHDOG_TIMEOUT: Duration = Duration::from_millis(5000);
 const POLL_TIMEOUT_MS: i32 = 20;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum KeyCombo {
     AltF4,
     AltTab,
@@ -57,7 +57,10 @@ pub enum CapturedEvent {
         vertical_v120: i32,
     },
     UngrabbedAll,
-    KeyCombo(KeyCombo),
+    KeyCombo {
+        combo: KeyCombo,
+        pressed: bool,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -298,6 +301,7 @@ impl LibinputInterface for RestrictedInterface {
 #[derive(Default)]
 struct RuntimeDeviceState {
     pressed_keys: HashSet<u16>,
+    active_combos: HashSet<KeyCombo>,
     horizontal_v120_remainder: f64,
     vertical_v120_remainder: f64,
 }
@@ -528,19 +532,39 @@ fn process_libinput_event(
 
             if pressed {
                 state.pressed_keys.insert(code);
-
-                match check_key_combo(&state.pressed_keys) {
-                    Some(KeyCombo::CtrlAltDel) => {
-                        log::info!("Ctrl+Alt+Del pressed, ungrabbing all input devices");
-                        return ProcessResult::EmergencyUngrab;
-                    }
-                    Some(key_combo) if emit => {
-                        let _ = event_tx.send(CapturedEvent::KeyCombo(key_combo));
-                    }
-                    _ => {}
-                }
             } else {
                 state.pressed_keys.remove(&code);
+            }
+
+            if pressed && key_combo_is_pressed(KeyCombo::CtrlAltDel, &state.pressed_keys) {
+                log::info!("Ctrl+Alt+Del pressed, ungrabbing all input devices");
+                return ProcessResult::EmergencyUngrab;
+            }
+
+            // emit press/release whenever a combo's complete state changes.
+            for combo in [KeyCombo::AltF4, KeyCombo::AltTab] {
+                let combo_pressed = key_combo_is_pressed(combo, &state.pressed_keys);
+                let was_pressed = state.active_combos.contains(&combo);
+
+                if combo_pressed == was_pressed {
+                    continue;
+                }
+
+                if combo_pressed {
+                    state.active_combos.insert(combo);
+                } else {
+                    state.active_combos.remove(&combo);
+                }
+
+                if event_tx
+                    .send(CapturedEvent::KeyCombo {
+                        combo,
+                        pressed: combo_pressed,
+                    })
+                    .is_err()
+                {
+                    return ProcessResult::ReceiverGone;
+                }
             }
 
             if event_tx.send(CapturedEvent::Key { code, pressed }).is_err() {
@@ -729,6 +753,7 @@ fn force_emergency_ungrab(
 fn clear_transient_state(runtime_devices: &mut HashMap<LibinputDevice, RuntimeDeviceState>) {
     for state in runtime_devices.values_mut() {
         state.pressed_keys.clear();
+        state.active_combos.clear();
         state.horizontal_v120_remainder = 0.0;
         state.vertical_v120_remainder = 0.0;
     }
@@ -808,26 +833,18 @@ fn mouse_buttons() -> [KeyCode; 8] {
     ]
 }
 
-fn check_key_combo(pressed: &HashSet<u16>) -> Option<KeyCombo> {
+fn key_combo_is_pressed(combo: KeyCombo, pressed: &HashSet<u16>) -> bool {
     let alt =
         pressed.contains(&KeyCode::KEY_LEFTALT.0) || pressed.contains(&KeyCode::KEY_RIGHTALT.0);
 
     let ctrl =
         pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
 
-    if alt && pressed.contains(&KeyCode::KEY_F4.0) {
-        return Some(KeyCombo::AltF4);
+    match combo {
+        KeyCombo::AltF4 => alt && pressed.contains(&KeyCode::KEY_F4.0),
+        KeyCombo::AltTab => alt && pressed.contains(&KeyCode::KEY_TAB.0),
+        KeyCombo::CtrlAltDel => ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0),
     }
-
-    if alt && pressed.contains(&KeyCode::KEY_TAB.0) {
-        return Some(KeyCombo::AltTab);
-    }
-
-    if ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0) {
-        return Some(KeyCombo::CtrlAltDel);
-    }
-
-    None
 }
 
 fn io_errno(error: io::Error) -> i32 {
