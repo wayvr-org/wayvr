@@ -1,19 +1,34 @@
-use evdev::{AttributeSetRef, Device, EventType, KeyCode, RelativeAxisCode};
+use evdev::{AttributeSetRef, Device as EvdevDevice, KeyCode, RelativeAxisCode};
+use input::{
+    AccelProfile, Device as LibinputDevice, DeviceCapability, Libinput, LibinputInterface,
+    event::{
+        Event, EventTrait,
+        device::DeviceEvent,
+        keyboard::{KeyState, KeyboardEvent, KeyboardEventTrait},
+        pointer::{Axis, ButtonState, PointerEvent, PointerScrollEvent},
+    },
+};
 use std::{
-    collections::HashSet,
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    fs::OpenOptions,
     io,
-    os::fd::AsRawFd,
+    os::{
+        fd::{AsRawFd, OwnedFd, RawFd},
+        unix::fs::OpenOptionsExt,
+    },
     path::{Path, PathBuf},
-    sync::mpsc::{self, Receiver, SyncSender, TryRecvError},
+    rc::Rc,
+    sync::mpsc::{self, Receiver, Sender, SyncSender, TryRecvError},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
 
 pub const IGNORE_PREFIX: &str = "WayVR";
 
+const SEAT_NAME: &str = "seat0";
 const WATCHDOG_TIMEOUT: Duration = Duration::from_millis(5000);
 const POLL_TIMEOUT_MS: i32 = 20;
-const SYN_REPORT_CODE: u16 = 0;
 
 #[derive(Debug, Clone)]
 pub enum CapturedEvent {
@@ -36,6 +51,36 @@ pub enum CapturedEvent {
     UngrabbedAll,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PointerAccelProfile {
+    Adaptive,
+    Flat,
+}
+
+impl PointerAccelProfile {
+    fn to_libinput(self) -> AccelProfile {
+        match self {
+            Self::Adaptive => AccelProfile::Adaptive,
+            Self::Flat => AccelProfile::Flat,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PointerAccelConfig {
+    profile: PointerAccelProfile,
+    speed: f64,
+}
+
+impl Default for PointerAccelConfig {
+    fn default() -> Self {
+        Self {
+            profile: PointerAccelProfile::Adaptive,
+            speed: 0.0,
+        }
+    }
+}
+
 pub struct InputCapture {
     command_tx: SyncSender<Command>,
     event_rx: Receiver<CapturedEvent>,
@@ -45,17 +90,31 @@ pub struct InputCapture {
 impl InputCapture {
     pub fn new() -> io::Result<Self> {
         let (command_tx, command_rx) = mpsc::sync_channel(8);
-        let (event_tx, event_rx) = mpsc::sync_channel(64);
+        let (event_tx, event_rx) = mpsc::channel();
+        let (init_tx, init_rx) = mpsc::sync_channel(1);
 
         let worker = thread::Builder::new()
             .name("wayvr-input-capture".into())
-            .spawn(move || worker_main(command_rx, event_tx))?;
+            .spawn(move || worker_main(command_rx, event_tx, init_tx))?;
 
-        Ok(Self {
-            command_tx,
-            event_rx,
-            worker: Some(worker),
-        })
+        match init_rx.recv() {
+            Ok(Ok(())) => Ok(Self {
+                command_tx,
+                event_rx,
+                worker: Some(worker),
+            }),
+            Ok(Err(error)) => {
+                let _ = worker.join();
+                Err(error)
+            }
+            Err(error) => {
+                let _ = worker.join();
+                Err(io::Error::new(
+                    io::ErrorKind::BrokenPipe,
+                    format!("input worker exited during initialization: {error}"),
+                ))
+            }
+        }
     }
 
     /// Returns every currently queued event without blocking.
@@ -67,9 +126,36 @@ impl InputCapture {
     /// Exclusively grabs every currently detected keyboard and mouse.
     /// Newly connected matching devices are grabbed automatically.
     pub fn set_grabbed(&self, grabbed: bool) -> anyhow::Result<()> {
-        if let Err(e) = self.command_tx.send(Command::SetGrabbed { grabbed }) {
-            anyhow::bail!("Worker thread unreachable: {e:?}");
+        let (response_tx, response_rx) = mpsc::sync_channel(1);
+
+        self.command_tx
+            .send(Command::SetGrabbed {
+                grabbed,
+                response_tx,
+            })
+            .map_err(|error| anyhow::anyhow!("worker thread unreachable: {error}"))?;
+
+        response_rx
+            .recv()
+            .map_err(|error| anyhow::anyhow!("worker thread unreachable: {error}"))??;
+
+        Ok(())
+    }
+
+    /// Set acceleration profile for current and future mice
+    pub fn set_pointer_accel(
+        &self,
+        profile: PointerAccelProfile,
+        speed: f64,
+    ) -> anyhow::Result<()> {
+        if !speed.is_finite() || !(-1.0..=1.0).contains(&speed) {
+            anyhow::bail!("pointer acceleration speed must be within -1.0..=1.0");
         }
+
+        self.command_tx
+            .send(Command::SetPointerAccel { profile, speed })
+            .map_err(|error| anyhow::anyhow!("worker thread unreachable: {error}"))?;
+
         Ok(())
     }
 }
@@ -85,201 +171,593 @@ impl Drop for InputCapture {
 
 enum Command {
     ResetWatchdog,
-    SetGrabbed { grabbed: bool },
+    SetGrabbed {
+        grabbed: bool,
+        response_tx: SyncSender<io::Result<()>>,
+    },
+    SetPointerAccel {
+        profile: PointerAccelProfile,
+        speed: f64,
+    },
     Shutdown,
 }
 
-struct OpenDevice {
+struct RestrictedDevice {
     path: PathBuf,
-    device: Device,
-    is_keyboard: bool,
-    is_mouse: bool,
-    pending: Vec<PendingEvent>,
-    pressed_keys: HashSet<u16>,
+    device: EvdevDevice,
 }
 
-#[derive(Debug)]
-enum PendingEvent {
-    Key {
-        code: u16,
-        pressed: bool,
-    },
-    Button {
-        button: u32,
-        pressed: bool,
-    },
-    Motion {
-        dx: i32,
-        dy: i32,
-    },
-    Axis {
-        horizontal: i32,
-        vertical: i32,
-        horizontal_hi_res: i32,
-        vertical_hi_res: i32,
-    },
+#[derive(Default)]
+struct RestrictedState {
+    desired_grabbed: bool,
+    devices: HashMap<RawFd, RestrictedDevice>,
 }
 
-fn worker_main(command_rx: Receiver<Command>, event_tx: SyncSender<CapturedEvent>) {
-    let mut devices = Vec::<OpenDevice>::new();
-    let mut grabbed = false;
-    let mut emergency_ungrab = false;
+impl RestrictedState {
+    fn set_grabbed(&mut self, grabbed: bool) -> io::Result<()> {
+        if grabbed {
+            let fds = self.devices.keys().copied().collect::<Vec<_>>();
+            let mut grabbed_now = Vec::new();
 
-    let mut want_rescan = true;
-    let mut watchdog = Instant::now(); // in case wayvr main thread gets blocked
-
-    'worker: loop {
-        if Instant::now() >= watchdog && grabbed {
-            log::warn!("Watchdog timed out, ungrabbing all input devices.");
-            emergency_ungrab = true;
-        } else if want_rescan {
-            scan_for_devices(&mut devices, grabbed);
-            want_rescan = false;
-        }
-
-        loop {
-            match command_rx.try_recv() {
-                Ok(Command::SetGrabbed { grabbed: requested }) => {
-                    let result = if requested {
-                        grab_existing_devices(&mut devices)
-                    } else {
-                        ungrab_existing_devices(&mut devices)
+            for fd in fds {
+                let newly_grabbed = {
+                    let Some(entry) = self.devices.get_mut(&fd) else {
+                        continue;
                     };
+                    if entry.device.is_grabbed() {
+                        Ok(false)
+                    } else {
+                        entry
+                            .device
+                            .grab()
+                            .map(|()| true)
+                            .map_err(|error| with_device_context("grab", &entry.path, error))
+                    }
+                };
 
-                    grabbed = requested && result.is_ok();
-                    watchdog = Instant::now() + WATCHDOG_TIMEOUT;
-
-                    for entry in &mut devices {
-                        entry.pending.clear();
-                        entry.pressed_keys.clear();
-                        discard_available_events(&mut entry.device);
+                match newly_grabbed {
+                    Ok(true) => grabbed_now.push(fd),
+                    Ok(false) => {}
+                    Err(error) => {
+                        for previous_fd in grabbed_now {
+                            if let Some(previous) = self.devices.get_mut(&previous_fd) {
+                                let _ = previous.device.ungrab();
+                            }
+                        }
+                        self.desired_grabbed = false;
+                        return Err(error);
                     }
                 }
-                Ok(Command::ResetWatchdog) => watchdog = Instant::now() + WATCHDOG_TIMEOUT,
+            }
+
+            self.desired_grabbed = true;
+            return Ok(());
+        }
+
+        // devices opened during a later resume shall not be grabbed
+        self.desired_grabbed = false;
+        let mut first_error = None;
+
+        for entry in self.devices.values_mut() {
+            if !entry.device.is_grabbed() {
+                continue;
+            }
+
+            if let Err(error) = entry.device.ungrab()
+                && first_error.is_none()
+            {
+                first_error = Some(with_device_context("ungrab", &entry.path, error));
+            }
+        }
+
+        match first_error {
+            Some(error) => Err(error),
+            None => Ok(()),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct RestrictedInterface {
+    state: Rc<RefCell<RestrictedState>>,
+}
+
+impl LibinputInterface for RestrictedInterface {
+    fn open_restricted(&mut self, path: &Path, flags: i32) -> Result<OwnedFd, i32> {
+        let access = flags & libc::O_ACCMODE;
+        let file = OpenOptions::new()
+            .custom_flags(flags)
+            .read(access == libc::O_RDONLY || access == libc::O_RDWR)
+            .write(access == libc::O_WRONLY || access == libc::O_RDWR)
+            .open(path)
+            .map_err(io_errno)?;
+
+        // duplicate fd used for capability inspection and EVIOCGRAB
+        let control_file = file.try_clone().map_err(io_errno)?;
+        let control_fd: OwnedFd = control_file.into();
+        let mut device = EvdevDevice::from_fd(control_fd).map_err(io_errno)?;
+
+        if !should_capture_device(&device) {
+            return Err(libc::ENODEV);
+        }
+
+        let raw_fd = file.as_raw_fd();
+        let mut state = self.state.borrow_mut();
+
+        if state.desired_grabbed {
+            device.grab().map_err(io_errno)?;
+        }
+
+        state.devices.insert(
+            raw_fd,
+            RestrictedDevice {
+                path: path.to_owned(),
+                device,
+            },
+        );
+
+        Ok(file.into())
+    }
+
+    fn close_restricted(&mut self, fd: OwnedFd) {
+        self.state.borrow_mut().devices.remove(&fd.as_raw_fd());
+        drop(fd);
+    }
+}
+
+#[derive(Default)]
+struct RuntimeDeviceState {
+    pressed_keys: HashSet<u16>,
+    horizontal_v120_remainder: f64,
+    vertical_v120_remainder: f64,
+}
+
+enum ProcessResult {
+    Continue,
+    EmergencyUngrab,
+    ReceiverGone,
+}
+
+fn worker_main(
+    command_rx: Receiver<Command>,
+    event_tx: Sender<CapturedEvent>,
+    init_tx: SyncSender<io::Result<()>>,
+) {
+    let restricted_state = Rc::new(RefCell::new(RestrictedState::default()));
+    let interface = RestrictedInterface {
+        state: restricted_state.clone(),
+    };
+
+    let mut libinput = Libinput::new_with_udev(interface);
+    if libinput.udev_assign_seat(SEAT_NAME).is_err() {
+        let _ = init_tx.send(Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("failed to assign libinput seat {SEAT_NAME:?}"),
+        )));
+        return;
+    }
+
+    if init_tx.send(Ok(())).is_err() {
+        return;
+    }
+
+    let mut grabbed = false;
+    let mut watchdog = Instant::now() + WATCHDOG_TIMEOUT;
+    let mut emergency_ungrab = false;
+    let mut pointer_accel = PointerAccelConfig::default();
+    let mut runtime_devices = HashMap::<LibinputDevice, RuntimeDeviceState>::new();
+    let mut pointer_devices = HashSet::<LibinputDevice>::new();
+
+    'worker: loop {
+        loop {
+            match command_rx.try_recv() {
+                Ok(Command::SetGrabbed {
+                    grabbed: requested,
+                    response_tx,
+                }) => {
+                    let result = if requested {
+                        match restricted_state.borrow_mut().set_grabbed(true) {
+                            Ok(()) => {
+                                grabbed = true;
+                                Ok(())
+                            }
+                            Err(error) => {
+                                grabbed = false;
+                                Err(error)
+                            }
+                        }
+                    } else {
+                        let ungrab_result = restricted_state.borrow_mut().set_grabbed(false);
+                        grabbed = false;
+
+                        match ungrab_result {
+                            Ok(()) => Ok(()),
+                            Err(error) => {
+                                log::warn!(
+                                    "Could not cleanly ungrab every input device: {error}. Reopening libinput devices."
+                                );
+                                force_reopen_ungrabbed(
+                                    &mut libinput,
+                                    &restricted_state,
+                                    &mut runtime_devices,
+                                    &mut pointer_devices,
+                                    pointer_accel,
+                                    &event_tx,
+                                )
+                            }
+                        }
+                    };
+
+                    watchdog = Instant::now() + WATCHDOG_TIMEOUT;
+                    clear_transient_state(&mut runtime_devices);
+                    drain_pending_libinput_events(
+                        &mut libinput,
+                        &mut runtime_devices,
+                        &mut pointer_devices,
+                        pointer_accel,
+                        &event_tx,
+                    );
+
+                    let _ = response_tx.send(result);
+                }
+                Ok(Command::SetPointerAccel { profile, speed }) => {
+                    pointer_accel = PointerAccelConfig { profile, speed };
+                    for mut device in pointer_devices.iter().cloned() {
+                        apply_pointer_accel(&mut device, pointer_accel);
+                    }
+                }
+                Ok(Command::ResetWatchdog) => {
+                    watchdog = Instant::now() + WATCHDOG_TIMEOUT;
+                }
                 Ok(Command::Shutdown) => break 'worker,
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => break 'worker,
             }
         }
 
-        let mut poll_fds: Vec<libc::pollfd> = devices
-            .iter()
-            .map(|entry| libc::pollfd {
-                fd: entry.device.as_raw_fd(),
-                events: libc::POLLIN,
-                revents: 0,
-            })
-            .collect();
+        if grabbed && Instant::now() >= watchdog {
+            log::warn!("Watchdog timed out, ungrabbing all input devices.");
+            emergency_ungrab = true;
+        }
 
-        // SAFETY: poll_fds is a valid contiguous array for the duration of the call.
-        let poll_result = unsafe {
-            libc::poll(
-                poll_fds.as_mut_ptr(),
-                poll_fds.len() as libc::nfds_t,
-                POLL_TIMEOUT_MS,
-            )
+        if emergency_ungrab {
+            force_emergency_ungrab(
+                &mut libinput,
+                &restricted_state,
+                &mut runtime_devices,
+                &mut pointer_devices,
+                pointer_accel,
+                &event_tx,
+            );
+            grabbed = false;
+            emergency_ungrab = false;
+
+            if event_tx.send(CapturedEvent::UngrabbedAll).is_err() {
+                break 'worker;
+            }
+            continue;
+        }
+
+        let mut poll_fd = libc::pollfd {
+            fd: libinput.as_raw_fd(),
+            events: libc::POLLIN,
+            revents: 0,
         };
+
+        // SAFETY: poll_fd is valid for the duration of this call
+        let poll_result = unsafe { libc::poll(&mut poll_fd, 1, POLL_TIMEOUT_MS) };
 
         if poll_result < 0 {
             let error = io::Error::last_os_error();
             if error.kind() != io::ErrorKind::Interrupted {
+                log::warn!("libinput poll failed: {error}");
                 thread::sleep(Duration::from_millis(20));
             }
             continue;
         }
 
-        let mut dead = vec![false; devices.len()];
+        if poll_result == 0 {
+            continue;
+        }
 
-        for (index, poll_fd) in poll_fds.iter().enumerate() {
-            if poll_fd.revents & (libc::POLLERR | libc::POLLHUP | libc::POLLNVAL) != 0 {
-                dead[index] = true;
-                continue;
+        if poll_fd.revents & (libc::POLLERR | libc::POLLHUP | libc::POLLNVAL) != 0 {
+            log::error!("libinput poll fd became invalid; input worker is exiting");
+            break 'worker;
+        }
+
+        if poll_fd.revents & libc::POLLIN == 0 {
+            continue;
+        }
+
+        if let Err(error) = libinput.dispatch() {
+            if error.kind() != io::ErrorKind::WouldBlock {
+                log::warn!("libinput dispatch failed: {error}");
             }
+            continue;
+        }
 
-            if poll_fd.revents & libc::POLLIN == 0 {
-                continue;
-            }
-
-            match read_device_events(&mut devices[index], grabbed, &event_tx) {
-                ReadResult::Continue => {}
-                ReadResult::DeviceGone => dead[index] = true,
-                ReadResult::EmergencyUngrab => {
+        for event in &mut libinput {
+            match process_libinput_event(
+                event,
+                grabbed,
+                &event_tx,
+                &mut runtime_devices,
+                &mut pointer_devices,
+                pointer_accel,
+            ) {
+                ProcessResult::Continue => {}
+                ProcessResult::EmergencyUngrab => {
                     emergency_ungrab = true;
                     break;
                 }
-                ReadResult::ReceiverGone => break 'worker,
+                ProcessResult::ReceiverGone => break 'worker,
             }
         }
 
         if emergency_ungrab {
-            // dropping the descriptors forcibly releases EVIOCGRAB
-            devices.clear();
-
+            force_emergency_ungrab(
+                &mut libinput,
+                &restricted_state,
+                &mut runtime_devices,
+                &mut pointer_devices,
+                pointer_accel,
+                &event_tx,
+            );
             grabbed = false;
             emergency_ungrab = false;
 
-            // rediscover the devices immediately, but leave them ungrabbed
-            want_rescan = true;
-
-            let e = event_tx.send(CapturedEvent::UngrabbedAll); // send this synchronously
-            if e.is_err() {
+            if event_tx.send(CapturedEvent::UngrabbedAll).is_err() {
                 break 'worker;
-            }
-
-            continue;
-        }
-
-        for index in (0..dead.len()).rev() {
-            if dead[index] {
-                devices.swap_remove(index);
             }
         }
     }
 }
 
-fn scan_for_devices(devices: &mut Vec<OpenDevice>, grabbed: bool) {
-    let known_paths: HashSet<PathBuf> = devices.iter().map(|entry| entry.path.clone()).collect();
-
-    for (path, mut device) in evdev::enumerate() {
-        if known_paths.contains(&path) {
-            continue;
+fn process_libinput_event(
+    event: Event,
+    emit: bool,
+    event_tx: &Sender<CapturedEvent>,
+    runtime_devices: &mut HashMap<LibinputDevice, RuntimeDeviceState>,
+    pointer_devices: &mut HashSet<LibinputDevice>,
+    pointer_accel: PointerAccelConfig,
+) -> ProcessResult {
+    match event {
+        Event::Device(event) => {
+            handle_device_event(event, runtime_devices, pointer_devices, pointer_accel);
         }
+        Event::Keyboard(KeyboardEvent::Key(event)) if emit => {
+            let code_u32 = event.key();
+            let Ok(code) = u16::try_from(code_u32) else {
+                log::warn!("Ignoring out-of-range Linux key code {code_u32}");
+                return ProcessResult::Continue;
+            };
 
-        if device
-            .name()
-            .is_some_and(|name| name.starts_with(IGNORE_PREFIX))
-        {
-            continue;
+            let pressed = event.key_state() == KeyState::Pressed;
+            let device = event.device();
+            let state = runtime_devices.entry(device).or_default();
+
+            if pressed {
+                state.pressed_keys.insert(code);
+                if emergency_chord_active(&state.pressed_keys) {
+                    log::info!("Ctrl+Alt+Del pressed, ungrabbing all input devices");
+                    return ProcessResult::EmergencyUngrab;
+                }
+            } else {
+                state.pressed_keys.remove(&code);
+            }
+
+            if event_tx.send(CapturedEvent::Key { code, pressed }).is_err() {
+                return ProcessResult::ReceiverGone;
+            }
         }
-
-        let Some(keys) = device.supported_keys() else {
-            continue;
-        };
-
-        let is_keyboard = looks_like_keyboard(keys);
-        let is_mouse = looks_like_mouse(&device, keys);
-        if !is_keyboard && !is_mouse {
-            continue;
+        Event::Pointer(PointerEvent::Motion(event)) if emit => {
+            let dx = event.dx();
+            let dy = event.dy();
+            if (dx != 0.0 || dy != 0.0)
+                && event_tx
+                    .send(CapturedEvent::PointerMotion { dx, dy })
+                    .is_err()
+            {
+                return ProcessResult::ReceiverGone;
+            }
         }
-
-        if device.set_nonblocking(true).is_err() {
-            continue;
+        Event::Pointer(PointerEvent::Button(event)) if emit => {
+            let pressed = event.button_state() == ButtonState::Pressed;
+            if event_tx
+                .send(CapturedEvent::PointerButton {
+                    button: event.button(),
+                    pressed,
+                })
+                .is_err()
+            {
+                return ProcessResult::ReceiverGone;
+            }
         }
+        Event::Pointer(PointerEvent::ScrollWheel(event)) if emit => {
+            let horizontal = if event.has_axis(Axis::Horizontal) {
+                event.scroll_value_v120(Axis::Horizontal)
+            } else {
+                0.0
+            };
+            let vertical = if event.has_axis(Axis::Vertical) {
+                event.scroll_value_v120(Axis::Vertical)
+            } else {
+                0.0
+            };
 
-        if grabbed && device.grab().is_err() {
-            continue;
+            let state = runtime_devices.entry(event.device()).or_default();
+            let horizontal_v120 = accumulate_v120(&mut state.horizontal_v120_remainder, horizontal);
+            let vertical_v120 = accumulate_v120(&mut state.vertical_v120_remainder, vertical);
+
+            // libinput already provides correct values unlike REL_WHEEL
+            if (horizontal_v120 != 0 || vertical_v120 != 0)
+                && event_tx
+                    .send(CapturedEvent::PointerAxis {
+                        horizontal_v120,
+                        vertical_v120,
+                    })
+                    .is_err()
+            {
+                return ProcessResult::ReceiverGone;
+            }
         }
-
-        discard_available_events(&mut device);
-        devices.push(OpenDevice {
-            path,
-            device,
-            is_keyboard,
-            is_mouse,
-            pending: Vec::new(),
-            pressed_keys: HashSet::with_capacity(8),
-        });
+        _ => {
+            // intentionally ignore absolute pointer, finger-scroll,
+            // continuous-scroll, touch, tablet and gesture events
+        }
     }
+
+    ProcessResult::Continue
+}
+
+fn handle_device_event(
+    event: DeviceEvent,
+    runtime_devices: &mut HashMap<LibinputDevice, RuntimeDeviceState>,
+    pointer_devices: &mut HashSet<LibinputDevice>,
+    pointer_accel: PointerAccelConfig,
+) {
+    match event {
+        DeviceEvent::Added(event) => {
+            let mut device = event.device();
+            runtime_devices.entry(device.clone()).or_default();
+
+            if device.has_capability(DeviceCapability::Pointer) {
+                apply_pointer_accel(&mut device, pointer_accel);
+                pointer_devices.insert(device);
+            }
+        }
+        DeviceEvent::Removed(event) => {
+            let device = event.device();
+            runtime_devices.remove(&device);
+            pointer_devices.remove(&device);
+        }
+        _ => {}
+    }
+}
+
+fn apply_pointer_accel(device: &mut LibinputDevice, config: PointerAccelConfig) {
+    if !device.config_accel_is_available() {
+        return;
+    }
+
+    let profile = config.profile.to_libinput();
+    if device.config_accel_profiles().contains(&profile) {
+        let _ = device.config_accel_set_profile(profile);
+    }
+    let _ = device.config_accel_set_speed(config.speed);
+}
+
+fn drain_pending_libinput_events(
+    libinput: &mut Libinput,
+    runtime_devices: &mut HashMap<LibinputDevice, RuntimeDeviceState>,
+    pointer_devices: &mut HashSet<LibinputDevice>,
+    pointer_accel: PointerAccelConfig,
+    event_tx: &Sender<CapturedEvent>,
+) {
+    let _ = libinput.dispatch();
+    for event in libinput {
+        let _ = process_libinput_event(
+            event,
+            false,
+            event_tx,
+            runtime_devices,
+            pointer_devices,
+            pointer_accel,
+        );
+    }
+}
+
+fn force_reopen_ungrabbed(
+    libinput: &mut Libinput,
+    restricted_state: &Rc<RefCell<RestrictedState>>,
+    runtime_devices: &mut HashMap<LibinputDevice, RuntimeDeviceState>,
+    pointer_devices: &mut HashSet<LibinputDevice>,
+    pointer_accel: PointerAccelConfig,
+    event_tx: &Sender<CapturedEvent>,
+) -> io::Result<()> {
+    restricted_state.borrow_mut().desired_grabbed = false;
+
+    // closing the libinput-owned descriptors forcibly releases EVIOCGRAB
+    libinput.suspend();
+    restricted_state.borrow_mut().devices.clear();
+    runtime_devices.clear();
+    pointer_devices.clear();
+
+    libinput
+        .resume()
+        .map_err(|()| io::Error::new(io::ErrorKind::Other, "failed to resume libinput context"))?;
+
+    drain_pending_libinput_events(
+        libinput,
+        runtime_devices,
+        pointer_devices,
+        pointer_accel,
+        event_tx,
+    );
+    Ok(())
+}
+
+fn force_emergency_ungrab(
+    libinput: &mut Libinput,
+    restricted_state: &Rc<RefCell<RestrictedState>>,
+    runtime_devices: &mut HashMap<LibinputDevice, RuntimeDeviceState>,
+    pointer_devices: &mut HashSet<LibinputDevice>,
+    pointer_accel: PointerAccelConfig,
+    event_tx: &Sender<CapturedEvent>,
+) {
+    if let Err(error) = force_reopen_ungrabbed(
+        libinput,
+        restricted_state,
+        runtime_devices,
+        pointer_devices,
+        pointer_accel,
+        event_tx,
+    ) {
+        // ungrab has succeded, just not the resume
+        log::error!("Could not resume libinput after emergency ungrab: {error}");
+    }
+}
+
+fn clear_transient_state(runtime_devices: &mut HashMap<LibinputDevice, RuntimeDeviceState>) {
+    for state in runtime_devices.values_mut() {
+        state.pressed_keys.clear();
+        state.horizontal_v120_remainder = 0.0;
+        state.vertical_v120_remainder = 0.0;
+    }
+}
+
+fn accumulate_v120(remainder: &mut f64, value: f64) -> i32 {
+    if !value.is_finite() {
+        return 0;
+    }
+
+    let total = *remainder + value;
+    let integer = total.trunc();
+    let clamped = integer.clamp(i32::MIN as f64, i32::MAX as f64);
+    let result = clamped as i32;
+
+    *remainder = if integer == clamped {
+        total - integer
+    } else {
+        0.0
+    };
+
+    result
+}
+
+fn should_capture_device(device: &EvdevDevice) -> bool {
+    if device
+        .name()
+        .is_some_and(|name| name.starts_with(IGNORE_PREFIX))
+    {
+        return false;
+    }
+
+    let Some(keys) = device.supported_keys() else {
+        return false;
+    };
+
+    looks_like_keyboard(keys) || looks_like_mouse(device, keys)
 }
 
 fn looks_like_keyboard(keys: &AttributeSetRef<KeyCode>) -> bool {
@@ -297,7 +775,7 @@ fn looks_like_keyboard(keys: &AttributeSetRef<KeyCode>) -> bool {
     full_keyboard || numeric_keypad
 }
 
-fn looks_like_mouse(device: &Device, keys: &AttributeSetRef<KeyCode>) -> bool {
+fn looks_like_mouse(device: &EvdevDevice, keys: &AttributeSetRef<KeyCode>) -> bool {
     let Some(relative_axes) = device.supported_relative_axes() else {
         return false;
     };
@@ -322,277 +800,6 @@ fn mouse_buttons() -> [KeyCode; 8] {
     ]
 }
 
-fn grab_existing_devices(devices: &mut [OpenDevice]) -> io::Result<()> {
-    let mut grabbed_now = Vec::new();
-
-    for index in 0..devices.len() {
-        if devices[index].device.is_grabbed() {
-            continue;
-        }
-
-        if let Err(error) = devices[index].device.grab() {
-            let error = with_device_context("grab", &devices[index].path, error);
-            for previous in grabbed_now {
-                let dev: &mut OpenDevice = &mut devices[previous];
-                let _ = dev.device.ungrab();
-            }
-            return Err(error);
-        }
-
-        grabbed_now.push(index);
-    }
-
-    Ok(())
-}
-
-fn ungrab_existing_devices(devices: &mut [OpenDevice]) -> io::Result<()> {
-    let mut first_error = None;
-
-    for entry in devices {
-        if !entry.device.is_grabbed() {
-            continue;
-        }
-
-        if let Err(error) = entry.device.ungrab() {
-            if first_error.is_none() {
-                first_error = Some(with_device_context("ungrab", &entry.path, error));
-            }
-        }
-    }
-
-    match first_error {
-        Some(error) => Err(error),
-        None => Ok(()),
-    }
-}
-
-fn discard_available_events(device: &mut Device) {
-    loop {
-        match device.fetch_events() {
-            Ok(events) => {
-                if events.count() == 0 {
-                    break;
-                }
-            }
-            Err(error) if error.kind() == io::ErrorKind::WouldBlock => break,
-            Err(_) => break,
-        }
-    }
-}
-
-enum ReadResult {
-    Continue,
-    DeviceGone,
-    EmergencyUngrab,
-    ReceiverGone,
-}
-
-fn read_device_events(
-    entry: &mut OpenDevice,
-    emit: bool,
-    event_tx: &SyncSender<CapturedEvent>,
-) -> ReadResult {
-    loop {
-        let events = match entry.device.fetch_events() {
-            Ok(events) => events.collect::<Vec<_>>(),
-            Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
-                return ReadResult::Continue;
-            }
-            Err(_) => return ReadResult::DeviceGone,
-        };
-
-        if events.is_empty() {
-            return ReadResult::Continue;
-        }
-
-        if !emit {
-            entry.pending.clear();
-            continue;
-        }
-
-        for event in events {
-            if event.event_type() == EventType::KEY {
-                match event.value() {
-                    0 | 1 => {
-                        let code = event.code();
-                        let pressed = event.value() == 1;
-
-                        if entry.is_mouse && is_mouse_button(code) {
-                            entry.pending.push(PendingEvent::Button {
-                                button: u32::from(code),
-                                pressed,
-                            });
-                        } else if entry.is_keyboard {
-                            entry.pending.push(PendingEvent::Key { code, pressed });
-
-                            if !is_mouse_button(code) {
-                                if pressed {
-                                    entry.pressed_keys.insert(code);
-                                    if emergency_chord_active(&entry.pressed_keys) {
-                                        // do not forward delete or any pending events to wayvr
-                                        entry.pending.clear();
-                                        log::info!(
-                                            "Ctrl+Alt+Del pressed, ungrabbing all input devices"
-                                        );
-                                        return ReadResult::EmergencyUngrab;
-                                    }
-                                } else {
-                                    entry.pressed_keys.remove(&code);
-                                }
-                            }
-                        }
-                    }
-                    2 => {
-                        // kernel autorepeat. smithay/xkb performs repeat itself
-                    }
-                    _ => {}
-                }
-            } else if event.event_type() == EventType::RELATIVE && entry.is_mouse {
-                push_relative_event(entry, event.code(), event.value());
-            } else if event.event_type() == EventType::SYNCHRONIZATION
-                && event.code() == SYN_REPORT_CODE
-                && !flush_pending(entry, event_tx)
-            {
-                return ReadResult::ReceiverGone;
-            }
-        }
-    }
-}
-
-fn push_relative_event(entry: &mut OpenDevice, code: u16, value: i32) {
-    if code == RelativeAxisCode::REL_X.0 || code == RelativeAxisCode::REL_Y.0 {
-        let (dx, dy) = if code == RelativeAxisCode::REL_X.0 {
-            (value, 0)
-        } else {
-            (0, value)
-        };
-
-        if let Some(PendingEvent::Motion {
-            dx: pending_dx,
-            dy: pending_dy,
-            ..
-        }) = entry.pending.last_mut()
-        {
-            *pending_dx = pending_dx.saturating_add(dx);
-            *pending_dy = pending_dy.saturating_add(dy);
-        } else {
-            entry.pending.push(PendingEvent::Motion { dx, dy });
-        }
-        return;
-    }
-
-    let axis_field = if code == RelativeAxisCode::REL_WHEEL.0 {
-        AxisField::Vertical
-    } else if code == RelativeAxisCode::REL_HWHEEL.0 {
-        AxisField::Horizontal
-    } else if code == RelativeAxisCode::REL_WHEEL_HI_RES.0 {
-        AxisField::VerticalHiRes
-    } else if code == RelativeAxisCode::REL_HWHEEL_HI_RES.0 {
-        AxisField::HorizontalHiRes
-    } else {
-        return;
-    };
-
-    if !matches!(entry.pending.last(), Some(PendingEvent::Axis { .. })) {
-        entry.pending.push(PendingEvent::Axis {
-            horizontal: 0,
-            vertical: 0,
-            horizontal_hi_res: 0,
-            vertical_hi_res: 0,
-        });
-    }
-
-    let Some(PendingEvent::Axis {
-        horizontal,
-        vertical,
-        horizontal_hi_res,
-        vertical_hi_res,
-        ..
-    }) = entry.pending.last_mut()
-    else {
-        unreachable!();
-    };
-
-    let target = match axis_field {
-        AxisField::Horizontal => horizontal,
-        AxisField::Vertical => vertical,
-        AxisField::HorizontalHiRes => horizontal_hi_res,
-        AxisField::VerticalHiRes => vertical_hi_res,
-    };
-    *target = target.saturating_add(value);
-}
-
-enum AxisField {
-    Horizontal,
-    Vertical,
-    HorizontalHiRes,
-    VerticalHiRes,
-}
-
-fn flush_pending(entry: &mut OpenDevice, event_tx: &SyncSender<CapturedEvent>) -> bool {
-    for pending in entry.pending.drain(..) {
-        let event = match pending {
-            PendingEvent::Key { code, pressed } => CapturedEvent::Key { code, pressed },
-            PendingEvent::Button { button, pressed } => {
-                CapturedEvent::PointerButton { button, pressed }
-            }
-            PendingEvent::Motion { dx, dy } => {
-                if dx == 0 && dy == 0 {
-                    continue;
-                }
-                CapturedEvent::PointerMotion {
-                    dx: f64::from(dx),
-                    dy: f64::from(dy),
-                }
-            }
-            PendingEvent::Axis {
-                horizontal,
-                vertical,
-                horizontal_hi_res,
-                vertical_hi_res,
-            } => {
-                let horizontal_v120 = if horizontal_hi_res != 0 {
-                    horizontal_hi_res
-                } else {
-                    horizontal.saturating_mul(120)
-                };
-                let vertical_v120_raw = if vertical_hi_res != 0 {
-                    vertical_hi_res
-                } else {
-                    vertical.saturating_mul(120)
-                };
-
-                if horizontal_v120 == 0 && vertical_v120_raw == 0 {
-                    continue;
-                }
-
-                CapturedEvent::PointerAxis {
-                    horizontal_v120,
-                    // REL_WHEEL is positive for wheel-up
-                    vertical_v120: vertical_v120_raw.saturating_neg(),
-                }
-            }
-        };
-
-        if event_tx.send(event).is_err() {
-            return false;
-        }
-    }
-
-    true
-}
-
-fn is_mouse_button(code: u16) -> bool {
-    mouse_buttons().into_iter().any(|button| button.0 == code)
-}
-
-fn with_device_context(action: &str, path: &Path, error: io::Error) -> io::Error {
-    io::Error::new(
-        error.kind(),
-        format!("failed to {action} {}: {error}", path.display()),
-    )
-}
-
 fn emergency_chord_active(pressed: &HashSet<u16>) -> bool {
     let ctrl =
         pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
@@ -601,4 +808,15 @@ fn emergency_chord_active(pressed: &HashSet<u16>) -> bool {
         pressed.contains(&KeyCode::KEY_LEFTALT.0) || pressed.contains(&KeyCode::KEY_RIGHTALT.0);
 
     ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0)
+}
+
+fn io_errno(error: io::Error) -> i32 {
+    error.raw_os_error().unwrap_or(libc::EIO)
+}
+
+fn with_device_context(action: &str, path: &Path, error: io::Error) -> io::Error {
+    io::Error::new(
+        error.kind(),
+        format!("failed to {action} {}: {error}", path.display()),
+    )
 }

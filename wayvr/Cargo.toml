@@ -33,6 +33,11 @@ dbus.workspace = true
 glam = { workspace = true, features = ["mint", "serde"] }
 idmap = { workspace = true, features = ["serde"] }
 idmap-derive.workspace = true
+input = {
+  version = "0.9.1",
+  default-features = false,
+  features = ["libinput_1_19", "udev"],
+}
 interprocess.workspace = true
 libc.workspace = true
 log.workspace = true
