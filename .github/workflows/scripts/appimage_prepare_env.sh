@@ -1,7 +1,11 @@
 #!/bin/sh
 
 sudo apt-get update
-sudo apt-get install -y fuse cmake pkg-config fontconfig libasound2-dev libxkbcommon-dev libxkbcommon-x11-0 libxkbcommon-x11-dev libopenxr-dev libfontconfig-dev libdbus-1-dev libpipewire-0.3-0 libpipewire-0.3-dev libspa-0.2-dev libx11-6 libxext6 libxrandr2 libx11-dev libxext-dev libxrandr-dev libopenvr-dev libopenvr-api1 libwayland-dev libegl-dev libxcb-glx0 libxcb-glx0-dev dav1d libdav1d-dev libvulkan-dev glslc vulkan-tools 
+sudo apt-get install -y fuse cmake pkg-config fontconfig libasound2-dev libxkbcommon-dev libxkbcommon-x11-0 libxkbcommon-x11-dev \
+  libopenxr-dev libfontconfig-dev libdbus-1-dev libpipewire-0.3-0 libpipewire-0.3-dev libspa-0.2-dev libx11-6 libxext6 libxrandr2 \
+  libx11-dev libxext-dev libxrandr-dev libopenvr-dev libopenvr-api1 libwayland-dev libegl-dev libxcb-glx0 libxcb-glx0-dev \
+  dav1d libdav1d-dev libvulkan-dev glslc vulkan-tools libudev-dev libudev1 libinput-dev libinput10
+
 rustup update
 
 if [ "$APPDIR" != "" ]; then
