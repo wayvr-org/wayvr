@@ -334,6 +334,10 @@ impl Connection {
         Ok(())
     }
 
+    fn handle_wvr_input_capture(params: &mut TickParams, grab: bool) {
+        params.wvr_server.set_input_focus(grab);
+    }
+
     fn handle_wlx_device_haptics(
         params: &mut TickParams,
         device: usize,
@@ -425,6 +429,9 @@ impl Connection {
             }
             PacketClient::WvrProcessTerminate(process_handle) => {
                 Self::handle_wvr_process_terminate(params, process_handle);
+            }
+            PacketClient::WvrInputCapture(grab) => {
+                Self::handle_wvr_input_capture(params, grab);
             }
             PacketClient::WlxDeviceHaptics(device, haptics_params) => {
                 Self::handle_wlx_device_haptics(params, device, haptics_params);

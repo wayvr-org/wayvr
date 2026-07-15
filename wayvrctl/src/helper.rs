@@ -135,6 +135,14 @@ pub async fn wvr_process_launch(
     )
 }
 
+pub async fn wlr_input_capture(state: &mut WayVRClientState, grab: bool) {
+    handle_empty_result(
+        WayVRClient::fn_wvr_input_capture(state.wayvr_client.clone(), grab)
+            .await
+            .context("failed to change input capture"),
+    )
+}
+
 pub async fn wlx_device_haptics(
     state: &mut WayVRClientState,
     device: usize,

@@ -460,6 +460,11 @@ impl WayVRClient {
 		Ok(())
 	}
 
+	pub async fn fn_wvr_input_capture(client: WayVRClientMutex, grab: bool) -> anyhow::Result<()> {
+		send_only!(client, &PacketClient::WvrInputCapture(grab));
+		Ok(())
+	}
+
 	pub async fn fn_wlx_modify_panel(
 		client: WayVRClientMutex,
 		params: packet_client::WlxModifyPanelParams,

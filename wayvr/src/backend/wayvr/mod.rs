@@ -803,7 +803,7 @@ impl WvrServerState {
                             self.close_window(window_handle);
                         }
                     }
-                    input_capture::KeyCombo::AltTab => self.alt_tab(),
+                    input_capture::KeyCombo::AltTab => self.alt_tab(pressed),
                     _ => {}
                 },
             }
@@ -852,7 +852,7 @@ impl WvrServerState {
         }
     }
 
-    fn alt_tab(&mut self) {
+    fn alt_tab(&mut self, pressed: bool) {
         let mut windows: Vec<_> = self.wm.windows.iter().collect();
         if windows.is_empty() {
             return;
