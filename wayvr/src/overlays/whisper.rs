@@ -29,7 +29,7 @@ use crate::{
     subsystem::{
         clipboard::{self, ClipboardProvider},
         hid::VirtualKey,
-        input::KeyboardFocus,
+        input::InputFocus,
         whisper_stt::WhisperStt,
     },
     windowing::{
@@ -51,14 +51,14 @@ impl WhisperState {
             return false;
         };
 
-        match app.hid_provider.keyboard_focus {
-            KeyboardFocus::WayVR => {
+        match app.hid_provider.get_input_focus() {
+            InputFocus::WayVR => {
                 if let Some(wvr) = app.wvr_server.as_mut() {
                     wvr.set_clipboard(text);
                     return true;
                 }
             }
-            KeyboardFocus::PhysicalScreen => {
+            InputFocus::PhysicalScreen => {
                 if let Some(clip) = self.clipboard_provider.as_mut() {
                     clip.set_clipboard_utf8(text);
                     return true;

@@ -51,7 +51,7 @@ use crate::{
     },
     overlays::screen::capture::ScreenPipeline,
     state::{self, AppState},
-    subsystem::{hid::WheelDelta, input::KeyboardFocus},
+    subsystem::{hid::WheelDelta, input::InputFocus},
     windowing::{
         OverlayID, OverlaySelector,
         backend::{
@@ -112,7 +112,7 @@ pub fn create_wl_window_overlay(
             ),
             ..OverlayWindowState::default()
         },
-        keyboard_focus: Some(KeyboardFocus::WayVR),
+        input_focus: Some(InputFocus::WayVR),
         category: OverlayCategory::WayVR,
         show_on_spawn: true,
         ..OverlayWindowConfig::from_backend(Box::new(WvrWindowBackend::new(

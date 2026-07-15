@@ -232,9 +232,24 @@ impl WayVRCompositor {
             Keycode::new(virtual_key),
             state,
             self.serial_counter.next_serial(),
-            0,
+            super::time::get_millis() as u32,
             |_, _, _| smithay::input::keyboard::FilterResult::Forward,
         );
+    }
+
+    pub fn release_all_keys(&mut self) {
+        let pressed = self.seat_keyboard.pressed_keys();
+
+        for keycode in pressed {
+            self.seat_keyboard.input::<(), _>(
+                &mut self.state,
+                keycode,
+                smithay::backend::input::KeyState::Released,
+                self.serial_counter.next_serial(),
+                super::time::get_millis() as u32,
+                |_, _, _| smithay::input::keyboard::FilterResult::Forward,
+            );
+        }
     }
 
     pub fn set_keymap(&mut self, keymap: &xkb::Keymap) -> anyhow::Result<()> {

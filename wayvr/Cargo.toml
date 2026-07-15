@@ -121,6 +121,7 @@ xkbcommon = {
 
 calloop = { version = "0.14.4", optional = true }
 calloop-wayland-source = { version = "0.4.1", optional = true }
+evdev = "0.13.2"
 
 [build-dependencies]
 regex.workspace = true

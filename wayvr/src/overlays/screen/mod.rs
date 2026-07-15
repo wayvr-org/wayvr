@@ -6,7 +6,7 @@ use wlx_common::windowing::{OverlayWindowState, Positioning};
 
 use crate::{
     state::{AppSession, AppState, ScreenMeta},
-    subsystem::input::KeyboardFocus,
+    subsystem::input::InputFocus,
     windowing::{
         backend::OverlayBackend,
         window::{OverlayCategory, OverlayWindowConfig},
@@ -56,7 +56,7 @@ fn create_screen_from_backend(
             ),
             ..OverlayWindowState::default()
         },
-        keyboard_focus: Some(KeyboardFocus::PhysicalScreen),
+        input_focus: Some(InputFocus::PhysicalScreen),
         ..OverlayWindowConfig::from_backend(backend)
     }
 }

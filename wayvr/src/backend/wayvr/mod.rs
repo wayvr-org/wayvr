@@ -2,9 +2,11 @@ pub mod client;
 mod comp;
 mod handle;
 mod image_importer;
+mod input_capture;
 pub mod process;
 mod time;
 pub mod window;
+
 use anyhow::Context;
 use comp::Application;
 use glam::Vec2;
@@ -52,7 +54,7 @@ use std::{
 use vulkano::image::view::ImageView;
 use wayland_protocols::xdg::shell::server::xdg_toplevel;
 use wayvr_ipc::{packet_client::PositionMode, packet_server};
-use wgui::gfx::WGfx;
+use wgui::{gfx::WGfx, log::LogErr};
 use wlx_capture::frame::Transform;
 use wlx_common::desktop_finder::DesktopFinder;
 use xkbcommon::xkb;
@@ -62,6 +64,7 @@ use crate::{
         task::{OverlayTask, SpawnPos, TaskContainer, TaskType, ToggleMode},
         wayvr::{
             image_importer::ImageImporter,
+            input_capture::InputCapture,
             process::{KillSignal, Process},
         },
     },
@@ -69,7 +72,10 @@ use crate::{
     ipc::{event_queue::SyncEventQueue, ipc_server, signal::WayVRSignal},
     overlays::wayvr::create_wl_window_overlay,
     state::AppState,
-    subsystem::hid::{MODS_TO_KEYS, WheelDelta},
+    subsystem::{
+        dbus::DbusConnector,
+        hid::{MODS_TO_KEYS, WheelDelta},
+    },
     windowing::{OverlayID, OverlaySelector},
 };
 
@@ -125,6 +131,9 @@ pub struct WvrServerState {
     window_to_overlay: HashMap<window::WindowHandle, OverlayID>,
     overlay_to_window: SecondaryMap<OverlayID, window::WindowHandle>,
     process_overlays: HashMap<process::ProcessHandle, Vec<OverlayID>>,
+    input_capture: Option<InputCapture>,
+    has_input_focus: bool,
+    grab_toast_sent: bool,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -246,6 +255,10 @@ impl WvrServerState {
 
         let dma_importer = ImageImporter::new(gfx);
 
+        let input_capture = InputCapture::new()
+            .log_err("Could not initialize evdev input capture")
+            .ok();
+
         let state = Application {
             output,
             image_importer: dma_importer,
@@ -281,6 +294,9 @@ impl WvrServerState {
             window_to_overlay: HashMap::new(),
             overlay_to_window: SecondaryMap::new(),
             process_overlays: HashMap::new(),
+            input_capture,
+            has_input_focus: false,
+            grab_toast_sent: false,
         })
     }
 
@@ -589,6 +605,8 @@ impl WvrServerState {
             wvr_server.manager.cleanup_handles();
         }
 
+        wvr_server.process_input_capture();
+
         wvr_server.ticks += 1;
 
         Ok(tasks)
@@ -659,6 +677,59 @@ impl WvrServerState {
 
     pub fn pointer_is_grabbed(&self) -> bool {
         self.manager.seat_pointer.is_grabbed()
+    }
+
+    pub fn process_input_capture(&mut self) {
+        if !self.has_input_focus {
+            return;
+        }
+        let Some(input_capture) = self.input_capture.as_mut() else {
+            return;
+        };
+
+        #[allow(unused_variables)] //TODO: remove this
+        for ev in input_capture.drain_events() {
+            match ev {
+                input_capture::CapturedEvent::Key { code, pressed } => {
+                    self.manager.send_key((code as u32) + 8, pressed);
+                }
+                input_capture::CapturedEvent::PointerButton { button, pressed } => {}
+                input_capture::CapturedEvent::PointerMotion { dx, dy } => {}
+                input_capture::CapturedEvent::PointerAxis {
+                    horizontal_v120,
+                    vertical_v120,
+                } => {}
+                input_capture::CapturedEvent::UngrabbedAll => {
+                    self.manager.release_all_keys();
+                    self.has_input_focus = false;
+                }
+            }
+        }
+    }
+
+    pub fn set_input_focus(&mut self, has_focus: bool) {
+        let Some(input_capture) = self.input_capture.as_mut() else {
+            return;
+        };
+
+        let res = input_capture
+            .set_grabbed(has_focus)
+            .log_err("Could not grab input.");
+
+        if res.is_ok() && !self.grab_toast_sent {
+            self.grab_toast_sent = true;
+            //TODO: localize
+            let _ = DbusConnector::notify_send(
+                "WayVR has your keyboard and mouse!",
+                "Ctrl+Alt+Del to release",
+                1,
+                5000,
+                0,
+                true,
+            );
+        }
+
+        self.has_input_focus = has_focus;
     }
 
     pub fn send_mouse_move(

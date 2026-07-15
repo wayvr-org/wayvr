@@ -18,7 +18,7 @@ use crate::overlays::keyboard::KEYBOARD_NAME;
 use crate::overlays::watch::WATCH_NAME;
 use crate::state::{AppSession, AppState};
 use crate::subsystem::hid::WheelDelta;
-use crate::subsystem::input::KeyboardFocus;
+use crate::subsystem::input::InputFocus;
 use crate::windowing::backend::OverlayEventData;
 use crate::windowing::manager::OverlayWindowManager;
 use crate::windowing::window::{self, OverlayWindowData, realign, scalar_scale};
@@ -407,12 +407,13 @@ fn populate_lines(
     }
 }
 
-fn update_focus(focus: &mut KeyboardFocus, overlay_keyboard_focus: Option<KeyboardFocus>) {
-    if let Some(f) = &overlay_keyboard_focus
-        && *focus != *f
+fn update_focus(app: &mut AppState, overlay_input_focus: Option<InputFocus>) {
+    if let Some(f) = &overlay_input_focus
+        && app
+            .hid_provider
+            .set_input_focus(app.wvr_server.as_mut(), *f)
     {
         log::debug!("Setting keyboard focus to {:?}", *f);
-        *focus = *f;
     }
 }
 
@@ -537,10 +538,7 @@ where
 
     // grab
     if pointer.now.grab && !pointer.before.grab && hovered_state.grabbable {
-        update_focus(
-            &mut app.hid_provider.keyboard_focus,
-            hovered.config.keyboard_focus,
-        );
+        update_focus(app, hovered.config.input_focus);
         start_grab(
             idx,
             hit.overlay,
@@ -567,10 +565,7 @@ where
     let pointer = &mut app.input_state.pointers[hit.pointer];
     if pointer.now.click && !pointer.before.click {
         pointer.interaction.clicked_id = Some(hit.overlay);
-        update_focus(
-            &mut app.hid_provider.keyboard_focus,
-            hovered.config.keyboard_focus,
-        );
+        update_focus(app, hovered.config.input_focus);
         hovered.config.backend.on_pointer(app, &hit, true);
     } else if !pointer.now.click && pointer.before.click {
         // send release event to overlay that was originally clicked

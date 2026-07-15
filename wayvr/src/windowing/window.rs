@@ -5,7 +5,7 @@ use wlx_common::windowing::{OverlayWindowState, Positioning};
 
 use crate::{
     state::AppState,
-    subsystem::input::KeyboardFocus,
+    subsystem::input::InputFocus,
     windowing::{
         backend::{FrameMeta, OverlayBackend, RenderResources, ShouldRender},
         snap_upright,
@@ -76,7 +76,7 @@ pub struct OverlayWindowConfig {
     /// Order to draw overlays in. Overlays with higher numbers will be drawn over ones with lower numbers.
     pub z_order: u32,
     /// If set, hovering this overlay will cause the HID provider to switch focus.
-    pub keyboard_focus: Option<KeyboardFocus>,
+    pub input_focus: Option<InputFocus>,
     /// Category of the overlay, used by toolbox on the watch.
     pub category: OverlayCategory,
     /// Should the overlay be displayed on the next frame?
@@ -104,7 +104,7 @@ impl OverlayWindowConfig {
             },
             active_state: None,
             z_order: 0,
-            keyboard_focus: None,
+            input_focus: None,
             category: OverlayCategory::Internal,
             show_on_spawn: false,
             global: false,
