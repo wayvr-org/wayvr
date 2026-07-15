@@ -549,6 +549,11 @@ impl DashInterface<AppState> for DashInterfaceLive {
                         .enqueue(TaskType::OpenXR(OpenXrTask::EnvironmentChanged));
                 }
             }
+            ConfigChangeKind::WvrServerConfig => {
+                if let Some(wvr_server) = data.wvr_server.as_mut() {
+                    wvr_server.config_changed(&data.session.config);
+                }
+            }
             _ => {}
         }
     }

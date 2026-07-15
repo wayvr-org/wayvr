@@ -163,7 +163,10 @@
 			"WL_VIRTUAL": "Wayland virtual input",
 			"WL_VIRTUAL_HELP": "Send events to the Wayland compositor using\nzwlr_virtual_pointer and zwp_virtual_keyboard.\nOnly works reliably on some desktops.\nDoes NOT work on KDE, GNOME or COSMIC."
 		},
+		"POINTER_ACCELERATION": "Mouse acceleration",
+		"POINTER_ACCELERATION_HELP": "On: Adaptive mouse acceleration\nOff: Constant speed",
 		"POINTER_LERP_FACTOR": "Pointer smoothing",
+		"POINTER_SPEED": "Mouse speed",
 		"REQUIRES_RESTART": "Requires restart",
 		"RESET_PLAYSPACE": "Reset playspace",
 		"RESET_PLAYSPACE_HELP": "Clear the stage space offset.",

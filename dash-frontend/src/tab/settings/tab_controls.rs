@@ -112,6 +112,9 @@ impl State {
 
 		options_slider_i32(par.mp, c, SettingType::ClickFreezeTimeMs, 0, 500, 50)?;
 
+		options_slider_f32(par.mp, c, SettingType::MouseSpeed, -1., 1., 0.05)?;
+		options_checkbox(par.mp, c, SettingType::MouseAcceleration)?;
+
 		Ok(State {
 			popup_input_profiles: popup,
 			frontend_tasks: par.frontend_tasks.clone(),

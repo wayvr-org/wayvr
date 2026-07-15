@@ -10,7 +10,7 @@ pub mod window;
 
 use anyhow::Context;
 use comp::Application;
-use glam::Vec2;
+use glam::{DVec2, Vec2};
 use process::ProcessVec;
 use slotmap::SecondaryMap;
 use smallvec::SmallVec;
@@ -57,7 +57,7 @@ use wayland_protocols::xdg::shell::server::xdg_toplevel;
 use wayvr_ipc::{packet_client::PositionMode, packet_server};
 use wgui::{gfx::WGfx, log::LogErr};
 use wlx_capture::frame::Transform;
-use wlx_common::desktop_finder::DesktopFinder;
+use wlx_common::{config::GeneralConfig, desktop_finder::DesktopFinder};
 use xkbcommon::xkb;
 
 use crate::{
@@ -615,6 +615,14 @@ impl WvrServerState {
         Ok(tasks)
     }
 
+    pub fn config_changed(&mut self, config: &GeneralConfig) {
+        if let Some(cap) = self.input_capture.as_mut() {
+            let _ = cap
+                .set_pointer_accel(config.wvr_mouse_acceleration, config.wvr_mouse_speed)
+                .log_err("Could not set mouse accel/speed");
+        }
+    }
+
     pub fn terminate_process(
         &mut self,
         process_handle: process::ProcessHandle,
@@ -719,6 +727,8 @@ impl WvrServerState {
             return;
         };
 
+        let mut mouse_delta = DVec2::ZERO;
+
         for ev in input_capture.drain_events() {
             match ev {
                 input_capture::CapturedEvent::Key { code, pressed } => {
@@ -765,36 +775,7 @@ impl WvrServerState {
                     );
                 }
                 input_capture::CapturedEvent::PointerMotion { dx, dy } => {
-                    let Some(ref hover) = self.wm.mouse else {
-                        continue;
-                    };
-                    let new_x = hover.x as f64 + dx;
-                    let new_y = hover.y as f64 + dy;
-                    let new_pos = Vec2::new(new_x as f32, new_y as f32);
-
-                    let Some(window) = self.wm.windows.get(&hover.hover_window) else {
-                        continue;
-                    };
-                    let toplevel = window.toplevel.wl_surface().clone();
-                    let inner_extent = with_states(&toplevel, |states| {
-                        SurfaceBufWithImage::get_from_surface(states)
-                            .map(|s| s.image.extent_u32arr())
-                            .unwrap_or([1, 1])
-                    });
-                    let Some(hit_ctx) = build_hit_context(
-                        &toplevel,
-                        &self.manager.state.popup_manager,
-                        inner_extent,
-                    ) else {
-                        continue;
-                    };
-                    let target = hit_ctx.hit_target_at(new_pos);
-                    let focus_target = self.hit_target_to_focus(
-                        target.unwrap_or(WvrHitTarget::Toplevel { pos: new_pos }),
-                        hover.hover_window,
-                        new_pos,
-                    );
-                    self.send_mouse_move(focus_target, new_pos, hover.hover_window);
+                    mouse_delta += DVec2 { x: dx, y: dy };
                 }
                 input_capture::CapturedEvent::PointerAxis {
                     horizontal_v120,
@@ -817,6 +798,40 @@ impl WvrServerState {
                     self.manager.release_all_keys();
                     self.has_input_focus = false;
                 }
+            }
+        }
+
+        if mouse_delta.length_squared() > 1e-6 {
+            'mouse_update: {
+                let Some(ref hover) = self.wm.mouse else {
+                    break 'mouse_update;
+                };
+
+                let new_x = hover.x as f64 + mouse_delta.x;
+                let new_y = hover.y as f64 + mouse_delta.y;
+                let new_pos = Vec2::new(new_x as f32, new_y as f32);
+
+                let Some(window) = self.wm.windows.get(&hover.hover_window) else {
+                    break 'mouse_update;
+                };
+                let toplevel = window.toplevel.wl_surface().clone();
+                let inner_extent = with_states(&toplevel, |states| {
+                    SurfaceBufWithImage::get_from_surface(states)
+                        .map(|s| s.image.extent_u32arr())
+                        .unwrap_or([1, 1])
+                });
+                let Some(hit_ctx) =
+                    build_hit_context(&toplevel, &self.manager.state.popup_manager, inner_extent)
+                else {
+                    break 'mouse_update;
+                };
+                let target = hit_ctx.hit_target_at(new_pos);
+                let focus_target = self.hit_target_to_focus(
+                    target.unwrap_or(WvrHitTarget::Toplevel { pos: new_pos }),
+                    hover.hover_window,
+                    new_pos,
+                );
+                self.send_mouse_move(focus_target, new_pos, hover.hover_window);
             }
         }
     }

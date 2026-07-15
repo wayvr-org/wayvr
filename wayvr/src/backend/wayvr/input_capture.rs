@@ -51,31 +51,16 @@ pub enum CapturedEvent {
     UngrabbedAll,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PointerAccelProfile {
-    Adaptive,
-    Flat,
-}
-
-impl PointerAccelProfile {
-    fn to_libinput(self) -> AccelProfile {
-        match self {
-            Self::Adaptive => AccelProfile::Adaptive,
-            Self::Flat => AccelProfile::Flat,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 struct PointerAccelConfig {
-    profile: PointerAccelProfile,
-    speed: f64,
+    accel: bool,
+    speed: f32,
 }
 
 impl Default for PointerAccelConfig {
     fn default() -> Self {
         Self {
-            profile: PointerAccelProfile::Adaptive,
+            accel: true,
             speed: 0.0,
         }
     }
@@ -143,17 +128,13 @@ impl InputCapture {
     }
 
     /// Set acceleration profile for current and future mice
-    pub fn set_pointer_accel(
-        &self,
-        profile: PointerAccelProfile,
-        speed: f64,
-    ) -> anyhow::Result<()> {
+    pub fn set_pointer_accel(&self, accel: bool, speed: f32) -> anyhow::Result<()> {
         if !speed.is_finite() || !(-1.0..=1.0).contains(&speed) {
             anyhow::bail!("pointer acceleration speed must be within -1.0..=1.0");
         }
 
         self.command_tx
-            .send(Command::SetPointerAccel { profile, speed })
+            .send(Command::SetPointerAccel { accel, speed })
             .map_err(|error| anyhow::anyhow!("worker thread unreachable: {error}"))?;
 
         Ok(())
@@ -176,8 +157,8 @@ enum Command {
         response_tx: SyncSender<io::Result<()>>,
     },
     SetPointerAccel {
-        profile: PointerAccelProfile,
-        speed: f64,
+        accel: bool,
+        speed: f32,
     },
     Shutdown,
 }
@@ -400,8 +381,8 @@ fn worker_main(
 
                     let _ = response_tx.send(result);
                 }
-                Ok(Command::SetPointerAccel { profile, speed }) => {
-                    pointer_accel = PointerAccelConfig { profile, speed };
+                Ok(Command::SetPointerAccel { accel, speed }) => {
+                    pointer_accel = PointerAccelConfig { accel, speed };
                     for mut device in pointer_devices.iter().cloned() {
                         apply_pointer_accel(&mut device, pointer_accel);
                     }
@@ -640,11 +621,15 @@ fn apply_pointer_accel(device: &mut LibinputDevice, config: PointerAccelConfig) 
         return;
     }
 
-    let profile = config.profile.to_libinput();
+    let profile = if config.accel {
+        AccelProfile::Adaptive
+    } else {
+        AccelProfile::Flat
+    };
     if device.config_accel_profiles().contains(&profile) {
         let _ = device.config_accel_set_profile(profile);
     }
-    let _ = device.config_accel_set_speed(config.speed);
+    let _ = device.config_accel_set_speed(config.speed as _);
 }
 
 fn drain_pending_libinput_events(

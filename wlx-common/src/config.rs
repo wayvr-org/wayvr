@@ -206,10 +206,6 @@ const fn def_true() -> bool {
 	true
 }
 
-const fn def_false() -> bool {
-	false
-}
-
 const fn def_one() -> f32 {
 	1.0
 }
@@ -226,10 +222,6 @@ const fn def_point3() -> f32 {
 	0.3
 }
 
-const fn def_zero() -> f32 {
-	0.0
-}
-
 const fn def_osc_port() -> u16 {
 	9000
 }
@@ -244,10 +236,6 @@ fn def_timezones() -> Vec<String> {
 		EMEA..APAC => vec!["America/New_York".into(), "Asia/Tokyo".into()],
 		APAC..=i32::MAX => vec!["Europe/Paris".into(), "America/New_York".into()],
 	}
-}
-
-fn def_empty() -> Arc<str> {
-	"".into()
 }
 
 fn def_default() -> Arc<str> {
@@ -288,10 +276,10 @@ pub struct GeneralConfig {
 	#[serde(default = "def_click_freeze_time_ms")]
 	pub click_freeze_time_ms: i32,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub invert_scroll_direction_x: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub invert_scroll_direction_y: bool,
 
 	#[serde(default = "def_one")]
@@ -330,19 +318,19 @@ pub struct GeneralConfig {
 	#[serde(default = "def_osc_port")]
 	pub osc_out_port: u16,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub upright_screen_fix: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub double_cursor_fix: bool,
 
 	#[serde(default = "def_true")]
 	pub enable_watch: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub sets_on_watch: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub hide_grab_help: bool,
 
 	#[serde(default)]
@@ -357,13 +345,13 @@ pub struct GeneralConfig {
 	#[serde(default = "def_true")]
 	pub allow_sliding: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub focus_follows_mouse_mode: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub left_handed_mouse: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub block_game_input: bool,
 
 	#[serde(default = "def_true")]
@@ -375,7 +363,7 @@ pub struct GeneralConfig {
 	#[serde(default = "def_one")]
 	pub space_drag_multiplier: f32,
 
-	#[serde(default = "def_empty")]
+	#[serde(default)]
 	pub skybox_texture: Arc<str>,
 
 	#[serde(default = "def_true")]
@@ -387,7 +375,7 @@ pub struct GeneralConfig {
 	#[serde(default = "def_max_height")]
 	pub screen_max_height: u16,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub screen_render_down: bool,
 
 	#[serde(default = "def_point3")]
@@ -396,10 +384,10 @@ pub struct GeneralConfig {
 	#[serde(default = "def_true")]
 	pub space_drag_unlocked: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub space_rotate_unlocked: bool,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub space_gravity_enabled: bool,
 
 	#[serde(default = "def_one")]
@@ -414,7 +402,7 @@ pub struct GeneralConfig {
 	#[serde(default = "def_one")]
 	pub space_gravity_ground_friction: f32,
 
-	#[serde(default = "def_zero")]
+	#[serde(default)]
 	pub space_gravity_floor_height: f32,
 
 	#[serde(default)]
@@ -426,7 +414,7 @@ pub struct GeneralConfig {
 	#[serde(default = "def_timezones")]
 	pub timezones: Vec<String>,
 
-	#[serde(default = "def_false")]
+	#[serde(default)]
 	pub clock_12h: bool,
 
 	#[serde(default)]
@@ -471,7 +459,7 @@ pub struct GeneralConfig {
 	#[serde(default)]
 	pub tutorial_graduated: bool,
 
-	#[serde(default = "def_empty")]
+	#[serde(default)]
 	pub whisper_model: Arc<str>,
 
 	#[serde(default = "def_default")]
@@ -479,4 +467,10 @@ pub struct GeneralConfig {
 
 	#[serde(default)]
 	pub snap_angle_deg: f32,
+
+	#[serde(default = "def_true")]
+	pub wvr_mouse_acceleration: bool,
+
+	#[serde(default)]
+	pub wvr_mouse_speed: f32,
 }
