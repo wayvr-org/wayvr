@@ -228,17 +228,6 @@ impl PlayspaceMover {
     }
 
     pub fn recenter(&mut self, chaperone_mgr: &mut ChaperoneSetupManager, input: &InputState) {
-        let Some(mut mat) = get_working_copy(&self.universe, chaperone_mgr) else {
-            log::warn!("Can't recenter - failed to get zero pose");
-            return;
-        };
-
-        mat.translation.x += input.hmd.translation.x;
-        mat.translation.z += input.hmd.translation.z;
-
-        set_working_copy(&self.universe, chaperone_mgr, &mat);
-        chaperone_mgr.commit_working_copy(EChaperoneConfigFile::EChaperoneConfigFile_Live);
-
         if self.drag.is_some() {
             log::info!("Space drag interrupted by recenter");
             self.drag = None;
@@ -247,6 +236,45 @@ impl PlayspaceMover {
             log::info!("Space rotate interrupted by recenter");
             self.rotate = None;
         }
+
+        let Some(mat) = get_working_copy(&self.universe, chaperone_mgr) else {
+            log::warn!("Can't recenter - failed to get zero pose");
+            return;
+        };
+
+        let cur_rot: Quat = Quat::from_affine3(&mat);
+        let cur_pos: Vec3 = Vec3::from(mat.translation);
+
+        let mut stage_offset = Affine3A::from_rotation_translation(cur_rot, cur_pos);
+
+        let horiz_hmd_pos = Vec3::new(input.hmd.translation.x, 0.0, input.hmd.translation.z);
+
+        let fwd = input.hmd.transform_vector3a(Vec3A::NEG_Z);
+        let horiz_len_sq = fwd.x.mul_add(fwd.x, fwd.z * fwd.z);
+
+        let hmd_yaw = if horiz_len_sq > f32::EPSILON {
+            let yaw = (-fwd.x).atan2(-fwd.z);
+            Quat::from_rotation_y(yaw)
+        } else {
+            Quat::IDENTITY
+        };
+
+        let recenter_offset = Affine3A::from_rotation_translation(hmd_yaw, horiz_hmd_pos);
+
+        stage_offset *= recenter_offset;
+
+        let (_, new_rot, new_pos) = stage_offset.to_scale_rotation_translation();
+
+        let new_mat = if horiz_len_sq > f32::EPSILON {
+            Affine3A::from_rotation_translation(new_rot, new_pos)
+        } else {
+            let mut m = mat;
+            m.translation = new_pos.into();
+            m
+        };
+
+        set_working_copy(&self.universe, chaperone_mgr, &new_mat);
+        chaperone_mgr.commit_working_copy(EChaperoneConfigFile::EChaperoneConfigFile_Live);
     }
 
     pub fn playspace_changed(
