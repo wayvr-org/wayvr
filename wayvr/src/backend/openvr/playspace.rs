@@ -23,14 +23,16 @@ pub(super) struct PlayspaceMover {
     universe: ETrackingUniverseOrigin,
     drag: Option<MoverData<Vec3A>>,
     rotate: Option<MoverData<Quat>>,
+    floor_y: Option<f32>,
 }
 
 impl PlayspaceMover {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             universe: ETrackingUniverseOrigin::TrackingUniverseRawAndUncalibrated,
             drag: None,
             rotate: None,
+            floor_y: None,
         }
     }
 
@@ -177,13 +179,10 @@ impl PlayspaceMover {
     }
 
     pub fn reset_offset(&mut self, chaperone_mgr: &mut ChaperoneSetupManager, input: &InputState) {
-        let mut height = 1.6;
-        if let Some(mat) = get_working_copy(&self.universe, chaperone_mgr) {
-            height = input.hmd.translation.y - mat.translation.y;
-            if self.universe == ETrackingUniverseOrigin::TrackingUniverseStanding {
-                apply_chaperone_transform(mat, chaperone_mgr);
-            }
-        }
+        let height = match self.floor_y {
+            Some(y) => y,
+            None => input.hmd.translation.y - 1.7,
+        };
 
         let xform = if self.universe == ETrackingUniverseOrigin::TrackingUniverseSeated {
             Affine3A::from_translation(Vec3::NEG_Y * height)
@@ -213,6 +212,7 @@ impl PlayspaceMover {
         };
         let offset = y1.min(y2) - 0.03;
         mat.translation.y += offset;
+        self.floor_y = Some(mat.translation.y);
 
         set_working_copy(&self.universe, chaperone_mgr, &mat);
         chaperone_mgr.commit_working_copy(EChaperoneConfigFile::EChaperoneConfigFile_Live);
