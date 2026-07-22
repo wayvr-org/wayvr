@@ -88,7 +88,7 @@ pub enum Event {
 }
 
 impl Event {
-	fn test_transform_pos(transform: &Transform, pos: Vec2) -> bool {
+	pub fn test_transform_pos(transform: &Transform, pos: Vec2) -> bool {
 		pos.x >= transform.abs_pos.x
 			&& pos.x < transform.abs_pos.x + transform.visual_dim.x
 			&& pos.y >= transform.abs_pos.y
