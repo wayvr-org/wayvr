@@ -11,6 +11,7 @@ use slotmap::{DenseSlotMap, new_key_type};
 use crate::{
 	animation::{self, Animation},
 	components::{ComponentTrait, ComponentWeak},
+	drawing::Boundary,
 	globals,
 	i18n::I18n,
 	layout::{LayoutDispatchFunc, LayoutState, LayoutTask, WidgetID},
@@ -95,12 +96,14 @@ impl Event {
 			&& pos.y < transform.abs_pos.y + transform.visual_dim.y
 	}
 
-	pub fn test_mouse_within_transform(&self, transform: &Transform) -> bool {
+	pub fn test_mouse_within_transform(&self, transform: &Transform, scissor_boundary: &Boundary) -> bool {
 		match self {
-			Self::MouseDown(evt) => Self::test_transform_pos(transform, evt.pos),
-			Self::MouseMotion(evt) => Self::test_transform_pos(transform, evt.pos),
-			Self::MouseUp(evt) => Self::test_transform_pos(transform, evt.pos),
-			Self::MouseWheel(evt) => Self::test_transform_pos(transform, evt.pos),
+			Self::MouseDown(evt) => Self::test_transform_pos(transform, evt.pos) && scissor_boundary.contains_point(evt.pos),
+			Self::MouseMotion(evt) => {
+				Self::test_transform_pos(transform, evt.pos) && scissor_boundary.contains_point(evt.pos)
+			}
+			Self::MouseUp(evt) => Self::test_transform_pos(transform, evt.pos) && scissor_boundary.contains_point(evt.pos),
+			Self::MouseWheel(evt) => Self::test_transform_pos(transform, evt.pos) && scissor_boundary.contains_point(evt.pos),
 			_ => false,
 		}
 	}

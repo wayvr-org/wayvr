@@ -465,40 +465,41 @@ impl WidgetState {
 			..Default::default()
 		};
 
+		#[allow(clippy::useless_let_if_seq)]
+		let mut boundary: Option<drawing::Boundary> = None;
+
 		// Horizontal handle
 		if enabled_horiz && info.handle_size.x < 1.0 {
-			state.primitives.push(drawing::RenderPrimitive::Rectangle(
-				PrimitiveExtent {
-					boundary: drawing::Boundary::from_pos_size(
-						Vec2::new(
-							// X
-							transform_widget.content_rel_pos.x
-								+ transform_parent.raw_dim.x * (1.0 - info.handle_size.x) * self.data.scrolling_cur.x,
-							// Y
-							transform_widget.content_rel_pos.y + transform_widget.raw_dim.y - thickness - margin,
-						),
-						Vec2::new(transform_widget.raw_dim.x * info.handle_size.x, thickness),
-					),
-					transform: transform_parent.transform,
-				},
-				rect_params,
+			boundary = Some(drawing::Boundary::from_pos_size(
+				Vec2::new(
+					// X
+					transform_widget.content_rel_pos.x
+						+ transform_parent.raw_dim.x * (1.0 - info.handle_size.x) * self.data.scrolling_cur.x.clamp(0.0, 1.0),
+					// Y
+					transform_widget.content_rel_pos.y + transform_widget.raw_dim.y - thickness - margin,
+				),
+				Vec2::new(transform_widget.raw_dim.x * info.handle_size.x, thickness),
 			));
 		}
 
 		// Vertical handle
 		if enabled_vert && info.handle_size.y < 1.0 {
+			boundary = Some(drawing::Boundary::from_pos_size(
+				Vec2::new(
+					// X
+					transform_widget.content_rel_pos.x + transform_widget.raw_dim.x - thickness - margin,
+					// Y
+					transform_widget.content_rel_pos.y
+						+ transform_parent.raw_dim.y * (1.0 - info.handle_size.y) * self.data.scrolling_cur.y.clamp(0.0, 1.0),
+				),
+				Vec2::new(thickness, transform_widget.raw_dim.y * info.handle_size.y),
+			));
+		}
+
+		if let Some(boundary) = boundary.take() {
 			state.primitives.push(drawing::RenderPrimitive::Rectangle(
 				PrimitiveExtent {
-					boundary: drawing::Boundary::from_pos_size(
-						Vec2::new(
-							// X
-							transform_widget.content_rel_pos.x + transform_widget.raw_dim.x - thickness - margin,
-							// Y
-							transform_widget.content_rel_pos.y
-								+ transform_parent.raw_dim.y * (1.0 - info.handle_size.y) * self.data.scrolling_cur.y,
-						),
-						Vec2::new(thickness, transform_widget.raw_dim.y * info.handle_size.y),
-					),
+					boundary,
 					transform: transform_parent.transform,
 				},
 				rect_params,
@@ -652,7 +653,10 @@ impl WidgetState {
 			return Ok(());
 		}
 
-		let hovered = event.test_mouse_within_transform(params.alterables.transform_stack.get());
+		let hovered = event.test_mouse_within_transform(
+			params.alterables.transform_stack.get(),
+			&params.alterables.scissor_stack.get().0,
+		);
 
 		let mut invoke_data = InvokeData {
 			widget_id,
