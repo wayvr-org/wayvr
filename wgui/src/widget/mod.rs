@@ -561,13 +561,17 @@ impl WidgetState {
 	}
 
 	// this is called before calling children of this widget
-	pub fn process_event_priority(
+	pub fn process_event_priority<'a>(
 		&mut self,
 		params: &mut EventParams,
 		widget_id: WidgetID,
 		event: &Event,
+		event_result: &'a mut EventResult,
 	) -> anyhow::Result<EventResult> {
 		match &event {
+			Event::MouseCancel => {
+				*event_result = EventResult::Pass;
+			}
 			Event::MouseUp(_e) => {
 				if self.data.swipe_running {
 					self.data.swipe_running = false;

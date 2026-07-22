@@ -508,11 +508,11 @@ fn register_event_mouse_release(
 				state.sticky_down = !state.sticky_down;
 			}
 
-			common.alterables.trigger_haptics();
-			common.alterables.play_sound(WguiSoundType::ButtonRelease);
-			common.alterables.mark_redraw();
-
 			if state.down {
+				common.alterables.trigger_haptics();
+				common.alterables.play_sound(WguiSoundType::ButtonRelease);
+				common.alterables.mark_redraw();
+
 				state.down = false;
 				if state.hovered {
 					anim_hover(

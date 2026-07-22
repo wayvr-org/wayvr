@@ -471,6 +471,7 @@ impl Layout {
 				&mut self.get_event_params(l, node_id, style, alterables),
 				widget_id,
 				event,
+				event_result,
 			)?;
 
 			if res_priority.can_propagate() {
