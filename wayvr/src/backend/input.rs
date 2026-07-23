@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 use std::process::{Child, Command};
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use glam::{Affine3A, Vec2, Vec3A, Vec3Swizzles};
 
@@ -58,7 +58,7 @@ pub enum TrackedDeviceRole {
     Tracker,
 }
 
-#[derive(Debug, Clone, Copy, EnumIs)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, EnumIs)]
 pub enum FocusPickState {
     None,
     /// aiming to pick the focus
@@ -75,6 +75,7 @@ pub struct InputState {
     pub handsfree_state: PointerState,
     pub picking_focus: FocusPickState,
     processes: Vec<Child>,
+    disable_lerp_until: Instant,
 }
 
 impl InputState {
@@ -87,6 +88,18 @@ impl InputState {
             processes: Vec::new(),
             handsfree_state: PointerState::default(),
             picking_focus: FocusPickState::None,
+            disable_lerp_until: Instant::now(),
+        }
+    }
+
+    pub fn should_disable_lerp(&self) -> bool {
+        self.disable_lerp_until > Instant::now()
+    }
+
+    pub fn stop_picking(&mut self) {
+        if !self.picking_focus.is_none() {
+            self.picking_focus = FocusPickState::None;
+            self.disable_lerp_until = Instant::now() + Duration::from_millis(250);
         }
     }
 

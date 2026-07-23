@@ -946,8 +946,7 @@ impl WvrServerState {
                             )));
                             tasks.enqueue_at(
                                 TaskType::Global(Box::new(|app| {
-                                    app.input_state.picking_focus =
-                                        super::input::FocusPickState::None;
+                                    app.input_state.stop_picking();
 
                                     let _ = std::mem::take(&mut app.input_state.handsfree_state);
                                 })),

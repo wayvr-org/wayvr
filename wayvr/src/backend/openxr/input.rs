@@ -251,12 +251,14 @@ impl OpenXrInputSource {
             ptr1.now = PointerState::default();
             ptr1.tracked = false;
         } else {
+            let should_disable_lerp = app.input_state.should_disable_lerp();
             for i in 0..2 {
                 let pointer = &mut app.input_state.pointers[i];
-                self.pointers[i].update(pointer, xr, &app.session)?;
+                self.pointers[i].update(pointer, xr, &app.session, !should_disable_lerp)?;
                 any_tracked |= pointer.tracked;
             }
         }
+
         if !any_tracked {
             self.handsfree_pointer.update_handsfree(
                 &mut app.input_state.pointers[0],
@@ -392,7 +394,11 @@ impl OpenXrPointer {
             }
             HandsfreePointer::EyeTracking | HandsfreePointer::EyeTrackingOnly => {
                 // more aggressive smoothing for eye
-                self.pointer_load_pose(pointer, xr, session.config.pointer_lerp_factor * 0.5)?;
+                self.pointer_load_pose(
+                    pointer,
+                    xr,
+                    Some(session.config.pointer_lerp_factor * 0.5),
+                )?;
             }
         }
 
@@ -426,9 +432,18 @@ impl OpenXrPointer {
         pointer: &mut Pointer,
         xr: &XrState,
         session: &AppSession,
+        do_lerp: bool,
     ) -> anyhow::Result<()> {
         pointer.handsfree = false;
-        self.pointer_load_pose(pointer, xr, session.config.pointer_lerp_factor)?;
+        self.pointer_load_pose(
+            pointer,
+            xr,
+            if do_lerp {
+                Some(session.config.pointer_lerp_factor)
+            } else {
+                None
+            },
+        )?;
         self.pointer_load_actions(pointer, xr)?;
 
         Ok(())
@@ -438,7 +453,7 @@ impl OpenXrPointer {
         &mut self,
         pointer: &mut Pointer,
         xr: &XrState,
-        lerp_factor: f32,
+        lerp_factor: Option<f32>,
     ) -> anyhow::Result<()> {
         let location = self.space.locate(&xr.stage, xr.predicted_display_time)?;
         if location
@@ -453,12 +468,17 @@ impl OpenXrPointer {
                     transmute::<Vector3f, Vec3>(location.pose.position),
                 )
             };
-            let lerp_factor = (1.0 / (xr.fps / 100.0) * lerp_factor).clamp(0.1, 1.0);
+
             pointer.raw_pose = Affine3A::from_rotation_translation(new_quat, new_pos);
-            pointer.pose = Affine3A::from_rotation_translation(
-                cur_quat.lerp(new_quat, lerp_factor),
-                cur_pos.lerp(new_pos.into(), lerp_factor).into(),
-            );
+            if let Some(lerp_factor) = lerp_factor {
+                let lerp_factor = (1.0 / (xr.fps / 100.0) * lerp_factor).clamp(0.1, 1.0);
+                pointer.pose = Affine3A::from_rotation_translation(
+                    cur_quat.lerp(new_quat, lerp_factor),
+                    cur_pos.lerp(new_pos.into(), lerp_factor).into(),
+                );
+            } else {
+                pointer.pose = pointer.raw_pose; // no lerp
+            }
             pointer.tracked = true;
         } else {
             pointer.tracked = false;

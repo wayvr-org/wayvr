@@ -304,7 +304,7 @@ impl OverlayBackend for ScreenBackend {
 
         let pick_now = app.input_state.picking_focus.is_picking();
         if pick_now {
-            app.input_state.picking_focus = input::FocusPickState::None;
+            app.input_state.stop_picking();
             app.hid_provider
                 .set_input_focus(app.wvr_server.as_mut(), InputFocus::PhysicalScreen);
         }
