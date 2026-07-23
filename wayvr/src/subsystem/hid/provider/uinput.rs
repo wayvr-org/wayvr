@@ -135,18 +135,14 @@ impl UInputProvider {
     }
 
     fn wheel_internal(&self, delta: WheelDelta) {
-        let multiplier = 64.0; /* cherry-picked value, overall scrolling speed can be altered via `scroll_speed` in the config */
-        let delta_x = (delta.x * multiplier) as i32;
-        let delta_y = (delta.y * multiplier) as i32;
-
         let time = get_time();
         let events = [
-            new_event(time, EV_REL, RelativeAxis::WheelHiRes as _, delta_y),
+            new_event(time, EV_REL, RelativeAxis::WheelHiRes as _, delta.y as _),
             new_event(
                 time,
                 EV_REL,
                 RelativeAxis::HorizontalWheelHiRes as _,
-                delta_x,
+                delta.x as _,
             ),
             new_event(time, EV_SYN, 0, 0),
         ];
@@ -206,7 +202,7 @@ impl HidProvider for UInputProvider {
         self.cur_modifiers = modifiers;
     }
 
-    fn send_key(&self, key: VirtualKey, down: bool) {
+    fn send_key(&mut self, key: VirtualKey, down: bool) {
         #[cfg(debug_assertions)]
         log::trace!("send_key: {key:?} {down}");
 

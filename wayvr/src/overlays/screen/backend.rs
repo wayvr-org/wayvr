@@ -352,7 +352,10 @@ impl OverlayBackend for ScreenBackend {
             .mouse_move(DVec2::new(pos.x as _, pos.y as _));
     }
 
-    fn on_scroll(&mut self, app: &mut AppState, _hit: &PointerHit, delta: WheelDelta) {
+    fn on_scroll(&mut self, app: &mut AppState, _hit: &PointerHit, mut delta: WheelDelta) {
+        // convert to v120 value; maximum deflect scrolls at half speed
+        delta.x *= 60.0;
+        delta.y *= 60.0;
         app.hid_provider.inner.wheel(delta);
     }
 

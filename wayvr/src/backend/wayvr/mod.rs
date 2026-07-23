@@ -85,7 +85,7 @@ use crate::{
     subsystem::{
         dbus::DbusConnector,
         hid::{self, MODS_TO_KEYS, WheelDelta},
-        input::{HidWrapper, InputFocus},
+        input::HidWrapper,
     },
     windowing::{OverlayID, OverlaySelector, backend::OverlayEventData},
 };
@@ -897,7 +897,6 @@ impl WvrServerState {
                     }
                 }
                 input_capture::CapturedEvent::Grabbed => {
-                    hid_wrapper.set_input_focus(Some(self), InputFocus::WayVR);
                     audio_sample_player.play_sample(audio_system, "input_grab");
                     if !self.grab_toast_sent {
                         self.grab_toast_sent = true;

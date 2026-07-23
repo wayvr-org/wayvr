@@ -63,7 +63,7 @@ impl HidWrapper {
     }
 
     pub fn send_key_routed(
-        &self,
+        &mut self,
         wvr_server: Option<&mut WvrServerState>,
         key: VirtualKey,
         down: bool,

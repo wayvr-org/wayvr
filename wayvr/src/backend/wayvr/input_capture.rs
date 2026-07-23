@@ -121,16 +121,6 @@ impl InputCapture {
         self.event_rx.try_iter().collect()
     }
 
-    /// Exclusively grabs every currently detected keyboard and mouse.
-    /// Newly connected matching devices are grabbed automatically.
-    pub fn set_grabbed(&self, grabbed: bool) -> anyhow::Result<()> {
-        self.command_tx
-            .try_send(Command::SetGrabbed(grabbed))
-            .map_err(|error| anyhow::anyhow!("worker thread unreachable: {error}"))?;
-
-        Ok(())
-    }
-
     /// Set acceleration profile for current and future mice
     pub fn set_pointer_accel(&self, accel: bool, speed: f32) -> anyhow::Result<()> {
         if !speed.is_finite() || !(-1.0..=1.0).contains(&speed) {
@@ -156,8 +146,12 @@ impl Drop for InputCapture {
 
 enum Command {
     ResetWatchdog,
-    SetGrabbed(bool),
-    SetPointerAccel { accel: bool, speed: f32 },
+    #[allow(dead_code)]
+    SetGrabbed(bool), // might need later?
+    SetPointerAccel {
+        accel: bool,
+        speed: f32,
+    },
     Shutdown,
 }
 

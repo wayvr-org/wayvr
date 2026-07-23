@@ -2,7 +2,7 @@ use std::io::Write;
 use std::os::fd::AsFd;
 use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::Context as _;
-use glam::{DVec2};
+use glam::{Vec2, DVec2};
 use input_linux::sys::{*};
 use smithay::reexports::rustix::fs::{memfd_create, MemfdFlags};
 use smithay::reexports::wayland_protocols_wlr::virtual_pointer::v1::client::zwlr_virtual_pointer_manager_v1::ZwlrVirtualPointerManagerV1;
@@ -21,6 +21,8 @@ use crate::overlays::toast::Toast;
 use crate::subsystem::hid::provider::HidProvider;
 use crate::subsystem::hid::{VirtualKey, WheelDelta, *};
 
+const LOCKED: u8 = CAPS_LOCK | NUM_LOCK;
+
 pub struct WlVirtualProvider {
     _connection: wayland_client::Connection,
     queue: wayland_client::EventQueue<KbState>,
@@ -35,6 +37,7 @@ pub struct WlVirtualProvider {
     keyboard_mods_state: u8,
 
     last_pointer_position: DVec2,
+    wheel_accum: Vec2,
 }
 
 struct KbState;
@@ -84,28 +87,30 @@ impl HidProvider for WlVirtualProvider {
         self.virtual_pointer.frame();
     }
 
-    fn wheel(&mut self, delta: WheelDelta) {
+    fn wheel(&mut self, mut delta: WheelDelta) {
         #[cfg(debug_assertions)]
         log::trace!("Scroll Axis: {delta:?}");
+
+        // no clue; a value of 10 seems to equal a v120 value of 120
+        delta.x /= 12.0;
+        delta.y /= 12.0;
 
         self.virtual_pointer.axis_source(AxisSource::Wheel);
 
         if delta.y != 0.0 {
-            let steps = -delta.y.round() as i32;
             self.virtual_pointer.axis_discrete(
                 Self::now_ms(),
                 Axis::VerticalScroll,
-                steps as f64 * 15.0,
-                steps,
+                -delta.y as _,
+                accumulate_discrete_scroll(&mut self.wheel_accum.y, -delta.y),
             );
         }
         if delta.x != 0.0 {
-            let steps = delta.x.round() as i32;
             self.virtual_pointer.axis_discrete(
                 Self::now_ms(),
                 Axis::HorizontalScroll,
-                steps as f64 * 15.0,
-                steps,
+                delta.x as _,
+                accumulate_discrete_scroll(&mut self.wheel_accum.x, delta.x),
             );
         }
 
@@ -122,15 +127,13 @@ impl HidProvider for WlVirtualProvider {
     }
 
     fn set_modifiers(&mut self, mods: u8) {
-        const LOCKED: u8 = CAPS_LOCK | NUM_LOCK;
-
         let changed = (self.keyboard_mods_state ^ mods) & !LOCKED;
         for bit in [SHIFT, CTRL, ALT, SUPER] {
             if changed & bit != 0 {
                 let down = mods & bit != 0;
-                if let Some(kc) = Self::modifier_keycode(bit) {
+                if let Some(kc) = MODS_TO_KEYS.get(bit) {
                     self.virtual_keyboard
-                        .key(Self::now_ms(), kc - 8, down as u32);
+                        .key(Self::now_ms(), kc[0] as u32 - 8, down as u32);
                 }
             }
         }
@@ -143,7 +146,7 @@ impl HidProvider for WlVirtualProvider {
         self._connection.flush().unwrap();
     }
 
-    fn send_key(&self, key: VirtualKey, down: bool) {
+    fn send_key(&mut self, key: VirtualKey, down: bool) {
         #[cfg(debug_assertions)]
         log::trace!("Keyboard key: {key:?} ({}), down: {down}", key as u16);
 
@@ -155,6 +158,20 @@ impl HidProvider for WlVirtualProvider {
                 false => 0,
             },
         );
+
+        // sending a mod key → also have to update mod state
+        if let Some(m) = KEYS_TO_MODS.get(key) {
+            match (down, m & LOCKED != 0) {
+                (true, true) => self.keyboard_mods_state ^= m,
+                (true, false) => self.keyboard_mods_state |= m,
+                (false, false) => self.keyboard_mods_state &= !m,
+                (false, true) => {}
+            }
+
+            let depressed = (self.keyboard_mods_state & !LOCKED) as u32;
+            let locked = (self.keyboard_mods_state & LOCKED) as u32;
+            self.virtual_keyboard.modifiers(depressed, 0, locked, 0);
+        }
 
         self._connection.flush().unwrap();
     }
@@ -222,6 +239,7 @@ impl WlVirtualProvider {
             desktop_origin: DVec2::ZERO,
             keyboard_mods_state: 0,
             last_pointer_position: DVec2::ZERO,
+            wheel_accum: Vec2::ZERO,
         };
 
         result.set_keymap(&XkbKeymap {
@@ -243,17 +261,6 @@ impl WlVirtualProvider {
             KEYMAP_COMPILE_NO_FLAGS,
         )
         .expect("Failed to compile XKB keymap")
-    }
-
-    fn modifier_keycode(bit: u8) -> Option<u32> {
-        let evdev = match bit {
-            b if b == SHIFT => KEY_LEFTSHIFT,
-            b if b == CTRL => KEY_LEFTCTRL,
-            b if b == ALT => KEY_LEFTALT,
-            b if b == SUPER => KEY_LEFTMETA,
-            _ => return None,
-        };
-        Some(evdev as u32 + 8)
     }
 
     fn now_ms() -> u32 {
@@ -291,4 +298,18 @@ pub fn initialize_wl_virtual() -> anyhow::Result<Box<dyn HidProvider>, Toast> {
         )
     })?;
     Ok(Box::new(provider))
+}
+
+fn accumulate_discrete_scroll(acc: &mut f32, delta: f32) -> i32 {
+    const WHEEL_DETENT: f32 = 10.0;
+    *acc += delta;
+    let steps = (*acc / WHEEL_DETENT).trunc() as i32;
+    if steps != 0 {
+        *acc -= steps as f32 * WHEEL_DETENT;
+        if acc.abs() < 0.001 {
+            *acc = 0.0;
+        }
+    }
+
+    steps
 }

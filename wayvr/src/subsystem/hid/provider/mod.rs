@@ -16,7 +16,7 @@ pub trait HidProvider: Sync + Send {
 
     // Keyboard Functions
     fn set_modifiers(&mut self, mods: u8);
-    fn send_key(&self, key: VirtualKey, down: bool);
+    fn send_key(&mut self, key: VirtualKey, down: bool);
     fn set_keymap(&mut self, keymap: &XkbKeymap);
 
     // Common Functions
