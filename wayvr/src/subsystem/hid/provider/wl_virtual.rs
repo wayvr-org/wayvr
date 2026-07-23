@@ -15,7 +15,7 @@ use wayland_client::protocol::wl_registry::WlRegistry;
 use wayland_client::protocol::wl_seat::{WlSeat};
 use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::zwp_virtual_keyboard_manager_v1::ZwpVirtualKeyboardManagerV1;
 use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::zwp_virtual_keyboard_v1::ZwpVirtualKeyboardV1;
-use xkbcommon::xkb::{Context, Keymap, CONTEXT_NO_FLAGS, KEYMAP_COMPILE_NO_FLAGS, KEYMAP_FORMAT_TEXT_V1};
+use xkbcommon::xkb::{KEYMAP_FORMAT_TEXT_V1};
 use wlx_common::overlays::ToastTopic;
 use crate::overlays::toast::Toast;
 use crate::subsystem::hid::provider::HidProvider;
@@ -228,6 +228,9 @@ impl WlVirtualProvider {
 
         let virtual_keyboard = keyboard_manager.create_virtual_keyboard(&seat, &qh, ());
 
+        let keymap =
+            get_keymap_wl().unwrap_or_else(|_| XkbKeymap::from_layout_variant("us", "").unwrap());
+
         let mut result = Self {
             keymap_file: None,
             _connection: connection,
@@ -242,25 +245,9 @@ impl WlVirtualProvider {
             wheel_accum: Vec2::ZERO,
         };
 
-        result.set_keymap(&XkbKeymap {
-            inner: Self::default_keymap(),
-        });
+        result.set_keymap(&keymap);
 
         Ok(result)
-    }
-
-    fn default_keymap() -> Keymap {
-        let xkb_context = Context::new(CONTEXT_NO_FLAGS);
-        Keymap::new_from_names(
-            &xkb_context,
-            "",
-            "",
-            "us",
-            "",
-            None,
-            KEYMAP_COMPILE_NO_FLAGS,
-        )
-        .expect("Failed to compile XKB keymap")
     }
 
     fn now_ms() -> u32 {
