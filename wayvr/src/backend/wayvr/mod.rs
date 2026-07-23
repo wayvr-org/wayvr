@@ -847,13 +847,13 @@ impl WvrServerState {
                     self.wm.keyboard_focus = None;
                 }
                 input_capture::CapturedEvent::KeyCombo { combo, pressed } => match combo {
-                    input_capture::KeyCombo::AltF4 if pressed => {
+                    input_capture::KeyCombo::CloseApp if pressed => {
                         if let Some(hover) = self.wm.mouse.as_mut() {
                             let window_handle = hover.hover_window;
                             self.close_window(window_handle);
                         }
                     }
-                    input_capture::KeyCombo::SuperTab => {
+                    input_capture::KeyCombo::SwitchApp => {
                         if pressed {
                             input_state.picking_focus = super::input::FocusPickState::Aiming;
                         } else {
@@ -870,16 +870,16 @@ impl WvrServerState {
                             );
                         }
                     }
-                    input_capture::KeyCombo::Super1 if pressed => {
+                    input_capture::KeyCombo::Set1 if pressed => {
                         tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(0)))
                     }
-                    input_capture::KeyCombo::Super2 if pressed => {
+                    input_capture::KeyCombo::Set2 if pressed => {
                         tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(1)))
                     }
-                    input_capture::KeyCombo::Super3 if pressed => {
+                    input_capture::KeyCombo::Set3 if pressed => {
                         tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(2)))
                     }
-                    input_capture::KeyCombo::Super4 if pressed => {
+                    input_capture::KeyCombo::Set4 if pressed => {
                         tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(3)))
                     }
                     _ => {}

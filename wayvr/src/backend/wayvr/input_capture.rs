@@ -30,14 +30,14 @@ const POLL_TIMEOUT_MS: i32 = 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum KeyCombo {
-    Super1,
-    Super2,
-    Super3,
-    Super4,
-    SuperTab,
-    AltF4,
+    Set1,
+    Set2,
+    Set3,
+    Set4,
+    SwitchApp,
+    CloseApp,
     /// Always consumed by InputCapture internally
-    CtrlAltDel,
+    EmergencyRelease,
 }
 
 #[derive(Debug, Clone)]
@@ -553,7 +553,7 @@ fn process_libinput_event(
             if !grabbed {
                 // while ungrabbed, SuperTab will arm an automatic grab
                 if allow_deferred_grab
-                    && key_combo_is_pressed(KeyCombo::SuperTab, &state.pressed_keys)
+                    && key_combo_is_pressed(KeyCombo::SwitchApp, &state.pressed_keys)
                 {
                     *pending_grab = true;
                 }
@@ -561,19 +561,19 @@ fn process_libinput_event(
                 return ProcessResult::Continue;
             }
 
-            if pressed && key_combo_is_pressed(KeyCombo::CtrlAltDel, &state.pressed_keys) {
+            if pressed && key_combo_is_pressed(KeyCombo::EmergencyRelease, &state.pressed_keys) {
                 log::info!("Ctrl+Alt+Del pressed, ungrabbing all input devices");
                 return ProcessResult::EmergencyUngrab;
             }
 
             // while grabbed, these combos get emitted as normal
             for combo in [
-                KeyCombo::SuperTab,
-                KeyCombo::AltF4,
-                KeyCombo::Super1,
-                KeyCombo::Super2,
-                KeyCombo::Super3,
-                KeyCombo::Super4,
+                KeyCombo::SwitchApp,
+                KeyCombo::CloseApp,
+                KeyCombo::Set1,
+                KeyCombo::Set2,
+                KeyCombo::Set3,
+                KeyCombo::Set4,
             ] {
                 let combo_pressed = key_combo_is_pressed(combo, &state.pressed_keys);
                 let was_pressed = state.active_combos.contains(&combo);
@@ -873,20 +873,20 @@ fn key_combo_is_pressed(combo: KeyCombo, pressed: &HashSet<u16>) -> bool {
     let alt =
         pressed.contains(&KeyCode::KEY_LEFTALT.0) || pressed.contains(&KeyCode::KEY_RIGHTALT.0);
 
-    let ctrl =
-        pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
+    // let ctrl =
+    //     pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
 
     let meta =
         pressed.contains(&KeyCode::KEY_LEFTMETA.0) || pressed.contains(&KeyCode::KEY_RIGHTMETA.0);
 
     match combo {
-        KeyCombo::AltF4 => alt && pressed.contains(&KeyCode::KEY_F4.0),
-        KeyCombo::CtrlAltDel => ctrl && alt && pressed.contains(&KeyCode::KEY_DELETE.0),
-        KeyCombo::SuperTab => meta && pressed.contains(&KeyCode::KEY_TAB.0),
-        KeyCombo::Super1 => meta && pressed.contains(&KeyCode::KEY_1.0),
-        KeyCombo::Super2 => meta && pressed.contains(&KeyCode::KEY_2.0),
-        KeyCombo::Super3 => meta && pressed.contains(&KeyCode::KEY_3.0),
-        KeyCombo::Super4 => meta && pressed.contains(&KeyCode::KEY_4.0),
+        KeyCombo::CloseApp => alt && pressed.contains(&KeyCode::KEY_F4.0),
+        KeyCombo::EmergencyRelease => meta && pressed.contains(&KeyCode::KEY_BACKSPACE.0),
+        KeyCombo::SwitchApp => meta && pressed.contains(&KeyCode::KEY_X.0),
+        KeyCombo::Set1 => meta && pressed.contains(&KeyCode::KEY_1.0),
+        KeyCombo::Set2 => meta && pressed.contains(&KeyCode::KEY_2.0),
+        KeyCombo::Set3 => meta && pressed.contains(&KeyCode::KEY_3.0),
+        KeyCombo::Set4 => meta && pressed.contains(&KeyCode::KEY_4.0),
     }
 }
 
