@@ -30,14 +30,10 @@ const POLL_TIMEOUT_MS: i32 = 20;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum KeyCombo {
-    Set1,
-    Set2,
-    Set3,
-    Set4,
     SwitchApp,
     CloseApp,
     /// Always consumed by InputCapture internally
-    EmergencyRelease,
+    GrabRelease,
 }
 
 #[derive(Debug, Clone)]
@@ -294,11 +290,12 @@ struct RuntimeDeviceState {
     active_combos: HashSet<KeyCombo>,
     horizontal_v120_remainder: f64,
     vertical_v120_remainder: f64,
+    aiming: bool,
 }
 
 enum ProcessResult {
     Continue,
-    EmergencyUngrab,
+    ForceUngrab,
     ReceiverGone,
 }
 
@@ -471,7 +468,7 @@ fn worker_main(
                 pointer_accel,
             ) {
                 ProcessResult::Continue => {}
-                ProcessResult::EmergencyUngrab => {
+                ProcessResult::ForceUngrab => {
                     emergency_ungrab = true;
                     break;
                 }
@@ -551,32 +548,31 @@ fn process_libinput_event(
             }
 
             if !grabbed {
-                // while ungrabbed, SuperTab will arm an automatic grab
+                // while ungrabbed, arm an automatic grab that triggers after release
                 if allow_deferred_grab
-                    && key_combo_is_pressed(KeyCombo::SwitchApp, &state.pressed_keys)
+                    && key_combo_is_pressed(KeyCombo::GrabRelease, &state.pressed_keys)
                 {
                     *pending_grab = true;
                 }
 
                 return ProcessResult::Continue;
-            }
-
-            if pressed && key_combo_is_pressed(KeyCombo::EmergencyRelease, &state.pressed_keys) {
-                log::info!("Ctrl+Alt+Del pressed, ungrabbing all input devices");
-                return ProcessResult::EmergencyUngrab;
+            } else if pressed && key_combo_is_pressed(KeyCombo::GrabRelease, &state.pressed_keys) {
+                log::info!("Ungrabbing all input devices");
+                return ProcessResult::ForceUngrab;
             }
 
             // while grabbed, these combos get emitted as normal
-            for combo in [
-                KeyCombo::SwitchApp,
-                KeyCombo::CloseApp,
-                KeyCombo::Set1,
-                KeyCombo::Set2,
-                KeyCombo::Set3,
-                KeyCombo::Set4,
-            ] {
-                let combo_pressed = key_combo_is_pressed(combo, &state.pressed_keys);
+            for combo in [KeyCombo::SwitchApp, KeyCombo::CloseApp] {
+                let mut combo_pressed = key_combo_is_pressed(combo, &state.pressed_keys);
                 let was_pressed = state.active_combos.contains(&combo);
+
+                if matches!(combo, KeyCombo::SwitchApp)
+                    && was_pressed
+                    && mod_super(&state.pressed_keys)
+                {
+                    // keep SwitchApp active until Super is released
+                    combo_pressed = true;
+                }
 
                 if combo_pressed == was_pressed {
                     continue;
@@ -792,6 +788,7 @@ fn clear_transient_state(runtime_devices: &mut HashMap<LibinputDevice, RuntimeDe
         state.active_combos.clear();
         state.horizontal_v120_remainder = 0.0;
         state.vertical_v120_remainder = 0.0;
+        state.aiming = false;
     }
 }
 
@@ -869,24 +866,19 @@ fn mouse_buttons() -> [KeyCode; 8] {
     ]
 }
 
+fn mod_alt(pressed: &HashSet<u16>) -> bool {
+    pressed.contains(&KeyCode::KEY_LEFTALT.0) || pressed.contains(&KeyCode::KEY_RIGHTALT.0)
+}
+
+fn mod_super(pressed: &HashSet<u16>) -> bool {
+    pressed.contains(&KeyCode::KEY_LEFTMETA.0) || pressed.contains(&KeyCode::KEY_RIGHTMETA.0)
+}
+
 fn key_combo_is_pressed(combo: KeyCombo, pressed: &HashSet<u16>) -> bool {
-    let alt =
-        pressed.contains(&KeyCode::KEY_LEFTALT.0) || pressed.contains(&KeyCode::KEY_RIGHTALT.0);
-
-    // let ctrl =
-    //     pressed.contains(&KeyCode::KEY_LEFTCTRL.0) || pressed.contains(&KeyCode::KEY_RIGHTCTRL.0);
-
-    let meta =
-        pressed.contains(&KeyCode::KEY_LEFTMETA.0) || pressed.contains(&KeyCode::KEY_RIGHTMETA.0);
-
     match combo {
-        KeyCombo::CloseApp => alt && pressed.contains(&KeyCode::KEY_F4.0),
-        KeyCombo::EmergencyRelease => meta && pressed.contains(&KeyCode::KEY_BACKSPACE.0),
-        KeyCombo::SwitchApp => meta && pressed.contains(&KeyCode::KEY_X.0),
-        KeyCombo::Set1 => meta && pressed.contains(&KeyCode::KEY_1.0),
-        KeyCombo::Set2 => meta && pressed.contains(&KeyCode::KEY_2.0),
-        KeyCombo::Set3 => meta && pressed.contains(&KeyCode::KEY_3.0),
-        KeyCombo::Set4 => meta && pressed.contains(&KeyCode::KEY_4.0),
+        KeyCombo::CloseApp => mod_alt(pressed) && pressed.contains(&KeyCode::KEY_F4.0),
+        KeyCombo::GrabRelease => mod_super(pressed) && pressed.contains(&KeyCode::KEY_Z.0),
+        KeyCombo::SwitchApp => mod_super(pressed) && pressed.contains(&KeyCode::KEY_X.0),
     }
 }
 

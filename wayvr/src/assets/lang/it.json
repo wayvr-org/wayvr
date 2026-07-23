@@ -17,7 +17,9 @@
 			"TITLE": "Modalità a mani libere",
 			"NONE": "Disattivato",
 			"HMD": "HMD + pizzico",
-			"EYE_TRACKING": "Occhio + pizzico"
+			"EYE_TRACKING": "Occhio + pizzico",
+			"EYE_ONLY": "Laser oculare",
+			"HMD_ONLY": "Laser HMD"
 		}
 	},
 	"DEFAULT": "Predefinito",
@@ -131,5 +133,21 @@
 		"WAITING_FOR_USER_DESC": "Controlla il desktop per un pop-up di condivisione schermo.\nSeleziona quanto segue:",
 		"WAITING_FOR_USER": "Controlla il desktop per un pop-up di condivisione schermo.",
 		"FAIL": "Impossibile inizializzare la sorgente di trasmissione dello schermo."
+	},
+	"ALTTAB": {
+		"RELEASE_TO_FOCUS": "Mira a un'app e rilascia il tasto Super per focalizzare l'app.",
+		"WHILE_AIMING": "Mentre si mira",
+		"CLICK": "Click del puntatore VR",
+		"GRABALL": "Sposta l'intero set",
+		"GRAB": "Sposta overlay singolo",
+		"DASH": "Attiva/disattiva dashboard",
+		"EDIT": "Attiva/disattiva modalità modifica",
+		"SET": "Cambia set",
+		"RECENTER": "Mostra/nascondi/ricentra",
+		"GENERAL_BINDS": "Binding generali",
+		"TOGGLE_CAPTURE": "Restituisci il controllo al desktop",
+		"FOCUS_MODE": "Modalità focus (tieni premuto Super)",
+		"CLOSE": "Chiudi l'app focalizzata",
+		"MOUSE": "I clic e lo scorrimento del mouse reale vengono tradotti anche nel puntatore VR"
 	}
 }

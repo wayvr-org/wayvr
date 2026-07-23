@@ -1,10 +1,10 @@
-use glam::Vec2;
+use glam::DVec2;
 use idmap::{IdMap, idmap};
 use idmap_derive::IntegerId;
 use libc::{input_event, timeval};
 use serde::Deserialize;
 use std::sync::LazyLock;
-use strum::{EnumIter, EnumString};
+use strum::{EnumIter, EnumString, FromRepr};
 use xkbcommon::xkb;
 
 #[cfg(feature = "wayland")]
@@ -27,8 +27,8 @@ struct MouseButtonAction {
 
 #[derive(Default)]
 struct MouseAction {
-    last_requested_pos: Option<Vec2>,
-    pos: Option<Vec2>,
+    last_requested_pos: Option<DVec2>,
+    pos: Option<DVec2>,
     button: Option<MouseButtonAction>,
     scroll: Option<WheelDelta>,
 }
@@ -37,7 +37,7 @@ pub const MOUSE_LEFT: u16 = 0x110;
 pub const MOUSE_RIGHT: u16 = 0x111;
 pub const MOUSE_MIDDLE: u16 = 0x112;
 
-const MOUSE_EXTENT: f32 = 32768.;
+const MOUSE_EXTENT: f64 = 32768.;
 
 const EV_SYN: u16 = 0x0;
 const EV_KEY: u16 = 0x1;
@@ -75,7 +75,9 @@ pub const ALTGR: KeyModifier = 0x80;
 
 #[allow(non_camel_case_types)]
 #[repr(u16)]
-#[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, IntegerId, EnumString, EnumIter)]
+#[derive(
+    Debug, Deserialize, PartialEq, Eq, Clone, Copy, IntegerId, EnumString, EnumIter, FromRepr,
+)]
 pub enum VirtualKey {
     Escape = 9,
     N1, // number row

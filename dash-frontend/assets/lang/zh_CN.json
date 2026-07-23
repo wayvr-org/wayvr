@@ -78,9 +78,13 @@
 			"EYE_PINCH": "眼睛 + 捏合",
 			"NONE_INPUT_HELP": "不模拟鼠标和键盘。\n将无法与屏幕进行交互。",
 			"UINPUT": "设备模拟",
-			"UINPUT_HELP": "使用 uinput 模块来模拟设备。\n您的用户必须处于 input 用户组中。\n已知在大多数桌面上运行良好。",
 			"WL_VIRTUAL": "Wayland 虚拟输入",
-			"WL_VIRTUAL_HELP": "使用 zwlr_virtual_pointer 和 zwp_virtual_keyboard 向 Wayland 合成器发送事件。\n仅在部分桌面环境下能可靠工作。\n在 KDE、GNOME 或 COSMIC 上无法工作。"
+			"WL_VIRTUAL_HELP": "使用 zwlr_virtual_pointer 和 zwp_virtual_keyboard 向 Wayland 合成器发送事件。\n仅在部分桌面环境下能可靠工作。\n在 KDE、GNOME 或 COSMIC 上无法工作。",
+			"EYE_ONLY": "眼部激光",
+			"HMD_ONLY": "HMD 激光指针",
+			"NONE_INPUT_CAPTURE_HELP": "不捕捉鼠标和键盘。\n在 WayVR 中启动的应用里将无法\n使用物理鼠标或键盘。",
+			"UINPUT_HELP": "使用 uinput 模块来模拟设备。\n已知在大多数桌面环境下运行良好。",
+			"EVDEV_HELP": "独占使用输入设备。\n您的用户必须在 input 组中。"
 		},
 		"POINTER_LERP_FACTOR": "指针平滑",
 		"RESTART_SOFTWARE": "重启软件",
@@ -217,7 +221,14 @@
 		"SAVE_PLAYSPACE_CENTER": "保存 Playspace 中心",
 		"SAVE_PLAYSPACE_CENTER_HELP": "将当前活动空间用于重置活动空间的绑定。",
 		"RESET_PLAYSPACE_CENTER": "重置游玩区域中心",
-		"RESET_PLAYSPACE_CENTER_HELP": "清除之前设置的 Playspace 中心。"
+		"RESET_PLAYSPACE_CENTER_HELP": "清除之前设置的 Playspace 中心。",
+		"HANDSFREE_ALT_TAB": "应用切换瞄准点",
+		"HANDSFREE_ALT_TAB_HELP": "按住 Super+X，对准目标窗口，然后松开以切换焦点。",
+		"INPUT_CAPTURE_METHOD": "输入捕获方式",
+		"POINTER_ACCELERATION": "鼠标加速",
+		"POINTER_ACCELERATION_HELP": "开启：自适应鼠标加速\n关闭：恒定速度",
+		"POINTER_SPEED": "鼠标速度",
+		"INPUT_CAPTURE_METHOD_HELP": "允许在 WayVR 中使用物理外设。\n Super+Z: 在 WayVR 和真实桌面之间切换输入\n Super+X: 在 WayVR 应用之间切换"
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",
 	"APPLICATION_STARTED": "应用已启动",

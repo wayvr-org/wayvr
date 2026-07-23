@@ -76,9 +76,13 @@
 			"EYE_PINCH": "Ojo + pellizco",
 			"NONE_INPUT_HELP": "No emular ratón y teclado.\nNo podrá interactuar con las pantallas.",
 			"UINPUT": "Emulación de dispositivo",
-			"UINPUT_HELP": "Utiliza el módulo uinput para emular un dispositivo.\nSu usuario debe estar en el grupo input.\nSe sabe que funciona bien en la mayoría de los escritorios.",
 			"WL_VIRTUAL": "Entrada virtual de Wayland",
-			"WL_VIRTUAL_HELP": "Enviar eventos al compositor de Wayland usando\nzwlr_virtual_pointer y zwp_virtual_keyboard.\nSolo funciona de forma fiable en algunos escritorios.\nNO funciona en KDE, GNOME o COSMIC."
+			"WL_VIRTUAL_HELP": "Enviar eventos al compositor de Wayland usando\nzwlr_virtual_pointer y zwp_virtual_keyboard.\nSolo funciona de forma fiable en algunos escritorios.\nNO funciona en KDE, GNOME o COSMIC.",
+			"EYE_ONLY": "Láser ocular",
+			"HMD_ONLY": "Láser del HMD",
+			"NONE_INPUT_CAPTURE_HELP": "No capturar el ratón ni el teclado.\nNo se podrá usar el ratón físico ni el\nteclado en las aplicaciones lanzadas dentro de WayVR.",
+			"UINPUT_HELP": "Utiliza el módulo uinput para emular un dispositivo.\nSe sabe que funciona bien en la mayoría de los escritorios.",
+			"EVDEV_HELP": "Captura los dispositivos de entrada para uso exclusivo.\nTu usuario debe pertenecer al grupo 'input'."
 		},
 		"AUTOSTART_APPS": "Aplicaciones a ejecutar al inicio",
 		"HANDSFREE_POINTER": "Modo manos libres",
@@ -196,7 +200,14 @@
 		"SAVE_PLAYSPACE_CENTER": "Guardar centro del playspace",
 		"SAVE_PLAYSPACE_CENTER_HELP": "Usa el playspace actual para el comando de restablecer playspace.",
 		"RESET_PLAYSPACE_CENTER": "Reiniciar centro del playspace",
-		"RESET_PLAYSPACE_CENTER_HELP": "Borra el centro del playspace establecido previamente."
+		"RESET_PLAYSPACE_CENTER_HELP": "Borra el centro del playspace establecido previamente.",
+		"HANDSFREE_ALT_TAB": "Puntero del selector de aplicaciones",
+		"HANDSFREE_ALT_TAB_HELP": "Mantén presionadas Super+X, apunta a la ventana deseada y luego suelta para cambiar el foco.",
+		"INPUT_CAPTURE_METHOD": "Método de captura de entrada",
+		"POINTER_ACCELERATION": "Aceleración del ratón",
+		"POINTER_ACCELERATION_HELP": "Activado: Aceleración adaptativa del ratón\nDesactivado: Velocidad constante",
+		"POINTER_SPEED": "Velocidad del ratón",
+		"INPUT_CAPTURE_METHOD_HELP": "Permite usar periféricos físicos dentro de WayVR.\n Super+Z: Cambiar la entrada entre WayVR y el escritorio real\n Super+X: Cambiar entre aplicaciones de WayVR"
 	},
 	"HELLO": "¡Hola!",
 	"AUDIO": {

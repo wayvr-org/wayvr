@@ -2,7 +2,7 @@ use std::io::Write;
 use std::os::fd::AsFd;
 use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::Context as _;
-use glam::Vec2;
+use glam::{DVec2};
 use input_linux::sys::{*};
 use smithay::reexports::rustix::fs::{memfd_create, MemfdFlags};
 use smithay::reexports::wayland_protocols_wlr::virtual_pointer::v1::client::zwlr_virtual_pointer_manager_v1::ZwlrVirtualPointerManagerV1;
@@ -27,18 +27,20 @@ pub struct WlVirtualProvider {
     state: KbState,
 
     virtual_pointer: ZwlrVirtualPointerV1,
-    desktop_extent: Vec2,
-    desktop_origin: Vec2,
+    desktop_extent: DVec2,
+    desktop_origin: DVec2,
     keymap_file: Option<std::fs::File>,
 
     virtual_keyboard: ZwpVirtualKeyboardV1,
     keyboard_mods_state: u8,
+
+    last_pointer_position: DVec2,
 }
 
 struct KbState;
 
 impl HidProvider for WlVirtualProvider {
-    fn mouse_move(&mut self, pos: Vec2) {
+    fn mouse_move(&mut self, pos: DVec2) {
         #[cfg(debug_assertions)]
         log::trace!("Pointer move: {pos:?}");
 
@@ -51,6 +53,15 @@ impl HidProvider for WlVirtualProvider {
         );
         self.virtual_pointer.motion(Self::now_ms(), 0.0, 0.0);
         self.virtual_pointer.frame();
+        self.last_pointer_position = pos;
+    }
+
+    fn mouse_move_rel(&mut self, rel_pos: DVec2) {
+        let pos = (self.last_pointer_position + rel_pos).clamp(
+            self.desktop_origin,
+            self.desktop_origin + self.desktop_extent,
+        );
+        self.mouse_move(pos);
     }
 
     fn send_button(&mut self, button: u16, down: bool) {
@@ -102,11 +113,11 @@ impl HidProvider for WlVirtualProvider {
         self.virtual_pointer.frame();
     }
 
-    fn set_desktop_extent(&mut self, extent: Vec2) {
+    fn set_desktop_extent(&mut self, extent: DVec2) {
         self.desktop_extent = extent;
     }
 
-    fn set_desktop_origin(&mut self, origin: Vec2) {
+    fn set_desktop_origin(&mut self, origin: DVec2) {
         self.desktop_origin = origin;
     }
 
@@ -207,9 +218,10 @@ impl WlVirtualProvider {
             state,
             virtual_pointer,
             virtual_keyboard,
-            desktop_extent: Vec2::ZERO,
-            desktop_origin: Vec2::ZERO,
+            desktop_extent: DVec2::ZERO,
+            desktop_origin: DVec2::ZERO,
             keyboard_mods_state: 0,
+            last_pointer_position: DVec2::ZERO,
         };
 
         result.set_keymap(&XkbKeymap {

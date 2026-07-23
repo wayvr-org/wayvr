@@ -62,6 +62,19 @@ pub enum InputEmulationMethod {
 	None,
 }
 
+#[derive(Default, Clone, Copy, Serialize, Deserialize, AsRefStr, EnumString, EnumProperty, VariantArray)]
+pub enum InputCaptureMethod {
+	#[strum(props(Tooltip = "APP_SETTINGS.OPTION.EVDEV_HELP"))]
+	Evdev,
+
+	#[default]
+	#[strum(props(
+		Translation = "APP_SETTINGS.OPTION.NONE",
+		Tooltip = "APP_SETTINGS.OPTION.NONE_INPUT_CAPTURE_HELP"
+	))]
+	None,
+}
+
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, AsRefStr, EnumString, EnumProperty, VariantArray)]
 pub enum AltModifier {
 	#[default]
@@ -494,4 +507,7 @@ pub struct GeneralConfig {
 
 	#[serde(default)]
 	pub wvr_mouse_speed: f32,
+
+	#[serde(default)]
+	pub wvr_input_capture: InputCaptureMethod,
 }

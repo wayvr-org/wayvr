@@ -76,9 +76,13 @@
 			"EYE_PINCH": "Auge + Kneifen",
 			"NONE_INPUT_HELP": "Maus und Tastatur nicht emulieren.\nEs wird nicht möglich sein, mit Displays zu interagieren.",
 			"UINPUT": "Gerätesimulation",
-			"UINPUT_HELP": "Verwendet das uinput-Modul, um ein Gerät zu emulieren.\nIhr Benutzer muss in der Gruppe „input“ sein.\nBekannt dafür, auf den meisten Desktops gut zu funktionieren.",
 			"WL_VIRTUAL": "Wayland-virtueller Input",
-			"WL_VIRTUAL_HELP": "Sendet Ereignisse an den Wayland-Compositor unter Verwendung von\nzwlr_virtual_pointer und zwp_virtual_keyboard.\nFunktioniert nur zuverlässig auf einigen Desktops.\nFunktioniert NICHT auf KDE, GNOME oder COSMIC."
+			"WL_VIRTUAL_HELP": "Sendet Ereignisse an den Wayland-Compositor unter Verwendung von\nzwlr_virtual_pointer und zwp_virtual_keyboard.\nFunktioniert nur zuverlässig auf einigen Desktops.\nFunktioniert NICHT auf KDE, GNOME oder COSMIC.",
+			"EYE_ONLY": "Augenlaser",
+			"HMD_ONLY": "HMD-Laser",
+			"NONE_INPUT_CAPTURE_HELP": "Maus und Tastatur nicht erfassen.\nDie physische Maus oder Tastatur kann in den \ninnerhalb von WayVR gestarteten Apps nicht verwendet werden.",
+			"UINPUT_HELP": "Verwendet das uinput-Modul, um ein Gerät zu emulieren.\nFunktioniert auf den meisten Desktops zuverlässig.",
+			"EVDEV_HELP": "Eingabegeräte für die exklusive Nutzung erfassen.\nIhr Benutzer muss Mitglied der Input-Gruppe sein."
 		},
 		"AUTOSTART_APPS": "Anwendungen, die beim Start ausgeführt werden sollen",
 		"HANDSFREE_POINTER": "Freihändige Modus",
@@ -196,7 +200,14 @@
 		"SAVE_PLAYSPACE_CENTER": "Playspace-Zentrum speichern",
 		"SAVE_PLAYSPACE_CENTER_HELP": "Nutzen Sie den aktuellen Playspace für die Zuweisung zum Zurücksetzen des Playspaces.",
 		"RESET_PLAYSPACE_CENTER": "Playspace-Zentrum zurücksetzen",
-		"RESET_PLAYSPACE_CENTER_HELP": "Zuvor festgelegtes Playspace-Zentrum zurücksetzen."
+		"RESET_PLAYSPACE_CENTER_HELP": "Zuvor festgelegtes Playspace-Zentrum zurücksetzen.",
+		"HANDSFREE_ALT_TAB": "App-Switcher-Ziel",
+		"HANDSFREE_ALT_TAB_HELP": "Super+X gedrückt halten, auf das gewünschte Fenster zielen und dann loslassen, um den Fokus zu wechseln.",
+		"INPUT_CAPTURE_METHOD": "Eingabe-Erfassungsmethode",
+		"POINTER_ACCELERATION": "Mausbeschleunigung",
+		"POINTER_ACCELERATION_HELP": "An: Adaptive Mausbeschleunigung\nAus: Konstante Geschwindigkeit",
+		"POINTER_SPEED": "Mausgeschwindigkeit",
+		"INPUT_CAPTURE_METHOD_HELP": "Ermöglicht die Nutzung physischer Peripheriegeräte innerhalb von WayVR.\n Super+Z: Eingabe zwischen WayVR und echtem Desktop umschalten\n Super+X: Zwischen WayVR-Apps umschalten"
 	},
 	"HELLO": "Hallo!",
 	"AUDIO": {

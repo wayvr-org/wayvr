@@ -17,7 +17,9 @@
 			"TITLE": "Modo manos libres",
 			"NONE": "Desactivado",
 			"HMD": "HMD + pellizco",
-			"EYE_TRACKING": "Ojo + pellizco"
+			"EYE_TRACKING": "Ojo + pellizco",
+			"EYE_ONLY": "Láser ocular",
+			"HMD_ONLY": "Láser del HMD"
 		}
 	},
 	"WATCH": {
@@ -133,5 +135,21 @@
 		"WAITING_FOR_USER_DESC": "Busca la ventana emergente de transmisión de pantalla en tu escritorio.\nSelecciona lo siguiente:",
 		"WAITING_FOR_USER": "Revisa tu escritorio para ver la ventana emergente de transmisión de pantalla.",
 		"FAIL": "No se pudo inicializar la fuente de transmisión de pantalla."
+	},
+	"ALTTAB": {
+		"RELEASE_TO_FOCUS": "Apunta a una aplicación y suelta Super para enfocar esa aplicación.",
+		"WHILE_AIMING": "Mientras se apunta",
+		"CLICK": "Clic del puntero de VR",
+		"GRABALL": "Mover set completo",
+		"GRAB": "Mover superposición individual",
+		"DASH": "Alternar tablero",
+		"EDIT": "Alternar modo de edición",
+		"SET": "Cambiar set",
+		"RECENTER": "Mostrar/ocultar/recentrar",
+		"GENERAL_BINDS": "Asignaciones generales",
+		"TOGGLE_CAPTURE": "Devolver el control al escritorio",
+		"FOCUS_MODE": "Modo de enfoque (mantener Super)",
+		"CLOSE": "Cerrar aplicación enfocada",
+		"MOUSE": "Los clics y el desplazamiento del ratón real también se traducen al puntero de VR"
 	}
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use glam::vec2;
+use glam::{DVec2, vec2};
 use wlx_capture::{
     WlxCapture,
     frame::Transform,
@@ -42,7 +42,6 @@ impl ScreenBackend {
 
 #[cfg(feature = "pipewire")]
 pub fn create_screens_x11pw(app: &mut AppState) -> anyhow::Result<ScreenCreateData> {
-    use glam::vec2;
     use wlx_capture::xshm::xshm_get_monitors;
     use wlx_common::astr_containers::AStrMapExt;
 
@@ -91,7 +90,7 @@ pub fn create_screens_x11pw(app: &mut AppState) -> anyhow::Result<ScreenCreateDa
     log::info!("Got {} monitors", monitors.len());
     log::info!("Got {} streams", select_screen_result.streams.len());
 
-    let mut extent = vec2(0., 0.);
+    let mut extent = DVec2::ZERO;
     let screens = select_screen_result
         .streams
         .into_iter()
@@ -99,8 +98,8 @@ pub fn create_screens_x11pw(app: &mut AppState) -> anyhow::Result<ScreenCreateDa
         .map(|(i, s)| {
             let m = best_match(&s, monitors.iter().map(AsRef::as_ref)).unwrap();
             log::info!("Stream {i} is {}", m.name);
-            extent.x = extent.x.max((m.monitor.x() + m.monitor.width()) as f32);
-            extent.y = extent.y.max((m.monitor.y() + m.monitor.height()) as f32);
+            extent.x = extent.x.max((m.monitor.x() + m.monitor.width()) as _);
+            extent.y = extent.y.max((m.monitor.y() + m.monitor.height()) as _);
 
             let mut backend = ScreenBackend::new_raw(
                 m.name.clone(),
@@ -133,7 +132,7 @@ pub fn create_screens_x11pw(app: &mut AppState) -> anyhow::Result<ScreenCreateDa
         .collect();
 
     app.hid_provider.inner.set_desktop_extent(extent);
-    app.hid_provider.inner.set_desktop_origin(vec2(0.0, 0.0));
+    app.hid_provider.inner.set_desktop_origin(DVec2::ZERO);
 
     Ok(ScreenCreateData { screens })
 }
@@ -169,7 +168,7 @@ fn best_match<'a>(
 pub fn create_screens_xshm(app: &mut AppState) -> anyhow::Result<ScreenCreateData> {
     use wlx_capture::xshm::xshm_get_monitors;
 
-    let mut extent = vec2(0., 0.);
+    let mut extent = DVec2::ZERO;
 
     let monitors = match xshm_get_monitors() {
         Ok(m) => m,
@@ -181,8 +180,8 @@ pub fn create_screens_xshm(app: &mut AppState) -> anyhow::Result<ScreenCreateDat
     let screens = monitors
         .into_iter()
         .map(|s| {
-            extent.x = extent.x.max((s.monitor.x() + s.monitor.width()) as f32);
-            extent.y = extent.y.max((s.monitor.y() + s.monitor.height()) as f32);
+            extent.x = extent.x.max((s.monitor.x() + s.monitor.width()) as _);
+            extent.y = extent.y.max((s.monitor.y() + s.monitor.height()) as _);
 
             let size = (s.monitor.width(), s.monitor.height());
             let pos = (s.monitor.x(), s.monitor.y());
@@ -216,7 +215,7 @@ pub fn create_screens_xshm(app: &mut AppState) -> anyhow::Result<ScreenCreateDat
         .collect();
 
     app.hid_provider.inner.set_desktop_extent(extent);
-    app.hid_provider.inner.set_desktop_origin(vec2(0.0, 0.0));
+    app.hid_provider.inner.set_desktop_origin(DVec2::ZERO);
 
     Ok(ScreenCreateData { screens })
 }

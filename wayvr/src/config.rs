@@ -10,7 +10,8 @@ use wlx_common::{
     astr_containers::AStrMap,
     config::{
         AltModifier, CaptureMethod, ChromaKeyParams, GeneralConfig, HandsfreeAltTab,
-        HandsfreePointer, InputEmulationMethod, SerializedWindowSet, SerializedWindowStates,
+        HandsfreePointer, InputCaptureMethod, InputEmulationMethod, SerializedWindowSet,
+        SerializedWindowStates,
     },
     config_io,
     locale::Language,
@@ -191,6 +192,7 @@ pub struct AutoSettings {
     pub snap_angle_deg: f32,
     pub wvr_mouse_acceleration: bool,
     pub wvr_mouse_speed: f32,
+    pub wvr_input_capture: InputCaptureMethod,
 }
 
 fn get_settings_path() -> PathBuf {
@@ -260,6 +262,7 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         snap_angle_deg: config.snap_angle_deg,
         wvr_mouse_acceleration: config.wvr_mouse_acceleration,
         wvr_mouse_speed: config.wvr_mouse_speed,
+        wvr_input_capture: config.wvr_input_capture,
     };
 
     let json = serde_json::to_string_pretty(&conf).unwrap(); // want panic

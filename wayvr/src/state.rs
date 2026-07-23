@@ -148,6 +148,22 @@ impl AppState {
             ))?,
         )?;
 
+        audio_sample_player.register_sample(
+            "input_grab",
+            audio::AudioSample::from_mp3(&audio::AudioSample::bytes_from_config_or_default(
+                "sound/wvr_input_capture_grabbed.mp3",
+                include_bytes!("assets/sound/wvr_input_capture_grabbed.mp3"),
+            ))?,
+        )?;
+
+        audio_sample_player.register_sample(
+            "input_ungrab",
+            audio::AudioSample::from_mp3(&audio::AudioSample::bytes_from_config_or_default(
+                "sound/wvr_input_capture_ungrabbed.mp3",
+                include_bytes!("assets/sound/wvr_input_capture_ungrabbed.mp3"),
+            ))?,
+        )?;
+
         let mut assets = Box::new(gui::asset::GuiAsset {});
         audio_sample_player.register_wgui_samples(assets.as_mut())?;
 

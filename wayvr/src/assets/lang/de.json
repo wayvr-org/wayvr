@@ -17,7 +17,9 @@
 			"TITLE": "Freihändig-Modus",
 			"NONE": "Aus",
 			"HMD": "HMD + Kneifen",
-			"EYE_TRACKING": "Auge + Kneifen"
+			"EYE_TRACKING": "Auge + Kneifen",
+			"EYE_ONLY": "Augenlaser",
+			"HMD_ONLY": "HMD-Laser"
 		}
 	},
 	"WATCH": {
@@ -133,5 +135,21 @@
 		"WAITING_FOR_USER_DESC": "Überprüfen Sie Ihren Desktop auf ein Pop-up zur Bildschirmübertragung.\nWählen Sie Folgendes aus:",
 		"WAITING_FOR_USER": "Überprüfen Sie Ihren Desktop auf ein Pop-up zur Bildschirmübertragung.",
 		"FAIL": "Bildschirmübertragungsquelle konnte nicht initialisiert werden."
+	},
+	"ALTTAB": {
+		"RELEASE_TO_FOCUS": "Richten Sie den Cursor auf eine App und lassen Sie die Super-Taste los, um diese App zu fokussieren.",
+		"WHILE_AIMING": "Beim Zielen",
+		"CLICK": "VR-Pointer-Klick",
+		"GRABALL": "Gesamtes Set bewegen",
+		"GRAB": "Einzelnes Overlay bewegen",
+		"DASH": "Dashboard umschalten",
+		"EDIT": "Bearbeitungsmodus umschalten",
+		"SET": "Set wechseln",
+		"RECENTER": "Anzeigen/Ausblenden/Zentrieren",
+		"GENERAL_BINDS": "Allgemeine Belegungen",
+		"TOGGLE_CAPTURE": "Kontrolle an Desktop zurückgeben",
+		"FOCUS_MODE": "Fokus-Modus (Super gedrückt halten)",
+		"CLOSE": "Fokussierte App schließen",
+		"MOUSE": "Echte Mausklicks & Scrollen werden auch auf den VR-Zeiger übertragen"
 	}
 }

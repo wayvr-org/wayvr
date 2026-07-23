@@ -319,6 +319,7 @@ pub(crate) enum SettingType {
 	HandsfreePointer,
 	HideGrabHelp,
 	HideUsername,
+	InputCaptureMethod,
 	InputEmulationMethod,
 	InvertScrollDirectionX,
 	InvertScrollDirectionY,
@@ -436,6 +437,9 @@ impl SettingType {
 			Self::CaptureMethod => {
 				config.capture_method = wlx_common::config::CaptureMethod::from_str(value).expect("Invalid enum value!")
 			}
+			Self::InputCaptureMethod => {
+				config.wvr_input_capture = wlx_common::config::InputCaptureMethod::from_str(value).expect("Invalid enum value!")
+			}
 			Self::InputEmulationMethod => {
 				config.input_emulation_method =
 					wlx_common::config::InputEmulationMethod::from_str(value).expect("Invalid enum value!")
@@ -460,6 +464,7 @@ impl SettingType {
 	fn get_enum_title(self, config: &mut GeneralConfig) -> Translation {
 		match self {
 			Self::CaptureMethod => Self::get_enum_title_inner(config.capture_method),
+			Self::InputCaptureMethod => Self::get_enum_title_inner(config.wvr_input_capture),
 			Self::InputEmulationMethod => Self::get_enum_title_inner(config.input_emulation_method),
 			Self::KeyboardMiddleClick => Self::get_enum_title_inner(config.keyboard_middle_click_mode),
 			Self::HandsfreePointer => Self::get_enum_title_inner(config.handsfree_pointer),
@@ -509,6 +514,7 @@ impl SettingType {
 			Self::HandsfreePointer => Ok("APP_SETTINGS.HANDSFREE_POINTER"),
 			Self::HideGrabHelp => Ok("APP_SETTINGS.HIDE_GRAB_HELP"),
 			Self::HideUsername => Ok("APP_SETTINGS.HIDE_USERNAME"),
+			Self::InputCaptureMethod => Ok("APP_SETTINGS.INPUT_CAPTURE_METHOD"),
 			Self::InputEmulationMethod => Ok("APP_SETTINGS.INPUT_EMULATION_METHOD"),
 			Self::InvertScrollDirectionX => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_X"),
 			Self::InvertScrollDirectionY => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_Y"),
@@ -561,6 +567,7 @@ impl SettingType {
 			Self::GridOpacity => Some("APP_SETTINGS.GRID_OPACITY_HELP"),
 			Self::HandsfreeAltTab => Some("APP_SETTINGS.HANDSFREE_ALT_TAB_HELP"),
 			Self::HandsfreePointer => Some("APP_SETTINGS.HANDSFREE_POINTER_HELP"),
+			Self::InputCaptureMethod => Some("APP_SETTINGS.INPUT_CAPTURE_METHOD_HELP"),
 			Self::InputEmulationMethod => Some("APP_SETTINGS.INPUT_EMULATION_METHOD_HELP"),
 			Self::KeyboardMiddleClick => Some("APP_SETTINGS.KEYBOARD_MIDDLE_CLICK_HELP"),
 			Self::LeftHandedMouse => Some("APP_SETTINGS.LEFT_HANDED_MOUSE_HELP"),

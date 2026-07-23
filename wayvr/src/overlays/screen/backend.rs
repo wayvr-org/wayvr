@@ -3,7 +3,7 @@ use std::{
     time::Instant,
 };
 
-use glam::{Affine2, Vec2, vec2};
+use glam::{Affine2, DVec2, Vec2, vec2};
 use wlx_capture::{WlxCapture, frame::Transform};
 
 use crate::{
@@ -314,7 +314,9 @@ impl OverlayBackend for ScreenBackend {
                 || app.input_state.pointers[hit.pointer].now.move_mouse)
         {
             let pos = self.mouse_transform.transform_point2(hit.uv);
-            app.hid_provider.inner.mouse_move(pos);
+            app.hid_provider
+                .inner
+                .mouse_move(DVec2::new(pos.x as _, pos.y as _));
             set_next_move(app.session.config.mouse_move_interval_ms as _);
         }
         HoverResult::consume()
@@ -345,7 +347,9 @@ impl OverlayBackend for ScreenBackend {
             return;
         }
         let pos = self.mouse_transform.transform_point2(hit.uv);
-        app.hid_provider.inner.mouse_move(pos);
+        app.hid_provider
+            .inner
+            .mouse_move(DVec2::new(pos.x as _, pos.y as _));
     }
 
     fn on_scroll(&mut self, app: &mut AppState, _hit: &PointerHit, delta: WheelDelta) {

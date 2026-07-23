@@ -1,4 +1,4 @@
-use glam::{Affine3A, Quat, Vec3};
+use glam::{Affine3A, Quat, Vec3, vec3};
 use std::sync::{Arc, LazyLock};
 use wgui::event::EventAlterables;
 use wgui::parser::Fetchable;
@@ -9,7 +9,7 @@ use crate::overlays::watch::WATCH_NAME;
 use crate::state::AppState;
 use crate::windowing::backend::OverlayEventData;
 use crate::windowing::window::OverlayWindowConfig;
-use crate::windowing::{Z_ORDER_ANCHOR, Z_ORDER_HELP};
+use crate::windowing::{PIXELS_TO_METERS, Z_ORDER_ANCHOR, Z_ORDER_HELP};
 
 pub static ANCHOR_NAME: LazyLock<Arc<str>> = LazyLock::new(|| Arc::from("anchor"));
 
@@ -102,6 +102,32 @@ pub fn create_grab_help(app: &mut AppState) -> anyhow::Result<OverlayWindowConfi
                 Quat::IDENTITY,
                 Vec3::ZERO,
             ),
+            ..OverlayWindowState::default()
+        },
+        global: true,
+        ..OverlayWindowConfig::from_backend(Box::new(panel))
+    })
+}
+
+pub static ALTTAB_HELP_NAME: LazyLock<Arc<str>> = LazyLock::new(|| Arc::from("alttab-help"));
+
+pub fn create_alltab_help(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
+    let mut panel =
+        GuiPanel::new_from_template(app, "gui/alttab-help.xml", (), Default::default())?;
+    panel.update_layout(app)?;
+
+    Ok(OverlayWindowConfig {
+        name: ALTTAB_HELP_NAME.clone(),
+        z_order: Z_ORDER_HELP,
+        default_state: OverlayWindowState {
+            interactable: false,
+            grabbable: false,
+            transform: Affine3A::from_scale_rotation_translation(
+                Vec3::ONE * panel.layout.content_size.x * PIXELS_TO_METERS,
+                Quat::IDENTITY,
+                vec3(0., -0.2, -0.51), // 1 cm behind toast
+            ),
+            positioning: Positioning::FollowHead { lerp: 0.1 },
             ..OverlayWindowState::default()
         },
         global: true,

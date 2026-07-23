@@ -71,9 +71,13 @@
 			"EYE_PINCH": "Ściśnięcie palcami + oko",
 			"NONE_INPUT_HELP": "Nie emuluj myszy ani klawiatury.\nBrak możliwości interakcji z ekranami.",
 			"UINPUT": "Emulacja urządzenia",
-			"UINPUT_HELP": "Używa modułu uinput do emulowania urządzenia.\nTwoje konto użytkownika musi należeć do grupy input.\nWiadomo, że działa dobrze na większości komputerów stacjonarnych.",
 			"WL_VIRTUAL": "Wirtualne wejście Wayland",
-			"WL_VIRTUAL_HELP": "Wysyłaj wejście myszki/klawiatury do kompozytora Wayland za pomocą\nzwlr_virtual_pointer i zwp_virtual_keyboard.\nDziała niezawodnie tylko na niektórych pulpitach.\nNIE działa na KDE, GNOME ani COSMIC."
+			"WL_VIRTUAL_HELP": "Wysyłaj wejście myszki/klawiatury do kompozytora Wayland za pomocą\nzwlr_virtual_pointer i zwp_virtual_keyboard.\nDziała niezawodnie tylko na niektórych pulpitach.\nNIE działa na KDE, GNOME ani COSMIC.",
+			"EYE_ONLY": "Laser oczami",
+			"HMD_ONLY": "Laser HMD",
+			"NONE_INPUT_CAPTURE_HELP": "Nie przechwytuj myszy i klawiatury.\nFizyczna mysz lub klawiatura nie będą\ndostępne w aplikacjach uruchomionych w WayVR.",
+			"UINPUT_HELP": "Używa modułu uinput do emulacji urządzenia.\nSprawdzono, że działa dobrze na większości komputerów stacjonarnych.",
+			"EVDEV_HELP": "Przejmij urządzenia wejściowe do wyłącznego użytku.\nUżytkownik musi należeć do grupy 'input'."
 		},
 		"AUTOSTART_APPS": "Aplikacje auto-start",
 		"HANDSFREE_POINTER": "Tryb bez użycia rąk",
@@ -191,7 +195,14 @@
 		"SAVE_PLAYSPACE_CENTER": "Zapisz centrum obszaru gry",
 		"SAVE_PLAYSPACE_CENTER_HELP": "Użyj aktualnego obszaru gry dla przypisania resetowania obszaru gry.",
 		"RESET_PLAYSPACE_CENTER": "Zresetuj środek obszaru gry",
-		"RESET_PLAYSPACE_CENTER_HELP": "Wyczyść poprzednio ustawiony środek obszaru playspace."
+		"RESET_PLAYSPACE_CENTER_HELP": "Wyczyść poprzednio ustawiony środek obszaru playspace.",
+		"HANDSFREE_ALT_TAB": "Cel przełącznika aplikacji",
+		"HANDSFREE_ALT_TAB_HELP": "Przytrzymaj Super+X, wyceluj w żądane okno, a następnie puść, aby zmienić fokus.",
+		"INPUT_CAPTURE_METHOD": "Metoda przechwytywania wejścia",
+		"POINTER_ACCELERATION": "Akceleracja myszy",
+		"POINTER_ACCELERATION_HELP": "Wł.: Adaptacyjna akceleracja myszy\nWył.: Stała prędkość",
+		"POINTER_SPEED": "Prędkość myszy",
+		"INPUT_CAPTURE_METHOD_HELP": "Umożliwia korzystanie z fizycznych urządzeń peryferyjnych wewnątrz WayVR.\n Super+Z: Przełącz wejście między WayVR a rzeczywistym pulpitem\n Super+X: Przełącz między aplikacjami WayVR"
 	},
 	"APPLICATION_LAUNCHER": "Uruchamiacz aplikacji",
 	"APPLICATIONS": "Aplikacje",

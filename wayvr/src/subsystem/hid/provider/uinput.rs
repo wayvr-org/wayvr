@@ -4,7 +4,7 @@ use crate::subsystem::hid::{
     EV_ABS, EV_KEY, EV_REL, EV_SYN, MODS_TO_KEYS, MOUSE_EXTENT, MOUSE_LEFT, MOUSE_MIDDLE,
     MouseAction, MouseButtonAction, VirtualKey, WheelDelta, XkbKeymap, get_time, new_event,
 };
-use glam::Vec2;
+use glam::DVec2;
 use input_linux::{
     AbsoluteAxis, AbsoluteInfo, AbsoluteInfoSetup, EventKind, InputId, Key, RelativeAxis,
     UInputHandle,
@@ -18,8 +18,8 @@ use wlx_common::overlays::ToastTopic;
 pub struct UInputProvider {
     keyboard_handle: UInputHandle<File>,
     mouse_handle: UInputHandle<File>,
-    desktop_extent: Vec2,
-    desktop_origin: Vec2,
+    desktop_extent: DVec2,
+    desktop_origin: DVec2,
     cur_modifiers: u8,
     current_action: MouseAction,
 }
@@ -101,8 +101,8 @@ impl UInputProvider {
         Some(Self {
             keyboard_handle,
             mouse_handle,
-            desktop_extent: Vec2::ZERO,
-            desktop_origin: Vec2::ZERO,
+            desktop_extent: DVec2::ZERO,
+            desktop_origin: DVec2::ZERO,
             current_action: MouseAction::default(),
             cur_modifiers: 0,
         })
@@ -117,7 +117,7 @@ impl UInputProvider {
             log::error!("send_button: {res}");
         }
     }
-    fn mouse_move_internal(&mut self, pos: Vec2) {
+    fn mouse_move_internal(&mut self, pos: DVec2) {
         #[cfg(debug_assertions)]
         log::trace!("Mouse move: {pos:?}");
 
@@ -157,11 +157,21 @@ impl UInputProvider {
 }
 
 impl HidProvider for UInputProvider {
-    fn mouse_move(&mut self, pos: Vec2) {
+    fn mouse_move(&mut self, pos: DVec2) {
         if self.current_action.pos.is_none() && self.current_action.scroll.is_none() {
             self.current_action.pos = Some(pos);
         }
         self.current_action.last_requested_pos = Some(pos);
+    }
+    fn mouse_move_rel(&mut self, rel_pos: DVec2) {
+        let last_pos = self.current_action.last_requested_pos.unwrap_or_default();
+        let new_pos = (last_pos + rel_pos).clamp(
+            self.desktop_origin,
+            self.desktop_origin + self.desktop_extent,
+        );
+
+        self.current_action.pos = Some(new_pos);
+        self.current_action.last_requested_pos = Some(new_pos);
     }
     fn send_button(&mut self, button: u16, down: bool) {
         if self.current_action.button.is_none() {
@@ -177,10 +187,10 @@ impl HidProvider for UInputProvider {
             self.current_action.pos = None;
         }
     }
-    fn set_desktop_extent(&mut self, extent: Vec2) {
+    fn set_desktop_extent(&mut self, extent: DVec2) {
         self.desktop_extent = extent;
     }
-    fn set_desktop_origin(&mut self, origin: Vec2) {
+    fn set_desktop_origin(&mut self, origin: DVec2) {
         self.desktop_origin = origin;
     }
     fn set_modifiers(&mut self, modifiers: u8) {

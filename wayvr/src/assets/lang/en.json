@@ -78,6 +78,22 @@
 			"TITLE": "3D Stereo Mode"
 		}
 	},
+	"ALTTAB": {
+		"RELEASE_TO_FOCUS": "Aim at an app and release Super to focus that app.",
+		"WHILE_AIMING": "While aiming",
+		"CLICK": "VR pointer click",
+		"GRABALL": "Move entire set",
+		"GRAB": "Move individual overlay",
+		"DASH": "Toggle dashboard",
+		"EDIT": "Toggle edit mode",
+		"SET": "Switch set",
+		"RECENTER": "Show/hide/recenter",
+		"GENERAL_BINDS": "General bindings",
+		"TOGGLE_CAPTURE": "Give control back to desktop",
+		"FOCUS_MODE": "Focus mode (hold Super)",
+		"CLOSE": "Close focused app",
+		"MOUSE": "Real mouse clicks & scroll also translate to VR pointer"
+	},
 	"GRAB": {
 		"ADJUST_DISTANCE": "Adjust distance",
 		"ADJUST_SIZE": "Adjust size",

@@ -17,7 +17,9 @@
 			"TITLE": "Tryb wolnych rąk",
 			"NONE": "Wyłączone",
 			"HMD": "HMD + uszczypnięcie",
-			"EYE_TRACKING": "Oko + uszczypnięcie"
+			"EYE_TRACKING": "Oko + uszczypnięcie",
+			"EYE_ONLY": "Laser wzrokowy",
+			"HMD_ONLY": "Laser w HMD"
 		}
 	},
 	"WATCH": {
@@ -131,5 +133,21 @@
 		"WAITING_FOR_USER_DESC": "Sprawdź na pulpicie okno wyboru ekranu do transmitowania.\nWybierz następujące:",
 		"WAITING_FOR_USER": "Sprawdź na pulpicie powiadomienie o przesyłaniu ekranu.",
 		"FAIL": "Nie udało się zainicjować źródła przesyłania obrazu z ekranu."
+	},
+	"ALTTAB": {
+		"RELEASE_TO_FOCUS": "Wyceluj w aplikację i puść klawisz Super, aby ją przenieść na pierwszy plan.",
+		"WHILE_AIMING": "Podczas celowania",
+		"CLICK": "Kliknięcie wskaźnikiem VR",
+		"GRABALL": "Przesuń cały zestaw",
+		"GRAB": "Przesuń pojedynczy overlay",
+		"DASH": "Przełącz pulpit sterowania",
+		"EDIT": "Przełącz tryb edycji",
+		"SET": "Zmień zestaw",
+		"RECENTER": "Pokaż/ukryj/wycentruj",
+		"GENERAL_BINDS": "Ogólne przypisania",
+		"TOGGLE_CAPTURE": "Oddaj kontrolę do pulpitu",
+		"FOCUS_MODE": "Tryb skupienia (przytrzymaj klawisz Super)",
+		"CLOSE": "Zamknij aktualną aplikację",
+		"MOUSE": "Kliknięcia i przewijanie fizycznej myszy są również przeniesione na wskaźnik VR"
 	}
 }

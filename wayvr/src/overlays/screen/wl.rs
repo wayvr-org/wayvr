@@ -1,4 +1,4 @@
-use glam::vec2;
+use glam::{DVec2, vec2};
 use wgui::log::LogErr;
 use wlx_capture::{
     WlxCapture,
@@ -116,10 +116,10 @@ pub fn create_screens_wayland(
 
     app.hid_provider
         .inner
-        .set_desktop_extent(vec2(extent.0 as f32, extent.1 as f32));
+        .set_desktop_extent(DVec2::new(extent.0 as _, extent.1 as _));
     app.hid_provider
         .inner
-        .set_desktop_origin(vec2(origin.0 as f32, origin.1 as f32));
+        .set_desktop_origin(DVec2::new(origin.0 as _, origin.1 as _));
 
     Ok(ScreenCreateData { screens })
 }

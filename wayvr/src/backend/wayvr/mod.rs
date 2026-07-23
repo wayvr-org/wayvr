@@ -58,7 +58,11 @@ use wayland_protocols::xdg::shell::server::xdg_toplevel;
 use wayvr_ipc::{packet_client::PositionMode, packet_server};
 use wgui::{gfx::WGfx, log::LogErr};
 use wlx_capture::frame::Transform;
-use wlx_common::{config::GeneralConfig, desktop_finder::DesktopFinder};
+use wlx_common::{
+    audio::{AudioSystem, SamplePlayer},
+    config::{GeneralConfig, InputCaptureMethod},
+    desktop_finder::DesktopFinder,
+};
 use xkbcommon::xkb;
 
 use crate::{
@@ -73,7 +77,10 @@ use crate::{
     },
     graphics::{ExtentExt, WGfxExtras},
     ipc::{event_queue::SyncEventQueue, ipc_server, signal::WayVRSignal},
-    overlays::wayvr::{WvrCommand, create_wl_window_overlay},
+    overlays::{
+        anchor::ALTTAB_HELP_NAME,
+        wayvr::{WvrCommand, create_wl_window_overlay},
+    },
     state::AppState,
     subsystem::{
         dbus::DbusConnector,
@@ -139,6 +146,7 @@ pub struct WvrServerState {
     overlay_to_window: SecondaryMap<OverlayID, window::WindowHandle>,
     process_overlays: HashMap<process::ProcessHandle, Vec<OverlayID>>,
     input_capture: Option<InputCapture>,
+    input_capture_init_attempted: bool,
     has_input_focus: bool,
     grab_toast_sent: bool,
 }
@@ -263,10 +271,6 @@ impl WvrServerState {
 
         let dma_importer = ImageImporter::new(gfx);
 
-        let input_capture = InputCapture::new()
-            .log_err("Could not initialize evdev input capture")
-            .ok();
-
         let state = Application {
             output,
             image_importer: dma_importer,
@@ -304,7 +308,8 @@ impl WvrServerState {
             window_to_overlay: HashMap::new(),
             overlay_to_window: SecondaryMap::new(),
             process_overlays: HashMap::new(),
-            input_capture,
+            input_capture: None,
+            input_capture_init_attempted: false,
             has_input_focus: false,
             grab_toast_sent: false,
         })
@@ -643,6 +648,9 @@ impl WvrServerState {
             &mut app.input_state,
             &mut app.tasks,
             &mut app.hid_provider,
+            &mut app.audio_sample_player,
+            &mut app.audio_system,
+            &app.session.config,
         );
 
         wvr_server.ticks += 1;
@@ -759,9 +767,42 @@ impl WvrServerState {
         input_state: &mut InputState,
         tasks: &mut TaskContainer,
         hid_wrapper: &mut HidWrapper,
+        audio_sample_player: &mut SamplePlayer,
+        audio_system: &mut AudioSystem,
+        config: &GeneralConfig,
     ) {
-        let Some(input_capture) = self.input_capture.as_mut() else {
-            return;
+        let input_capture = match (self.input_capture.as_mut(), config.wvr_input_capture) {
+            (Some(cap), InputCaptureMethod::Evdev) => cap,
+            (Some(_), InputCaptureMethod::None) => {
+                self.input_capture.take();
+                return;
+            }
+            (None, InputCaptureMethod::Evdev) if !self.input_capture_init_attempted => {
+                self.input_capture = InputCapture::new()
+                    .log_err("Could not initialize evdev input capture")
+                    .ok();
+                self.input_capture_init_attempted = true;
+                if let Some(cap) = self.input_capture.as_mut() {
+                    cap
+                } else {
+                    let _ = DbusConnector::notify_send(
+                        "Could not initialize keyboard/mouse capture!",
+                        "Check that your user is in the input group.",
+                        1,
+                        5000,
+                        0,
+                        true,
+                    );
+                    return;
+                }
+            }
+            (None, InputCaptureMethod::Evdev) => {
+                return;
+            }
+            (None, InputCaptureMethod::None) => {
+                self.input_capture_init_attempted = false;
+                return;
+            }
         };
 
         let mut mouse_delta = DVec2::ZERO;
@@ -775,21 +816,33 @@ impl WvrServerState {
                         if (hid::VirtualKey::Q as u32) == vk {
                             input_state.handsfree_state.grab = pressed;
                             input_state.handsfree_state.grab_float = pressed;
-                        }
-                        if (hid::VirtualKey::A as u32) == vk {
+                        } else if (hid::VirtualKey::A as u32) == vk {
                             input_state.handsfree_state.grab = pressed;
-                        }
-                        if (hid::VirtualKey::W as u32) == vk {
+                        } else if (hid::VirtualKey::W as u32) == vk {
                             input_state.handsfree_state.click = pressed;
-                        }
-                        if (hid::VirtualKey::E as u32) == vk && pressed {
+                        } else if (hid::VirtualKey::E as u32) == vk && pressed {
                             tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleEditMode));
-                        }
-                        if (hid::VirtualKey::D as u32) == vk && pressed {
+                        } else if (hid::VirtualKey::D as u32) == vk && pressed {
                             tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleDashboard));
+                        } else if (hid::VirtualKey::R as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ShowHide));
+                        } else if (hid::VirtualKey::N1 as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(0)))
+                        } else if (hid::VirtualKey::N2 as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(1)))
+                        } else if (hid::VirtualKey::N3 as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(2)))
+                        } else if (hid::VirtualKey::N4 as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(3)))
+                        } else if (hid::VirtualKey::N5 as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(4)))
+                        } else if (hid::VirtualKey::N6 as u32) == vk && pressed {
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(5)))
                         }
-                    } else {
+                    } else if self.has_input_focus {
                         self.manager.send_key(vk, pressed);
+                    } else if let Some(vk) = hid::VirtualKey::from_repr(vk as u16) {
+                        hid_wrapper.inner.send_key(vk, pressed);
                     }
                 }
                 input_capture::CapturedEvent::PointerButton { button, pressed } => {
@@ -808,8 +861,10 @@ impl WvrServerState {
                             }
                             _ => {}
                         }
-                    } else {
+                    } else if self.has_input_focus {
                         self.manager.send_pointer_button(mouse_index, pressed);
+                    } else {
+                        hid_wrapper.inner.send_button(button as u16, pressed);
                     }
                 }
                 input_capture::CapturedEvent::PointerMotion {
@@ -828,23 +883,42 @@ impl WvrServerState {
                     horizontal_v120,
                     vertical_v120,
                 } => {
-                    let delta = WheelDelta {
+                    let mut delta = WheelDelta {
                         x: horizontal_v120 as f32,
                         y: vertical_v120 as f32,
                     };
                     if input_state.picking_focus.is_aiming() {
                         input_state.handsfree_state.scroll_y = (vertical_v120 as f32) * -0.12;
-                    } else {
+                    } else if self.has_input_focus {
                         self.manager.send_pointer_axis_wheel_raw(delta);
+                    } else {
+                        delta.y *= -1.0;
+                        hid_wrapper.inner.wheel(delta);
                     }
                 }
                 input_capture::CapturedEvent::Grabbed => {
                     hid_wrapper.set_input_focus(Some(self), InputFocus::WayVR);
+                    audio_sample_player.play_sample(audio_system, "input_grab");
+                    if !self.grab_toast_sent {
+                        self.grab_toast_sent = true;
+                        //TODO: toast
+                        let _ = DbusConnector::notify_send(
+                            "WayVR has your keyboard and mouse!",
+                            "Super+Z to release",
+                            1,
+                            5000,
+                            0,
+                            true,
+                        );
+                    }
                 }
                 input_capture::CapturedEvent::Ungrabbed => {
+                    hid_wrapper.inner.send_key(hid::VirtualKey::LSuper, false);
+                    hid_wrapper.inner.send_key(hid::VirtualKey::RSuper, false);
                     self.manager.release_all_keys();
                     self.has_input_focus = false;
                     self.wm.keyboard_focus = None;
+                    audio_sample_player.play_sample(audio_system, "input_ungrab");
                 }
                 input_capture::CapturedEvent::KeyCombo { combo, pressed } => match combo {
                     input_capture::KeyCombo::CloseApp if pressed => {
@@ -856,9 +930,21 @@ impl WvrServerState {
                     input_capture::KeyCombo::SwitchApp => {
                         if pressed {
                             input_state.picking_focus = super::input::FocusPickState::Aiming;
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                                OverlaySelector::Name(ALTTAB_HELP_NAME.clone()),
+                                Box::new(move |app, o| {
+                                    o.activate(app);
+                                }),
+                            )));
                         } else {
                             input_state.picking_focus = super::input::FocusPickState::Picking;
 
+                            tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                                OverlaySelector::Name(ALTTAB_HELP_NAME.clone()),
+                                Box::new(move |_app, o| {
+                                    o.deactivate();
+                                }),
+                            )));
                             tasks.enqueue_at(
                                 TaskType::Global(Box::new(|app| {
                                     app.input_state.picking_focus =
@@ -866,21 +952,9 @@ impl WvrServerState {
 
                                     let _ = std::mem::take(&mut app.input_state.handsfree_state);
                                 })),
-                                Instant::now() + Duration::from_millis(33),
+                                Instant::now() + Duration::from_millis(50),
                             );
                         }
-                    }
-                    input_capture::KeyCombo::Set1 if pressed => {
-                        tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(0)))
-                    }
-                    input_capture::KeyCombo::Set2 if pressed => {
-                        tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(1)))
-                    }
-                    input_capture::KeyCombo::Set3 if pressed => {
-                        tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(2)))
-                    }
-                    input_capture::KeyCombo::Set4 if pressed => {
-                        tasks.enqueue(TaskType::Overlay(OverlayTask::ToggleSet(3)))
                     }
                     _ => {}
                 },
@@ -888,44 +962,51 @@ impl WvrServerState {
         }
 
         if mouse_delta.length_squared() > 1e-6 {
-            'mouse_update: {
-                let Some(ref hover) = self.wm.mouse else {
-                    break 'mouse_update;
-                };
+            if self.has_input_focus {
+                'mouse_update: {
+                    let Some(ref hover) = self.wm.mouse else {
+                        break 'mouse_update;
+                    };
 
-                let Some(window) = self.wm.windows.get(&hover.hover_window) else {
-                    break 'mouse_update;
-                };
-                let toplevel = window.toplevel.wl_surface().clone();
-                let inner_extent = with_states(&toplevel, |states| {
-                    SurfaceBufWithImage::get_from_surface(states)
-                        .map(|s| s.image.extent_u32arr())
-                        .unwrap_or([1, 1])
-                });
-                let Some(hit_ctx) =
-                    build_hit_context(&toplevel, &self.manager.state.popup_manager, inner_extent)
-                else {
-                    break 'mouse_update;
-                };
+                    let Some(window) = self.wm.windows.get(&hover.hover_window) else {
+                        break 'mouse_update;
+                    };
+                    let toplevel = window.toplevel.wl_surface().clone();
+                    let inner_extent = with_states(&toplevel, |states| {
+                        SurfaceBufWithImage::get_from_surface(states)
+                            .map(|s| s.image.extent_u32arr())
+                            .unwrap_or([1, 1])
+                    });
+                    let Some(hit_ctx) = build_hit_context(
+                        &toplevel,
+                        &self.manager.state.popup_manager,
+                        inner_extent,
+                    ) else {
+                        break 'mouse_update;
+                    };
 
-                let new_x = (hover.pos.x + mouse_delta.x).clamp(0., inner_extent[0] as f64);
-                let new_y = (hover.pos.y + mouse_delta.y).clamp(0., inner_extent[1] as f64);
-                let new_pos = DVec2::new(new_x, new_y);
-                let new_pos_f32 = Vec2::new(new_x as f32, new_y as f32);
+                    let new_x = (hover.pos.x + mouse_delta.x).clamp(0., inner_extent[0] as f64);
+                    let new_y = (hover.pos.y + mouse_delta.y).clamp(0., inner_extent[1] as f64);
+                    let new_pos = DVec2::new(new_x, new_y);
+                    let new_pos_f32 = Vec2::new(new_x as f32, new_y as f32);
 
-                let target = hit_ctx.hit_target_at(new_pos_f32);
-                let focus_target = self.hit_target_to_focus(
-                    target.unwrap_or(WvrHitTarget::Toplevel { pos: new_pos_f32 }),
-                    hover.hover_window,
-                    new_pos_f32,
-                );
-                self.send_mouse_move_relative(
-                    focus_target,
-                    new_pos,
-                    mouse_delta,
-                    mouse_delta_raw,
-                    hover.hover_window,
-                );
+                    let target = hit_ctx.hit_target_at(new_pos_f32);
+                    let focus_target = self.hit_target_to_focus(
+                        target.unwrap_or(WvrHitTarget::Toplevel { pos: new_pos_f32 }),
+                        hover.hover_window,
+                        new_pos_f32,
+                    );
+                    self.send_mouse_move_relative(
+                        focus_target,
+                        new_pos,
+                        mouse_delta,
+                        mouse_delta_raw,
+                        hover.hover_window,
+                    );
+                }
+            } else {
+                // no has_input_focus → send back to desktop
+                hid_wrapper.inner.mouse_move_rel(mouse_delta);
             }
         }
     }
@@ -941,27 +1022,6 @@ impl WvrServerState {
 
     /// Use HidWrapper::set_input_focus instead!!!
     pub fn set_input_focus(&mut self, has_focus: bool) {
-        let Some(input_capture) = self.input_capture.as_mut() else {
-            return;
-        };
-
-        let res = input_capture
-            .set_grabbed(has_focus)
-            .log_err("Could not set input grab");
-
-        if res.is_ok() && !self.grab_toast_sent {
-            self.grab_toast_sent = true;
-            //TODO: localize
-            let _ = DbusConnector::notify_send(
-                "WayVR has your keyboard and mouse!",
-                "Ctrl+Alt+Del to release",
-                1,
-                5000,
-                0,
-                true,
-            );
-        }
-
         self.has_input_focus = has_focus;
         if !has_focus {
             self.wm.mouse = None;

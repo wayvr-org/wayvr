@@ -78,9 +78,13 @@
 			"EYE_PINCH": "Occhio + pizzico",
 			"NONE_INPUT_HELP": "Non emulare mouse e tastiera.\nNon sarà possibile interagire con gli schermi.",
 			"UINPUT": "Emulazione dispositivo",
-			"UINPUT_HELP": "Utilizza il modulo uinput per emulare un dispositivo.\nL'utente deve far parte del gruppo input.\nRisultato ottimale su quasi tutti i desktop.",
 			"WL_VIRTUAL": "Input virtuale Wayland",
-			"WL_VIRTUAL_HELP": "Invia eventi al compositor Wayland utilizzando\nzwlr_virtual_pointer e zwp_virtual_keyboard.\nFunziona in modo affidabile solo su alcuni desktop.\nNON funziona su KDE, GNOME o COSMIC."
+			"WL_VIRTUAL_HELP": "Invia eventi al compositor Wayland utilizzando\nzwlr_virtual_pointer e zwp_virtual_keyboard.\nFunziona in modo affidabile solo su alcuni desktop.\nNON funziona su KDE, GNOME o COSMIC.",
+			"EYE_ONLY": "Laser oculare",
+			"HMD_ONLY": "Laser HMD",
+			"NONE_INPUT_CAPTURE_HELP": "Non acquisire mouse e tastiera.\nNon sarà possibile utilizzare il mouse fisico o\nla tastiera nelle app lanciate all'interno di WayVR.",
+			"UINPUT_HELP": "Utilizza il modulo uinput per emulare un dispositivo.\nNoto per funzionare bene sulla maggior parte dei desktop.",
+			"EVDEV_HELP": "Acquisisci i dispositivi di input per l'uso esclusivo.\nL'utente deve appartenere al gruppo 'input'."
 		},
 		"POINTER_LERP_FACTOR": "Smussamento puntatore",
 		"RESTART_SOFTWARE": "Riavvia il software",
@@ -217,7 +221,14 @@
 		"SAVE_PLAYSPACE_CENTER": "Salva centro playspace",
 		"SAVE_PLAYSPACE_CENTER_HELP": "Usa il playspace corrente per il comando di reset del playspace.",
 		"RESET_PLAYSPACE_CENTER": "Ripristina centro playspace",
-		"RESET_PLAYSPACE_CENTER_HELP": "Ripristina il centro del playspace impostato precedentemente."
+		"RESET_PLAYSPACE_CENTER_HELP": "Ripristina il centro del playspace impostato precedentemente.",
+		"HANDSFREE_ALT_TAB": "Mira commutatore app",
+		"HANDSFREE_ALT_TAB_HELP": "Tieni premuto Super+X, punta alla finestra desiderata, poi rilascia per cambiare focus.",
+		"INPUT_CAPTURE_METHOD": "Metodo di acquisizione input",
+		"POINTER_ACCELERATION": "Accelerazione del mouse",
+		"POINTER_ACCELERATION_HELP": "Attivo: Accelerazione adattiva del mouse\nDisattivo: Velocità costante",
+		"POINTER_SPEED": "Velocità mouse",
+		"INPUT_CAPTURE_METHOD_HELP": "Consente l'uso di periferiche fisiche all'interno di WayVR.\n Super+Z: Passa l'input tra WayVR e il desktop reale\n Super+X: Passa tra le app di WayVR"
 	},
 	"APPLICATION_LAUNCHER": "Lanciatore applicazioni",
 	"APPLICATION_STARTED": "Applicazione avviata",

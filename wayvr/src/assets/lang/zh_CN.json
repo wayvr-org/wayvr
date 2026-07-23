@@ -17,7 +17,9 @@
 			"TITLE": "免提模式",
 			"NONE": "关闭",
 			"HMD": "HMD + 捏合",
-			"EYE_TRACKING": "眼动 + 捏合"
+			"EYE_TRACKING": "眼动 + 捏合",
+			"EYE_ONLY": "眼睛激光",
+			"HMD_ONLY": "头显射线"
 		}
 	},
 	"DEFAULT": "默认",
@@ -131,5 +133,21 @@
 		"WAITING_FOR_USER_DESC": "请检查桌面上的屏幕投射弹出窗口。\n选择以下选项：",
 		"WAITING_FOR_USER": "请检查桌面上的屏幕投射弹出窗口。",
 		"FAIL": "无法初始化屏幕镜像源。"
+	},
+	"ALTTAB": {
+		"RELEASE_TO_FOCUS": "瞄准一个应用程序并松开 Super 键以将焦点切换到该程序。",
+		"WHILE_AIMING": "瞄准时",
+		"CLICK": "VR 指针点击",
+		"GRABALL": "移动整个集",
+		"GRAB": "移动单个覆盖层",
+		"DASH": "切换控制面板",
+		"EDIT": "切换编辑模式",
+		"SET": "切换 Set",
+		"RECENTER": "显示/隐藏/重新中心化",
+		"GENERAL_BINDS": "通用绑定",
+		"TOGGLE_CAPTURE": "将控制权还给桌面",
+		"FOCUS_MODE": "焦点模式 (按住 Super 键)",
+		"CLOSE": "关闭当前焦点应用",
+		"MOUSE": "真实鼠标的点击和滚动也将转换为 VR 指针"
 	}
 }

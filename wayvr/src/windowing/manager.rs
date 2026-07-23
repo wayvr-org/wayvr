@@ -19,7 +19,7 @@ use crate::{
     backend::task::{CreateOverlayTask, GlobalChange, OverlayTask, SpawnPos, ToggleMode},
     config::save_state,
     overlays::{
-        anchor::{create_anchor, create_grab_help},
+        anchor::{create_alltab_help, create_anchor, create_grab_help},
         custom::create_custom,
         dashboard::{DASH_NAME, create_dash_frontend},
         edit::EditWrapperManager,
@@ -138,6 +138,9 @@ where
 
         let grab_help = OverlayWindowData::from_config(create_grab_help(app)?);
         me.add(grab_help, app);
+
+        let alttab_help = OverlayWindowData::from_config(create_alltab_help(app)?);
+        me.add(alttab_help, app);
 
         #[cfg(feature = "whisper")]
         {
