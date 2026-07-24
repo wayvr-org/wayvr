@@ -103,7 +103,6 @@
 		"COLOR_PALETTE_CUSTOM_URL": "Add your own custom theme!",
 		"COLOR_PALETTE_CUSTOM_URL2": "Click to open web manual.",
 		"COLOR_PALETTE_ACTIVATE": "Click to use this theme.",
-		"APPLY_CHANGES_RESTART": "Restart WayVR to apply changes?",
 		"CLEAR_PIPEWIRE_TOKENS": "Clear PipeWire tokens",
 		"CLEAR_PIPEWIRE_TOKENS_HELP": "Prompt for screen selection on next start",
 		"CLEAR_SAVED_STATE": "Clear saved state",

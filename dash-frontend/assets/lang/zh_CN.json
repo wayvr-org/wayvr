@@ -212,7 +212,6 @@
 		"COLOR_PALETTES": "配色方案",
 		"COLOR_PALETTE_CURRENT": "当前激活的主题。",
 		"COLOR_PALETTE_ACTIVATE": "点击以使用此主题。",
-		"APPLY_CHANGES_RESTART": "重启 WayVR 以应用更改吗？",
 		"COLOR_PALETTE_HELP": "点击浏览配色方案。\n如需创建自定义配色，请参阅网站！",
 		"COLOR_PALETTE_CUSTOM_URL": "添加自定义主题！",
 		"COLOR_PALETTE_CUSTOM_URL2": "点击打开网页版手册。",

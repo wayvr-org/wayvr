@@ -22,7 +22,7 @@ impl WguiColorPalette {
 		}
 
 		log::warn!("No color palette with name '{palette_name}', using default colors.");
-		return DEFAULT.clone();
+		DEFAULT.clone()
 	}
 
 	pub const fn from_inner(colors: [drawing::Color; WguiColorName::COUNT]) -> Self {

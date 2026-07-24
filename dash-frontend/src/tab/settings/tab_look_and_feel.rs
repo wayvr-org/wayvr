@@ -11,7 +11,7 @@ use wgui::{
 use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
-		SettingType, SettingsMountParams, SettingsTab, Task as SettingsTask, horiz_cell,
+		SettingType, SettingsMountParams, SettingsTab, horiz_cell,
 		macros::{options_category, options_checkbox, options_dropdown, options_slider_f32},
 		mount_requires_restart,
 	},
@@ -29,7 +29,6 @@ pub struct State {
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
 	tasks: Tasks<Task>,
-	settings_tasks: Tasks<SettingsTask>,
 }
 
 impl SettingsTab for State {
@@ -43,7 +42,6 @@ impl SettingsTab for State {
 						self.frontend_tasks.clone(),
 						self.globals.clone(),
 						self.popup_color_palettes.clone(),
-						self.settings_tasks.clone(),
 						par.general_config.color_palette.clone(),
 					);
 				}
@@ -81,7 +79,6 @@ impl State {
 			frontend_tasks: par.frontend_tasks.clone(),
 			globals: par.mp.doc_params.globals.clone(),
 			tasks,
-			settings_tasks: par.mp.tasks.clone(),
 		})
 	}
 }

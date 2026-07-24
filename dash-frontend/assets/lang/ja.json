@@ -191,7 +191,6 @@
 		"COLOR_PALETTES": "カラーパレット",
 		"COLOR_PALETTE_CURRENT": "現在有効なテーマ。",
 		"COLOR_PALETTE_ACTIVATE": "クリックしてこのテーマを適用します。",
-		"APPLY_CHANGES_RESTART": "変更を適用するためにWayVRを再起動しますか？",
 		"COLOR_PALETTE_HELP": "クリックしてカラーパレットを選択してください。\nカスタムパレットの作成については、ウェブサイトを参照してください！",
 		"COLOR_PALETTE_CUSTOM_URL": "カスタムテーマを追加しましょう！",
 		"COLOR_PALETTE_CUSTOM_URL2": "クリックしてウェブマニュアルを開く。",

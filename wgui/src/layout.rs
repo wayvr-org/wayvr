@@ -155,6 +155,7 @@ pub enum LayoutTask {
 	PlaySound(WguiSoundType),
 	Dispatch(LayoutDispatchFunc),
 	SetFocus(ComponentWeak),
+	RefreshPalette,
 	Unfocus,
 }
 
@@ -748,6 +749,10 @@ impl Layout {
 		let mut tasks = self.tasks.drain();
 		while let Some(task) = tasks.pop_front() {
 			match task {
+				LayoutTask::RefreshPalette => {
+					let root = self.tree_root_widget;
+					LayoutState::refresh_palette_recur(&mut self.common(), root);
+				}
 				LayoutTask::RemoveWidget(widget_id) => {
 					self.remove_widget(widget_id);
 				}
@@ -1027,5 +1032,28 @@ impl LayoutState {
 
 		// safety: we just checked the type
 		unsafe { Ok(Rc::from_raw(Rc::into_raw(component.0).cast())) }
+	}
+
+	fn refresh_palette_recur(common: &mut CallbackDataCommon, widget_id: WidgetID) {
+		if let Some(widget) = common.state.widgets.get(widget_id) {
+			widget.state().obj.palette_updated(common);
+		} else {
+			debug_assert!(false);
+			return;
+		}
+
+		let Some(node_id) = common.state.nodes.get(widget_id) else {
+			/* node/widget desync, this shouldn't happen */
+			debug_assert!(false);
+			return;
+		};
+
+		for child_node_id in common.state.tree.child_ids(*node_id) {
+			let Some(widget_id) = common.state.tree.get_node_context(child_node_id) else {
+				debug_assert!(false);
+				continue;
+			};
+			LayoutState::refresh_palette_recur(common, *widget_id);
+		}
 	}
 }

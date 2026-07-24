@@ -1,11 +1,16 @@
+use crate::{
+	frontend::{FrontendTask, FrontendTasks},
+	util::popup_manager::{MountPopupOnceParams, PopupHolder},
+	views::{ViewTrait, ViewUpdateParams},
+};
 use std::{rc::Rc, sync::Arc};
+use wgui::color::WguiColorName;
 use wgui::{
 	assets::AssetPath,
-	color::WguiColorName,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
-	layout::{Layout, WidgetID},
+	layout::{Layout, LayoutTask, WidgetID},
 	log::LogErr,
 	palette::PALETTES,
 	parser::{Fetchable, ParseDocumentParams, TemplateParams},
@@ -16,19 +21,10 @@ use wlx_common::{
 	palette::{list_palette_files, load_custom_palette},
 };
 
-use crate::{
-	frontend::{FrontendTask, FrontendTasks},
-	tab::settings::Task as SettingsTask,
-	util::popup_manager::{MountPopupOnceParams, PopupHolder},
-	views::{self, ViewTrait, ViewUpdateParams},
-};
-
 #[derive(Clone)]
 enum Task {
 	SelectPalette(String),
 	CustomPaletteUrl,
-	Restart,
-	Cancel,
 }
 
 pub struct Params<'a> {
@@ -36,40 +32,30 @@ pub struct Params<'a> {
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
 	pub frontend_tasks: &'a FrontendTasks,
-	pub settings_tasks: Tasks<SettingsTask>,
+	pub on_close_request: Box<dyn FnOnce()>,
 	pub current_palette: Arc<str>,
 }
 
 pub struct View {
 	tasks: Tasks<Task>,
 	frontend_tasks: FrontendTasks,
-	globals: WguiGlobals,
-	popup_dialog: PopupHolder<views::dialog_box::View>,
-	settings_tasks: Tasks<SettingsTask>,
-	chosen_palette: Option<Arc<str>>,
+	on_close_request: Option<Box<dyn FnOnce()>>,
 }
 
 impl ViewTrait for View {
 	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
-		self.popup_dialog.update(par)?;
-
 		for task in self.tasks.drain() {
 			match task {
 				Task::SelectPalette(profile) => {
-					self.chosen_palette = Some(profile.into());
-					self.show_restart_dialog_box()?;
-				}
-				Task::Cancel => {
-					let close_dialog = self.popup_dialog.get_close_callback(par.layout);
-					close_dialog();
-				}
-				Task::Restart => {
-					if let Some(palette) = self.chosen_palette.take() {
-						par.general_config.color_palette = palette;
-						par.config_change_kind.replace(ConfigChangeKind::WguiThemeChange);
+					let mut globals = par.layout.state.globals.get();
+					let new_palette = wlx_common::palette::load_palette(&profile);
+					globals.palette = new_palette;
+					par.general_config.color_palette = profile.into();
+					par.layout.tasks.push(LayoutTask::RefreshPalette);
+					par.config_change_kind.replace(ConfigChangeKind::WguiThemeChange);
+					if let Some(c) = self.on_close_request.take() {
+						c();
 					}
-
-					self.settings_tasks.push(SettingsTask::RestartSoftware);
 				}
 				Task::CustomPaletteUrl => {
 					self.frontend_tasks.push(FrontendTask::OpenURL(
@@ -113,7 +99,6 @@ impl View {
 		let list_parent = parser_state.fetch_widget(&params.layout.state, "list_parent")?.id;
 
 		let tasks = Tasks::new();
-		let popup_dialog = PopupHolder::<views::dialog_box::View>::default();
 
 		for (idx, name) in list_palette_files().into_iter().enumerate() {
 			let Ok(palette) = load_custom_palette(&name).log_warn("Could not load custom color palette") else {
@@ -246,50 +231,8 @@ impl View {
 		Ok(Self {
 			tasks,
 			frontend_tasks: params.frontend_tasks.clone(),
-			globals: params.globals.clone(),
-			popup_dialog,
-			settings_tasks: params.settings_tasks,
-			chosen_palette: None,
+			on_close_request: Some(params.on_close_request),
 		})
-	}
-
-	fn show_restart_dialog_box(&mut self) -> anyhow::Result<()> {
-		const ACTION_RESTART: &str = "restart";
-		const ACTION_CANCEL: &str = "cancel";
-
-		let tasks = self.tasks.clone();
-
-		views::dialog_box::mount_popup(
-			self.popup_dialog.clone(),
-			self.frontend_tasks.clone(),
-			views::dialog_box::Params {
-				globals: self.globals.clone(),
-				message: Translation::from_translation_key("APP_SETTINGS.APPLY_CHANGES_RESTART"),
-				entries: vec![
-					views::dialog_box::ButtonEntry {
-						content: Translation::from_translation_key("APP_SETTINGS.CANCEL"),
-						icon: "dashboard/close.svg",
-						action: ACTION_CANCEL,
-					},
-					views::dialog_box::ButtonEntry {
-						content: Translation::from_translation_key("APP_SETTINGS.RESTART_SOFTWARE"),
-						icon: "dashboard/refresh.svg",
-						action: ACTION_RESTART,
-					},
-				],
-				on_action_click: Box::new(move |action| match action {
-					ACTION_RESTART => {
-						tasks.push(Task::Restart);
-					}
-					ACTION_CANCEL => {
-						tasks.push(Task::Cancel);
-					}
-					_ => unreachable!(),
-				}),
-			},
-		);
-
-		Ok(())
 	}
 }
 
@@ -297,7 +240,6 @@ pub fn mount_popup(
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
 	popup: PopupHolder<View>,
-	settings_tasks: Tasks<SettingsTask>,
 	current_palette: Arc<str>,
 ) {
 	frontend_tasks
@@ -305,13 +247,14 @@ pub fn mount_popup(
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
 			Translation::from_translation_key("APP_SETTINGS.COLOR_PALETTES"),
 			Box::new(move |data| {
+				let on_close_request = popup.get_close_callback(data.layout);
 				let view = View::new(Params {
 					globals: globals.clone(),
 					layout: data.layout,
 					parent_id: data.id_content,
 					frontend_tasks: &frontend_tasks,
-					settings_tasks,
 					current_palette,
+					on_close_request,
 				})?;
 
 				popup.set_view(data.handle, view, None);

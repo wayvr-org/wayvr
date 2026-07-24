@@ -23,7 +23,7 @@
         <div gap="16" align_items="center">
           <!-- Back button -->
           <Button id="but_back" width="48" height="48" color="on_background_contrast(transparent)" border_color="on_background_contrast(transparent)">
-            <sprite src_builtin="dashboard/back.svg" width="24" height="24" />
+            <sprite src_builtin="dashboard/back.svg" width="24" height="24" color="on_background_contrast" />
           </Button>
 
           <!-- Title -->

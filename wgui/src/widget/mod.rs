@@ -191,6 +191,8 @@ pub trait WidgetObj: AnyTrait {
 
 	fn draw(&mut self, state: &mut DrawState, params: &DrawParams);
 
+	fn palette_updated(&mut self, _common: &mut CallbackDataCommon) {}
+
 	fn measure(
 		&mut self,
 		_globals: &Globals,

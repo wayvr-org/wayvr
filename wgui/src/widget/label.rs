@@ -129,11 +129,11 @@ impl WidgetLabel {
 		}
 	}
 
-	pub fn get_color(&self) -> WguiColor {
+	pub const fn get_color(&self) -> WguiColor {
 		self.params.style.color.unwrap() // create_ex populates this
 	}
 
-	pub fn parent_color(&self) -> ParentColor {
+	pub const fn parent_color(&self) -> ParentColor {
 		self.params.parent_color
 	}
 }
@@ -186,6 +186,11 @@ impl WidgetObj for WidgetLabel {
 				height,
 			}
 		})
+	}
+
+	fn palette_updated(&mut self, common: &mut CallbackDataCommon) {
+		let cur_color = self.get_color();
+		self.set_color(common, cur_color, true);
 	}
 
 	fn get_id(&self) -> WidgetID {
