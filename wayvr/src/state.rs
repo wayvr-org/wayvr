@@ -189,8 +189,6 @@ impl AppState {
             )
             .ok();
 
-        let palette = load_palette(&*session.config.color_palette);
-
         let mut app_state = Self {
             tasks,
             gfx,
@@ -208,7 +206,7 @@ impl AppState {
                 &lang_provider,
                 &WguiFontConfig::default(),
                 get_config_file_path(&theme_path),
-                palette,
+                load_palette(&*session.config.color_palette),
             )?,
             wgui_theme: Rc::new(theme),
             dbus,

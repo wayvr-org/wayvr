@@ -107,6 +107,7 @@ pub enum SpawnPos {
 pub enum GlobalChange {
     Settings,
     Keyboard,
+    ColorPalette,
 }
 
 pub type ModifyOverlayTask = dyn FnOnce(&mut AppState, &mut OverlayWindowConfig) + Send;

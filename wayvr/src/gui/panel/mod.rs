@@ -29,7 +29,7 @@ use wgui::{
     },
     gfx::cmd::WGfxClearMode,
     i18n::Translation,
-    layout::{Layout, LayoutParams, LayoutUpdateParams, WidgetID},
+    layout::{Layout, LayoutParams, LayoutTask, LayoutUpdateParams, WidgetID},
     parser::{self, CustomAttribsInfoOwned, Fetchable, ParseDocumentExtra, ParserState},
     renderer_vk::{context::Context as WguiContext, text::custom_glyph::CustomGlyphData},
     widget::{
@@ -360,6 +360,9 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
     }
 
     fn notify(&mut self, app: &mut AppState, data: OverlayEventData) -> anyhow::Result<()> {
+        if let OverlayEventData::ColorPaletteRefresh = data {
+            self.layout.tasks.push(LayoutTask::RefreshPalette);
+        }
         let Some(on_notify) = self.on_notify.take() else {
             return Ok(());
         };

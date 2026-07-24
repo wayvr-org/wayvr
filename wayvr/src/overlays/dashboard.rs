@@ -538,11 +538,17 @@ impl DashInterface<AppState> for DashInterfaceLive {
         data.session.config_dirty = true;
 
         match kind {
+            ConfigChangeKind::WguiColorPaletteChange => {
+                data.tasks
+                    .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
+                        GlobalChange::ColorPalette,
+                    )));
+            }
             ConfigChangeKind::OverlayConfig => {
                 data.tasks
                     .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
                         GlobalChange::Settings,
-                    )))
+                    )));
             }
             ConfigChangeKind::EnvironmentBlend => {
                 #[cfg(feature = "openxr")]

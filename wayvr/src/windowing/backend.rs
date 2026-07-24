@@ -130,6 +130,7 @@ pub enum OverlayEventData {
     },
     WvrCommand(WvrCommand),
     ResizeRequest([u32; 2]),
+    ColorPaletteRefresh,
 }
 
 pub trait OverlayBackend: Any {

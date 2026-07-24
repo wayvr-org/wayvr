@@ -333,6 +333,20 @@ where
                 self.overlays_changed(app)?;
                 self.sets_changed(app);
             }
+            OverlayTask::GlobalChange(GlobalChange::ColorPalette) => {
+                {
+                    let mut globals = app.wgui_globals.get();
+                    globals.palette =
+                        wlx_common::palette::load_palette(&app.session.config.color_palette);
+                }
+
+                for o in self.overlays.values_mut() {
+                    let _ = o
+                        .config
+                        .backend
+                        .notify(app, OverlayEventData::ColorPaletteRefresh);
+                }
+            }
             OverlayTask::CleanupMirrors => {
                 let mut ids_to_remove = vec![];
                 for (oid, o) in &self.overlays {

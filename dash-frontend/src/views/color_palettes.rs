@@ -52,7 +52,7 @@ impl ViewTrait for View {
 					globals.palette = new_palette;
 					par.general_config.color_palette = profile.into();
 					par.layout.tasks.push(LayoutTask::RefreshPalette);
-					par.config_change_kind.replace(ConfigChangeKind::WguiThemeChange);
+					par.config_change_kind.replace(ConfigChangeKind::WguiColorPaletteChange);
 					if let Some(c) = self.on_close_request.take() {
 						c();
 					}
