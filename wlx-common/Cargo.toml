@@ -19,6 +19,7 @@ log.workspace = true
 serde = { workspace = true, features = ["rc"] }
 serde_json.workspace = true
 serde_json5.workspace = true
+slotmap.workspace = true
 smol.workspace = true
 strum.workspace = true
 xdg.workspace = true

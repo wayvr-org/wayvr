@@ -1,6 +1,8 @@
 use bytes::BufMut;
 use interprocess::local_socket::{self, ToNsName};
 use serde::Serialize;
+use slotmap::DenseSlotMap;
+use slotmap::new_key_type;
 use smallvec::SmallVec;
 use smol::io::AsyncReadExt;
 use smol::io::AsyncWriteExt;
@@ -9,7 +11,6 @@ use std::os::unix::net::UnixStream as StdUnixStream;
 use std::sync::{Arc, Weak};
 
 use crate::{
-	gen_id,
 	ipc::{self, Serial},
 	packet_client::{self, HandsfreeParams, PacketClient},
 	packet_server::{self, PacketServer},
@@ -22,12 +23,9 @@ pub struct QueuedPacket {
 	packet: Option<PacketServer>,
 }
 
-gen_id!(
-	QueuedPacketVec,
-	QueuedPacket,
-	QueuedPacketCell,
-	QueuedPacketHandle
-);
+new_key_type! {
+	pub struct QueuedPacketHandle;
+}
 
 #[derive(Debug, Serialize, Clone)]
 pub struct AuthInfo {
@@ -41,7 +39,7 @@ pub struct WayVRClient {
 	sender: SenderMutex,
 	cancel_tx: async_channel::Sender<()>,
 	exiting: bool,
-	queued_packets: QueuedPacketVec,
+	queued_packets: DenseSlotMap<QueuedPacketHandle, QueuedPacket>,
 	pub auth: Option<AuthInfo>,
 	pub on_signal: Option<SignalFunc>,
 }
@@ -156,7 +154,7 @@ impl WayVRClient {
 			sender: sender.clone(),
 			cancel_tx,
 			exiting: false,
-			queued_packets: QueuedPacketVec::new(),
+			queued_packets: Default::default(),
 			auth: None,
 			on_signal: None,
 		}));
@@ -263,12 +261,7 @@ impl WayVRClient {
 
 			// queue packet to read if it contains a serial response
 			if let Some(serial) = packet.serial() {
-				for qpacket in &mut client.queued_packets.vec {
-					let Some(qpacket) = qpacket else {
-						continue;
-					};
-
-					let qpacket = &mut qpacket.obj;
+				for (_, qpacket) in &mut client.queued_packets {
 					if qpacket.serial != *serial {
 						continue; //skip
 					}
@@ -306,7 +299,7 @@ impl WayVRClient {
 		// Send packet to the server
 		let queued_packet_handle = {
 			let mut client = client_mtx.lock().await;
-			let handle = client.queued_packets.add(QueuedPacket {
+			let handle = client.queued_packets.insert(QueuedPacket {
 				notifier: notifier.clone(),
 				packet: None, // will be filled after notify
 				serial,
@@ -329,7 +322,7 @@ impl WayVRClient {
 
 			let cell = client
 				.queued_packets
-				.get_mut(&queued_packet_handle)
+				.get_mut(queued_packet_handle)
 				.ok_or(anyhow::anyhow!(
 					"missing packet cell, this shouldn't happen"
 				))?;
@@ -338,7 +331,7 @@ impl WayVRClient {
 				anyhow::bail!("packet is None, this shouldn't happen");
 			};
 
-			client.queued_packets.remove(&queued_packet_handle);
+			client.queued_packets.remove(queued_packet_handle);
 
 			Ok(packet)
 		}

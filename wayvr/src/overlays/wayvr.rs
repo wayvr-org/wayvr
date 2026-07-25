@@ -97,7 +97,7 @@ pub fn create_wl_window_overlay(
     let resizable = app
         .wvr_server
         .as_mut()
-        .and_then(|wvr| wvr.wm.windows.get(&window))
+        .and_then(|wvr| wvr.wm.windows.get(window))
         .map(|w| w.resizable())
         .unwrap_or(false);
 
@@ -284,7 +284,7 @@ impl WvrWindowBackend {
                 self.resizable = app
                     .wvr_server
                     .as_mut()
-                    .and_then(|wvr| wvr.wm.windows.get(&self.window))
+                    .and_then(|wvr| wvr.wm.windows.get(self.window))
                     .map(|w| w.resizable())
                     .unwrap_or(false);
 
@@ -475,7 +475,7 @@ impl WvrWindowBackend {
 
         let committed = Size::new(inner_extent[0].max(1) as i32, inner_extent[1].max(1) as i32);
 
-        let Some(window) = wvr_server.wm.windows.get_mut(&self.window) else {
+        let Some(window) = wvr_server.wm.windows.get_mut(self.window) else {
             return Ok(());
         };
 
@@ -516,7 +516,7 @@ impl OverlayBackend for WvrWindowBackend {
         let Some(toplevel) = app
             .wvr_server
             .as_ref()
-            .and_then(|sv| sv.wm.windows.get(&self.window))
+            .and_then(|sv| sv.wm.windows.get(self.window))
             .map(|win| win.toplevel.clone())
         else {
             log::debug!(
@@ -742,7 +742,7 @@ impl OverlayBackend for WvrWindowBackend {
                 }
             }
 
-            if let Some(window) = wvr_server.wm.windows.get(&self.window) {
+            if let Some(window) = wvr_server.wm.windows.get(self.window) {
                 let surface_id = window.toplevel.wl_surface().id();
                 state.send_frame_callbacks_for_surface_id(&surface_id);
             }
@@ -774,7 +774,7 @@ impl OverlayBackend for WvrWindowBackend {
             }
             OverlayEventData::WvrCommand(WvrCommand::ReloadTitle) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap(); //never None
-                if let Some(window) = wvr_server.wm.windows.get(&self.window) {
+                if let Some(window) = wvr_server.wm.windows.get(self.window) {
                     let title = with_states(window.toplevel.wl_surface(), |states| {
                         states
                             .data_map
@@ -795,14 +795,14 @@ impl OverlayBackend for WvrWindowBackend {
             }
             OverlayEventData::WvrCommand(WvrCommand::KillProcess(signal)) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap();
-                let Some(p) = wvr_server.wm.windows.get(&self.window) else {
+                let Some(p) = wvr_server.wm.windows.get(self.window) else {
                     return Ok(());
                 };
                 wvr_server.terminate_process(p.process, signal);
             }
             OverlayEventData::ResizeRequest(new_size) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap();
-                let Some(win) = wvr_server.wm.windows.get_mut(&self.window) else {
+                let Some(win) = wvr_server.wm.windows.get_mut(self.window) else {
                     log::warn!("Could not process resize request: window not found");
                     return Ok(());
                 };

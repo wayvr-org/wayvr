@@ -227,7 +227,7 @@ impl Connection {
             .wvr_server
             .wm
             .windows
-            .get_mut(&wayvr::window::WindowHandle::from_packet(handle))
+            .get_mut(wayvr::window::WindowHandle::from_packet(handle))
         {
             window.visible = visible;
         }
@@ -272,19 +272,8 @@ impl Connection {
         let list: Vec<packet_server::WvrProcess> = params
             .wvr_server
             .processes
-            .vec
             .iter()
-            .enumerate()
-            .filter_map(|(idx, opt_cell)| {
-                let Some(cell) = opt_cell else {
-                    return None;
-                };
-                let process = &cell.obj;
-                Some(process.to_packet(wayvr::process::ProcessHandle::new(
-                    idx as u32,
-                    cell.generation,
-                )))
-            })
+            .map(|(handle, process)| process.to_packet(handle))
             .collect();
 
         send_packet(
@@ -306,7 +295,7 @@ impl Connection {
         use crate::backend::wayvr::process::KillSignal;
 
         let native_handle = &wayvr::process::ProcessHandle::from_packet(process_handle);
-        let process = params.wvr_server.processes.get_mut(native_handle);
+        let process = params.wvr_server.processes.get_mut(*native_handle);
 
         let Some(process) = process else {
             return;
@@ -325,7 +314,7 @@ impl Connection {
         let process = params
             .wvr_server
             .processes
-            .get(native_handle)
+            .get(*native_handle)
             .map(|process| process.to_packet(*native_handle));
 
         send_packet(

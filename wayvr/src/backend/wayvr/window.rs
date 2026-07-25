@@ -1,11 +1,12 @@
 use std::rc::Rc;
 
 use glam::DVec2;
+use slotmap::{DenseSlotMap, new_key_type};
 use smithay::utils::{Logical, Size};
 use smithay::wayland::shell::xdg::ToplevelSurface;
 use wayvr_ipc::packet_server;
 
-use crate::{backend::wayvr::process, gen_id};
+use crate::backend::wayvr::process;
 
 #[derive(Debug)]
 pub struct Window {
@@ -113,27 +114,24 @@ pub struct MouseState {
 
 #[derive(Debug)]
 pub struct WindowManager {
-    pub windows: WindowVec,
+    pub windows: DenseSlotMap<WindowHandle, Window>,
     pub mouse: Option<MouseState>,
     pub keyboard_focus: Option<WindowHandle>,
 }
 
 impl WindowManager {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            windows: WindowVec::new(),
+            windows: Default::default(),
             mouse: None,
             keyboard_focus: None,
         }
     }
 
     pub fn find_window_handle(&self, toplevel: &ToplevelSurface) -> Option<WindowHandle> {
-        for (idx, cell) in self.windows.vec.iter().enumerate() {
-            if let Some(cell) = cell {
-                let window = &cell.obj;
-                if *window.toplevel == *toplevel {
-                    return Some(WindowVec::get_handle(cell, idx));
-                }
+        for (handle, window) in &self.windows {
+            if *window.toplevel == *toplevel {
+                return Some(handle);
             }
         }
         None
@@ -151,28 +149,26 @@ impl WindowManager {
     ) -> WindowHandle {
         let mut window = Window::new(toplevel, process, bounds, min_size, max_size);
         window.remember_committed_size(Size::new(size_x as i32, size_y as i32));
-        self.windows.add(window)
+        self.windows.insert(window)
     }
 
     pub fn remove_window(&mut self, window_handle: WindowHandle) {
-        self.windows.remove(&window_handle);
+        self.windows.remove(window_handle);
     }
 }
 
-gen_id!(WindowVec, Window, WindowCell, WindowHandle);
+new_key_type! {
+    pub struct WindowHandle;
+}
 
 impl WindowHandle {
-    pub const fn from_packet(handle: packet_server::WvrWindowHandle) -> Self {
-        Self {
-            generation: handle.generation,
-            idx: handle.idx,
-        }
+    pub fn from_packet(handle: packet_server::WvrWindowHandle) -> Self {
+        Self::from(slotmap::KeyData::from_ffi(handle.user))
     }
 
-    pub const fn as_packet(&self) -> packet_server::WvrWindowHandle {
+    pub fn as_packet(&self) -> packet_server::WvrWindowHandle {
         packet_server::WvrWindowHandle {
-            idx: self.idx,
-            generation: self.generation,
+            user: self.0.as_ffi(),
         }
     }
 }

@@ -8,6 +8,7 @@ use std::{
 
 use anyhow::Context;
 use glam::{DVec2, Vec2};
+use slotmap::DenseSlotMap;
 use smithay::{
     backend::input::{Axis, AxisSource, ButtonState, Keycode},
     input::{
@@ -146,7 +147,7 @@ impl WayVRCompositor {
     fn accept_connection(
         &mut self,
         stream: UnixStream,
-        processes: &mut process::ProcessVec,
+        processes: &mut DenseSlotMap<process::ProcessHandle, process::Process>,
     ) -> anyhow::Result<()> {
         let client = self
             .display
@@ -154,13 +155,13 @@ impl WayVRCompositor {
             .insert_client(stream, Arc::new(comp::ClientState::default()))
             .unwrap();
 
-        let creds = client.get_credentials(&self.display.handle())?;
+        let credentials = client.get_credentials(&self.display.handle())?;
 
-        let process_env = get_wayvr_env_from_pid(creds.pid)?;
+        let process_env = get_wayvr_env_from_pid(credentials.pid)?;
 
         // Find suitable auth key from the process list
-        for p in processes.vec.iter().flatten() {
-            if let process::Process::Managed(process) = &p.obj
+        for (_, process) in processes {
+            if let process::Process::Managed(process) = &process
                 && let Some(auth_key) = &process_env.display_auth
             {
                 // Find process with matching auth key
@@ -168,7 +169,7 @@ impl WayVRCompositor {
                     // Add client
                     self.add_client(WayVRClient {
                         client,
-                        pid: creds.pid as u32,
+                        pid: credentials.pid as u32,
                     });
                     return Ok(());
                 }
@@ -179,7 +180,7 @@ impl WayVRCompositor {
         // Treat external processes exclusively (spawned by the user or external program)
         log::warn!(
             "External process ID {} connected to this Wayland server",
-            creds.pid
+            credentials.pid
         );
 
         self.state
@@ -187,13 +188,16 @@ impl WayVRCompositor {
             .send(WayVRTask::NewExternalProcess(ExternalProcessRequest {
                 env: process_env,
                 client,
-                pid: creds.pid as u32,
+                pid: credentials.pid as u32,
             }));
 
         Ok(())
     }
 
-    fn accept_connections(&mut self, processes: &mut process::ProcessVec) -> anyhow::Result<()> {
+    fn accept_connections(
+        &mut self,
+        processes: &mut DenseSlotMap<process::ProcessHandle, process::Process>,
+    ) -> anyhow::Result<()> {
         if let Some(stream) = self.listener.accept()?
             && let Err(e) = self.accept_connection(stream, processes)
         {
@@ -203,7 +207,10 @@ impl WayVRCompositor {
         Ok(())
     }
 
-    pub fn tick_wayland(&mut self, processes: &mut process::ProcessVec) -> anyhow::Result<()> {
+    pub fn tick_wayland(
+        &mut self,
+        processes: &mut DenseSlotMap<process::ProcessHandle, process::Process>,
+    ) -> anyhow::Result<()> {
         if let Err(e) = self.accept_connections(processes) {
             log::error!("accept_connections failed: {e}");
         }

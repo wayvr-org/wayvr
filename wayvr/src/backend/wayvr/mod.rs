@@ -1,6 +1,5 @@
 pub mod client;
 mod comp;
-mod handle;
 pub mod hit_test;
 mod image_importer;
 mod input_capture;
@@ -11,8 +10,7 @@ pub mod window;
 use anyhow::Context;
 use comp::Application;
 use glam::{DVec2, Vec2};
-use process::ProcessVec;
-use slotmap::SecondaryMap;
+use slotmap::{DenseSlotMap, SecondaryMap};
 use smallvec::SmallVec;
 use smithay::{
     desktop::PopupManager,
@@ -136,7 +134,7 @@ pub enum WayVRTask {
 pub struct WvrServerState {
     pub manager: client::WayVRCompositor,
     pub wm: window::WindowManager,
-    pub processes: process::ProcessVec,
+    pub processes: DenseSlotMap<process::ProcessHandle, process::Process>,
     pub tasks: SyncEventQueue<WayVRTask>,
     ticks: u64,
     cur_modifiers: u8,
@@ -298,7 +296,7 @@ impl WvrServerState {
 
         Ok(Self {
             manager: client::WayVRCompositor::new(state, display, seat_keyboard, seat_pointer)?,
-            processes: ProcessVec::new(),
+            processes: Default::default(),
             wm: window::WindowManager::new(),
             ticks: 0,
             tasks,
@@ -341,7 +339,7 @@ impl WvrServerState {
         }
 
         for p_handle in &to_remove {
-            wvr_server.processes.remove(p_handle);
+            wvr_server.processes.remove(*p_handle);
             wvr_server.process_removed(&mut app.tasks, *p_handle);
         }
 
@@ -399,7 +397,7 @@ impl WvrServerState {
 
                         // Size, icon & fallback title comes from process
                         let (fallback_size, pos, fallback_title, icon, is_cage) =
-                            match wvr_server.processes.get(&process_handle) {
+                            match wvr_server.processes.get(process_handle) {
                                 Some(Process::Managed(p)) => {
                                     let size: Size<i32, Logical> =
                                         Size::new(p.resolution[0] as _, p.resolution[1] as _);
@@ -529,7 +527,7 @@ impl WvrServerState {
                         let process_handle = wvr_server
                             .wm
                             .windows
-                            .get(&window_handle)
+                            .get(window_handle)
                             .map(|window| window.process);
 
                         if let Some(oid) = wvr_server.window_to_overlay.remove(&window_handle) {
@@ -601,7 +599,7 @@ impl WvrServerState {
                     }
                 }
                 WayVRTask::ProcessTerminationRequest(process_handle, signal) => {
-                    if let Some(process) = wvr_server.processes.get_mut(&process_handle) {
+                    if let Some(process) = wvr_server.processes.get_mut(process_handle) {
                         process.kill(signal);
                     }
 
@@ -625,7 +623,7 @@ impl WvrServerState {
                     }
                 }
                 WayVRTask::CloseWindowRequest(window_handle) => {
-                    if let Some(w) = wvr_server.wm.windows.get(&window_handle) {
+                    if let Some(w) = wvr_server.wm.windows.get(window_handle) {
                         log::info!("Sending window close to {window_handle:?}");
                         w.toplevel.send_close();
                     } else {
@@ -684,7 +682,7 @@ impl WvrServerState {
         self.overlay_to_window.insert(oid, window);
         self.window_to_overlay.insert(window, oid);
 
-        if let Some(process_handle) = self.wm.windows.get(&window).map(|window| window.process) {
+        if let Some(process_handle) = self.wm.windows.get(window).map(|window| window.process) {
             let overlays = self.process_overlays.entry(process_handle).or_default();
             overlays.retain(|other| *other != oid);
             overlays.push(oid);
@@ -719,7 +717,7 @@ impl WvrServerState {
         }
 
         for hnd in &to_remove {
-            self.wm.windows.remove(hnd);
+            self.wm.windows.remove(*hnd);
         }
 
         self.process_overlays.remove(&process);
@@ -740,7 +738,7 @@ impl WvrServerState {
             WvrHitTarget::Toplevel { .. } => self
                 .wm
                 .windows
-                .get(&hover_window)
+                .get(hover_window)
                 .map(|w| {
                     let surface = w.toplevel.wl_surface().clone();
                     PointerFocusTarget::Surface {
@@ -967,7 +965,7 @@ impl WvrServerState {
                         break 'mouse_update;
                     };
 
-                    let Some(window) = self.wm.windows.get(&hover.hover_window) else {
+                    let Some(window) = self.wm.windows.get(hover.hover_window) else {
                         break 'mouse_update;
                     };
                     let toplevel = window.toplevel.wl_surface().clone();
@@ -1046,7 +1044,7 @@ impl WvrServerState {
                 let surface = self
                     .wm
                     .windows
-                    .get(&hover_window)
+                    .get(hover_window)
                     .map(|x| x.toplevel.wl_surface().clone());
 
                 (
@@ -1058,7 +1056,7 @@ impl WvrServerState {
                 let surface = self
                     .wm
                     .windows
-                    .get(&hover_window)
+                    .get(hover_window)
                     .map(|x| x.toplevel.wl_surface().clone());
                 (None, pressed.then_some(surface).flatten())
             }
@@ -1208,7 +1206,7 @@ impl WvrServerState {
 
     pub fn add_external_process(&mut self, pid: u32) -> process::ProcessHandle {
         self.processes
-            .add(process::Process::External(process::ExternalProcess { pid }))
+            .insert(process::Process::External(process::ExternalProcess { pid }))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1244,7 +1242,7 @@ impl WvrServerState {
 
         let handle = self
             .processes
-            .add(process::Process::Managed(process::WayVRProcess {
+            .insert(process::Process::Managed(process::WayVRProcess {
                 auth_key,
                 child,
                 exec_path: String::from(exec_path),

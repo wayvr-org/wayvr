@@ -36,7 +36,7 @@ idmap-derive.workspace = true
 input = {
   version = "0.9.1",
   default-features = false,
-  features = ["libinput_1_19", "udev"],
+  features = ["libinput_1_19", "udev"]
 }
 interprocess.workspace = true
 libc.workspace = true

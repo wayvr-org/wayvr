@@ -427,7 +427,7 @@ impl DashInterface<AppState> for DashInterfaceLive {
         let handle = ProcessHandle::from_packet(handle);
         wvr_server
             .processes
-            .get(&handle)
+            .get(handle)
             .map(|x| x.to_packet(handle))
     }
 

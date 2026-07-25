@@ -1,8 +1,7 @@
 use std::{collections::HashMap, io::Read, sync::Arc};
 
+use slotmap::{DenseSlotMap, new_key_type};
 use wayvr_ipc::{packet_client, packet_server};
-
-use crate::gen_id;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -176,24 +175,26 @@ impl ExternalProcess {
     }
 }
 
-gen_id!(ProcessVec, Process, ProcessCell, ProcessHandle);
+new_key_type! {
+    pub struct ProcessHandle;
+}
 
-pub fn find_by_pid(processes: &ProcessVec, pid: u32) -> Option<ProcessHandle> {
+pub fn find_by_pid(
+    processes: &DenseSlotMap<ProcessHandle, Process>,
+    pid: u32,
+) -> Option<ProcessHandle> {
     log::debug!("Finding process with PID {pid}");
 
-    for (idx, cell) in processes.vec.iter().enumerate() {
-        let Some(cell) = cell else {
-            continue;
-        };
-        match &cell.obj {
+    for (handle, process) in processes {
+        match &process {
             Process::Managed(wayvr_process) => {
                 if wayvr_process.child.id() == pid {
-                    return Some(ProcessVec::get_handle(cell, idx));
+                    return Some(handle);
                 }
             }
             Process::External(external_process) => {
                 if external_process.pid == pid {
-                    return Some(ProcessVec::get_handle(cell, idx));
+                    return Some(handle);
                 }
             }
         }
@@ -202,14 +203,11 @@ pub fn find_by_pid(processes: &ProcessVec, pid: u32) -> Option<ProcessHandle> {
     log::debug!("Finding by PID failed, trying WAYVR_DISPLAY_AUTH...");
 
     if let Ok(Some(value)) = get_process_env_value(pid as i32, "WAYVR_DISPLAY_AUTH") {
-        for (idx, cell) in processes.vec.iter().enumerate() {
-            let Some(cell) = cell else {
-                continue;
-            };
-            if let Process::Managed(wayvr_process) = &cell.obj
+        for (handle, process) in processes {
+            if let Process::Managed(wayvr_process) = &process
                 && wayvr_process.auth_key == value
             {
-                return Some(ProcessVec::get_handle(cell, idx));
+                return Some(handle);
             }
         }
     }
@@ -219,17 +217,13 @@ pub fn find_by_pid(processes: &ProcessVec, pid: u32) -> Option<ProcessHandle> {
 }
 
 impl ProcessHandle {
-    pub const fn from_packet(handle: packet_server::WvrProcessHandle) -> Self {
-        Self {
-            generation: handle.generation,
-            idx: handle.idx,
-        }
+    pub fn from_packet(handle: packet_server::WvrProcessHandle) -> Self {
+        Self::from(slotmap::KeyData::from_ffi(handle.user))
     }
 
-    pub const fn as_packet(&self) -> packet_server::WvrProcessHandle {
+    pub fn as_packet(&self) -> packet_server::WvrProcessHandle {
         packet_server::WvrProcessHandle {
-            idx: self.idx,
-            generation: self.generation,
+            user: self.0.as_ffi(),
         }
     }
 }
