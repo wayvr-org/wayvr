@@ -11,6 +11,7 @@ use wayvr_ipc::{
     client::WayVRClient,
     ipc,
     packet_client::{self, PositionMode},
+    packet_server::{WvrProcessHandle, WvrWindowHandle},
 };
 
 use crate::helper::{
@@ -107,11 +108,13 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
             handle,
             visible_0_or_1,
         } => {
-            let handle = serde_json::from_str(&handle).context("Invalid handle")?;
+            let handle =
+                serde_json::from_str::<WvrWindowHandle>(&handle).context("Invalid handle")?;
             wvr_window_set_visible(state, handle, visible_0_or_1 != 0).await;
         }
         Subcommands::ProcessGet { handle } => {
-            let handle = serde_json::from_str(&handle).context("Invalid handle")?;
+            let handle =
+                serde_json::from_str::<WvrProcessHandle>(&handle).context("Invalid handle")?;
             wvr_process_get(state, handle).await;
         }
         Subcommands::ProcessList => {

@@ -1,8 +1,6 @@
+use crate::backend::wayvr::{self, WayVRTask, WvrServerState};
 use wayvr_ipc::packet_client::{HandsfreeMode, HandsfreeParams};
-use wayvr_ipc::packet_server;
 use wlx_common::config::HandsfreePointer;
-
-use crate::backend::wayvr::{self, WvrServerState};
 
 use crate::{
     backend::{
@@ -41,9 +39,12 @@ where
 {
     while let Some(signal) = app.wayvr_signals.read() {
         match signal {
-            WayVRSignal::BroadcastStateChanged(packet) => {
-                app.ipc_server
-                    .broadcast(packet_server::PacketServer::WvrStateChanged(packet));
+            WayVRSignal::WindowVisibilityChanged(window_handle, visible) => {
+                if let Some(server) = &mut app.wvr_server {
+                    server
+                        .tasks
+                        .send(WayVRTask::VisibilityChange(window_handle, visible));
+                }
             }
             WayVRSignal::DeviceHaptics(device, haptics) => {
                 app.tasks

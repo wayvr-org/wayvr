@@ -22,7 +22,7 @@ impl SerialGenerator {
 	}
 }
 
-pub const PROTOCOL_VERSION: u32 = 3;
+pub const PROTOCOL_VERSION: u32 = 4;
 pub const CONNECTION_MAGIC: &str = "wayvr_ipc";
 
 pub fn data_encode<T>(data: &T) -> Vec<u8>

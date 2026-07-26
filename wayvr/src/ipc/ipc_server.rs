@@ -223,13 +223,12 @@ impl Connection {
         handle: packet_server::WvrWindowHandle,
         visible: bool,
     ) {
-        if let Some(window) = params
-            .wvr_server
-            .wm
-            .windows
-            .get_mut(wayvr::window::WindowHandle::from_packet(handle))
-        {
+        let window_handle = wayvr::window::WindowHandle::from_packet(handle);
+        if let Some(window) = params.wvr_server.wm.windows.get_mut(window_handle) {
             window.visible = visible;
+            params
+                .signals
+                .send(WayVRSignal::WindowVisibilityChanged(window_handle, visible))
         }
     }
 
@@ -575,13 +574,5 @@ impl WayVRServer {
     pub fn tick(&mut self, params: &mut TickParams) {
         self.accept_connections();
         self.tick_connections(params);
-    }
-
-    pub fn broadcast(&mut self, packet: packet_server::PacketServer) {
-        for connection in &mut self.connections {
-            if let Err(e) = send_packet(&mut connection.conn, &ipc::data_encode(&packet)) {
-                log::error!("failed to broadcast packet: {e:?}");
-            }
-        }
     }
 }

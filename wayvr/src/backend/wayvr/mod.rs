@@ -53,7 +53,7 @@ use std::{
 };
 use vulkano::image::view::ImageView;
 use wayland_protocols::xdg::shell::server::xdg_toplevel;
-use wayvr_ipc::{packet_client::PositionMode, packet_server};
+use wayvr_ipc::packet_client::PositionMode;
 use wgui::{gfx::WGfx, log::LogErr};
 use wlx_capture::frame::Transform;
 use wlx_common::{
@@ -74,7 +74,7 @@ use crate::{
         },
     },
     graphics::{ExtentExt, WGfxExtras},
-    ipc::{event_queue::SyncEventQueue, ipc_server, signal::WayVRSignal},
+    ipc::{event_queue::SyncEventQueue, ipc_server},
     overlays::{
         anchor::ALTTAB_HELP_NAME,
         wayvr::{WvrCommand, create_wl_window_overlay},
@@ -126,6 +126,7 @@ pub enum WayVRTask {
     DropToplevel(ClientId, ToplevelSurface),
     MinimizeRequest(ClientId, ToplevelSurface),
     TitleChange(ClientId, ToplevelSurface),
+    VisibilityChange(window::WindowHandle, bool),
     NewExternalProcess(ExternalProcessRequest),
     ProcessTerminationRequest(process::ProcessHandle, KillSignal),
     CloseWindowRequest(window::WindowHandle),
@@ -138,7 +139,6 @@ pub struct WvrServerState {
     pub tasks: SyncEventQueue<WayVRTask>,
     ticks: u64,
     cur_modifiers: u8,
-    signals: SyncEventQueue<WayVRSignal>,
     mouse_freeze: Instant,
     window_to_overlay: HashMap<window::WindowHandle, OverlayID>,
     overlay_to_window: SecondaryMap<OverlayID, window::WindowHandle>,
@@ -171,11 +171,7 @@ const KEY_REPEAT_RATE: i32 = 50;
 const WAYVR_SCREEN_RES: [i32; 2] = [2560, 1440];
 
 impl WvrServerState {
-    pub fn new(
-        gfx: Arc<WGfx>,
-        gfx_extras: &WGfxExtras,
-        signals: SyncEventQueue<WayVRSignal>,
-    ) -> anyhow::Result<Self> {
+    pub fn new(gfx: Arc<WGfx>, gfx_extras: &WGfxExtras) -> anyhow::Result<Self> {
         const fn filter_allow_any(_: &wayland_server::Client) -> bool {
             true
         }
@@ -301,7 +297,6 @@ impl WvrServerState {
             ticks: 0,
             tasks,
             cur_modifiers: 0,
-            signals,
             mouse_freeze: Instant::now(),
             window_to_overlay: HashMap::new(),
             overlay_to_window: SecondaryMap::new(),
@@ -341,12 +336,6 @@ impl WvrServerState {
         for p_handle in &to_remove {
             wvr_server.processes.remove(*p_handle);
             wvr_server.process_removed(&mut app.tasks, *p_handle);
-        }
-
-        if !to_remove.is_empty() {
-            app.wayvr_signals.send(WayVRSignal::BroadcastStateChanged(
-                packet_server::WvrStateChanged::ProcessRemoved,
-            ));
         }
 
         while let Some(task) = wvr_server.tasks.read() {
@@ -506,10 +495,6 @@ impl WvrServerState {
                                 .ok()
                             }),
                         )));
-
-                        app.wayvr_signals.send(WayVRSignal::BroadcastStateChanged(
-                            packet_server::WvrStateChanged::WindowCreated,
-                        ));
                     }
                 }
                 WayVRTask::DropToplevel(client_id, toplevel) => {
@@ -552,6 +537,19 @@ impl WvrServerState {
                         }
 
                         wvr_server.wm.remove_window(window_handle);
+                    }
+                }
+                WayVRTask::VisibilityChange(window_handle, visible) => {
+                    if let Some(oid) = wvr_server.window_to_overlay.get(&window_handle) {
+                        app.tasks
+                            .enqueue(TaskType::Overlay(OverlayTask::ToggleOverlay(
+                                OverlaySelector::Id(*oid),
+                                if visible {
+                                    ToggleMode::EnsureOn
+                                } else {
+                                    ToggleMode::EnsureOff
+                                },
+                            )));
                     }
                 }
                 WayVRTask::MinimizeRequest(client_id, toplevel) => {
@@ -1258,10 +1256,6 @@ impl WvrServerState {
                 resolution,
                 pos_mode,
             }));
-
-        self.signals.send(WayVRSignal::BroadcastStateChanged(
-            packet_server::WvrStateChanged::ProcessCreated,
-        ));
 
         Ok(handle)
     }
