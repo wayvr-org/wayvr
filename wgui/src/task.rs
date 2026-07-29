@@ -18,6 +18,10 @@ impl<TaskType: 'static> Tasks<TaskType> {
 		self.0.borrow_mut().push_back(task);
 	}
 
+	pub fn len(&self) -> usize {
+		self.0.borrow().len()
+	}
+
 	pub fn drain(&mut self) -> VecDeque<TaskType> {
 		let mut tasks = self.0.borrow_mut();
 		std::mem::take(&mut *tasks)

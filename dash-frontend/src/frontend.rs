@@ -56,7 +56,7 @@ pub struct Frontend<T> {
 
 	pub interface: BoxDashInterface<T>,
 
-	// async runtime executor
+	// single-threaded async runtime executor
 	pub executor: AsyncExecutor,
 
 	#[allow(dead_code)]

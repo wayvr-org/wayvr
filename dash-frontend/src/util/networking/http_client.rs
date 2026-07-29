@@ -1,13 +1,9 @@
 use anyhow::Context as _;
-use smol::{
-	Task,
-	channel::{Receiver, bounded},
-	io::AsyncWriteExt as _,
-};
+use smol::{channel::bounded, io::AsyncWriteExt as _};
 use std::{io::Read as _, path::Path, str, sync::OnceLock};
 
 const IO_BUFFER_SIZE: usize = 256 * 1024;
-const CHANNEL_CAPACITY: usize = 4;
+const CHANNEL_CAPACITY: usize = 8;
 const MAX_INITIAL_ALLOCATION: usize = 8 * 1024 * 1024;
 
 pub struct HttpClientResponse {
@@ -37,10 +33,15 @@ pub struct GetParams<'a> {
 	pub on_progress: Option<ProgressFunc<'a>>,
 }
 
+enum HttpClientData {
+	FileSize(u64),
+	Chunk(Vec<u8>),
+	Ended(anyhow::Result<()>),
+}
+
 struct DownloadStream {
 	file_size: u64,
-	chunks: Receiver<Vec<u8>>,
-	worker: Task<anyhow::Result<()>>,
+	receiver: smol::channel::Receiver<HttpClientData>,
 }
 
 static HTTP_AGENT: OnceLock<ureq::Agent> = OnceLock::new();
@@ -55,118 +56,115 @@ fn http_agent() -> &'static ureq::Agent {
 	})
 }
 
-/// Starts a blocking HTTP request and streams its body through a bounded
-/// asynchronous channel.
-///
+fn thread_http_client(
+	url: &str,
+	allow_missing_content_length: bool,
+	sender: smol::channel::Sender<HttpClientData>,
+) -> anyhow::Result<()> {
+	log::info!("fetching URL \"{}\"", url);
+	let agent = http_agent().clone();
+
+	let response = agent
+		.get(url)
+		.header("Accept-Encoding", "identity")
+		.call()
+		.with_context(|| format!("failed to fetch URL \"{url}\""))?;
+
+	if !response.status().is_success() {
+		anyhow::bail!("non-200 HTTP response: {}", response.status().as_u16(),);
+	}
+
+	let file_size = match response.body().content_length() {
+		Some(file_size) => file_size,
+
+		None if allow_missing_content_length => 0,
+
+		None => {
+			anyhow::bail!("HTTP response has no Content-Length header");
+		}
+	};
+
+	sender.send_blocking(HttpClientData::FileSize(file_size))?;
+
+	let mut reader = response.into_body().into_reader();
+	let mut buffer = [0_u8; IO_BUFFER_SIZE];
+
+	loop {
+		let count = reader.read(&mut buffer).with_context(|| {
+			format!(
+				"failed while reading HTTP response body \
+						 from \"{url}\""
+			)
+		})?;
+
+		if count == 0 {
+			break;
+		}
+
+		sender.send_blocking(HttpClientData::Chunk(buffer[..count].to_vec()))?;
+	}
+
+	Ok(())
+}
+
+/// Starts a HTTP request in a separate thread and streams its body through an async channel
 /// The request, TLS operations, and all BodyReader reads remain inside one
 /// blocking worker. Only owned byte chunks cross back to the async task.
 async fn start_download(url: &str, allow_missing_content_length: bool) -> anyhow::Result<DownloadStream> {
 	let url = url.to_owned();
-	let agent = http_agent().clone();
 
-	let (metadata_tx, metadata_rx) = bounded::<u64>(1);
-
-	let (chunk_tx, chunk_rx) = bounded::<Vec<u8>>(CHANNEL_CAPACITY);
-
-	let worker = smol::unblock(move || -> anyhow::Result<()> {
-		log::info!("fetching URL \"{}\"", url);
-
-		let response = agent
-			.get(&url)
-			.header("Accept-Encoding", "identity")
-			.call()
-			.with_context(|| format!("failed to fetch URL \"{url}\""))?;
-
-		if !response.status().is_success() {
-			anyhow::bail!("non-200 HTTP response: {}", response.status().as_u16(),);
-		}
-
-		let file_size = match response.body().content_length() {
-			Some(file_size) => file_size,
-
-			None if allow_missing_content_length => 0,
-
-			None => {
-				anyhow::bail!("HTTP response has no Content-Length header");
-			}
-		};
-
-		if metadata_tx.send_blocking(file_size).is_err() {
-			return Ok(());
-		}
-
-		drop(metadata_tx);
-
-		let mut reader = response.into_body().into_reader();
-		let mut buffer = [0_u8; IO_BUFFER_SIZE];
-
-		loop {
-			let count = reader.read(&mut buffer).with_context(|| {
-				format!(
-					"failed while reading HTTP response body \
-						 from \"{url}\""
-				)
-			})?;
-
-			if count == 0 {
-				break;
-			}
-
-			let chunk = buffer[..count].to_vec();
-
-			if chunk_tx.send_blocking(chunk).is_err() {
-				return Ok(());
-			}
-		}
-
-		Ok(())
+	let (sender, receiver) = bounded::<HttpClientData>(CHANNEL_CAPACITY);
+	std::thread::spawn(move || {
+		let res = thread_http_client(&url, allow_missing_content_length, sender.clone());
+		let _ = sender.send_blocking(HttpClientData::Ended(res));
 	});
 
-	let file_size = match metadata_rx.recv().await {
-		Ok(file_size) => file_size,
-
-		Err(_) => {
-			worker.await?;
-
-			anyhow::bail!("HTTP worker stopped before providing response metadata");
+	let file_size = match receiver.recv().await? {
+		HttpClientData::Ended(res) => match res {
+			Ok(_) => anyhow::bail!("HTTP worker failure"),
+			Err(e) => return Err(anyhow::anyhow!(e)),
+		},
+		HttpClientData::FileSize(file_size) => file_size,
+		_ => {
+			anyhow::bail!("HTTP worker failure")
 		}
 	};
 
-	Ok(DownloadStream {
-		file_size,
-		chunks: chunk_rx,
-		worker,
-	})
+	Ok(DownloadStream { file_size, receiver })
 }
 
 /// Downloads a response into memory.
 ///
 /// This fails if the server does not provide a Content-Length header.
 pub async fn get(mut params: GetParams<'_>) -> anyhow::Result<HttpClientResponse> {
-	let DownloadStream {
-		file_size,
-		chunks,
-		worker,
-	} = start_download(params.url, false).await?;
+	let DownloadStream { file_size, receiver } = start_download(params.url, false).await?;
 
 	let initial_capacity = usize::try_from(file_size).unwrap_or(0).min(MAX_INITIAL_ALLOCATION);
 
 	let mut data = Vec::with_capacity(initial_capacity);
 	let mut bytes_downloaded = 0_u64;
 
-	while let Ok(chunk) = chunks.recv().await {
-		bytes_downloaded += chunk.len() as u64;
-		data.extend_from_slice(&chunk);
+	while let Ok(msg) = receiver.recv().await {
+		match msg {
+			HttpClientData::FileSize(_) => unreachable!(),
+			HttpClientData::Ended(e) => {
+				if let Err(e) = e {
+					anyhow::bail!("HTTP request failed: {}", e);
+				}
+			}
+			HttpClientData::Chunk(chunk) => {
+				bytes_downloaded += chunk.len() as u64;
+				data.extend_from_slice(&chunk);
 
-		if let Some(on_progress) = params.on_progress.as_mut() {
-			on_progress(ProgressFuncData {
-				bytes_downloaded,
-				file_size,
-			});
+				if let Some(on_progress) = params.on_progress.as_mut() {
+					on_progress(ProgressFuncData {
+						bytes_downloaded,
+						file_size,
+					});
+				}
+			}
 		}
 	}
-
-	worker.await?;
 
 	if bytes_downloaded != file_size {
 		anyhow::bail!(
@@ -189,11 +187,7 @@ pub async fn get(mut params: GetParams<'_>) -> anyhow::Result<HttpClientResponse
 pub async fn download_to_file(mut params: GetParams<'_>, path: impl AsRef<Path>) -> anyhow::Result<()> {
 	let path = path.as_ref().to_owned();
 
-	let DownloadStream {
-		file_size,
-		chunks,
-		worker,
-	} = start_download(params.url, true).await?;
+	let DownloadStream { file_size, receiver } = start_download(params.url, true).await?;
 
 	let mut file = smol::fs::File::create(&path)
 		.await
@@ -201,23 +195,31 @@ pub async fn download_to_file(mut params: GetParams<'_>, path: impl AsRef<Path>)
 
 	let mut bytes_downloaded = 0_u64;
 
-	while let Ok(chunk) = chunks.recv().await {
-		file
-			.write_all(&chunk)
-			.await
-			.with_context(|| format!("failed to write download file {:?}", path,))?;
+	while let Ok(msg) = receiver.recv().await {
+		match msg {
+			HttpClientData::FileSize(_) => unreachable!(),
+			HttpClientData::Ended(e) => {
+				if let Err(e) = e {
+					anyhow::bail!("HTTP request failed: {}", e);
+				}
+			}
+			HttpClientData::Chunk(chunk) => {
+				file
+					.write_all(&chunk)
+					.await
+					.with_context(|| format!("failed to write download file {:?}", path,))?;
 
-		bytes_downloaded += chunk.len() as u64;
+				bytes_downloaded += chunk.len() as u64;
 
-		if let Some(on_progress) = params.on_progress.as_mut() {
-			on_progress(ProgressFuncData {
-				bytes_downloaded,
-				file_size,
-			});
+				if let Some(on_progress) = params.on_progress.as_mut() {
+					on_progress(ProgressFuncData {
+						bytes_downloaded,
+						file_size,
+					});
+				}
+			}
 		}
 	}
-
-	worker.await?;
 
 	file
 		.flush()

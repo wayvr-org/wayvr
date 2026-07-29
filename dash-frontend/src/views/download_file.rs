@@ -208,12 +208,14 @@ impl View {
 					on_progress: Some(Box::new({
 						let tasks = tasks.clone();
 						move |data: ProgressFuncData| {
-							tasks.push(Task::SetStatusText(format!(
-								"{}/{} MiB ({}%)",
-								data.bytes_downloaded / 1024 / 1024,
-								data.file_size / 1024 / 1024,
-								(data.bytes_downloaded as f32 / data.file_size as f32 * 100.0).round()
-							)))
+							if tasks.len() < 50 {
+								tasks.push(Task::SetStatusText(format!(
+									"{}/{} MiB ({}%)",
+									data.bytes_downloaded / 1024 / 1024,
+									data.file_size / 1024 / 1024,
+									(data.bytes_downloaded as f32 / data.file_size as f32 * 100.0).round()
+								)))
+							}
 						}
 					})),
 				},
