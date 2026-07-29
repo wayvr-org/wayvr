@@ -52,12 +52,8 @@ pub struct View {
 
 impl ViewTrait for View {
 	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-			for task in tasks {
+		while !self.tasks.is_empty() {
+			for task in self.tasks.drain() {
 				match task {
 					Task::FillAppDetails(details) => self.action_fill_app_details(par.layout, details)?,
 					Task::Launch => self.action_launch(),

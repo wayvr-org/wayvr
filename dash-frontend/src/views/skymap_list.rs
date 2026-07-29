@@ -58,12 +58,8 @@ impl ViewTrait for View {
 		self.popup_remote_skymap_list.update(par)?;
 		self.popup_dialog_box.update(par)?;
 
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-			for task in tasks {
+		while !self.tasks.is_empty() {
+			for task in self.tasks.drain() {
 				match task {
 					Task::DownloadSkymaps => {
 						self.download_skymaps(par.executor)?;

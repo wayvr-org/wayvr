@@ -298,12 +298,8 @@ impl View {
 	}
 
 	pub fn update<T>(&mut self, interface: &mut BoxDashInterface<T>, data: &mut T) -> anyhow::Result<()> {
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-			for task in tasks {
+		while !self.tasks.is_empty() {
+			for task in self.tasks.drain() {
 				match task {
 					Task::SetCompositor(mode) => self.compositor_mode = mode,
 					Task::SetRes(mode) => self.res_mode = mode,

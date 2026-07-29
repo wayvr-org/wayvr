@@ -70,12 +70,8 @@ pub struct View {
 
 impl ViewTrait for View {
 	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-			for task in tasks {
+		while !self.tasks.is_empty() {
+			for task in self.tasks.drain() {
 				match task {
 					Task::LoadManifests => self.load_manifests(),
 					Task::FillPage(page_idx) => self.fill_page(par.layout, par.executor, page_idx)?,

@@ -22,6 +22,10 @@ impl<TaskType: 'static> Tasks<TaskType> {
 		self.0.borrow().len()
 	}
 
+	pub fn is_empty(&self) -> bool {
+		self.0.borrow().is_empty()
+	}
+
 	pub fn drain(&mut self) -> VecDeque<TaskType> {
 		let mut tasks = self.0.borrow_mut();
 		std::mem::take(&mut *tasks)

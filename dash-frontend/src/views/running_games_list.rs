@@ -77,13 +77,8 @@ impl View {
 	}
 
 	pub fn update(&mut self, layout: &mut Layout, time_ms: u32) -> anyhow::Result<()> {
-		loop {
-			let tasks = self.tasks.drain();
-			if tasks.is_empty() {
-				break;
-			}
-
-			for task in tasks {
+		while !self.tasks.is_empty() {
+			for task in self.tasks.drain() {
 				match task {
 					Task::Refresh => self.refresh(layout)?,
 					Task::StopGame(app_id, kill) => self.stop_game(app_id, kill),

@@ -66,63 +66,66 @@ fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
 
 impl ViewTrait for View {
 	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
-		for task in self.tasks.drain() {
-			match task {
-				Task::StartDownload(url, path) => {
-					if let Some(on_downloaded) = self.on_downloaded.take() {
-						self.task_downloader = Some(self.executor.spawn(View::download(
-							self.tasks.clone(),
-							url,
-							path,
-							on_downloaded,
-						)));
+		while !self.tasks.is_empty() {
+			for task in self.tasks.drain() {
+				match task {
+					Task::StartDownload(url, path) => {
+						if let Some(on_downloaded) = self.on_downloaded.take() {
+							self.task_downloader = Some(self.executor.spawn(View::download(
+								self.tasks.clone(),
+								url,
+								path,
+								on_downloaded,
+							)));
+						}
 					}
-				}
-				Task::SetStatusText(text) => {
-					let widgets = &mut par.layout.state.widgets;
-					widgets
-						.fetch(self.id_label_status)?
-						.cast::<WidgetLabel>()?
-						.set_text(&mut par.layout.common(), Translation::from_raw_text_string(text));
-				}
-				Task::ShowIconSuccess => {
-					par.layout.remove_children(self.id_loading_parent);
-					wgui_simple::create_icon(
-						par.layout,
-						self.id_loading_parent,
-						Vec2::splat(32.0),
-						AssetPath::BuiltIn("dashboard/check.svg"),
-					)?;
-
-					// "Close window" button
-					self
-						.parser_state
-						.realize_template(
-							&doc_params(&self.globals),
-							"btn_close",
+					Task::SetStatusText(text) => {
+						let widgets = &mut par.layout.state.widgets;
+						widgets
+							.fetch(self.id_label_status)?
+							.cast::<WidgetLabel>()?
+							.set_text(&mut par.layout.common(), Translation::from_raw_text_string(text));
+					}
+					Task::ShowIconSuccess => {
+						par.layout.remove_children(self.id_loading_parent);
+						wgui_simple::create_icon(
 							par.layout,
-							self.id_content,
-							Default::default(),
-						)?
-						.fetch_component_as::<ComponentButton>("btn")?
-						.on_click(self.tasks.get_button_click_callback(Task::Close));
-				}
-				Task::ShowIconError => {
-					par.layout.remove_children(self.id_loading_parent);
-					wgui_simple::create_icon(
-						par.layout,
-						self.id_loading_parent,
-						Vec2::splat(32.0),
-						AssetPath::BuiltIn("dashboard/error.svg"),
-					)?;
-				}
-				Task::Close => {
-					if let Some(on_close) = self.on_close_request.take() {
-						on_close();
+							self.id_loading_parent,
+							Vec2::splat(32.0),
+							AssetPath::BuiltIn("dashboard/check.svg"),
+						)?;
+
+						// "Close window" button
+						self
+							.parser_state
+							.realize_template(
+								&doc_params(&self.globals),
+								"btn_close",
+								par.layout,
+								self.id_content,
+								Default::default(),
+							)?
+							.fetch_component_as::<ComponentButton>("btn")?
+							.on_click(self.tasks.get_button_click_callback(Task::Close));
+					}
+					Task::ShowIconError => {
+						par.layout.remove_children(self.id_loading_parent);
+						wgui_simple::create_icon(
+							par.layout,
+							self.id_loading_parent,
+							Vec2::splat(32.0),
+							AssetPath::BuiltIn("dashboard/error.svg"),
+						)?;
+					}
+					Task::Close => {
+						if let Some(on_close) = self.on_close_request.take() {
+							on_close();
+						}
 					}
 				}
 			}
 		}
+
 		Ok(())
 	}
 }
