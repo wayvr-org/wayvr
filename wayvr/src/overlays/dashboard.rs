@@ -95,6 +95,7 @@ impl DashFrontend {
             has_monado: matches!(app.xr_backend, XrBackend::OpenXR),
             theme: app.wgui_theme.clone(),
             color_palette: &*app.session.config.color_palette,
+            executor: app.executor.clone(),
         })?;
 
         frontend

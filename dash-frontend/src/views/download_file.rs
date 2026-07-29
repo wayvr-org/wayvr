@@ -51,6 +51,9 @@ pub struct View {
 	id_content: WidgetID,
 	on_close_request: Option<Box<dyn FnOnce()>>,
 	on_downloaded: Option<Box<dyn FnOnce()>>,
+
+	// will cancel on Drop
+	task_downloader: Option<smol::Task<Option<()>>>,
 }
 
 fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
@@ -67,10 +70,12 @@ impl ViewTrait for View {
 			match task {
 				Task::StartDownload(url, path) => {
 					if let Some(on_downloaded) = self.on_downloaded.take() {
-						self
-							.executor
-							.spawn(View::download(self.tasks.clone(), url, path, on_downloaded))
-							.detach();
+						self.task_downloader = Some(self.executor.spawn(View::download(
+							self.tasks.clone(),
+							url,
+							path,
+							on_downloaded,
+						)));
 					}
 				}
 				Task::SetStatusText(text) => {
@@ -178,6 +183,7 @@ impl View {
 			id_content,
 			on_close_request: Some(on_close_request),
 			on_downloaded: Some(par.on_downloaded),
+			task_downloader: None,
 		})
 	}
 
@@ -208,7 +214,7 @@ impl View {
 					on_progress: Some(Box::new({
 						let tasks = tasks.clone();
 						move |data: ProgressFuncData| {
-							if tasks.len() < 50 {
+							if tasks.len() < 100 {
 								tasks.push(Task::SetStatusText(format!(
 									"{}/{} MiB ({}%)",
 									data.bytes_downloaded / 1024 / 1024,

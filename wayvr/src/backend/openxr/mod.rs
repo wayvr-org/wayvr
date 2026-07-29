@@ -267,6 +267,7 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
             continue 'main_loop;
         }
 
+        while app.executor.try_tick() {}
         app.input_state.pre_update();
         input_source.update(&xr_state, &mut app)?;
         app.input_state.post_update(&app.session);

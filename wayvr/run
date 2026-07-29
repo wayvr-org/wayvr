@@ -1,6 +1,0 @@
-#!/bin/bash
-
-
-
-
-cargo run --profile=plain -- --show --replace

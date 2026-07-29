@@ -98,6 +98,7 @@ pub struct InitParams<'a, T> {
 	pub has_monado: bool,
 	pub theme: Rc<WguiTheme>,
 	pub color_palette: &'a str,
+	pub executor: AsyncExecutor,
 }
 
 #[derive(Clone)]
@@ -202,7 +203,7 @@ impl<T: 'static> Frontend<T> {
 			toast_manager,
 			window_audio_settings: WguiWindow::default(),
 			view_audio_settings: None,
-			executor: Rc::new(smol::LocalExecutor::new()),
+			executor: params.executor,
 			sounds_to_play: Vec::new(),
 		};
 
@@ -253,9 +254,6 @@ impl<T: 'static> Frontend<T> {
 
 			self.current_tab = Some(tab);
 		}
-
-		// process async runtime tasks
-		while self.executor.try_tick() {}
 
 		let res = self.tick(params)?;
 		self.ticks += 1;

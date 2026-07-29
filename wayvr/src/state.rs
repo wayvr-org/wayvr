@@ -58,6 +58,8 @@ pub struct AppState {
 
     pub wgui_shared: WSharedContext,
 
+    pub executor: wlx_common::async_executor::AsyncExecutor,
+
     pub input_state: InputState,
     pub screens: SmallVec<[ScreenMeta; 8]>,
     pub anchor: Affine3A,
@@ -189,6 +191,8 @@ impl AppState {
             )
             .ok();
 
+        let executor = wlx_common::async_executor::create_local();
+
         let mut app_state = Self {
             tasks,
             gfx,
@@ -209,6 +213,7 @@ impl AppState {
                 load_palette(&*session.config.color_palette),
             )?,
             wgui_theme: Rc::new(theme),
+            executor,
             dbus,
             xr_backend,
             ipc_server,

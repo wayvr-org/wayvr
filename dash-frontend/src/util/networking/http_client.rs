@@ -117,6 +117,7 @@ async fn start_download(url: &str, allow_missing_content_length: bool) -> anyhow
 	std::thread::spawn(move || {
 		let res = thread_http_client(&url, allow_missing_content_length, sender.clone());
 		let _ = sender.send_blocking(HttpClientData::Ended(res));
+		log::debug!("thread_http_client exiting");
 	});
 
 	let file_size = match receiver.recv().await? {
@@ -177,6 +178,20 @@ pub async fn get(mut params: GetParams<'_>) -> anyhow::Result<HttpClientResponse
 	Ok(HttpClientResponse { data })
 }
 
+struct FileCancelGuard {
+	path: std::path::PathBuf,
+	should_delete: bool,
+}
+
+impl Drop for FileCancelGuard {
+	fn drop(&mut self) {
+		if self.should_delete {
+			log::warn!("Removing partially downloaded file {:?}", self.path);
+			let _ = std::fs::remove_file(&self.path);
+		}
+	}
+}
+
 /// Downloads a response directly to a file.
 ///
 /// Unlike `get`, this permits responses without a Content-Length header. In
@@ -189,9 +204,14 @@ pub async fn download_to_file(mut params: GetParams<'_>, path: impl AsRef<Path>)
 
 	let DownloadStream { file_size, receiver } = start_download(params.url, true).await?;
 
+	let mut file_cancel_guard = FileCancelGuard {
+		path: path.clone(),
+		should_delete: true,
+	};
+
 	let mut file = smol::fs::File::create(&path)
 		.await
-		.with_context(|| format!("failed to create download file {:?}", path,))?;
+		.with_context(|| format!("failed to create download file {:?}", path))?;
 
 	let mut bytes_downloaded = 0_u64;
 
@@ -233,6 +253,8 @@ pub async fn download_to_file(mut params: GetParams<'_>, path: impl AsRef<Path>)
 			bytes_downloaded,
 		);
 	}
+
+	file_cancel_guard.should_delete = false; // we're good!
 
 	Ok(())
 }
