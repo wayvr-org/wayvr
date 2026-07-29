@@ -10,7 +10,6 @@
 		"TOGGLE_VISIBILITY": "Przełącz widoczność",
 		"RESET_POSITION": "Zresetuj pozycję",
 		"RELOAD_FROM_DISK": "Przeładuj XML z dysku",
-		"CLOSE_MIRROR": "Zamknij lustro",
 		"CLOSE_APP": "Zamknij aplikację",
 		"FORCE_CLOSE_APP": "Wymuś zamknięcie aplikacji",
 		"HANDSFREE": {
@@ -20,7 +19,9 @@
 			"EYE_TRACKING": "Oko + uszczypnięcie",
 			"EYE_ONLY": "Laser wzrokowy",
 			"HMD_ONLY": "Laser w HMD"
-		}
+		},
+		"ADD_PASSTHRU": "Dodaj okno passthrough",
+		"CLOSE_OVERLAY": "Zamknij nakładkę"
 	},
 	"WATCH": {
 		"RECENTER": "Wyśrodkuj przestrzeń gry",

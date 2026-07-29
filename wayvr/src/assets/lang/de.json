@@ -10,7 +10,6 @@
 		"TOGGLE_VISIBILITY": "Sichtbarkeit umschalten",
 		"RESET_POSITION": "Position zurücksetzen",
 		"RELOAD_FROM_DISK": "XML-Datei von der Festplatte neu laden",
-		"CLOSE_MIRROR": "Spiegel schließen",
 		"CLOSE_APP": "App schließen",
 		"FORCE_CLOSE_APP": "App zwangsweise schließen",
 		"HANDSFREE": {
@@ -20,7 +19,9 @@
 			"EYE_TRACKING": "Auge + Kneifen",
 			"EYE_ONLY": "Augenlaser",
 			"HMD_ONLY": "HMD-Laser"
-		}
+		},
+		"ADD_PASSTHRU": "Passthrough-Fenster hinzufügen",
+		"CLOSE_OVERLAY": "Overlay schließen"
 	},
 	"WATCH": {
 		"RECENTER": "Spielbereich neu zentrieren",

@@ -154,7 +154,7 @@
       <!-- title text="${name}" /-->
       <cell translation="BAR.TOGGLE_VISIBILITY" _press="::OverlayToggle ${name}" />
       <cell translation="BAR.RESET_POSITION" _press="::OverlayReset ${name}" />
-      <cell translation="BAR.CLOSE_MIRROR" _press="::OverlayDrop ${name}" />
+      <cell translation="BAR.CLOSE_OVERLAY" _press="::OverlayDrop ${name}" />
     </context_menu>
   </blueprint>
 
@@ -182,6 +182,7 @@
       <cell translation="BAR.EDIT_MODE_TOGGLE" _press="::EditToggle" _press2="::ContextMenuClose" />
       <cell translation="BAR.HANDSFREE.TITLE" _press="::ContextMenuOpen menu_handsfree" />
       <cell translation="BAR.ADD_MIRROR" _press="::NewMirror" />
+      <cell translation="BAR.ADD_PASSTHRU" _press="::NewPassthru" />
       <cell translation="BAR.ADD_NEW_SET" _press="::AddSet" />
       <cell translation="BAR.DELETE_CURRENT_SET" _press="::DeleteSet" />
     </context_menu>

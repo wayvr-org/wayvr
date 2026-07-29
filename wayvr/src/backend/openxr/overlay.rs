@@ -11,7 +11,7 @@ use crate::{
         swapchain::{SwapchainOpts, WlxSwapchainImage, create_swapchain},
     },
     state::AppState,
-    windowing::window::OverlayWindowData,
+    windowing::window::{OverlayCategory, OverlayWindowData},
 };
 
 #[derive(Default)]
@@ -21,6 +21,7 @@ pub struct OpenXrOverlayData {
     pub(super) init: bool,
     pub(super) cur_visible: bool,
     color_bias_khr: Option<Box<xr::sys::CompositionLayerColorScaleBiasKHR>>,
+    layer_alpha_blend_fb: Option<Box<xr::sys::CompositionLayerAlphaBlendFB>>,
 }
 
 impl OverlayWindowData<OpenXrOverlayData> {
@@ -104,12 +105,34 @@ impl OverlayWindowData<OpenXrOverlayData> {
             (major, major / aspect_ratio)
         };
 
-        let flags = if state.additive {
-            CompositionLayerFlags::BLEND_TEXTURE_SOURCE_ALPHA
-        } else {
-            CompositionLayerFlags::BLEND_TEXTURE_SOURCE_ALPHA
-                | CompositionLayerFlags::UNPREMULTIPLIED_ALPHA
-        };
+        let mut flags = CompositionLayerFlags::BLEND_TEXTURE_SOURCE_ALPHA;
+
+        if state.additive {
+            flags |= CompositionLayerFlags::UNPREMULTIPLIED_ALPHA;
+        }
+
+        if xr
+            .instance
+            .exts()
+            .fb_composition_layer_alpha_blend
+            .is_some()
+            && self.config.category == OverlayCategory::Passthru
+            && self.data.layer_alpha_blend_fb.is_none()
+            && !self.config.editing
+        {
+            self.data.layer_alpha_blend_fb =
+                Some(Box::new(openxr::sys::CompositionLayerAlphaBlendFB {
+                    ty: xr::sys::CompositionLayerAlphaBlendFB::TYPE,
+                    next: std::ptr::null_mut(),
+                    src_factor_color: xr::BlendFactorFB::ZERO,
+                    dst_factor_color: xr::BlendFactorFB::SRC_ALPHA,
+                    src_factor_alpha: xr::BlendFactorFB::ONE,
+                    dst_factor_alpha: xr::BlendFactorFB::ZERO,
+                }));
+            flags &= !CompositionLayerFlags::BLEND_TEXTURE_SOURCE_ALPHA;
+        } else if self.config.editing {
+            self.data.layer_alpha_blend_fb = None;
+        }
 
         if let Some(curvature) = state.curvature {
             let radius = scale_x / (2.0 * PI * curvature);
@@ -132,6 +155,12 @@ impl OverlayWindowData<OpenXrOverlayData> {
                     .central_angle(angle)
                     .aspect_ratio(aspect_ratio);
 
+                if let Some(layer_alpha_blend_fb) = self.data.layer_alpha_blend_fb.as_mut() {
+                    unsafe {
+                        let raw = next_chain_insert!(cylinder, layer_alpha_blend_fb);
+                        cylinder = xr::CompositionLayerCylinderKHR::from_raw(raw);
+                    }
+                }
                 if let Some(color_bias_khr) = self.data.color_bias_khr.as_mut() {
                     unsafe {
                         let raw = next_chain_insert!(cylinder, color_bias_khr);
@@ -157,6 +186,12 @@ impl OverlayWindowData<OpenXrOverlayData> {
                         height: scale_y,
                     });
 
+                if let Some(layer_alpha_blend_fb) = self.data.layer_alpha_blend_fb.as_mut() {
+                    unsafe {
+                        let raw = next_chain_insert!(quad, layer_alpha_blend_fb);
+                        quad = xr::CompositionLayerQuad::from_raw(raw);
+                    }
+                }
                 if let Some(color_bias_khr) = self.data.color_bias_khr.as_mut() {
                     unsafe {
                         let raw = next_chain_insert!(quad, color_bias_khr);

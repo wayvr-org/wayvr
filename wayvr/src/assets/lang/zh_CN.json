@@ -10,7 +10,6 @@
 		"TOGGLE_VISIBILITY": "切换可见性",
 		"RESET_POSITION": "重置位置",
 		"RELOAD_FROM_DISK": "从磁盘重新加载 XML",
-		"CLOSE_MIRROR": "关闭镜像",
 		"CLOSE_APP": "关闭应用",
 		"FORCE_CLOSE_APP": "强制关闭应用",
 		"HANDSFREE": {
@@ -20,7 +19,9 @@
 			"EYE_TRACKING": "眼动 + 捏合",
 			"EYE_ONLY": "眼睛激光",
 			"HMD_ONLY": "头显射线"
-		}
+		},
+		"ADD_PASSTHRU": "添加透视窗口",
+		"CLOSE_OVERLAY": "关闭叠加层"
 	},
 	"DEFAULT": "默认",
 	"DISABLED": "已禁用",

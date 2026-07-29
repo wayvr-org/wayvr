@@ -49,3 +49,12 @@ pub fn snap_upright(transform: Affine3A, up_dir: Vec3A) -> Affine3A {
         transform
     }
 }
+
+pub fn overlay_scale_from_extent(size: [u32; 2]) -> (f32, f32) {
+    const RELATIVE_SIZE: f32 = 1440.0; // sqrt(1920 * 1080)
+
+    let w = size[0].max(1) as f32;
+    let h = size[1].max(1) as f32;
+
+    ((w * h).sqrt() / RELATIVE_SIZE, w / 1920.0)
+}

@@ -1,3 +1,5 @@
+use std::ffi::CStr;
+
 use anyhow::{bail, ensure};
 use glam::{Affine3A, Quat, Vec3, Vec3A};
 use openxr::{self as xr, SessionCreateFlags, Version, sys::Handle};
@@ -41,6 +43,12 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
     } else {
         log::warn!("Missing EXT_dpad_binding extension.");
     }
+    if available_extensions.fb_composition_layer_alpha_blend {
+        enabled_extensions.fb_composition_layer_alpha_blend = true;
+    } else {
+        log::warn!("Missing XR_FB_composition_layer_alpha_blend extension.");
+    }
+
     if available_extensions.ext_samsung_odyssey_controller {
         enabled_extensions.ext_samsung_odyssey_controller = true;
     } else {
@@ -117,6 +125,22 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
         instance_props.runtime_name,
         instance_props.runtime_version
     );
+
+    let enabled_extensions = enabled_extensions
+        .names()
+        .into_iter()
+        .filter_map(|name| {
+            Some(
+                CStr::from_bytes_with_nul(name)
+                    .ok()?
+                    .to_string_lossy()
+                    .into_owned(),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    log::info!("OpenXR extensions:\n{enabled_extensions}");
 
     let Ok(system) = xr_instance.system(xr::FormFactor::HEAD_MOUNTED_DISPLAY) else {
         bail!("Failed to access OpenXR HMD system.");

@@ -10,8 +10,6 @@
 		"TOGGLE_VISIBILITY": "Alterna visibilità",
 		"RESET_POSITION": "Ripristina posizione",
 		"RELOAD_FROM_DISK": "Ricarica XML dal disco",
-		"CLOSE_MIRROR": "Chiudi mirror",
-		"CLOSE_APP": "Chiudi app",
 		"FORCE_CLOSE_APP": "Chiudi forzatamente l'app",
 		"HANDSFREE": {
 			"TITLE": "Modalità a mani libere",
@@ -20,7 +18,10 @@
 			"EYE_TRACKING": "Occhio + pizzico",
 			"EYE_ONLY": "Laser oculare",
 			"HMD_ONLY": "Laser HMD"
-		}
+		},
+		"ADD_PASSTHRU": "Aggiungi una finestra passthrough",
+		"CLOSE_APP": "Chiudi app",
+		"CLOSE_OVERLAY": "Chiudi overlay"
 	},
 	"DEFAULT": "Predefinito",
 	"DISABLED": "Disabilitato",

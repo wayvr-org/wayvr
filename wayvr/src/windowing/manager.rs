@@ -347,10 +347,10 @@ where
                         .notify(app, OverlayEventData::ColorPaletteRefresh);
                 }
             }
-            OverlayTask::CleanupMirrors => {
+            OverlayTask::CleanupOverlays(category) => {
                 let mut ids_to_remove = vec![];
                 for (oid, o) in &self.overlays {
-                    if !matches!(o.config.category, OverlayCategory::Mirror) {
+                    if o.config.category == category {
                         continue;
                     }
                     if o.config.active_state.is_some() {

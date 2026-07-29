@@ -10,7 +10,6 @@
 		"TOGGLE_VISIBILITY": "表示/非表示の切り替え",
 		"RESET_POSITION": "位置をリセット",
 		"RELOAD_FROM_DISK": "ディスクからXMLを再読み込み",
-		"CLOSE_MIRROR": "ミラーを閉じる",
 		"CLOSE_APP": "アプリを閉じる",
 		"FORCE_CLOSE_APP": "アプリを強制終了",
 		"HANDSFREE": {
@@ -20,7 +19,9 @@
 			"EYE_TRACKING": "視線 + ピンチ",
 			"EYE_ONLY": "アイルーザー",
 			"HMD_ONLY": "HMDレーザー"
-		}
+		},
+		"ADD_PASSTHRU": "パススルーウィンドウを追加",
+		"CLOSE_OVERLAY": "オーバーレイを閉じる"
 	},
 	"WATCH": {
 		"RECENTER": "プレイスペースをリセンター",

@@ -64,6 +64,7 @@ pub enum OverlayCategory {
     Screen,
     Mirror,
     WayVR,
+    Passthru,
 }
 
 pub struct OverlayWindowConfig {

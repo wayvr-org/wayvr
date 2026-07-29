@@ -59,6 +59,13 @@ impl OverlayList {
                             );
                             ("Mirror", panels_root)
                         }
+                        OverlayCategory::Passthru => {
+                            params.insert_rc(
+                                "display",
+                                (*meta.name).chars().last().unwrap().to_string().into(),
+                            );
+                            ("Mirror", panels_root)
+                        }
                         OverlayCategory::Panel | OverlayCategory::BuiltInPanel => {
                             let icon: Rc<str> = if let Some(icon) = meta.icon.as_ref() {
                                 icon.to_string().into()

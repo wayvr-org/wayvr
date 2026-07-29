@@ -5,8 +5,9 @@
 	"BAR": {
 		"ADD_MIRROR": "Add a new mirror overlay",
 		"ADD_NEW_SET": "Add new set",
+		"ADD_PASSTHRU": "Add a passthrough window",
 		"CLOSE_APP": "Close app",
-		"CLOSE_MIRROR": "Close mirror",
+		"CLOSE_OVERLAY": "Close overlay",
 		"DELETE_CURRENT_SET": "Delete current set",
 		"EDIT_MODE_TOGGLE": "Toggle edit mode",
 		"FORCE_CLOSE_APP": "Force close app",

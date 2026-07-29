@@ -10,7 +10,10 @@ use serde::Deserialize;
 use crate::{
     backend::input,
     state::AppState,
-    windowing::{OverlaySelector, window::OverlayWindowConfig},
+    windowing::{
+        OverlaySelector,
+        window::{OverlayCategory, OverlayWindowConfig},
+    },
 };
 
 static TASK_AUTO_INCREMENT: AtomicUsize = AtomicUsize::new(0);
@@ -123,7 +126,7 @@ pub enum OverlayTask {
     ToggleEditMode,
     ToggleDashboard,
     ShowHide,
-    CleanupMirrors,
+    CleanupOverlays(OverlayCategory),
     GlobalChange(GlobalChange),
     Modify(OverlaySelector, Box<ModifyOverlayTask>),
     Spawn(OverlaySelector, SpawnPos, Box<CreateOverlayTask>),

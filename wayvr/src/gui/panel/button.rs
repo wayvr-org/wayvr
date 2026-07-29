@@ -552,7 +552,35 @@ pub(super) fn setup_custom_button<S: 'static>(
                     }
 
                     app.tasks
-                        .enqueue(TaskType::Overlay(OverlayTask::CleanupMirrors));
+                        .enqueue(TaskType::Overlay(OverlayTask::CleanupOverlays(
+                            OverlayCategory::Mirror,
+                        )));
+                    Ok(EventResult::Consumed)
+                }),
+                "::NewPassthru" => Box::new(move |_common, data, app, _| {
+                    if !test_button(data) || !test_duration(&button, app) {
+                        return Ok(EventResult::Pass);
+                    }
+
+                    let name = crate::overlays::passthrough::new_passtrhu_name();
+                    app.tasks.enqueue(TaskType::Overlay(OverlayTask::Spawn(
+                        OverlaySelector::Name(name.clone()),
+                        SpawnPos::Spread,
+                        Box::new(move |app| {
+                            Some(crate::overlays::passthrough::new_passthru(name, app))
+                        }),
+                    )));
+                    Ok(EventResult::Consumed)
+                }),
+                "::CleanupPassthrus" => Box::new(move |_common, data, app, _| {
+                    if !test_button(data) || !test_duration(&button, app) {
+                        return Ok(EventResult::Pass);
+                    }
+
+                    app.tasks
+                        .enqueue(TaskType::Overlay(OverlayTask::CleanupOverlays(
+                            OverlayCategory::Passthru,
+                        )));
                     Ok(EventResult::Consumed)
                 }),
                 "::PlayspaceReset" => Box::new(move |_common, data, app, _| {
