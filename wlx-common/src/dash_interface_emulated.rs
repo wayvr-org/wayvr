@@ -1,4 +1,4 @@
-use slotmap::{new_key_type, DenseSlotMap};
+use slotmap::{DenseSlotMap, new_key_type};
 use wayvr_ipc::{
 	packet_client::WvrProcessLaunchParams,
 	packet_server::{WvrProcess, WvrProcessHandle, WvrWindow, WvrWindowHandle},

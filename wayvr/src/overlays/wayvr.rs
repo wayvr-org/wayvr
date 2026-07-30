@@ -731,7 +731,7 @@ impl OverlayBackend for WvrWindowBackend {
             match state.cursor_image {
                 CursorImageStatus::Hidden => {}
                 CursorImageStatus::Named(_) | CursorImageStatus::Surface(_) => {
-                    // FIXME: properly render surface?
+                    // TODO: properly render surface?
                     if let Some(mouse) = self.mouse.as_ref() {
                         self.pipeline.as_mut().unwrap().render_mouse(mouse, rdr)?;
                     }

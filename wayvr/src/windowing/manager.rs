@@ -691,12 +691,12 @@ impl<T> OverlayWindowManager<T> {
             self.wrappers
                 .wrap_edit_mode(id, &mut overlay.config, app)
                 .inspect_err(|e| log::error!("{e:?}"))
-                .unwrap(); // FIXME: unwrap
+                .unwrap();
         } else {
             self.wrappers
                 .unwrap_edit_mode(&mut overlay.config, app)
                 .inspect_err(|e| log::error!("{e:?}"))
-                .unwrap(); // FIXME: unwrap
+                .unwrap();
         }
     }
 

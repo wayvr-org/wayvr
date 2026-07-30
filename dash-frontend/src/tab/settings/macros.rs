@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::tab::settings::{self, horiz_cell, mount_requires_restart, SettingType, Task};
+use crate::tab::settings::{self, SettingType, Task, horiz_cell, mount_requires_restart};
 use wgui::{
 	components::{
 		button::{ButtonClickEvent, ComponentButton},
@@ -13,7 +13,7 @@ use wgui::{
 	widget::label::WidgetLabel,
 	windowing::context_menu,
 };
-use wlx_common::{config::GeneralConfig, dash_interface::InterfaceFeats, DesktopBackend, XrBackend};
+use wlx_common::{DesktopBackend, XrBackend, config::GeneralConfig, dash_interface::InterfaceFeats};
 
 pub fn options_category(
 	mp: &mut MacroParams,

@@ -334,7 +334,7 @@ impl ParserState {
 
 		let mut cells = Vec::<context_menu::Cell>::new();
 
-		for child in el_context_menu.children() {
+		'children: for child in el_context_menu.children() {
 			match child.tag_name().name() {
 				"" => {}
 				"cell" => {
@@ -352,8 +352,15 @@ impl ParserState {
 							"tooltip" => tooltip = Some(Translation::from_translation_key(value)),
 							"tooltip_str" => tooltip = Some(Translation::from_raw_text(value)),
 							"action" => action_name = Some(value.into()),
+							"skip" => {
+								let resolved = replace_vars(value, template_params);
+								//FIXME: this is always empty
+								if &*resolved == "1" {
+									continue 'children;
+								}
+							}
 							other => {
-								if !other.starts_with('_') && other != "skip" {
+								if !other.starts_with('_') {
 									anyhow::bail!("unexpected \"{other}\" attribute");
 								}
 								attribs.push(AttribPair::new(key, replace_vars(value, template_params)));
@@ -985,12 +992,12 @@ fn parse_child<'a>(
 	parent_id: WidgetID,
 ) -> anyhow::Result<()> {
 	let tag_name = child_node.tag_name().name();
-	match child_node.attribute("skip") {
-		Some(val) => {
-			// TODO: need to resolve variables in val
+	if let Some(skip) = child_node.attribute("skip") {
+		let resolved = process_attrib(&file.template_parameters, ctx, "skip", skip).value;
+		//FIXME: this is always empty
+		if &*resolved == "1" {
 			return Ok(()); // do not parse this element
 		}
-		_ => {}
 	}
 
 	let attribs = process_attribs(file, ctx, &child_node, false);
