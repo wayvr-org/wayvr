@@ -172,8 +172,8 @@
       <cell translation="BAR.HANDSFREE.NONE" _press="::HandsfreeMode None" _press2="::ContextMenuClose" />
       <cell translation="BAR.HANDSFREE.HMD" _press="::HandsfreeMode Hmd" _press2="::ContextMenuClose" />
       <cell translation="BAR.HANDSFREE.HMD_ONLY" _press="::HandsfreeMode HmdOnly" _press2="::ContextMenuClose" />
-      <cell translation="BAR.HANDSFREE.EYE_TRACKING" _press="::HandsfreeMode EyeTracking" _press2="::ContextMenuClose" />
-      <cell translation="BAR.HANDSFREE.EYE_ONLY" _press="::HandsfreeMode EyeTrackingOnly" _press2="::ContextMenuClose" />
+      <cell translation="BAR.HANDSFREE.EYE_TRACKING" _press="::HandsfreeMode EyeTracking" _press2="::ContextMenuClose" skip="~openvr" />
+      <cell translation="BAR.HANDSFREE.EYE_ONLY" _press="::HandsfreeMode EyeTrackingOnly" _press2="::ContextMenuClose" skip="~openvr" />
     </context_menu>
   </blueprint>
 
@@ -181,8 +181,8 @@
     <context_menu >
       <cell translation="BAR.EDIT_MODE_TOGGLE" _press="::EditToggle" _press2="::ContextMenuClose" />
       <cell translation="BAR.HANDSFREE.TITLE" _press="::ContextMenuOpen menu_handsfree" />
-      <cell translation="BAR.ADD_MIRROR" _press="::NewMirror" />
-      <cell translation="BAR.ADD_PASSTHRU" _press="::NewPassthru" />
+      <cell translation="BAR.ADD_MIRROR" _press="::NewMirror" skip="~not_wayland" />
+      <cell translation="BAR.ADD_PASSTHRU" _press="::NewPassthru" skip="~openvr" />
       <cell translation="BAR.ADD_NEW_SET" _press="::AddSet" />
       <cell translation="BAR.DELETE_CURRENT_SET" _press="::DeleteSet" />
     </context_menu>

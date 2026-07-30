@@ -44,7 +44,8 @@ use sysinfo::Pid;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{backend::XrBackend, subsystem::dbus::DbusConnector};
+use crate::subsystem::dbus::DbusConnector;
+use wlx_common::XrBackend;
 
 pub static FRAME_COUNTER: AtomicUsize = AtomicUsize::new(0);
 pub static RUNNING: AtomicBool = AtomicBool::new(true);

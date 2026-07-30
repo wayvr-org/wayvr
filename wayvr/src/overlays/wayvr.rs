@@ -36,7 +36,6 @@ use wlx_common::{
 
 use crate::{
     backend::{
-        XrBackend,
         input::{self, HoverResult},
         task::{OverlayTask, TaskType},
         wayvr::{
@@ -249,11 +248,7 @@ impl WvrWindowBackend {
             just_resumed: false,
             meta: None,
             mouse: None,
-            stereo: if matches!(app.xr_backend, XrBackend::OpenXR) {
-                Some(StereoMode::None)
-            } else {
-                None
-            },
+            stereo: app.xr_backend.is_open_xr().then_some(StereoMode::None),
             stereo_full_frame: false,
             stereo_adjust_mouse: false,
             cur_image: None,

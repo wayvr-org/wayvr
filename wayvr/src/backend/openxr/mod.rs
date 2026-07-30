@@ -13,9 +13,9 @@ use vulkano::{Handle, VulkanObject};
 use wlx_common::overlays::{StereoMode, ToastTopic};
 
 use crate::{
-    Args, FRAME_COUNTER, RUNNING,
+    Args, FRAME_COUNTER, RUNNING, XrBackend,
     backend::{
-        BackendError, XrBackend,
+        BackendError,
         input::interact,
         openxr::{helpers::try_apply_chroma_key, lines::LinePool, overlay::OpenXrOverlayData},
         task::{OpenXrTask, OverlayTask, TaskType},
@@ -88,11 +88,9 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
 
     app.late_init();
 
-    let mut playspace_mover = app.monado_state.as_mut().and_then(|m| {
-        playspace::PlayspaceMover::new()
-            .map_err(|e| log::warn!("Will not use Monado playspace mover: {e}"))
-            .ok()
-    });
+    let mut playspace_mover = playspace::PlayspaceMover::new()
+        .map_err(|e| log::warn!("Will not use Monado playspace mover: {e}"))
+        .ok();
 
     let mut blocker = app
         .monado_state

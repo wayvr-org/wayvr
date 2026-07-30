@@ -25,18 +25,34 @@ pub enum CaptureMethod {
 	Auto,
 
 	#[serde(alias = "pipewire")]
-	#[strum(props(Text = "PipeWire GPU", Tooltip = "APP_SETTINGS.OPTION.PIPEWIRE_HELP"))]
+	#[strum(props(
+		Text = "PipeWire GPU",
+		Tooltip = "APP_SETTINGS.OPTION.PIPEWIRE_HELP",
+		Desktop = "Wayland"
+	))]
 	PipeWire,
 
-	#[strum(props(Text = "ScreenCopy GPU", Tooltip = "APP_SETTINGS.OPTION.SCREENCOPY_GPU_HELP"))]
+	#[strum(props(
+		Text = "ScreenCopy GPU",
+		Tooltip = "APP_SETTINGS.OPTION.SCREENCOPY_GPU_HELP",
+		Desktop = "Wayland"
+	))]
 	ScreenCopyGpu,
 
 	#[serde(alias = "pw-fallback")]
-	#[strum(props(Text = "PipeWire CPU", Tooltip = "APP_SETTINGS.OPTION.PW_FALLBACK_HELP"))]
+	#[strum(props(
+		Text = "PipeWire CPU",
+		Tooltip = "APP_SETTINGS.OPTION.PW_FALLBACK_HELP",
+		Desktop = "Wayland"
+	))]
 	PipeWireCpu,
 
 	#[serde(alias = "screencopy")]
-	#[strum(props(Text = "ScreenCopy CPU", Tooltip = "APP_SETTINGS.OPTION.SCREENCOPY_HELP"))]
+	#[strum(props(
+		Text = "ScreenCopy CPU",
+		Tooltip = "APP_SETTINGS.OPTION.SCREENCOPY_HELP",
+		Desktop = "Wayland"
+	))]
 	ScreenCopyCpu,
 }
 
@@ -51,7 +67,8 @@ pub enum InputEmulationMethod {
 
 	#[strum(props(
 		Translation = "APP_SETTINGS.OPTION.WL_VIRTUAL",
-		Tooltip = "APP_SETTINGS.OPTION.WL_VIRTUAL_HELP"
+		Tooltip = "APP_SETTINGS.OPTION.WL_VIRTUAL_HELP",
+		Desktop = "Wayland"
 	))]
 	WlVirtual,
 
@@ -97,9 +114,9 @@ pub enum HandsfreePointer {
 	Hmd,
 	#[strum(props(Translation = "APP_SETTINGS.OPTION.HMD_ONLY"))]
 	HmdOnly,
-	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_PINCH"))]
+	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_PINCH", Backend = "OpenXR"))]
 	EyeTracking,
-	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_ONLY"))]
+	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_ONLY", Backend = "OpenXR"))]
 	EyeTrackingOnly,
 }
 
@@ -108,7 +125,7 @@ pub enum HandsfreeAltTab {
 	#[strum(props(Translation = "APP_SETTINGS.OPTION.HMD_ONLY"))]
 	#[default]
 	Hmd,
-	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_ONLY"))]
+	#[strum(props(Translation = "APP_SETTINGS.OPTION.EYE_ONLY", Backend = "OpenXR"))]
 	EyeTracking,
 }
 

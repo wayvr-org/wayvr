@@ -353,7 +353,7 @@ impl ParserState {
 							"tooltip_str" => tooltip = Some(Translation::from_raw_text(value)),
 							"action" => action_name = Some(value.into()),
 							other => {
-								if !other.starts_with('_') {
+								if !other.starts_with('_') && other != "skip" {
 									anyhow::bail!("unexpected \"{other}\" attribute");
 								}
 								attribs.push(AttribPair::new(key, replace_vars(value, template_params)));
@@ -986,7 +986,8 @@ fn parse_child<'a>(
 ) -> anyhow::Result<()> {
 	let tag_name = child_node.tag_name().name();
 	match child_node.attribute("skip") {
-		Some("1") => {
+		Some(val) => {
+			// TODO: need to resolve variables in val
 			return Ok(()); // do not parse this element
 		}
 		_ => {}

@@ -15,9 +15,9 @@ use vulkano::{Handle, VulkanObject, device::physical::PhysicalDevice};
 use wlx_common::overlays::ToastTopic;
 
 use crate::{
-    Args, FRAME_COUNTER, RUNNING,
+    Args, FRAME_COUNTER, RUNNING, XrBackend,
     backend::{
-        BackendError, XrBackend,
+        BackendError,
         input::interact,
         openvr::{
             helpers::adjust_gain,

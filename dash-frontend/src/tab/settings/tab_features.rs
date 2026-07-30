@@ -152,7 +152,7 @@ impl State {
 		options_checkbox(par.mp, c, SettingType::NotificationsEnabled)?;
 		options_checkbox(par.mp, c, SettingType::NotificationsSoundEnabled)?;
 		options_checkbox(par.mp, c, SettingType::KeyboardSoundEnabled)?;
-		if !par.feats.openxr || par.feats.monado {
+		if par.feats.xr_backend.is_open_vr() || par.feats.monado {
 			// monado or openvr
 			options_checkbox(par.mp, c, SettingType::BlockGameInput)?;
 			options_checkbox(par.mp, c, SettingType::BlockGameInputIgnoreWatch)?;

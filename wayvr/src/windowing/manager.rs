@@ -81,8 +81,6 @@ where
             initialized: false,
         };
 
-        let mut wayland = false;
-
         if headless {
             log::info!("Running in headless mode; keyboard will be en-US");
         } else {
@@ -90,7 +88,8 @@ where
             // this is the default and would be overwritten by
             // OverlayWindowManager::restore_layout down below
             match create_screens(app) {
-                Ok((data, is_wayland)) => {
+                Ok((data, backend)) => {
+                    app.desktop_backend = backend;
                     let last_idx = data.screens.len() - 1;
                     for (idx, (meta, mut config)) in data.screens.into_iter().enumerate() {
                         config.show_on_spawn = true;
@@ -102,14 +101,12 @@ where
                         }
                         app.screens.push(meta);
                     }
-
-                    wayland = is_wayland;
                 }
                 Err(e) => log::error!("Unable to initialize screens: {e:?}"),
             }
         }
 
-        let mut keyboard = OverlayWindowData::from_config(create_keyboard(app, wayland)?);
+        let mut keyboard = OverlayWindowData::from_config(create_keyboard(app)?);
         keyboard.config.show_on_spawn = true;
         me.keyboard_id = me.add(keyboard, app);
 
@@ -145,7 +142,7 @@ where
         #[cfg(feature = "whisper")]
         {
             use crate::overlays::whisper::create_whisper;
-            let whisper = OverlayWindowData::from_config(create_whisper(app, headless, wayland)?);
+            let whisper = OverlayWindowData::from_config(create_whisper(app)?);
             me.add(whisper, app);
         }
 

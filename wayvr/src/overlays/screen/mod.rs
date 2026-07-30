@@ -12,6 +12,7 @@ use crate::{
         window::{OverlayCategory, OverlayWindowConfig},
     },
 };
+use wlx_common::DesktopBackend;
 
 pub mod backend;
 pub mod capture;
@@ -65,14 +66,17 @@ pub struct ScreenCreateData {
     pub screens: Vec<(ScreenMeta, OverlayWindowConfig)>,
 }
 
-pub fn create_screens(app: &mut AppState) -> anyhow::Result<(ScreenCreateData, bool)> {
+pub fn create_screens(app: &mut AppState) -> anyhow::Result<(ScreenCreateData, DesktopBackend)> {
     app.screens.clear();
 
     #[cfg(feature = "wayland")]
     {
         if let Some(mut wl) = wlx_capture::wayland::WlxClient::new() {
             log::info!("Wayland detected.");
-            return Ok((wl::create_screens_wayland(&mut wl, app)?, true));
+            return Ok((
+                wl::create_screens_wayland(&mut wl, app)?,
+                DesktopBackend::Wayland,
+            ));
         }
         log::info!("Wayland not detected, assuming X11.");
     }
@@ -81,11 +85,11 @@ pub fn create_screens(app: &mut AppState) -> anyhow::Result<(ScreenCreateData, b
     {
         #[cfg(feature = "pipewire")]
         match x11::create_screens_x11pw(app) {
-            Ok(data) => return Ok((data, false)),
+            Ok(data) => return Ok((data, DesktopBackend::X11)),
             Err(e) => log::info!("Will not use X11 PipeWire capture: {e:?}"),
         }
 
-        Ok((x11::create_screens_xshm(app)?, false))
+        return Ok((x11::create_screens_xshm(app)?, DesktopBackend::X11));
     }
     #[cfg(not(feature = "x11"))]
     anyhow::bail!("No backends left to try.")

@@ -37,6 +37,8 @@ use crate::{
         window::{OverlayCategory, OverlayWindowConfig},
     },
 };
+#[cfg(feature = "wayland")]
+use wlx_common::DesktopBackend;
 
 const WHISPER_NAME: &str = "whisper";
 
@@ -69,19 +71,15 @@ impl WhisperState {
     }
 }
 
-pub fn create_whisper(
-    app: &mut AppState,
-    headless: bool,
-    wayland: bool,
-) -> anyhow::Result<OverlayWindowConfig> {
-    let clipboard_provider: Option<Box<dyn ClipboardProvider>> = match (headless, wayland) {
+pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
+    let clipboard_provider: Option<Box<dyn ClipboardProvider>> = match app.desktop_backend {
         #[cfg(feature = "wayland")]
-        (false, true) => clipboard::wl::Provider::new()
+        DesktopBackend::Wayland => clipboard::wl::Provider::new()
             .log_err("Could not create Wayland clipboard provider")
             .ok()
             .map(|p| Box::new(p) as Box<dyn ClipboardProvider>),
         #[cfg(feature = "x11")]
-        (false, false) => clipboard::x11::Provider::new()
+        DesktopBackend::X11 => clipboard::x11::Provider::new()
             .log_err("Could not create X11 clipboard provider")
             .ok()
             .map(|p| Box::new(p) as Box<dyn ClipboardProvider>),

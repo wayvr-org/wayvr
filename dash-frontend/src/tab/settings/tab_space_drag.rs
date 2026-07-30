@@ -54,7 +54,7 @@ impl State {
 		let id_gravity_enabled_parent = tab_state.get_widget_id("gravity_enabled_parent")?;
 		let id_space_gravity_parent = tab_state.get_widget_id("space_gravity_parent")?;
 
-		if !par.feats.openxr || par.feats.monado {
+		if par.feats.xr_backend.is_open_vr() || par.feats.monado {
 			// monado or openvr
 
 			options_button(

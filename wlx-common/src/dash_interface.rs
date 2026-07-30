@@ -3,7 +3,7 @@ use wayvr_ipc::{
 	packet_server::{WvrProcess, WvrProcessHandle, WvrWindow, WvrWindowHandle},
 };
 
-use crate::{config::GeneralConfig, desktop_finder::DesktopFinder};
+use crate::{DesktopBackend, XrBackend, config::GeneralConfig, desktop_finder::DesktopFinder};
 
 #[derive(Clone)]
 pub struct MonadoClient {
@@ -47,7 +47,8 @@ pub enum DashPlayspaceTask {
 
 #[derive(Clone, Copy)]
 pub struct InterfaceFeats {
-	pub openxr: bool,
+	pub xr_backend: XrBackend,
+	pub desktop_backend: DesktopBackend,
 	pub monado: bool,
 	pub whisper: bool,
 }

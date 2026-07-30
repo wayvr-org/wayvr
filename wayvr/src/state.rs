@@ -27,6 +27,7 @@ use wlx_common::{
 #[cfg(feature = "openxr")]
 use crate::backend;
 use crate::backend::wayvr::WvrServerState;
+use wlx_common::DesktopBackend;
 
 use crate::subsystem::notifications::NotificationManager;
 #[cfg(feature = "osc")]
@@ -35,7 +36,8 @@ use crate::subsystem::osc::OscSender;
 #[cfg(feature = "whisper")]
 use crate::subsystem::whisper_stt::WhisperStt;
 use crate::{
-    backend::{XrBackend, input::InputState, task::TaskContainer},
+    XrBackend,
+    backend::{input::InputState, task::TaskContainer},
     config::load_general_config,
     graphics::WGfxExtras,
     gui,
@@ -71,6 +73,7 @@ pub struct AppState {
     pub dbus: DbusConnector,
 
     pub xr_backend: XrBackend,
+    pub desktop_backend: DesktopBackend,
 
     pub ipc_server: ipc_server::WayVRServer,
     pub wayvr_signals: SyncEventQueue<WayVRSignal>,
@@ -218,6 +221,7 @@ impl AppState {
             xr_backend,
             ipc_server,
             wayvr_signals: wvr_signals,
+            desktop_backend: DesktopBackend::Headless, // set by OverlayWindowManager
             desktop_finder,
             notifications: NotificationManager::new(),
 
@@ -249,7 +253,7 @@ impl AppState {
         self.notifications.run_udp();
 
         #[cfg(feature = "openxr")]
-        if matches!(self.xr_backend, XrBackend::OpenXR) {
+        if self.xr_backend.is_open_xr() {
             use crate::backend::openxr::monado_state::MonadoState;
 
             log::debug!("Connecting to Monado IPC");

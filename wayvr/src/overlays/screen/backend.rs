@@ -7,10 +7,8 @@ use glam::{Affine2, DVec2, Vec2, vec2};
 use wlx_capture::{WlxCapture, frame::Transform};
 
 use crate::{
-    backend::{
-        XrBackend,
-        input::{self, HoverResult, PointerHit, PointerMode},
-    },
+    XrBackend,
+    backend::input::{HoverResult, PointerHit, PointerMode},
     overlays::screen::capture::MyFirstDmaExporter,
     state::AppState,
     subsystem::{
@@ -82,11 +80,7 @@ impl ScreenBackend {
             meta: None,
             mouse_transform: Affine2::ZERO,
             interaction_transform: None,
-            stereo: if matches!(xr_backend, XrBackend::OpenXR) {
-                Some(StereoMode::None)
-            } else {
-                None
-            },
+            stereo: xr_backend.is_open_xr().then_some(StereoMode::None),
             stereo_full_frame: false,
             stereo_adjust_mouse: false,
             logical_pos: Vec2::ZERO,

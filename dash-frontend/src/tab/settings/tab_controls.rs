@@ -92,7 +92,7 @@ impl State {
 			"APP_SETTINGS.CONTROLS",
 			"dashboard/controller.svg",
 		)?;
-		if par.feats.openxr {
+		if par.feats.xr_backend.is_open_xr() {
 			create_input_profiles_button(par.mp, c, tasks.clone(), &popup)?;
 		}
 		options_dropdown::<wlx_common::config::AltModifier>(par.mp, c, &SettingType::KeyboardMiddleClick)?;
@@ -107,7 +107,7 @@ impl State {
 		options_slider_f32(par.mp, c, SettingType::LongPressDuration, 0.1, 2.0, 0.1)?;
 		options_slider_f32(par.mp, c, SettingType::SnapAngleDeg, 0., 45., 5.)?;
 
-		if par.feats.openxr {
+		if par.feats.xr_backend.is_open_xr() {
 			options_slider_f32(par.mp, c, SettingType::PointerLerpFactor, 0.1, 1.0, 0.1)?;
 		}
 

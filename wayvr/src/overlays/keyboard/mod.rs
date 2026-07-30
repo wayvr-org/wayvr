@@ -49,7 +49,7 @@ pub const KEYBOARD_NAME: &str = "kbd";
 const AUTO_RELEASE_MODS: [KeyModifier; 5] = [SHIFT, CTRL, ALT, SUPER, ALTGR];
 const SYSTEM_LAYOUT_ALIASES: [&str; 5] = ["mozc", "pinyin", "hangul", "sayura", "unikey"];
 
-pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<OverlayWindowConfig> {
+pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     let layout = layout::Layout::load_from_disk();
     let default_state = KeyboardState {
         modifiers: 0,
@@ -70,7 +70,7 @@ pub fn create_keyboard(app: &mut AppState, wayland: bool) -> anyhow::Result<Over
         active_layout: KeyboardPanelKey::default(),
         default_state,
         wlx_layout: layout,
-        wayland,
+        wayland: app.desktop_backend.is_wayland(),
         re_fcitx: Regex::new(r"^keyboard-([^-]+)(?:-([^-]+))?$").unwrap(),
     };
 

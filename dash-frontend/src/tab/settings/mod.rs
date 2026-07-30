@@ -680,6 +680,7 @@ impl<T> TabSettings<T> {
 			config: frontend.interface.general_config(data),
 			tasks: self.tasks.clone(),
 			idx: 9001,
+			feats,
 		};
 
 		let settings_mount_params = SettingsMountParams {
@@ -733,7 +734,7 @@ impl<T> TabSettings<T> {
 		let tasks = Tasks::default();
 		let tabs = parser_state.fetch_component_as::<ComponentTabs>("tabs")?;
 
-		if !frontend.interface.get_feats(data).openxr {
+		if !frontend.interface.get_feats(data).xr_backend.is_open_xr() {
 			let skybox_btn = tabs.get_tab_button("skybox").unwrap();
 			frontend
 				.layout

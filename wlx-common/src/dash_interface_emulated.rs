@@ -1,4 +1,4 @@
-use slotmap::{DenseSlotMap, new_key_type};
+use slotmap::{new_key_type, DenseSlotMap};
 use wayvr_ipc::{
 	packet_client::WvrProcessLaunchParams,
 	packet_server::{WvrProcess, WvrProcessHandle, WvrWindow, WvrWindowHandle},
@@ -235,7 +235,8 @@ impl DashInterface<()> for DashInterfaceEmulated {
 
 	fn get_feats(&mut self, _data: &mut ()) -> dash_interface::InterfaceFeats {
 		dash_interface::InterfaceFeats {
-			openxr: true,
+			xr_backend: crate::XrBackend::OpenXR,
+			desktop_backend: crate::DesktopBackend::Wayland,
 			monado: true,
 			whisper: true,
 		}

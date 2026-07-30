@@ -35,7 +35,6 @@ use libmonado::{ClientLogic, DeviceLogic};
 use crate::{
     RESTART, RUNNING,
     backend::{
-        XrBackend,
         input::{Haptics, HoverResult, PointerHit, PointerMode},
         task::{GlobalChange, OverlayTask, PlayspaceTask, TaskType, ToggleMode},
         wayvr::{
@@ -92,7 +91,7 @@ impl DashFrontend {
             interface: Box::new(interface),
             lang_provider: &WayVRLangProvider::from_config(&app.session.config),
             show_welcome: tutorial,
-            has_monado: matches!(app.xr_backend, XrBackend::OpenXR),
+            has_monado: app.xr_backend.is_open_xr(),
             theme: app.wgui_theme.clone(),
             color_palette: &*app.session.config.color_palette,
             executor: app.executor.clone(),
@@ -580,7 +579,8 @@ impl DashInterface<AppState> for DashInterfaceLive {
 
     fn get_feats(&mut self, data: &mut AppState) -> dash_interface::InterfaceFeats {
         dash_interface::InterfaceFeats {
-            openxr: matches!(data.xr_backend, XrBackend::OpenXR),
+            xr_backend: data.xr_backend,
+            desktop_backend: data.desktop_backend,
             #[cfg(feature = "openxr")]
             monado: data.monado_state.is_some(),
             #[cfg(not(feature = "openxr"))]
