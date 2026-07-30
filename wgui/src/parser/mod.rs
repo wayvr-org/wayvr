@@ -981,23 +981,14 @@ fn parse_widget_universal(ctx: &mut ParserContext, widget: &WidgetPair, attribs:
 fn parse_child<'a>(
 	file: &ParserFile,
 	ctx: &mut ParserContext,
-	parent_node: roxmltree::Node<'a, 'a>,
 	child_node: roxmltree::Node<'a, 'a>,
 	parent_id: WidgetID,
 ) -> anyhow::Result<()> {
 	let tag_name = child_node.tag_name().name();
-	match parent_node.attribute("ignore_in_mode") {
-		Some("dev") => {
-			if !ctx.doc_params.extra.dev_mode {
-				return Ok(()); // do not parse
-			}
+	match child_node.attribute("skip") {
+		Some("1") => {
+			return Ok(()); // do not parse this element
 		}
-		Some("live") => {
-			if ctx.doc_params.extra.dev_mode {
-				return Ok(()); // do not parse
-			}
-		}
-		Some(s) => ctx.print_invalid_attrib(tag_name, "ignore_in_mode", s),
 		_ => {}
 	}
 
@@ -1117,7 +1108,7 @@ fn parse_children<'a>(
 	parent_id: WidgetID,
 ) -> anyhow::Result<()> {
 	for child_node in parent_node.children() {
-		parse_child(file, ctx, parent_node, child_node, parent_id)?;
+		parse_child(file, ctx, child_node, parent_id)?;
 	}
 
 	Ok(())
