@@ -57,7 +57,7 @@ pub(super) fn create_keyboard_panel(
     state: KeyboardState,
     layout: &layout::Layout,
 ) -> anyhow::Result<GuiPanel<KeyboardState>> {
-    let mut params = NewGuiPanelParams::<AppState>::default();
+    let mut params = NewGuiPanelParams::default();
     params
         .extra_vars
         .insert("openvr".into(), bool_to_rc_str(app.xr_backend.is_open_vr()));
@@ -66,8 +66,7 @@ pub(super) fn create_keyboard_panel(
         bool_to_rc_str(!app.desktop_backend.is_wayland()),
     );
 
-    let mut panel =
-        GuiPanel::new_from_template(app, "gui/keyboard.xml", state, NewGuiPanelParams::default())?;
+    let mut panel = GuiPanel::new_from_template(app, "gui/keyboard.xml", state, params)?;
 
     let doc_params = new_doc_params(&mut panel);
 
