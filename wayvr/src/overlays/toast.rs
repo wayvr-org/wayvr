@@ -130,7 +130,6 @@ fn new_toast(toast: Toast, app: &mut AppState) -> Option<OverlayWindowConfig> {
             let relative_to = Positioning::FollowHand {
                 hand: LeftRight::Left,
                 lerp: 0.1,
-                align_to_hmd: true,
             };
             (vec3(0., 0., 0.), Quat::IDENTITY, relative_to)
         }

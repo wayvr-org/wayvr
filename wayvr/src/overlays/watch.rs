@@ -134,7 +134,6 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     let positioning = Positioning::FollowHand {
         hand: LeftRight::Left,
         lerp: 1.0,
-        align_to_hmd: false,
     };
 
     panel.update_layout(app)?;

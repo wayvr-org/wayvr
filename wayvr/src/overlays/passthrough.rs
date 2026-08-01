@@ -32,7 +32,11 @@ pub const PASSTHRU_PREFIX: &str = "__wvr_passthru-";
 static PASSTHRU_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 pub fn new_passtrhu_name() -> Arc<str> {
-    format!("{PASSTHRU_PREFIX}{}", PASSTHRU_COUNTER.fetch_add(1, Ordering::Relaxed)).into()
+    format!(
+        "{PASSTHRU_PREFIX}{}",
+        PASSTHRU_COUNTER.fetch_add(1, Ordering::Relaxed)
+    )
+    .into()
 }
 
 pub fn new_passthru(name: Arc<str>, app: &AppState) -> OverlayWindowConfig {

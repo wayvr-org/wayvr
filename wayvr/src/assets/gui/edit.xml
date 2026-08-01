@@ -65,11 +65,9 @@
                     <label translation="EDIT_MODE.INTERPOLATION" />
                     <Slider id="lerp_slider" width="250" height="16" min_value="0.05" max_value="1" value="1" step="0.05" />
                   </div>
-                  <div id="pos_align_to_hmd" >
-                    <CheckBox id="align_box" translation="EDIT_MODE.ALIGN_TO_HMD" tooltip_side="bottom" />
-                  </div>
                   <div id="pos_global" gap="16" justify_content="center" align_items="center">
                     <CheckBox id="global_box" translation="EDIT_MODE.GLOBAL" tooltip_side="bottom" />
+                    <CheckBox id="align_box" translation="EDIT_MODE.ALIGN_TO_HMD" tooltip_side="bottom" />
                     <CheckBox id="block_input_box" translation="EDIT_MODE.BLOCK_INPUT" tooltip_side="bottom" />
                   </div>
                 </div>

@@ -608,7 +608,7 @@ fn reset_panel(
     let c = panel
         .parser_state
         .fetch_component_as::<ComponentCheckbox>("align_box")?;
-    c.set_checked(&mut com, state.positioning.get_align().unwrap_or(false));
+    c.set_checked(&mut com, state.align_to_hmd);
 
     let c = panel
         .parser_state
@@ -728,7 +728,7 @@ const fn cb_assign_additive(_app: &mut AppState, owc: &mut OverlayWindowConfig, 
 const fn cb_assign_align(_app: &mut AppState, owc: &mut OverlayWindowConfig, align: bool) {
     owc.dirty = true;
     let active_state = owc.active_state.as_mut().unwrap();
-    active_state.positioning = active_state.positioning.with_align(align);
+    active_state.align_to_hmd = align;
 }
 
 const fn cb_assign_global(_app: &mut AppState, owc: &mut OverlayWindowConfig, global: bool) {

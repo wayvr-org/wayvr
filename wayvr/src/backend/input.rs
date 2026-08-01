@@ -868,11 +868,8 @@ fn start_grab(
                     .notify(app, OverlayEventData::OverlayGrabbed { name, pos, editing })
                     .inspect_err(|e| log::warn!("Error during Notify OverlayGrabbed: {e:?}"));
 
-                o.default_state.positioning = Positioning::FollowHand {
-                    hand,
-                    lerp: 0.1,
-                    align_to_hmd: true,
-                };
+                o.default_state.positioning = Positioning::FollowHand { hand, lerp: 0.1 };
+                o.default_state.align_to_hmd = true;
                 o.activate(app);
             }),
         )));
@@ -992,30 +989,22 @@ where
             if &*overlay.config.name == WATCH_NAME {
                 // watch special: when dropped, follow the hand that wasn't grabbing
                 if let Some(overlay_state) = overlay.config.active_state.as_mut() {
+                    let align_to_hmd = overlay_state.align_to_hmd;
                     overlay_state.positioning = match overlay_state.positioning {
-                        Positioning::FollowHand {
-                            hand,
-                            lerp,
-                            align_to_hmd,
-                        } => match pointer.hand() {
+                        Positioning::FollowHand { hand, lerp } => match pointer.hand() {
                             Some(LeftRight::Left) => Positioning::FollowHand {
                                 hand: LeftRight::Right,
                                 lerp,
-                                align_to_hmd,
                             },
                             Some(LeftRight::Right) => Positioning::FollowHand {
                                 hand: LeftRight::Left,
                                 lerp,
-                                align_to_hmd,
                             },
-                            _ => Positioning::FollowHand {
-                                hand,
-                                lerp,
-                                align_to_hmd,
-                            },
+                            _ => Positioning::FollowHand { hand, lerp },
                         },
                         x => x,
                     };
+                    overlay_state.align_to_hmd = align_to_hmd;
                 }
             } else if overlay.config.global
                 && let Some(active_state) = overlay.config.active_state.as_ref()
