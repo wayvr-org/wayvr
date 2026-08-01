@@ -11,6 +11,7 @@ use crate::{
         input::{HoverResult, PointerHit},
         task::{GlobalChange, OverlayTask, TaskType},
     },
+    config::none_if_0,
     gui::panel::{GuiPanel, overlay_list::OverlayList, set_list::SetList},
     overlays::keyboard::builder::create_keyboard_panel,
     state::AppState,
@@ -109,7 +110,8 @@ pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig
             grabbable: true,
             positioning: Positioning::Anchored,
             interactable: true,
-            curvature: Some(0.15),
+            curvature: none_if_0(app.session.config.default_curvature),
+            alpha: app.session.config.default_opacity,
             transform: Affine3A::from_scale_rotation_translation(
                 Vec3::ONE * width,
                 Quat::from_rotation_x(-10f32.to_radians()),

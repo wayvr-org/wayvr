@@ -12,6 +12,7 @@ use wlx_common::{
 
 use crate::{
     backend::input::{HoverResult, PointerHit},
+    config::none_if_0,
     overlays::screen::{
         backend::CaptureType,
         capture::{WlxCaptureIn, WlxCaptureOut},
@@ -120,9 +121,11 @@ pub fn new_mirror(name: Arc<str>, app: &mut AppState) -> anyhow::Result<OverlayW
         category: OverlayCategory::Mirror,
         show_on_spawn: true,
         default_state: OverlayWindowState {
+            positioning: app.session.config.default_positioning.into(),
+            curvature: none_if_0(app.session.config.default_curvature),
+            alpha: app.session.config.default_opacity,
             interactable: true,
             grabbable: true,
-            curvature: Some(0.15),
             transform: Affine3A::from_scale_rotation_translation(
                 Vec3::ONE * app.session.config.default_overlay_scale,
                 Quat::IDENTITY,

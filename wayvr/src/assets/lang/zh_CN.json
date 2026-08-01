@@ -45,7 +45,6 @@
 		"POS_HAND_L": "跟随左手。",
 		"POS_HAND_R": "跟随右手。",
 		"POS_HMD": "跟随头显 (HMD)。",
-		"POS_STATIC": "静态：不属于任何集合，不重新居中。",
 		"POSITIONING": "定位",
 		"RESIZE_PRESS_AND_DRAG": "调整大小 (按住并拖拽)",
 		"STEREO_3D_MODE": {

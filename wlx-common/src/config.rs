@@ -92,6 +92,28 @@ pub enum InputCaptureMethod {
 	None,
 }
 
+#[derive(Default, Clone, Copy, Serialize, Deserialize, AsRefStr, EnumString, EnumProperty, VariantArray)]
+pub enum DefaultPositioning {
+	#[default]
+	#[strum(props(
+		Translation = "APP_SETTINGS.OPTION.ANCHORED",
+		Tooltip = "APP_SETTINGS.OPTION.ANCHORED_HELP"
+	))]
+	Anchored,
+
+	#[strum(props(
+		Translation = "APP_SETTINGS.OPTION.FLOATING",
+		Tooltip = "APP_SETTINGS.OPTION.FLOATING_HELP",
+	))]
+	Floating,
+
+	#[strum(props(
+		Translation = "APP_SETTINGS.OPTION.STATIC",
+		Tooltip = "APP_SETTINGS.OPTION.STATIC_HELP"
+	))]
+	Static,
+}
+
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, AsRefStr, EnumString, EnumProperty, VariantArray)]
 pub enum AltModifier {
 	#[default]
@@ -268,6 +290,10 @@ const fn def_point7() -> f32 {
 
 const fn def_point3() -> f32 {
 	0.3
+}
+
+const fn def_point15() -> f32 {
+	0.15
 }
 
 const fn def_osc_port() -> u16 {
@@ -530,4 +556,13 @@ pub struct GeneralConfig {
 
 	#[serde(default)]
 	pub wvr_input_capture: InputCaptureMethod,
+
+	#[serde(default)]
+	pub default_positioning: DefaultPositioning,
+
+	#[serde(default = "def_one")]
+	pub default_opacity: f32,
+
+	#[serde(default = "def_point15")]
+	pub default_curvature: f32,
 }

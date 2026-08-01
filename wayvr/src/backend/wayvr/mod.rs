@@ -58,7 +58,7 @@ use wgui::{gfx::WGfx, log::LogErr};
 use wlx_capture::frame::Transform;
 use wlx_common::{
     audio::{AudioSystem, SamplePlayer},
-    config::{GeneralConfig, InputCaptureMethod},
+    config::{DefaultPositioning, GeneralConfig, InputCaptureMethod},
     desktop_finder::DesktopFinder,
 };
 use xkbcommon::xkb;
@@ -402,7 +402,11 @@ impl WvrServerState {
                                 }
                                 _ => (
                                     Size::new(1920, 1080).clamp(min_size, max_size),
-                                    PositionMode::Float,
+                                    match app.session.config.default_positioning {
+                                        DefaultPositioning::Anchored => PositionMode::Anchor,
+                                        DefaultPositioning::Floating => PositionMode::Float,
+                                        DefaultPositioning::Static => PositionMode::Static,
+                                    },
                                     None,
                                     None,
                                     false,

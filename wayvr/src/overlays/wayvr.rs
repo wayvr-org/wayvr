@@ -49,6 +49,7 @@ use crate::{
             window::WindowHandle,
         },
     },
+    config::none_if_0,
     graphics::{ExtentExt, Vert2Uv, upload_quad_vertices},
     gui::panel::{
         GuiPanel, NewGuiPanelParams, OnCustomAttribFunc,
@@ -111,7 +112,8 @@ pub fn create_wl_window_overlay(
                 PositionMode::Anchor => Positioning::Anchored,
                 PositionMode::Static => Positioning::Static,
             },
-            curvature: Some(0.15 * curve_scale),
+            alpha: app.session.config.default_opacity,
+            curvature: none_if_0(app.session.config.default_curvature).map(|x| x * curve_scale),
             transform: Affine3A::from_scale_rotation_translation(
                 Vec3::ONE * app.session.config.default_overlay_scale * scale,
                 Quat::IDENTITY,

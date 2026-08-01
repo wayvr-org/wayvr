@@ -17,6 +17,7 @@ use wlx_common::{
 
 use crate::{
     backend::task::{OverlayTask, TaskType, ToggleMode},
+    config::none_if_0,
     gui::{
         panel::{
             GuiPanel, NewGuiPanelParams, OnCustomAttribFunc,
@@ -326,7 +327,8 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
             interactable: true,
             grabbable: true,
             transform,
-            positioning: Positioning::Anchored,
+            positioning: app.session.config.default_positioning.into(),
+            alpha: app.session.config.default_opacity,
             ..OverlayWindowState::default()
         },
         category: OverlayCategory::BuiltInPanel,

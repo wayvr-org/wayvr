@@ -50,7 +50,6 @@
 		"POSITIONING": "Pozycjonowanie",
 		"BLOCK_INPUT": "Blokuj input z gry",
 		"RESIZE_PRESS_AND_DRAG": "Zmień rozmiar (naciśnij i przeciągnij)",
-		"POS_STATIC": "Statyczne: Pozostaje w miejscu i nigdy nie jest ponownie wyśrodkowywane.",
 		"POS_ANCHORED": "Zakotwiczone: Porusza się razem z resztą zestawu. Domyślne.",
 		"POS_FLOATING": "Pływające: Pozostaje w miejscu, ponownie się wyśrodkowuje po pokazaniu.",
 		"POS_HMD": "Podążaj za HMD.",

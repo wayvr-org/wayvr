@@ -9,9 +9,9 @@ use wayvr_ipc::packet_client::WvrProcessLaunchParams;
 use wlx_common::{
     astr_containers::AStrMap,
     config::{
-        AltModifier, CaptureMethod, ChromaKeyParams, GeneralConfig, HandsfreeAltTab,
-        HandsfreePointer, InputCaptureMethod, InputEmulationMethod, PinnedApp, SerializedWindowSet,
-        SerializedWindowStates,
+        AltModifier, CaptureMethod, ChromaKeyParams, DefaultPositioning, GeneralConfig,
+        HandsfreeAltTab, HandsfreePointer, InputCaptureMethod, InputEmulationMethod, PinnedApp,
+        SerializedWindowSet, SerializedWindowStates,
     },
     config_io,
     locale::Language,
@@ -195,6 +195,9 @@ pub struct AutoSettings {
     pub wvr_mouse_acceleration: bool,
     pub wvr_mouse_speed: f32,
     pub wvr_input_capture: InputCaptureMethod,
+    pub default_curvature: f32,
+    pub default_opacity: f32,
+    pub default_positioning: DefaultPositioning,
 }
 
 fn get_settings_path() -> PathBuf {
@@ -267,6 +270,9 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         wvr_mouse_acceleration: config.wvr_mouse_acceleration,
         wvr_mouse_speed: config.wvr_mouse_speed,
         wvr_input_capture: config.wvr_input_capture,
+        default_curvature: config.default_curvature,
+        default_opacity: config.default_opacity,
+        default_positioning: config.default_positioning,
     };
 
     let json = serde_json::to_string_pretty(&conf).unwrap(); // want panic
@@ -305,4 +311,12 @@ pub fn save_state(config: &GeneralConfig) -> anyhow::Result<()> {
 
     log::info!("State was saved successfully.");
     Ok(())
+}
+
+pub fn none_if_0(val: f32) -> Option<f32> {
+    if val.abs() < f32::EPSILON {
+        None
+    } else {
+        Some(val)
+    }
 }

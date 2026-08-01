@@ -45,7 +45,6 @@
 		"POS_HAND_L": "Segui la mano sinistra.",
 		"POS_HAND_R": "Segui la mano destra.",
 		"POS_HMD": "Segui l'HMD.",
-		"POS_STATIC": "Statico: non fa parte di alcun set, senza recentratura.",
 		"POSITIONING": "Posizionamento",
 		"RESIZE_PRESS_AND_DRAG": "Ridimensiona (premi e trascina)",
 		"STEREO_3D_MODE": {

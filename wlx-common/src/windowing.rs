@@ -1,7 +1,7 @@
 use glam::Affine3A;
 use serde::{Deserialize, Serialize};
 
-use crate::common::LeftRight;
+use crate::{common::LeftRight, config::DefaultPositioning};
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub enum Positioning {
@@ -23,6 +23,16 @@ pub enum Positioning {
 		#[serde(default)]
 		lerp: f32,
 	},
+}
+
+impl From<DefaultPositioning> for Positioning {
+	fn from(value: DefaultPositioning) -> Self {
+		match value {
+			DefaultPositioning::Anchored => Self::Anchored,
+			DefaultPositioning::Floating => Self::Floating,
+			DefaultPositioning::Static => Self::Static,
+		}
+	}
 }
 
 impl Positioning {

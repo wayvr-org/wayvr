@@ -49,7 +49,6 @@
 		"OPACITY": "Opacidad",
 		"POSITIONING": "Posicionamiento",
 		"RESIZE_PRESS_AND_DRAG": "Redimensionar (presionar y arrastrar)",
-		"POS_STATIC": "Estático: Permanece en su lugar y nunca se recentra.",
 		"POS_ANCHORED": "Anclado: Se mueve junto con el resto del conjunto. Predeterminado.",
 		"POS_FLOATING": "Flotante: Permanece en su lugar, se recentra cuando se muestra.",
 		"POS_HMD": "Seguir el HMD.",

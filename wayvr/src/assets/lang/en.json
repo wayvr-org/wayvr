@@ -62,7 +62,7 @@
 		"POS_HAND_L": "Follow the left hand.",
 		"POS_HAND_R": "Follow the right hand.",
 		"POS_HMD": "Follow the HMD.",
-		"POS_STATIC": "Static: Not part of any set, no recenter.",
+		"POS_STATIC": "Static: Stays in place relative to world.",
 		"POSITIONING": "Positioning",
 		"RESIZE_PRESS_AND_DRAG": "Resize (press & drag)",
 		"RESIZE_CORNER": "Drag to resize",

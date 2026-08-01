@@ -5,6 +5,7 @@ use wlx_capture::frame::Transform;
 use wlx_common::windowing::{OverlayWindowState, Positioning};
 
 use crate::{
+    config::none_if_0,
     state::{AppSession, AppState, ScreenMeta},
     subsystem::input::InputFocus,
     windowing::{
@@ -47,9 +48,10 @@ fn create_screen_from_backend(
         category: OverlayCategory::Screen,
         default_state: OverlayWindowState {
             grabbable: true,
-            positioning: Positioning::Anchored,
+            positioning: session.config.default_positioning.into(),
+            curvature: none_if_0(session.config.default_curvature),
+            alpha: session.config.default_opacity,
             interactable: true,
-            curvature: Some(0.15),
             transform: Affine3A::from_scale_rotation_translation(
                 Vec3::ONE * 1.5 * session.config.default_overlay_scale,
                 Quat::from_rotation_z(angle),

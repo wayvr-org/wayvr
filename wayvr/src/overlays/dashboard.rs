@@ -42,7 +42,7 @@ use crate::{
             window::WindowHandle,
         },
     },
-    config::save_settings,
+    config::{none_if_0, save_settings},
     ipc::ipc_server::{gen_args_vec, gen_env_vec},
     state::AppState,
     subsystem::hid::WheelDelta,
@@ -337,7 +337,7 @@ fn tutorial_spawn_effect(app: &mut AppState) -> anyhow::Result<()> {
                     grabbable: true,
                     interactable: true,
                     positioning: Positioning::FollowHead { lerp: 0.01 },
-                    curvature: Some(0.15),
+                    curvature: none_if_0(app.session.config.default_curvature),
                     alpha: 0.1,
                     ..Default::default()
                 });
@@ -376,7 +376,7 @@ pub fn create_dash_frontend(app: &mut AppState) -> anyhow::Result<OverlayWindowC
             grabbable: true,
             interactable: true,
             positioning: Positioning::Floating,
-            curvature: Some(0.15),
+            curvature: none_if_0(app.session.config.default_curvature),
             ..OverlayWindowState::default()
         },
         z_order: Z_ORDER_DASHBOARD,

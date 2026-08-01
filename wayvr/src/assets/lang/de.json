@@ -49,7 +49,6 @@
 		"OPACITY": "Undurchsichtigkeit",
 		"POSITIONING": "Positionierung",
 		"RESIZE_PRESS_AND_DRAG": "Größe ändern (gedrückt halten & ziehen)",
-		"POS_STATIC": "Statisch: Bleibt an Ort und Stelle und wird niemals neu zentriert.",
 		"POS_ANCHORED": "Verankert: Bewegt sich zusammen mit dem Rest des Sets. Standard.",
 		"POS_FLOATING": "Schwebend: Bleibt an Ort und Stelle, wird beim Anzeigen neu zentriert.",
 		"POS_HMD": "Folge dem Headset.",
