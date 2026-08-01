@@ -742,10 +742,6 @@ impl<T> OverlayWindowManager<T> {
         ret_val
     }
 
-    pub fn get_by_id(&mut self, id: OverlayID) -> Option<&OverlayWindowData<T>> {
-        self.overlays.get(id)
-    }
-
     pub fn mut_by_id(&mut self, id: OverlayID) -> Option<&mut OverlayWindowData<T>> {
         self.overlays.get_mut(id)
     }
@@ -816,6 +812,12 @@ impl<T> OverlayWindowManager<T> {
                     log::debug!("loaded state for {name} to set {i}");
                 }
             }
+        } else if let Some(state) = self.global_set.inactive_overlays.arc_rm(&name) {
+            let o = &mut self.overlays[oid];
+            o.config.active_state = Some(state);
+            o.config.reset(app, false);
+            shown = true;
+            log::debug!("loaded state for {name} from global_set!");
         }
 
         self.overlays[oid]
