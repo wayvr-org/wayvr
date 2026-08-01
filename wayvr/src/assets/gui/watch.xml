@@ -54,6 +54,14 @@
       </div>
     </Button>
   </template>
+  <template name="Passthru">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
+      <sprite width="38" height="38" src_builtin="icons/landscape.svg" />
+      <div position="absolute" margin_top="5" margin_left="13">
+        <label text="${display}" size="20" weight="bold" parent_color="background" />
+      </div>
+    </Button>
+  </template>
   <template name="App">
     <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">  
       <sprite width="38" height="38" src_ext="${icon}" />

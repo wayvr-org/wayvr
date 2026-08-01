@@ -167,6 +167,16 @@
     </Button>
   </template>
 
+  <!-- mirror with a different icon -->
+  <template name="Passthru">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_mirror" _press_right="::OverlayToggle ${name}">
+      <sprite width="38" height="38" src_builtin="icons/landscape.svg" />
+      <div position="absolute" margin_top="5" margin_left="13">
+        <label text="${display}" size="20" weight="bold" parent_color="background" />
+      </div>
+    </Button>
+  </template>
+
   <blueprint name="menu_handsfree">
     <context_menu >
       <cell translation="BAR.HANDSFREE.NONE" _press="::HandsfreeMode None" _press2="::ContextMenuClose" />
