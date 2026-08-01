@@ -60,10 +60,13 @@ impl OverlayList {
                             ("Mirror", panels_root)
                         }
                         OverlayCategory::Passthru => {
-                            params.insert_rc(
-                                "display",
-                                (*meta.name).chars().last().unwrap().to_string().into(),
-                            );
+                            let display = meta
+                                .name
+                                .rsplit('-')
+                                .next()
+                                .unwrap_or(&meta.name)
+                                .to_string();
+                            params.insert_rc("display", display.into());
                             ("Passthru", panels_root)
                         }
                         OverlayCategory::Panel | OverlayCategory::BuiltInPanel => {

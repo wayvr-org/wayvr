@@ -159,6 +159,27 @@ where
         me.restore_layout(app);
         me.overlays_changed(app)?;
 
+        // recreate saved passthru overlays
+        let saved_passthrus: Vec<_> = app
+            .session
+            .config
+            .global_set
+            .iter()
+            .filter(|(name, _)| name.starts_with(crate::overlays::passthrough::PASSTHRU_PREFIX))
+            .map(|(name, state)| (name.clone(), state.clone()))
+            .collect();
+        for (name, saved_state) in saved_passthrus {
+            if me.lookup(&name).is_none() {
+                let config = crate::overlays::passthrough::new_passthru(name.clone(), app);
+                let id = me.add(OverlayWindowData::from_config(config), app);
+                if let Some(o) = me.mut_by_id(id) {
+                    o.config.active_state = Some(saved_state);
+                    o.config.reset(app, false);
+                    log::debug!("restored passthru {}", name);
+                }
+            }
+        }
+
         for id in [me.watch_id, me.keyboard_id] {
             for ev in [
                 OverlayEventData::NumSetsChanged(me.sets.len()),
@@ -376,11 +397,27 @@ where
                 self.spawn_overlay(app, sel, spawn_pos, f)?;
             }
             OverlayTask::Drop(sel) => {
+                let (id, name) = match &sel {
+                    OverlaySelector::Id(id) => {
+                        let id = *id;
+                        let name = self.overlays.get(id).map(|o| o.config.name.clone());
+                        (Some(id), name)
+                    }
+                    OverlaySelector::Name(name) => {
+                        let id = self.lookup(name);
+                        (id, Some(name.clone()))
+                    }
+                    _ => (None, None),
+                };
+
                 if let Some(o) = self.mut_by_selector(&sel)
                     && o.birthframe < FRAME_COUNTER.load(Ordering::Relaxed)
                     && let Some(o) = self.remove_by_selector(&sel, app)
                 {
                     log::debug!("Dropping overlay {}", o.config.name);
+                    if let (Some(id), Some(name)) = (id, name) {
+                        self.remove_saved_state(id, &name);
+                    }
                     self.dropped_overlays.push_back(o);
                 }
             }
@@ -453,6 +490,16 @@ const SAVED_ATTRIBS: [BackendAttrib; 3] = [
 impl<T> OverlayWindowManager<T> {
     pub fn pop_dropped(&mut self) -> Option<OverlayWindowData<T>> {
         self.dropped_overlays.pop_front()
+    }
+
+    fn remove_saved_state(&mut self, id: OverlayID, name: &str) {
+        for set in &mut self.sets {
+            set.overlays.retain(|k, _| k != id);
+            set.inactive_overlays.arc_rm(name);
+            set.hidden_overlays.arc_rm(name);
+        }
+        self.global_set.inactive_overlays.arc_rm(name);
+        self.global_set.hidden_overlays.arc_rm(name);
     }
 
     pub fn persist_layout(&mut self, app: &mut AppState) {
