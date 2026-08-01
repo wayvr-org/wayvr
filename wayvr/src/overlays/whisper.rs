@@ -12,12 +12,11 @@ use wgui::{
 use wlx_common::{
     data_dir,
     overlays::{BackendAttrib, BackendAttribValue, ToastTopic},
-    windowing::{OverlayWindowState, Positioning},
+    windowing::OverlayWindowState,
 };
 
 use crate::{
     backend::task::{OverlayTask, TaskType, ToggleMode},
-    config::none_if_0,
     gui::{
         panel::{
             GuiPanel, NewGuiPanelParams, OnCustomAttribFunc,

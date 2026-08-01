@@ -2,7 +2,7 @@ use std::{f32::consts::PI, sync::Arc};
 
 use glam::{Affine3A, Quat, Vec3, vec3};
 use wlx_capture::frame::Transform;
-use wlx_common::windowing::{OverlayWindowState, Positioning};
+use wlx_common::windowing::OverlayWindowState;
 
 use crate::{
     config::none_if_0,
