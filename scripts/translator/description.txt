@@ -20,4 +20,6 @@ Glossary:
 
 End of glossary.
 
+Style: These are UI elements in a software, so keep the translations cocise and with an appropriate tone. Don't use polite/formal language. Make sure it sounds natural.
+
 You will be given the input in the code blocks which needs to be translated to {TARGET_LANG} language. Write only the result in codeblocks, do not explain. Keep any newlines and other important formatting-required identifiers as-is, in the same state.

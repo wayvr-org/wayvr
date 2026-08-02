@@ -141,11 +141,14 @@ function parse_csv(text: string): CsvEntry[] {
 		}
 	}
 	if (current) lines.push(current);
-	return lines.filter((l) => l.trim()).map(parse_csv_line).map(([key, english, context]) => ({
-		key,
-		english,
-		context,
-	}));
+	return lines
+		.filter((l) => l.trim())
+		.map(parse_csv_line)
+		.map(([key, english, context]) => ({
+			key,
+			english,
+			context,
+		}));
 }
 
 function csv_to_json(entries: CsvEntry[]): any {
@@ -212,14 +215,13 @@ function gen_prompt(
 		num += 1;
 	}
 	description += "\nEnd of examples.\n\n";
+	description += "Context: " + context + "\n\n";
 	description +=
 		"Translate key `" +
 		key +
 		"` from English to " +
 		template.full_name +
 		":\n\n";
-	description += "Context: " + context + "\n\n";
-	description += "Style: These are UI elements in a software, so keep the translations cocise and with an appropriate tone. Don't use polite/formal language. Make sure it sounds natural.\n\n";
 	description += "```\n";
 	description += english_translation + "\n";
 	description += "```\n";
@@ -302,7 +304,11 @@ async function run() {
 
 		console.log("Translating", key, "...");
 
-		const resolved_context = resolve_variables(context, llm_translated_json, csv_entries);
+		const resolved_context = resolve_variables(
+			context,
+			llm_translated_json,
+			csv_entries,
+		);
 
 		const prompt = gen_prompt(
 			description_txt,
