@@ -91,6 +91,35 @@ impl PassthruBackend {
             overlay_id: OverlayID::null(),
         }
     }
+    fn resize(&mut self, app: &mut AppState, new_size: [u32; 2]) {
+        self.frame_meta.extent = [new_size[0].clamp(256, 1024), new_size[1].clamp(256, 1024)];
+        self.interaction_transform = ui_transform(self.frame_meta.extent);
+
+        let old_scale = self.scale;
+        let (new_scale, _) = overlay_scale_from_extent(self.frame_meta.extent);
+        self.scale = new_scale;
+
+        if new_scale.abs() > f32::EPSILON {
+            let scale_delta = new_scale / old_scale;
+
+            if (scale_delta - 1.0).abs() > f32::EPSILON {
+                app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                    OverlaySelector::Id(self.overlay_id),
+                    Box::new(move |_app, owc| {
+                        if let Some(state) = owc.active_state.as_mut() {
+                            if let Some(saved) = state.saved_transform.as_mut() {
+                                saved.matrix3 = saved.matrix3.mul_scalar(scale_delta);
+                            }
+
+                            state.transform.matrix3 =
+                                state.transform.matrix3.mul_scalar(scale_delta);
+                        }
+                    }),
+                )));
+            }
+        }
+        self.rendered = false;
+    }
 }
 
 impl OverlayBackend for PassthruBackend {
@@ -177,36 +206,7 @@ impl OverlayBackend for PassthruBackend {
     fn notify(&mut self, app: &mut AppState, event_data: OverlayEventData) -> anyhow::Result<()> {
         match event_data {
             OverlayEventData::IdAssigned(id) => self.overlay_id = id,
-            OverlayEventData::ResizeRequest(new_size) => {
-                self.frame_meta.extent =
-                    [new_size[0].clamp(256, 1024), new_size[1].clamp(256, 1024)];
-                self.interaction_transform = ui_transform(self.frame_meta.extent);
-
-                let old_scale = self.scale;
-                let (new_scale, _) = overlay_scale_from_extent(self.frame_meta.extent);
-                self.scale = new_scale;
-
-                if new_scale.abs() > f32::EPSILON {
-                    let scale_delta = new_scale / old_scale;
-
-                    if (scale_delta - 1.0).abs() > f32::EPSILON {
-                        app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
-                            OverlaySelector::Id(self.overlay_id),
-                            Box::new(move |_app, owc| {
-                                if let Some(state) = owc.active_state.as_mut() {
-                                    if let Some(saved) = state.saved_transform.as_mut() {
-                                        saved.matrix3 = saved.matrix3.mul_scalar(scale_delta);
-                                    }
-
-                                    state.transform.matrix3 =
-                                        state.transform.matrix3.mul_scalar(scale_delta);
-                                }
-                            }),
-                        )));
-                    }
-                }
-                self.rendered = false;
-            }
+            OverlayEventData::ResizeRequest(new_size) => self.resize(app, new_size),
             _ => {}
         }
         Ok(())
@@ -242,14 +242,23 @@ impl OverlayBackend for PassthruBackend {
     ) -> Option<wlx_common::overlays::BackendAttribValue> {
         match attrib {
             BackendAttrib::Resizable => Some(BackendAttribValue::Resizable(true)),
+            BackendAttrib::WindowSize => {
+                Some(BackendAttribValue::WindowSize(self.frame_meta.extent))
+            }
             _ => None,
         }
     }
     fn set_attrib(
         &mut self,
-        _app: &mut AppState,
-        _value: wlx_common::overlays::BackendAttribValue,
+        app: &mut AppState,
+        value: wlx_common::overlays::BackendAttribValue,
     ) -> bool {
-        false
+        match value {
+            BackendAttribValue::WindowSize(new_size) => {
+                self.resize(app, new_size);
+                true
+            }
+            _ => false,
+        }
     }
 }

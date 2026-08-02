@@ -1076,6 +1076,16 @@ impl OverlayBackend for WvrWindowBackend {
                 }
                 true
             }
+            BackendAttribValue::WindowSize(new_size) => {
+                let wvr_server = app.wvr_server.as_mut().unwrap();
+                let Some(win) = wvr_server.wm.windows.get_mut(self.window) else {
+                    log::warn!("Could not process resize request: window not found");
+                    return true;
+                };
+                let size: Size<i32, Logical> = Size::new(new_size[0] as i32, new_size[1] as i32);
+                win.checked_configure_size(size);
+                true
+            }
             _ => false,
         }
     }

@@ -40,7 +40,10 @@ pub enum BackendAttribValue {
 	Icon(Arc<str>),
 	#[serde(skip_serializing, skip_deserializing)]
 	Resizable(bool),
+	WindowSize([u32; 2]),
 }
+
+const WELL_KNOWN_ASPECT_RATIOS: &[f32] = &[16. / 9., 3. / 2., 1., 2. / 3., 9. / 16.];
 
 impl BackendAttribValue {
 	/// Used to determine if value should be saved
@@ -52,6 +55,15 @@ impl BackendAttribValue {
 			Self::MouseTransform(val) => *val == MouseTransform::default(),
 			Self::Icon(_) => false,
 			Self::Resizable(_) => false,
+			Self::WindowSize([w, h]) => {
+				let r = (*w as f32) / (*h as f32);
+				for a in WELL_KNOWN_ASPECT_RATIOS {
+					if (a - r).abs() < 0.01 {
+						return true;
+					}
+				}
+				false
+			}
 		}
 	}
 }

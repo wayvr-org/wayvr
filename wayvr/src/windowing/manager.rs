@@ -587,14 +587,17 @@ impl<T> OverlayWindowManager<T> {
 
         // BackendAttrib
         for o in self.overlays.values() {
-            app.session.config.attribs.arc_set(
-                o.config.name.clone(),
-                SAVED_ATTRIBS
-                    .iter()
-                    .filter_map(|a| o.config.backend.get_attrib(*a))
-                    .filter(|val| !val.is_default())
-                    .collect(),
-            );
+            let attrs: Vec<_> = SAVED_ATTRIBS
+                .iter()
+                .filter_map(|a| o.config.backend.get_attrib(*a))
+                .filter(|val| !val.is_default())
+                .collect();
+            if !attrs.is_empty() {
+                app.session
+                    .config
+                    .attribs
+                    .arc_set(o.config.name.clone(), attrs);
+            }
         }
 
         if restore_after {
@@ -923,6 +926,13 @@ impl<T> OverlayWindowManager<T> {
             o.config.reset(app, false);
             shown = true;
             log::debug!("loaded state for {name} from global_set!");
+        }
+
+        let saved_attribs = app.session.config.attribs.arc_get(&name).cloned();
+        if let Some(attribs) = saved_attribs {
+            for value in attribs {
+                self.overlays[oid].config.backend.set_attrib(app, value);
+            }
         }
 
         self.overlays[oid]
