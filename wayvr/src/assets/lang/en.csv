@@ -14,6 +14,7 @@ DEFINITIONS.OVERLAY,Overlay,"An overlay window inside VR, similar to a “deskto
 ANCHOR.CENTER,Center,A marker on the floor describing where the center of the area is
 BAR.ADD_MIRROR,Add a new mirror overlay,"Button to add a mirror overlay window. “Mirror” was previously translated as “${DEFINITIONS.MIRROR}”, “Overlay” was previously translated as “${DEFINITIONS.OVERLAY}”"
 BAR.ADD_NEW_SET,Add new set,Button to add a new set. “Set” was previously translated as “${DEFINITIONS.SET}”
+BAR.ADD_PASSTHRU,Add new pass-through cutout,Button to add a new window that lets the user see into their real-life environment using camera pass-through.
 BAR.CLOSE_APP,Close app,Button to quit the app
 BAR.CLOSE_OVERLAY,Close overlay,Button to close an overlay window. “Overlay” was previously translated as “{$DEFINITIONS.OVERLAY}”
 BAR.DELETE_CURRENT_SET,Delete current set,Button to delete the currently selected set. “Set” was previously translated as “${DEFINITIONS.SET}”

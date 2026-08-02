@@ -1,0 +1,336 @@
+DEFINITIONS.ANCHORED,Anchored,"A movement option that makes this window move together with the rest of the workspace. Emphasize the ""moving together"" part as opposed to ""not moving at all""."
+DEFINITIONS.FLOATING,Floating,A movement option that lets this window float freely.
+DEFINITIONS.STATIC,Static,"A movement option that keeps this window in place relative to the world origin. Emphasize the ""not moving at all"" part, as opposed to the ""moving together"" option which was previously translated as ${DEFINITIONS.ANCHORED}."
+DEFINITIONS.SET,Set,A desktop workspace consisting of multiple windows.
+DEFINITIONS.WATCH,Watch,Name of the small utility window that hovers around the user's wrist.
+DEFINITIONS.DASHBOARD,Dashboard,Name of the window that acts as the main menu / control panel of the application.
+DEFINITIONS.EDIT_MODE,Edit Mode,Name of the mode that allows the user to make various tweaks to the current workspace and its windows.
+DEFINITIONS.SETTINGS,Settings,The title of the settings panel.
+DEFINITIONS.KEYBOARD,Keyboard,Name of the virtual keyboard
+DEFINITIONS.TASKBAR,Taskbar,"A long panel showing currently active programs & windows, workspaces and a clock."
+DEFINITIONS.FEATURES,Features,The section title of the section panel that deals with software features.
+DEFINITIONS.OVERLAY,Overlay,"An overlay window inside VR, similar to a ""desktop window"". Consider it a technical term."
+DEFINITIONS.SKYMAP,Skymap,A 360 degree background image that surrounds the user.
+DEFINITIONS.PLAYSPACE,Playspace,The VR play space that the user can adjust in different way. Technical term.
+DEFINITIONS.D_PAD,D-pad ,Directional pad on a modern game controller. Technical term.
+ACTIONS.RECENTER_PLAYSPACE,Re-center playspace,"Tooltip on a button (with recenter icon) in the bottom-left of the VR dashboard. The button resets the user's tracked playspace to the current physical location. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_LAUNCHER.ASPECT.SEMI_TALL,Semi-tall,"Radio button in the App Launcher panel's Aspect section. Sets the window to a 2:3 vertical aspect ratio. Tooltip shows ""2:3""."
+APP_LAUNCHER.ASPECT.SEMI_WIDE,Semi-wide,"Radio button in the App Launcher panel's Aspect section. Sets the window to a 3:2 aspect ratio. Tooltip shows ""3:2""."
+APP_LAUNCHER.ASPECT.SQUARE,Square,"Radio button in the App Launcher panel's Aspect section. Sets the window to a 1:1 aspect ratio. Tooltip shows ""1:1""."
+APP_LAUNCHER.ASPECT.TALL,Tall,"Radio button in the App Launcher panel's Aspect section. Sets the window to a 9:16 vertical aspect ratio. Tooltip shows ""9:16""."
+APP_LAUNCHER.ASPECT.WIDE,Wide,"Radio button in the App Launcher panel's Aspect section. Sets the window to a 16:9 aspect ratio (standard widescreen). Tooltip shows ""16:9""."
+APP_LAUNCHER.ASPECT_TITLE,Aspect,"Section header label above a row of 5 radio buttons (Wide, Semi-wide, Square, Semi-tall, Tall) in the App Launcher panel. Controls the window aspect ratio for the selected app."
+APP_LAUNCHER.AUTOSTART,Run automatically on startup,"Label on a checkbox in the App Launcher panel. When checked, the selected app will launch automatically when the Dash compositor starts."
+APP_LAUNCHER.LAUNCH,Launch,Label on the primary (blue/primary color) button at the bottom of the App Launcher panel. Launches the selected app with the configured settings. Has a play icon next to it.
+APP_LAUNCHER.MODE.CAGE,Compatibility mode (Cage),"Radio button option in the App Launcher panel's mode selector (next to ""Native mode""). Sets the app to run in Cage compatibility mode."
+APP_LAUNCHER.MODE.NATIVE,Native mode,"Radio button option (default/checked) in the App Launcher panel's mode selector (next to ""Compatibility mode (Cage)""). Sets the app to run in native Wayland mode."
+APP_LAUNCHER.RES_TITLE,Resolution,"Section header label in the App Launcher panel above a row of 4 radio buttons (1440p, 1080p, 720p, 480p). Controls the rendering resolution for the selected app."
+APP_SETTINGS.ALLOW_SLIDING,Stick interaction during grab,Checkbox label in Settings > Features tab. Toggles whether analog stick input works while an overlay is grabbed/moved.
+APP_SETTINGS.ANIMATION_SPEED,UI Animation speed,Slider label in Settings > Look & Feel tab. Controls the speed of UI transition animations (range 0.5-5.0).
+APP_SETTINGS.AUTOSTART_APPS,Apps to run on startup,Category header in Settings. Label for the section listing apps configured to auto-launch on WayVR startup.
+APP_SETTINGS.BLOCK_GAME_INPUT,Block game input,"Checkbox label in Settings > Features tab. When enabled, blocks all in-game input when an overlay is hovered."
+APP_SETTINGS.BLOCK_GAME_INPUT_HELP,Blocks all input when an overlay is hovered,Tooltip text appearing next to the Block game input checkbox in Settings > Features.
+APP_SETTINGS.BLOCK_GAME_INPUT_IGNORE_WATCH,Ignore watch when blocking input,"Checkbox label in Settings > Features tab. When enabled, hovering the wrist watch does not block game input. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
+APP_SETTINGS.BLOCK_GAME_INPUT_IGNORE_WATCH_HELP,Do not block input when watch is hovered,"Tooltip text next to the Ignore watch when blocking input checkbox. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
+APP_SETTINGS.BLOCK_POSES_ON_KBD_INTERACTION,Block poses when interacting with keyboard,Checkbox label in Settings > Features tab. Blocks game pose input when the on-screen keyboard is hovered (requires Block game input enabled).
+APP_SETTINGS.BLOCK_POSES_ON_KBD_INTERACTION_HELP,Blocks the game from receiving poses when the keyboard is hovered and 'Block game input' is enabled,Tooltip explaining the Block poses when interacting with keyboard checkbox.
+APP_SETTINGS.BINDINGS.COMP.CLICK,Click,Dropdown option in the controller bindings editor. Selects the Click component of a controller input.
+APP_SETTINGS.BINDINGS.COMP.FORCE,Force,Dropdown option in the controller bindings editor. Selects the Force analog component (e.g. how hard a trigger is pressed).
+APP_SETTINGS.BINDINGS.COMP.TOUCH,Touch,Dropdown option in the controller bindings editor. Selects the Touch component (whether a button is merely touched vs pressed).
+APP_SETTINGS.BINDINGS.COMP.VALUE,Value,Dropdown option in the controller bindings editor. Selects the raw Value analog output of a component.
+APP_SETTINGS.BINDINGS.COMP.PROXIMITY,Proximity,Dropdown option in the controller bindings editor. Selects the Proximity component (distance of controller from head/hand).
+APP_SETTINGS.BINDINGS.COMP.X_AXIS,X axis,"Dropdown option in the controller bindings editor. Selects the X-axis analog value (e.g. thumbstick X, trackpad X)."
+APP_SETTINGS.BINDINGS.COMP.Y_AXIS,Y axis,"Dropdown option in the controller bindings editor. Selects the Y-axis analog value (e.g. thumbstick Y, trackpad Y)."
+APP_SETTINGS.BINDINGS.TYPE.BUMPER,Bumper,Dropdown option in the bindings editor. Maps to the Bumper controller subpath (upper shoulder button).
+APP_SETTINGS.BINDINGS.TYPE.DPAD_UP,D-pad Up,"Dropdown option in the bindings editor. Maps to the D-pad up direction. ""D-pad"" was previously translated as ""${DEFINITIONS.D_PAD}""."
+APP_SETTINGS.BINDINGS.TYPE.DPAD_DOWN,D-pad Down,"Dropdown option in the bindings editor. Maps to the D-pad down direction. ""D-pad"" was previously translated as ""${DEFINITIONS.D_PAD}"". ""D-pad Up"" was previously translated as ""${APP_SETTINGS.BINDINGS.TYPE.DPAD_UP}""."
+APP_SETTINGS.BINDINGS.TYPE.DPAD_LEFT,D-pad Left,"Dropdown option in the bindings editor. Maps to the D-pad left direction. ""D-pad"" was previously translated as ""${DEFINITIONS.D_PAD}"". ""D-pad Up"" was previously translated as ""${APP_SETTINGS.BINDINGS.TYPE.DPAD_UP}""."
+APP_SETTINGS.BINDINGS.TYPE.DPAD_RIGHT,D-pad Right,"Dropdown option in the bindings editor. Maps to the D-pad right direction. ""D-pad"" was previously translated as ""${DEFINITIONS.D_PAD}"". ""D-pad Up"" was previously translated as ""${APP_SETTINGS.BINDINGS.TYPE.DPAD_UP}""."
+APP_SETTINGS.BINDINGS.TYPE.JOYSTICK,Joystick,Dropdown option in the bindings editor. Maps to the joystick subpath.
+APP_SETTINGS.BINDINGS.TYPE.MENU,Menu,Dropdown option in the bindings editor. Maps to the Menu controller button.
+APP_SETTINGS.BINDINGS.TYPE.SHOULDER,Shoulder,Dropdown option in the bindings editor. Maps to the Shoulder subpath (shoulder strap button).
+APP_SETTINGS.BINDINGS.TYPE.SQUEEZE,Grip,Dropdown option in the bindings editor. Maps to the Squeeze component (controller grip action).
+APP_SETTINGS.BINDINGS.TYPE.SYSTEM,System,Dropdown option in the bindings editor. Maps to the System controller subpath.
+APP_SETTINGS.BINDINGS.TYPE.THUMBREST,Thumbrest,Dropdown option in the bindings editor. Maps to the thumbrest touch sensor.
+APP_SETTINGS.BINDINGS.TYPE.THUMBSTICK,Thumbstick,"Dropdown option in the bindings editor. Maps to the thumbstick subpath. Different from ""Joystick"" which was previously translated as ""${APP_SETTINGS.BINDINGS.TYPE.JOYSTICK}""."
+APP_SETTINGS.BINDINGS.TYPE.TRACKPAD,Trackpad,Dropdown option in the bindings editor. Maps to the trackpad subpath.
+APP_SETTINGS.BINDINGS.TYPE.TRIGGER,Trigger,Dropdown option in the bindings editor. Maps to the trigger subpath.
+APP_SETTINGS.BINDINGS.TYPE.VIEW,View,Dropdown option in the bindings editor. Maps to the View controller button.
+APP_SETTINGS.BINDINGS.CLICK.ANY,Any,Dropdown option in the bindings editor. Selects any press click type (no double/triple tap requirement).
+APP_SETTINGS.BINDINGS.CLICK.DOUBLE,Double-tap,Dropdown option in the bindings editor. Requires a double-tap on the selected button/component.
+APP_SETTINGS.BINDINGS.CLICK.TRIPLE,Triple-tap,Dropdown option in the bindings editor. Requires a triple-tap on the selected button/component.
+APP_SETTINGS.BINDINGS.CLICK.TYPE,Tap count,Tooltip for the click-type dropdown in the bindings editor. Indicates this dropdown controls how many taps are required.
+APP_SETTINGS.BINDINGS.ACTION.CLICK,Click*,Label for the click action row in the controller bindings editor. The asterisk indicates it may have modifiers. Leave the '*' at the end.
+APP_SETTINGS.BINDINGS.ACTION.GRAB,Grab*,Label for the grab action row in the bindings editor. Maps to the controller grab/grip action. Leave the '*' at the end.
+APP_SETTINGS.BINDINGS.ACTION.ALT_CLICK,Custom shell exec (set alt_click in config),Label for the alt_click action row in the bindings editor. Triggers a custom shell command defined in config.
+APP_SETTINGS.BINDINGS.ACTION.SHOW_HIDE,"Show, hide, recenter*",Label for the show_hide action row. Toggles overlay visibility and recenters the set. Leave the '*' at the end.
+APP_SETTINGS.BINDINGS.ACTION.TOGGLE_DASHBOARD,Toggle dashboard,Label for the toggle_dashboard action row. Opens or closes the WayVR dashboard.
+APP_SETTINGS.BINDINGS.ACTION.SPACE_DRAG,Playspace drag,"Label for the space_drag action row. Allows dragging the entire playspace/set of overlays. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.BINDINGS.ACTION.SPACE_ROTATE,Playspace rotate,"Label for the space_rotate action row. Allows rotating the entire playspace/set. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.BINDINGS.ACTION.SPACE_RESET,Playspace reset,"Label for the space_reset action row. Resets playspace to the original state. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.BINDINGS.ACTION.CLICK_MODIFIER_RIGHT,Right-click modifier,Label for the click_modifier_right action row. Maps a controller input to act as a right-click modifier.
+APP_SETTINGS.BINDINGS.ACTION.CLICK_MODIFIER_MIDDLE,Middle-click modifier,Label for the click_modifier_middle action row. Maps a controller input to act as a middle-click modifier.
+APP_SETTINGS.BINDINGS.ACTION.MOVE_MOUSE,Move mouse (if off by default),Label for the move_mouse action row. Maps controller input to mouse movement.
+APP_SETTINGS.BINDINGS.ACTION.SCROLL,Scroll*,Label for the scroll action row. Maps controller input to scrolling. Leave the '*' at the end.
+APP_SETTINGS.BINDINGS.LEFT,Left,Label in the bindings editor. Refers to the left controller/hand configuration.
+APP_SETTINGS.BINDINGS.RIGHT,Right,Label in the bindings editor. Refers to the right controller/hand configuration.
+APP_SETTINGS.BINDINGS.COMPONENT,Actuation type,"Tooltip for the component dropdown in the bindings editor. Asks user to select what type of actuation (click, touch, axis, etc.)."
+APP_SETTINGS.BINDINGS.SUBPATH,Actuating control,Tooltip for the subpath dropdown in the bindings editor. Asks user to select which controller button/stick/trackpad to bind.
+APP_SETTINGS.BINDINGS.THRESHOLD,"Activate when above upper value
+Deactivate when below lower value",Tooltip for the threshold slider in the bindings editor. Explains the two-value threshold range for analog inputs.
+APP_SETTINGS.BROWSE_ONLINE_CATALOG,Browse online catalog...,Button label in the color palettes popup. Opens a web browser to the WayVR online catalog.
+APP_SETTINGS.BROWSE_SKYMAPS,Browse skymaps,"Button label in Settings > Skybox tab. Opens the skymap browser/list. ""Skymap"" was previously translated as ""${DEFINITIONS.SKYMAP}""."
+APP_SETTINGS.CAPTURE_METHOD,Screen capture method,"Dropdown label in Settings > Miscellaneous tab. Selects the method for capturing the desktop screen (PipeWire, ScreenCopy, etc.)."
+APP_SETTINGS.CAPTURE_METHOD_HELP,"Try changing this if you are
+experiencing black or glitchy screens",Tooltip for the Wayland screen capture dropdown in Miscellaneous settings.
+APP_SETTINGS.COLOR_KEYING,Color keying,Setting in the look-and-feel / color palette section. Enables or configures chroma-key style color filtering.
+APP_SETTINGS.COLOR_PALETTE,Color palette,Button label in Settings > Look & Feel tab. Opens the color palette selection popup.
+APP_SETTINGS.COLOR_PALETTE_HELP,"Click to browse color palettes.
+To create custom ones, see website!",Tooltip for the Color palette button.
+APP_SETTINGS.COLOR_PALETTES,Color palettes,Category/header label in the color palette popup.
+APP_SETTINGS.COLOR_PALETTE_CURRENT,Currently active theme.,Label or tooltip showing which color palette is currently applied.
+APP_SETTINGS.COLOR_PALETTE_CUSTOM_URL,Add your own custom theme!,Button/label in the color palette popup for adding a custom theme via URL.
+APP_SETTINGS.COLOR_PALETTE_CUSTOM_URL2,Click to open web manual.,"Secondary label/button next to the custom URL input, linking to the web manual."
+APP_SETTINGS.COLOR_PALETTE_ACTIVATE,Click to use this theme.,Tooltip or button label on a palette card to apply/activate that theme.
+APP_SETTINGS.CLEAR_PIPEWIRE_TOKENS,Clear PipeWire tokens,Button label in Settings > Troubleshooting tab. Clears stored PipeWire screen-selection tokens so the user is prompted again on next start.
+APP_SETTINGS.CLEAR_PIPEWIRE_TOKENS_HELP,Prompt for screen selection on next start,Tooltip explaining what clearing PipeWire tokens does.
+APP_SETTINGS.CLEAR_SAVED_STATE,Clear saved state,Button label in Settings > Troubleshooting tab. Resets overlay positions and set placements to defaults.
+APP_SETTINGS.CLEAR_SAVED_STATE_HELP,Reset sets & overlay positions,"Tooltip explaining what clearing saved state does. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}""."
+APP_SETTINGS.CLICK_FREEZE_TIME_MS,Click freeze time (ms),Slider/numeric input in Settings > Features tab. Sets a time window (in milliseconds) to help with double-click precision.
+APP_SETTINGS.CLICK_FREEZE_TIME_MS_HELP,Helps with double-click precision,Tooltip for the click freeze time setting.
+APP_SETTINGS.CLOCK_12H,12-hour clock,Checkbox label in Settings > Look & Feel tab. Toggles between 12-hour and 24-hour time display.
+APP_SETTINGS.CONTROLS,Controls,Category header in Settings. Groups input/controller-related settings.
+APP_SETTINGS.DELETE_ALL_CONFIGS,Wipe configuration,Button label in Settings > Troubleshooting tab. Removes all configuration files from conf.d.
+APP_SETTINGS.DELETE_ALL_CONFIGS_HELP,Remove all configuration files from conf.d,Tooltip explaining the Wipe configuration button.
+APP_SETTINGS.DOUBLE_CURSOR_FIX,Double cursor fix,Checkbox label in Settings > Miscellaneous tab. Enables a workaround for systems that show two cursors.
+APP_SETTINGS.DOUBLE_CURSOR_FIX_HELP,Enable this if you see 2 cursors,Tooltip for the double cursor fix checkbox.
+APP_SETTINGS.DEFAULT_OVERLAY_SCALE,Default overlay size,Slider label in Settings > Look & Feel tab. Sets the default scale for newly created overlays.
+APP_SETTINGS.DEFAULT_OVERLAY_SCALE_HELP,Spawn new overlays at this scale.,"Tooltip for the default overlay size slider. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}""."
+APP_SETTINGS.DEFAULT_CURVATURE,Default overlay curvature,"Slider label in Settings > Look & Feel tab. Sets the default curvature for new overlays. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}""."
+APP_SETTINGS.DEFAULT_OPACITY,Default overlay opacity,"Slider label in Settings > Look & Feel tab. Sets the default opacity for new overlays. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}""."
+APP_SETTINGS.DEFAULT_POSITIONING,Default overlay positioning,"Dropdown label in Settings > Look & Feel tab. Sets the default positioning mode (anchored/floating/static) for new overlays. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}""."
+APP_SETTINGS.OVERLAY_DEFAULTS_HELP,Only applies to new overlays,"Tooltip shared by default overlay settings (curvature, opacity, positioning). Notes these don't affect existing overlays. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}""."
+APP_SETTINGS.ENABLED,Enabled,Label used for enabling space gravity and related physics features in the space drag settings.
+APP_SETTINGS.FEATURES,Features,Category header in Settings. Previously translated as ${DEFINITIONS.FEATURES}
+APP_SETTINGS.FOCUS_FOLLOWS_MOUSE_MODE,Mouse move on trigger touch,"Setting in Settings > Features tab. When enabled, moving the trigger touch moves the mouse cursor."
+APP_SETTINGS.HANDSFREE_POINTER,Handsfree mode,Dropdown label in Settings > Features tab. Selects the input method used when motion controllers are unavailable.
+APP_SETTINGS.HANDSFREE_POINTER_HELP,"Input to use when motion
+controllers are unavailable.
+Left pinch is grab, right is click.",Tooltip for the handsfree mode dropdown.
+APP_SETTINGS.HANDSFREE_ALT_TAB,App switcher aim,Dropdown/setting in Settings > Features tab. Controls how the alt-tab app switcher is aimed.
+APP_SETTINGS.HANDSFREE_ALT_TAB_HELP,"Hold Super+X, aim at the desired window, then release to switch focus.",Tooltip explaining the handsfree alt-tab behavior.
+APP_SETTINGS.HIDE_GRAB_HELP,Hide grab help,Checkbox label in Settings > Look & Feel tab. Hides the grab help overlay/text.
+APP_SETTINGS.HIDE_USERNAME,Hide username,Checkbox label in Settings > Look & Feel tab. Hides the user's username from the UI.
+APP_SETTINGS.INPUT_EMULATION_METHOD,Input emulation method,"Dropdown label in Settings > Miscellaneous tab. Selects how WayVR emulates mouse/keyboard input (uinput, Wayland virtual, none)."
+APP_SETTINGS.INPUT_EMULATION_METHOD_HELP,"Try change this in case mouse or
+keyboard input does not register.",Tooltip for the input emulation method dropdown.
+APP_SETTINGS.INPUT_CAPTURE_METHOD,Input capture method,Dropdown label in Settings > Miscellaneous tab. Selects how physical input devices are captured for use inside WayVR.
+APP_SETTINGS.INPUT_CAPTURE_METHOD_HELP,"Allows using physical peripherial inside WayVR.
+ Super+Z: Switch input between WayVR and real desktop
+ Super+X: Switch between WayVR apps",Tooltip explaining the input capture method setting.
+APP_SETTINGS.INPUT_PROFILES,Change Input Bindings,Button label in Settings > Controls tab. Opens the controller bindings editor popup.
+APP_SETTINGS.INPUT_PROFILES_HELP,OpenXR controller input bindings,Tooltip for the Change Input Bindings button.
+APP_SETTINGS.INVERT_SCROLL_DIRECTION_X,Invert horizontal scroll direction,Checkbox label in Settings > Features tab. Inverts the horizontal scroll direction.
+APP_SETTINGS.INVERT_SCROLL_DIRECTION_Y,Invert vertical scroll direction,Checkbox label in Settings > Features tab. Inverts the vertical scroll direction.
+APP_SETTINGS.KEYBOARD_MIDDLE_CLICK,Keyboard middle click,Dropdown label in Settings > Features tab. Selects the modifier key used for middle-click when typing with the laser pointer.
+APP_SETTINGS.KEYBOARD_MIDDLE_CLICK_HELP,"Modifier to use when typing
+with purple laser",Tooltip for the keyboard middle-click setting.
+APP_SETTINGS.KEYBOARD_SOUND_ENABLED,Keyboard sounds,Checkbox label in Settings > Features tab. Enables or disables typing sounds when using the on-screen keyboard.
+APP_SETTINGS.LANGUAGE,Language,Dropdown label in Settings > Look & Feel tab. Selects the UI language.
+APP_SETTINGS.LEFT_HANDED_MOUSE,Left-handed mouse,Checkbox label in Settings > Features tab. Swaps mouse buttons for left-handed users.
+APP_SETTINGS.LEFT_HANDED_MOUSE_HELP,Use this if mouse buttons are swapped,Tooltip for the left-handed mouse checkbox.
+APP_SETTINGS.LONG_PRESS_DURATION,Long press duration,Setting in Settings > Features tab. Controls how long a press must be held to register as a long press.
+APP_SETTINGS.LOOK_AND_FEEL,Look & Feel,"Category header in Settings. Groups visual/customization settings like language, opacity, animation speed, color palettes."
+APP_SETTINGS.MISC,Miscellaneous,"Category header in Settings. Groups troubleshooting and system-level settings like capture method, input emulation, xwayland."
+APP_SETTINGS.NOTIFICATIONS_ENABLED,Enable notifications,Checkbox label in Settings > Features tab. Enables or disables system notifications within WayVR.
+APP_SETTINGS.NOTIFICATIONS_SOUND_ENABLED,Notification sounds,Checkbox label in Settings > Features tab. Enables or disables sound effects for notifications.
+APP_SETTINGS.NOT_SUPPORTED,Not supported,Label shown in the space drag/physics settings when a feature (like gravity) is not supported by the current backend.
+APP_SETTINGS.NO_SKYMAPS_FOUND,No skymaps found,"Label shown in the skymap browser when no skymaps are available locally. ""Skymap"" was previously translated as ""${DEFINITIONS.SKYMAP}""."
+APP_SETTINGS.OPAQUE_BACKGROUND,Opaque background,Checkbox label in Settings > Look & Feel tab. Makes overlay backgrounds fully opaque (no transparency).
+APP_SETTINGS.OPTION.ANCHORED_HELP,Moves with center marker. Recommended.,Tooltip for the Anchored positioning option.
+APP_SETTINGS.OPTION.FLOATING_HELP,"Moves independently, recenters.
+Easy to misplace; not recommended.",Tooltip for the Floating positioning option.
+APP_SETTINGS.OPTION.STATIC_HELP,Stays in place relative to world.,Tooltip for the Static positioning option.
+APP_SETTINGS.OPTION.AUTO,Automatic,"Dropdown option for screen capture method. Uses ScreenCopy GPU if supported, otherwise PipeWire GPU."
+APP_SETTINGS.OPTION.AUTO_HELP,"ScreenCopy GPU if supported,
+otherwise PipeWire GPU.",Tooltip for the Automatic capture method option.
+APP_SETTINGS.OPTION.EYE_ONLY,Eye laser,Dropdown option for handsfree pointer mode. Uses only eye-tracking laser (no pinch).
+APP_SETTINGS.OPTION.EYE_PINCH,Eye + pinch,Dropdown option for handsfree pointer mode. Uses eye-tracking for aiming and pinch for click.
+APP_SETTINGS.OPTION.HMD_ONLY,HMD laser,Dropdown option for handsfree pointer/alt-tab mode. Uses only the HMD forward laser.
+APP_SETTINGS.OPTION.HMD_PINCH,HMD + pinch,Dropdown option for handsfree pointer mode. Uses HMD laser for aiming and pinch for click.
+APP_SETTINGS.OPTION.NONE,None,"Dropdown option used as the no binding or disabled choice in various settings (input emulation, input capture, handsfree pointer, alt modifier, whisper model)."
+APP_SETTINGS.OPTION.NONE_INPUT_HELP,"Do not emulate mouse and keyboard.
+Will not be able to interact with screens.",Tooltip for the None input emulation option.
+APP_SETTINGS.OPTION.NONE_INPUT_CAPTURE_HELP,"Do not capture mouse and keyboard.
+Will not be able to use physical mouse or
+keyboard in apps launched inside WayVR.",Tooltip for the None input capture option.
+APP_SETTINGS.OPTION.PIPEWIRE_HELP,"Fast GPU capture,
+standard on all desktops.",Tooltip for the PipeWire GPU capture method option.
+APP_SETTINGS.OPTION.PW_FALLBACK_HELP,"Slow method with high CPU usage.
+Try in case PipeWire GPU doesn't work",Tooltip for the PipeWire CPU (fallback) capture method option.
+APP_SETTINGS.OPTION.SCREENCOPY_GPU_HELP,"Fast, no screen share popups.
+Works on: Hyprland, Niri, River, Sway",Tooltip for the ScreenCopy GPU capture method option.
+APP_SETTINGS.OPTION.SCREENCOPY_HELP,"Slow, no screen share popups.
+Works on: Hyprland, Niri, River, Sway",Tooltip for the ScreenCopy CPU capture method option.
+APP_SETTINGS.OPTION.UINPUT,Device emulation,Dropdown option for input emulation method. Uses the uinput kernel module to emulate input devices.
+APP_SETTINGS.OPTION.UINPUT_HELP,"Uses the uinput module to emulate a device.
+Known to work well on most desktops.",Tooltip for the Device emulation (uinput) option.
+APP_SETTINGS.OPTION.EVDEV_HELP,"Grab input devices for exclusive use.
+Your user must be in the input group.",Tooltip for the evdev input capture method option.
+APP_SETTINGS.OPTION.WL_VIRTUAL,Wayland virtual input,Dropdown option for input emulation method. Uses Wayland virtual pointer/keyboard protocols.
+APP_SETTINGS.OPTION.WL_VIRTUAL_HELP,"Send events to the Wayland compositor using
+zwlr_virtual_pointer and zwp_virtual_keyboard.
+Only works reliably on some desktops.
+Does NOT work on KDE, GNOME or COSMIC.",Tooltip for the Wayland virtual input option.
+APP_SETTINGS.POINTER_ACCELERATION,Mouse acceleration,Checkbox/dropdown in Settings > Features tab. Toggles adaptive mouse acceleration (on) or constant speed (off).
+APP_SETTINGS.POINTER_ACCELERATION_HELP,"On: Adaptive mouse acceleration
+Off: Constant speed",Tooltip for the mouse acceleration setting.
+APP_SETTINGS.POINTER_LERP_FACTOR,Pointer smoothing,Slider in Settings > Features tab. Controls the linear interpolation (smoothing) factor for pointer movement.
+APP_SETTINGS.POINTER_SPEED,Mouse speed,Slider in Settings > Features tab. Controls the base mouse pointer speed.
+APP_SETTINGS.REQUIRES_RESTART,Requires restart,Label shown below settings that require a software restart to take effect.
+APP_SETTINGS.RESET_PLAYSPACE,Reset playspace,"Button in Settings > Space Drag tab. Clears the stage space offset, resetting playspace position. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.RESET_PLAYSPACE_HELP,Clear the stage space offset.,"Tooltip for the Reset playspace button. ""Space"" in this context refers to ""Playspace"" which was translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.SAVE_PLAYSPACE_CENTER,Save playspace center,"Button in Settings > Space Drag tab. Saves the current playspace center as the reset target. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.SAVE_PLAYSPACE_CENTER_HELP,Use current playspace for reset playspace binding.,"Tooltip for the Save playspace center button. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.RESET_PLAYSPACE_CENTER,Reset playspace center,"Button in Settings > Space Drag tab. Clears the previously saved playspace center. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.RESET_PLAYSPACE_CENTER_HELP,Clear previously set playspace center.,"Tooltip for the Reset playspace center button. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.RESTART_SOFTWARE,Restart software,Button in Settings > Troubleshooting tab. Restarts the WayVR software to apply settings that require a restart.
+APP_SETTINGS.RESTART_SOFTWARE_HELP,Apply settings that require a restart,Tooltip for the Restart software button.
+APP_SETTINGS.ROUND_MULTIPLIER,UI Edge roundness,Slider in Settings > Look & Feel tab. Controls how rounded the corners of UI elements appear (range 0.1-5.0).
+APP_SETTINGS.SCREEN_RENDER_DOWN,Render screen at lower resolution,Checkbox in Settings > Miscellaneous tab. Renders the captured desktop screen at a lower resolution to improve performance or reduce aliasing.
+APP_SETTINGS.SCREEN_RENDER_DOWN_HELP,Helps with aliasing on high-res screens,Tooltip for the lower-resolution screen render setting.
+APP_SETTINGS.SCROLL_SPEED,Scroll speed,Slider in Settings > Features tab. Controls how fast scrolling occurs.
+APP_SETTINGS.SELECT_VARIANT,Select variant,Label/button in the color palette or variant selection UI. Allows choosing between different theme variants.
+APP_SETTINGS.SNAP_ANGLE_DEG,Window pitch & roll snap angle,Slider in Settings > Features tab. Sets the angle (in degrees) at which grabbed windows snap on pitch and roll axes.
+APP_SETTINGS.SNAP_ANGLE_DEG_HELP,Grabbed windows snap to this angle on pitch and roll axis.,Tooltip for the snap angle setting.
+APP_SETTINGS.ENABLE_WATCH,Enable watch,"Checkbox in Settings > Look & Feel tab. Enables the wrist watch UI element. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
+APP_SETTINGS.SETS_ON_WATCH,Sets on watch,"Checkbox in Settings > Look & Feel tab. Shows overlay sets on the wrist watch display. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}"". ""Set"" was previously translated as ""${DEFINITIONS.SET}""."
+APP_SETTINGS.SHOW_WELCOME_SCREEN,Show welcome screen,Checkbox in Settings > Features tab. Controls whether the welcome/tutorial screen is shown on first launch.
+APP_SETTINGS.SKYBOX,Skymap,"Category header in Settings > Skymap tab. Groups skymap-related settings. ""Skymap"" was previously translated as ""${DEFINITIONS.SKYMAP}""."
+APP_SETTINGS.SKYMAP_ALREADY_DOWNLOADED,This skymap is already downloaded. Select desired action.,"Message shown in a dialog when attempting to download a skymap that is already present locally. ""Skymap"" was previously translated as ""${DEFINITIONS.SKYMAP}""."
+APP_SETTINGS.SPACE_DRAG,Playspace,"Category header in Settings. Groups playspace drag/physics settings including reset buttons and gravity. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.SPACE_DRAG_MULTIPLIER,Space drag multiplier,"Setting in the space drag physics panel. Multiplies the force applied during space drag. ""Space"" in this context refers to ""Playspace"" which was translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.SPACE_DRAG_AFFECTS_WORLD,Leave overlays behind during space move,"Checkbox in Settings > Space Drag tab. When enabled, moving the playspace leaves overlays behind instead of moving them with the set. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}"". ""Space"" in this context refers to ""Playspace"" which was translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.SPACE_DRAG_UNLOCKED,Allow space drag on all axes,"Checkbox in Settings > Space Drag tab. Unlocks space drag to work on all axes instead of a constrained axis. ""Space"" in this context refers to ""Playspace"" which was translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.SPACE_GRAVITY_DAMPING,Damping,"Setting in the space gravity physics panel. Artificial drag to slow movement (0.1 = high drag, 1.0 = no drag)."
+APP_SETTINGS.SPACE_GRAVITY_DAMPING_HELP,"Artificial drag to slow down movement. 0.1 - high drag, 1.0 - no drag",Tooltip for the inertial damping setting.
+APP_SETTINGS.SPACE_GRAVITY_FLING_STRENGTH,Fling strength,Setting in the space gravity physics panel. Intensity multiplier for the gravitational launch force after space-drag.
+APP_SETTINGS.SPACE_GRAVITY_FLING_STRENGTH_HELP,"Intensity multiplier of gravitational launch force after space-drag.
+0.0 - no movement at all, 2.0 - double intensity","Tooltip for the fling strength setting. ""Space"" in this context refers to ""Playspace"" which was translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.SPACE_GRAVITY_GRAVITY,Gravity,Setting in the space gravity physics panel. Amount of downward force (0.0 = no gravity).
+APP_SETTINGS.SPACE_GRAVITY_GRAVITY_HELP,Amount of downwards force. 0.0 - no gravity,Tooltip for the gravity setting.
+APP_SETTINGS.SPACE_GRAVITY_GROUND_FRICTION,Ground friction,"Setting in the space gravity physics panel. Friction when touching the ground (0.0 = ice-like, 1.0 = rough)."
+APP_SETTINGS.SPACE_GRAVITY_GROUND_FRICTION_HELP,"Amount of friction slowing you down if you're touching the ground.
+0.0 - no friction (just like on ice), 1.0 - rough surface",Tooltip for the ground friction setting.
+APP_SETTINGS.SPACE_GRAVITY_FLOOR_HEIGHT,Floor height,Setting in the space gravity physics panel. The Y position where the virtual floor is.
+APP_SETTINGS.SPACE_GRAVITY_FLOOR_HEIGHT_HELP,The Y position where the floor is. Gravity stops when you reach this height.,Tooltip for the floor height setting.
+APP_SETTINGS.SPACE_ROTATE_UNLOCKED,Allow space rotate on all axes,"Checkbox in Settings > Space Drag tab. Unlocks space rotate to work on all axes. ""Space"" in this context refers to ""Playspace"" which was translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.TROUBLESHOOTING,Troubleshooting,"Category header in Settings. Groups diagnostic/reset actions like clearing tokens, wiping config, and restarting."
+APP_SETTINGS.UI_GRADIENT_INTENSITY,UI Gradient intensity,Slider in Settings > Look & Feel tab. Controls the intensity of gradient effects on the UI (range 0.0-1.0).
+APP_SETTINGS.UPRIGHT_SCREEN_FIX,Upright screen fix,Checkbox in Settings > Miscellaneous tab. Fixes upright screen orientation on some desktop environments.
+APP_SETTINGS.UPRIGHT_SCREEN_FIX_HELP,Fixes upright screens on some desktops,Tooltip for the upright screen fix checkbox.
+APP_SETTINGS.USE_PASSTHROUGH,Enable passthrough,Checkbox in Settings > Skybox tab. Allows camera passthrough mode if the XR runtime supports it.
+APP_SETTINGS.USE_PASSTHROUGH_HELP,Allow passthrough if the XR runtime supports it,Tooltip for the passthrough checkbox.
+APP_SETTINGS.USE_SKYBOX,Show skymap,"Checkbox in Settings > Skybox tab. Shows a skybox when there's no scene app or passthrough active. ""Skymap"" was previously translated as ""${DEFINITIONS.SKYMAP}""."
+APP_SETTINGS.USE_SKYBOX_HELP,Show a skymap if there's no scene app or passthrough,"Tooltip for the enable skybox checkbox. ""Skymap"" was previously translated as ""${DEFINITIONS.SKYMAP}""."
+APP_SETTINGS.WATCH_VIEW_ANGLE,Watch view angles,"Setting in Settings > Look & Feel tab. Controls the view angles at which the wrist watch fades in/out. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
+APP_SETTINGS.WATCH_VIEW_ANGLE_HELP,Control how the watch fades away,"Tooltip for the watch view angles setting. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
+APP_SETTINGS.WHISPER.NEED_TO_DOWNLOAD_MODEL,"The selected model needs to be downloaded.
+Download it right now?",Message shown in a dialog box when the user selects a Whisper model that hasn't been downloaded yet.
+APP_SETTINGS.WHISPER.REMOVE_UNUSED_MODELS,"You are turning off the speech-to-text feature.
+Would you like to remove downloaded Whisper models to free up space?",Message shown in a dialog box when the user disables the whisper feature.
+APP_SETTINGS.WHISPER_MODEL,Speech-to-text model,Dropdown label in Settings > Features tab. Selects which Whisper model to use for speech-to-text.
+APP_SETTINGS.WHISPER_MODEL_HELP,"Whisper model to use.
+Larger models produce more accurate
+results, but consume more VRAM.",Tooltip for the speech-to-text model dropdown.
+APP_SETTINGS.GRID_OPACITY,Floor grid opacity,Slider in Settings > Skybox tab. Controls the opacity of the floor grid when skybox is enabled.
+APP_SETTINGS.GRID_OPACITY_HELP,Opacity of the floor grid when the skymap is enabled,"Tooltip for the floor grid opacity slider. ""Skymap"" was previously translated as ""${DEFINITIONS.SKYMAP}""."
+APP_SETTINGS.XWAYLAND_BY_DEFAULT,Run apps in Compatibility mode by default,Checkbox in Settings > Miscellaneous tab. Launches apps in Cage/compatibility mode by default.
+APP_SETTINGS.SAVE,Save,Button label in the controller bindings editor popup. Saves the current bindings configuration.
+APP_SETTINGS.CANCEL,Cancel,Button label in the controller bindings editor popup and in whisper model dialogs. Cancels/dismisses the dialog without saving.
+APPLICATION_LAUNCHER,Application launcher,App launcher configuration popup title - appears as the label for the app launch/options dialog.
+APPLICATION_STARTED,Application started,Toast notification shown after a successful app launch.
+APPLICATIONS,Applications,Tab label in the dashboard sidebar for the Apps tab.
+AUDIO.AUTO_SWITCH_TO_VR_AUDIO,Auto-switch to VR audio,Tooltip on the auto-switch audio button in the audio settings popup.
+AUDIO.CARDS,Cards,Button label in the audio settings popup for selecting audio card profiles.
+AUDIO.FAILED_TO_SWITCH_MICROPHONE,Failed to switch microphone,Error toast shown when switching to a VR microphone fails.
+AUDIO.MICROPHONE_SET_SUCCESSFULLY,Microphone set successfully,Toast notification after successfully switching the microphone.
+AUDIO.MICROPHONES,Microphones,Button label in the audio settings popup for selecting microphone sources.
+AUDIO.NO_VR_MICROPHONE_SWITCH_MANUALLY,No VR microphone found. Switch it manually.,Toast shown when no VR microphone is detected and manual switching is needed.
+AUDIO.NO_VR_SPEAKERS_FOUND_SWITCH_MANUALLY,No VR speakers found. Switch them manually.,Toast shown when no VR speakers are detected after auto-switch.
+AUDIO.SELECT_AUDIO_CARD_PROFILE,Select audio card profile,Bold label in the audio settings popup for choosing an audio card profile.
+AUDIO.SETTINGS,Audio settings,Window title for the audio settings popup opened from the dashboard.
+AUDIO.SPEAKERS,Speakers,Button label in the audio settings popup for selecting speaker sinks.
+AUDIO.SPEAKERS_SET_SUCCESSFULLY,Speakers set successfully,Toast notification after successfully switching speakers.
+AUDIO.VOLUME,Volume,Tooltip on the audio volume button in the dashboard.
+CLOSE_WINDOW,Close window,"Close button label used in dialog boxes, download file popup, and window options."
+CREATION_DATE,Creation date,Column label in the remote skymap downloader showing file metadata.
+DEBUG_INFO,Debug info,Tab name in the Monado runtime section of the dashboard.
+DISPLAY_BRIGHTNESS,Display brightness,Label for the display brightness setting in the Monado general settings tab.
+DONATE.SUPPORT_US,Support us,Button tooltip on the home screen donate button.
+DONATE.DESCRIPTION,"We're a small team of 2 developers building WayVR in our free time. If you enjoy using this software, please consider supporting us - every donation helps us keep going.",Description text on the donate tab explaining the project.
+DONATE.THANK_YOU_WAYVR,Thank you from the WayVR Team!,Thank you message displayed on the donate tab.
+DONATE.BUTTON_TOOLTIP,Donate via Open Collective,Tooltip on the donate button on the donate tab.
+DONATE.CURRENT_SUPPORTERS,Current Supporters,Section header on the donate tab listing supporters.
+DOWNLOAD,Download,Button in the Whisper model download dialog to confirm downloading a model.
+DOWNLOADER,Downloader,Window title for the file download popup.
+WELCOME.ALL_SET,You're all set!,Main heading on the final welcome/tutorial page.
+WELCOME.BASICS,These basics will allow you to start using WayVR with ease.,Description text on the final welcome page under the You are all set heading.
+WELCOME.CENTER_MARKER,Center marker is what will appear in front of you when recentering. Place overlays around it!,"Description of the center marker on the moving your set tutorial page. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}""."
+WELCOME.DOUBLE_PRESS_TO_TOGGLE,"Double-press B (on Index) or Y (on Meta) to show, recenter or hide your set. Try it now.","Instruction text on the working set tutorial page explaining the double-press gesture. ""Set"" was previously translated as ""${DEFINITIONS.SET}""."
+WELCOME.FEATURES_DOCUMENTATION,"There are many other features worth customizing. For more information, check the documentation at",Text on the final welcome page linking to documentation.
+WELCOME.FINISH_TUTORIAL,Finish tutorial,Button text on the final welcome page to complete the tutorial.
+WELCOME.GRAB_BOTH_HANDS,Grab it with both hands if you want to move a specific overlay in your set.,Instruction text on the moving your set tutorial page for two-hand grab.
+WELCOME.GRAB_ONE_HAND,Grab it with one hand to move your set.,Instruction text on the moving your set tutorial page for one-hand grab.
+WELCOME.GREETING,Hi there!,Greeting label on the first welcome page.
+WELCOME.GUIDE_INTRO,Let us guide you through your first steps.,Intro text on the first welcome page below the greeting.
+WELCOME.LASER_COLORS,Laser Colors,Page title on the laser colors tutorial page.
+WELCOME.LASER_FUNCTIONALITY,"Much of the functionality in WayVR depends on what color of laser is used to interact with a UI element. You don't need to press these buttons, just touch them!",Description text on the laser colors tutorial page.
+WELCOME.LAST_PAGE_INFO,This tutorial will stop showing up once you get to the last page.,Info text on the first welcome page noting the tutorial is near the end.
+WELCOME.LOOK_AT_LEFT_WRIST,Look at your left wrist. That's your watch.,"Instruction text on the watch tutorial page. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
+WELCOME.MIDDLE_CLICK_MODE_PURPLE_LASER,?Middle-click Mode: Purple laser,Laser mode label on the laser colors tutorial page.
+WELCOME.MOVING_YOUR_SET,Moving your set,Page title on the moving your set tutorial page.
+WELCOME.NEXT_BUTTON,"Press ""Next"" button below to get started.",Label on the first welcome page pointing to the next button.
+WELCOME.REGULAR_MODE_BLUE_LASER,?Regular Mode: Blue laser,Laser mode label on the laser colors tutorial page.
+WELCOME.REPOSITION_THIS_WINDOW_BY_GRABBING,Reposition this window using your controller's grip action.,Instruction text on the first welcome page about window repositioning.
+WELCOME.RIGHT_CLICK_MODE_ORANGE_LASER,?Right-click Mode: Orange laser,Laser mode label on the laser colors tutorial page.
+WELCOME.THANKS_FOR_INSTALLING,Thank you for installing WayVR!,Thanks text on the first welcome page below the greeting.
+WELCOME.WATCH,Watch,"Page title on the watch/tutorial page. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
+WELCOME.WORKING_SET,Working Set,"Page title on the working set tutorial page. ""Set"" was previously translated as ""${DEFINITIONS.SET}"". Working as in ""Current""."
+DOWNLOAD_AGAIN,Download again,Button in the skymap already downloaded dialog to re-download a skymap.
+DOWNLOADING_FILE,Downloading file...,Status label in the download file popup showing download progress.
+FAILED_TO_LAUNCH_APPLICATION,Failed to launch a application:,Error prefix in the toast shown when app launch fails.
+GAME_LAUNCHED,Game launched,Toast notification shown after successfully launching a game via Steam.
+GAME_LIST.NO_GAMES_FOUND,No games found,Empty state text shown in the game list when no games are installed.
+GAME_LIST.RUNNING_GAMES_LIST,List of running games,Section label in the running games list view.
+GAMES,Games,Tab label in the dashboard sidebar for the Games tab.
+GENERAL_SETTINGS,General settings,Tab name and group box title in the Monado runtime settings.
+GETTING_STARTED,Getting started,Tab label in the dashboard sidebar for the Welcome/tutorial tab.
+HEIGHT,Height,Label for the height dimension field in the add display popup.
+HELLO,Hello!,Fallback greeting on the home screen when username is hidden.
+HELLO_USER,"Hello, {USER}!",Greeting on the home screen with the user name substituted in.
+HIDE,Hide,Used in the double-press tutorial context for hiding the set.
+HOME_SCREEN,Home,Tab label in the dashboard sidebar for the Home tab.
+MODIFICATION_DATE,Modification date,Column label in the remote skymap downloader showing file metadata.
+MONADO_RUNTIME,Monado runtime,Tab label in the dashboard sidebar for the Monado runtime tab.
+LOADING,Loading...,Label in the loading spinner template used across the UI.
+POPUP_ADD_DISPLAY.RESOLUTION,Resolution,Label for the resolution field in the add display popup.
+PROCESS.FORCE_KILL,Force-kill,Tooltip on the kill button in the running games list.
+PROCESS.STOP,Stop,Tooltip on the stop button in the running games list.
+PROCESS_LIST,Process list,Tab name and group box title in the Monado runtime process list section.
+REFRESH,Refresh,Tooltip on the refresh button in the running games list.
+REMOVE,Remove,Button label in the skymap already downloaded dialog and Whisper cleanup dialog to remove files.
+APPLY,Apply,Button label in the skymap already downloaded dialog to apply the selected skymap.
+RELOAD_FROM_DISK,Reload from disk,Tooltip on the reload button in the skymap list view.
+SETTINGS,Settings,Tab label in the dashboard sidebar for the Settings tab. Previously translated as ${DEFINITIONS.SETT}
+SHOW,Show,Used in the double-press tutorial context for showing the set.
+TARGET_PATH,Target path,Label for the target path display in the download file popup.
+TERMINATE_PROCESS,Terminate process,Button label in the window options bar to kill a process.
+VERSION,Version,Label for the version display in the remote skymap downloader.
+WIDTH,Width,Label for the width dimension field in the add display popup.
+PINNED_APPS,Pinned applications,"Section header label for the pinned apps list on the Apps tab, a.k.a. ""Favourites"""
+SAVED_TO_FAVOURITES,Saved to pinned apps,"Toast notification shown after pinning an app to favourites. ""Pinned apps"" was previously translated as ""${PINNED_APPS}""."
+ADD_TO_FAVOURITES,Add to pinned apps,"Label on the pin button in the app launcher popup that is used to add to favourites.. ""Pinned apps"" was previously translated as ""${PINNED_APPS}""."
+ADD_TO_FAVOURITES_HINT,Save preset and pin it to the app drawer,"Tooltip on the add to favourites button in the app launcher popup. ""Pinned apps"" was previously translated as ""${PINNED_APPS}""."
+REMOVE_FROM_FAVOURITES,Remove from pinned apps,"Label on the unpin section in the app launcher popup. ""Pinned apps"" was previously translated as ""${PINNED_APPS}""."
+EMPTY,Empty,Label shown in the pinned apps section when there are no pinned apps.

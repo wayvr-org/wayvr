@@ -88,7 +88,8 @@
 		},
 		"RELOAD_FROM_DISK": "从磁盘重新加载 XML",
 		"RESET_POSITION": "重置位置",
-		"TOGGLE_VISIBILITY": "切换显示状态"
+		"TOGGLE_VISIBILITY": "切换显示状态",
+		"ADD_PASSTHRU": "添加新的透视窗口"
 	},
 	"DEFAULT": "默认",
 	"DISABLED": "禁用",

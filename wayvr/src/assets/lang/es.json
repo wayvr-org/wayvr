@@ -88,7 +88,8 @@
 		},
 		"RELOAD_FROM_DISK": "Recargar XML desde el disco",
 		"RESET_POSITION": "Reiniciar posición",
-		"TOGGLE_VISIBILITY": "Alternar visibilidad"
+		"TOGGLE_VISIBILITY": "Alternar visibilidad",
+		"ADD_PASSTHRU": "Añadir nueva ventana de passthrough"
 	},
 	"DEFAULT": "Por defecto",
 	"DISABLED": "Desactivado",

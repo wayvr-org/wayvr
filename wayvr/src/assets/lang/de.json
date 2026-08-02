@@ -88,7 +88,8 @@
 		},
 		"RELOAD_FROM_DISK": "XML von Festplatte neu laden",
 		"RESET_POSITION": "Position zurücksetzen",
-		"TOGGLE_VISIBILITY": "Sichtbarkeit umschalten"
+		"TOGGLE_VISIBILITY": "Sichtbarkeit umschalten",
+		"ADD_PASSTHRU": "Neues Passthrough-Fenster hinzufügen"
 	},
 	"DEFAULT": "Standard",
 	"DISABLED": "Deaktiviert",

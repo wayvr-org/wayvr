@@ -99,5 +99,20 @@
 		"INITIAL_TEXT": "Press and hold the mic button to start transcribing...",
 		"INIT_ERROR": "Error while starting Whisper engine",
 		"ENTER_KEY": "Enter key"
+	},
+	"DEFINITIONS": {
+		"ANCHORED": "Anchored",
+		"FLOATING": "Floating",
+		"STATIC": "Static",
+		"SET": "Set",
+		"WATCH": "Watch",
+		"DASHBOARD": "Dashboard",
+		"EDIT_MODE": "Edit Mode",
+		"MIRROR": "Mirror",
+		"SETTINGS": "Settings",
+		"KEYBOARD": "Keyboard",
+		"TASKBAR": "Taskbar",
+		"FEATURES": "Features",
+		"OVERLAY": "Overlay"
 	}
 }

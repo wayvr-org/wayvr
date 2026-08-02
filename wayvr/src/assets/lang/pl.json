@@ -88,7 +88,8 @@
 		},
 		"RELOAD_FROM_DISK": "Przeładuj XML z dysku",
 		"RESET_POSITION": "Resetuj pozycję",
-		"TOGGLE_VISIBILITY": "Przełącz widoczność"
+		"TOGGLE_VISIBILITY": "Przełącz widoczność",
+		"ADD_PASSTHRU": "Dodaj wycięcie passthrough"
 	},
 	"DEFAULT": "Domyślny",
 	"DISABLED": "Wyłączony",
