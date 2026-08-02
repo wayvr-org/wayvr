@@ -161,7 +161,7 @@ impl OverlayWindowConfig {
                 (app.input_state.pointers[hand as usize].pose, lerp)
             }
             Positioning::Anchored => (app.anchor, 1.0),
-            _ => return,
+            Positioning::Static | Positioning::Floating => (Affine3A::IDENTITY, 1.0), // STAGE space
         };
 
         let target_transform = parent_transform * cur_transform;
