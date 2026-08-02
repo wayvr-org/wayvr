@@ -155,16 +155,15 @@ impl OverlayWindowConfig {
             .unwrap_or(self.default_state.transform);
         let scale = scalar_scale(&cur_transform);
 
-        let (parent_transform, lerp) = match state.positioning {
-            Positioning::FollowHead { lerp } => (app.input_state.hmd, lerp),
-            Positioning::FollowHand { hand, lerp } => {
-                (app.input_state.pointers[hand as usize].pose, lerp)
-            }
-            Positioning::Anchored => (app.anchor, 1.0),
-            Positioning::Static | Positioning::Floating => (Affine3A::IDENTITY, 1.0), // STAGE space
+        let (target_transform, lerp) = match state.positioning {
+            Positioning::FollowHead { lerp } => (app.input_state.hmd * cur_transform, lerp),
+            Positioning::FollowHand { hand, lerp } => (
+                app.input_state.pointers[hand as usize].pose * cur_transform,
+                lerp,
+            ),
+            Positioning::Anchored => (app.anchor * cur_transform, 1.0),
+            Positioning::Static | Positioning::Floating => (state.transform, 1.0), // STAGE space
         };
-
-        let target_transform = parent_transform * cur_transform;
 
         state.transform = match lerp {
             1.0 => target_transform,
