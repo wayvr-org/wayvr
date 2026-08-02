@@ -85,7 +85,12 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
         log::warn!("Missing XR_KHR_composition_layer_color_scale_bias extension.");
     }
 
-    let xr_extension = b"XR_MNDX_system_buttons".to_vec();
+    let xr_extension = b"XR_MNDX_system_buttons\0".to_vec();
+    if available_extensions.other.contains(&xr_extension) {
+        enabled_extensions.other.push(xr_extension);
+    }
+
+    let xr_extension = b"XR_VALVE_frame_controller_interaction\0".to_vec();
     if available_extensions.other.contains(&xr_extension) {
         enabled_extensions.other.push(xr_extension);
     }
