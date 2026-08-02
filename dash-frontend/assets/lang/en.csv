@@ -288,12 +288,12 @@ WELCOME.LASER_COLORS,Laser Colors,Page title on the laser colors tutorial page.
 WELCOME.LASER_FUNCTIONALITY,"Much of the functionality in WayVR depends on what color of laser is used to interact with a UI element. You don't need to press these buttons, just touch them!",Description text on the laser colors tutorial page.
 WELCOME.LAST_PAGE_INFO,This tutorial will stop showing up once you get to the last page.,Info text on the first welcome page noting the tutorial is near the end.
 WELCOME.LOOK_AT_LEFT_WRIST,Look at your left wrist. That's your watch.,"Instruction text on the watch tutorial page. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
-WELCOME.MIDDLE_CLICK_MODE_PURPLE_LASER,?Middle-click Mode: Purple laser,Laser mode label on the laser colors tutorial page.
+WELCOME.MIDDLE_CLICK_MODE_PURPLE_LASER, Middle-click Mode: Purple laser,Laser mode label on the laser colors tutorial page.
 WELCOME.MOVING_YOUR_SET,Moving your set,Page title on the moving your set tutorial page.
 WELCOME.NEXT_BUTTON,"Press ""Next"" button below to get started.",Label on the first welcome page pointing to the next button.
-WELCOME.REGULAR_MODE_BLUE_LASER,?Regular Mode: Blue laser,Laser mode label on the laser colors tutorial page.
+WELCOME.REGULAR_MODE_BLUE_LASER,Regular Mode: Blue laser,Laser mode label on the laser colors tutorial page.
 WELCOME.REPOSITION_THIS_WINDOW_BY_GRABBING,Reposition this window using your controller's grip action.,Instruction text on the first welcome page about window repositioning.
-WELCOME.RIGHT_CLICK_MODE_ORANGE_LASER,?Right-click Mode: Orange laser,Laser mode label on the laser colors tutorial page.
+WELCOME.RIGHT_CLICK_MODE_ORANGE_LASER,Right-click Mode: Orange laser,Laser mode label on the laser colors tutorial page.
 WELCOME.THANKS_FOR_INSTALLING,Thank you for installing WayVR!,Thanks text on the first welcome page below the greeting.
 WELCOME.WATCH,Watch,"Page title on the watch/tutorial page. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
 WELCOME.WORKING_SET,Working Set,"Page title on the working set tutorial page. ""Set"" was previously translated as ""${DEFINITIONS.SET}"". Working as in ""Current""."
