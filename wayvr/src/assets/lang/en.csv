@@ -106,7 +106,7 @@ GRAB.GRABBING_WATCH,"To swap hands, move the watch in front and grab it with the
 GRAB.UNRESTRICTED_MOVEMENT,Unrestricted movement,"Option that allows the user to move and rotate this window freely, in a raw manner, without assistance such as angle snapping."
 SCREENCAST.PENDING,Please wait...,Title saying that the operation is not yet completed.
 SCREENCAST.QUEUED,Waiting for a different overlay's screen cast pop-up to be approved.,Instructions asking the user to pay attention to a different screen cast pop-up. “Overlay” was previously translated as “${DEFINITIONS.OVERLAY}”
-SCREENCAST.WAITING_FOR_USER_DESC,"Check your dekstop for a screen cast pop-up.
+SCREENCAST.WAITING_FOR_USER_DESC,"Check your desktop for a screen cast pop-up.
 Select the following:",Instructions to the user.
 SCREENCAST.WAITING_FOR_USER,Check your desktop for a screen cast pop-up.,Instructions to the user.
 SCREENCAST.FAIL,Could not initialize screen cast source.,Error message on a window that normally displays screen casts.

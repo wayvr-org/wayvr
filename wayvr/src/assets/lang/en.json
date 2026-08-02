@@ -56,7 +56,7 @@
 	"SCREENCAST": {
 		"PENDING": "Please wait...",
 		"QUEUED": "Waiting for a different overlay's screen cast pop-up to be approved.",
-		"WAITING_FOR_USER_DESC": "Check your dekstop for a screen cast pop-up.\nSelect the following:",
+		"WAITING_FOR_USER_DESC": "Check your desktop for a screen cast pop-up.\nSelect the following:",
 		"WAITING_FOR_USER": "Check your desktop for a screen cast pop-up.",
 		"FAIL": "Could not initialize screen cast source."
 	},
