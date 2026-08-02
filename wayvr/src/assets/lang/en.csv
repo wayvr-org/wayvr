@@ -1,0 +1,145 @@
+DEFINITIONS.ANCHORED,Anchored,A movement option that makes this window move together with the rest of the workspace. Emphasize the “moving together” part as opposed to “not moving at all”.
+DEFINITIONS.FLOATING,Floating,A movement option that lets this window float freely.
+DEFINITIONS.STATIC,Static,"A movement option that keeps this window in place relative to the world origin. Emphasize the “not moving at all” part, as opposed to the “moving together” option which was previously translated as ${DEFINITIONS.ANCHORED}."
+DEFINITIONS.SET,Set,A desktop workspace consisting of multiple windows.
+DEFINITIONS.WATCH,Watch,Name of the small utility window that hovers around the user’s wrist.
+DEFINITIONS.DASHBOARD,Dashboard,Name of the window that acts as the main menu / control panel of the application.
+DEFINITIONS.EDIT_MODE,Edit Mode,Name of the mode that allows the user to make various tweaks to the current workspace and its windows.
+DEFINITIONS.MIRROR,Mirror,A type of virtual window that displays a desktop window using screen mirroring.
+DEFINITIONS.SETTINGS,Settings,The title of the settings panel.
+DEFINITIONS.KEYBOARD,Keyboard,Name of the virtual keyboard
+DEFINITIONS.TASKBAR,Taskbar,"A long panel showing currently active programs & windows, workspaces and a clock."
+DEFINITIONS.FEATURES,Features,The section title of the section panel that deals with software features.
+DEFINITIONS.OVERLAY,Overlay,"An overlay window inside VR, similar to a “desktop window”. Consider it a technical term."
+ANCHOR.CENTER,Center,A marker on the floor describing where the center of the area is
+BAR.ADD_MIRROR,Add a new mirror overlay,"Button to add a mirror overlay window. “Mirror” was previously translated as “${DEFINITIONS.MIRROR}”, “Overlay” was previously translated as “${DEFINITIONS.OVERLAY}”"
+BAR.ADD_NEW_SET,Add new set,Button to add a new set. “Set” was previously translated as “${DEFINITIONS.SET}”
+BAR.CLOSE_APP,Close app,Button to quit the app
+BAR.CLOSE_OVERLAY,Close overlay,Button to close an overlay window. “Overlay” was previously translated as “{$DEFINITIONS.OVERLAY}”
+BAR.DELETE_CURRENT_SET,Delete current set,Button to delete the currently selected set. “Set” was previously translated as “${DEFINITIONS.SET}”
+BAR.EDIT_MODE_TOGGLE,Toggle edit mode,Button to toggle Edit mode. “Edit mode” was previously translated as “${DEFINITIONS.EDIT_MODE}”
+BAR.FORCE_CLOSE_APP,Force close app,Button to terminate an application from the process manager
+BAR.HANDSFREE.EYE_ONLY,Eye laser,Option to aim with the user’s eye gaze (eye tracking)
+BAR.HANDSFREE.EYE_TRACKING,Eye + pinch,Option to aim with the user’s eye gaze (eye tracking) and input using pinch gestures
+BAR.HANDSFREE.HMD,HMD + pinch,Option to aim with the HMD and input using pinch gestures
+BAR.HANDSFREE.HMD_ONLY,HMD laser,Option to aim with the HMD
+BAR.HANDSFREE.NONE,Off,Option to not use this feature at all
+BAR.HANDSFREE.TITLE,Hands-free mode,"Title of a mode that lets the user interact with the software without controllers, keyboard or mouse."
+BAR.RELOAD_FROM_DISK,Reload XML from disk,Button to reload the XML configuration file from disk
+BAR.RESET_POSITION,Reset position,Button to reset the selected object to its default position and orientation
+BAR.TOGGLE_VISIBILITY,Toggle visibility,Button to toggle the visibility of this object
+DEFAULT,Default,Default value used when no custom setting is applied
+DISABLED,Disabled,Feature or setting is turned off
+DONE,Done,Title of a pop-up dialog explaining that the requested action has completed successfully.
+EDIT_MODE.ADJUST_CURVATURE,Adjust curvature,Tooltip on a settings page to adjust screen panel curvature
+EDIT_MODE.ALIGN_TO_HMD,Align to HMD,Checkbox for a window to always rotate (billboard) towards the viewer
+EDIT_MODE.ALPHA_BLEND_MODE,Alpha blend mode,Blending mode for window transparency
+EDIT_MODE.ANGLE_FADE,Angle fade,Fade based on viewing angle
+EDIT_MODE.ANGLE_FADE_HELP,Fade when not facing HMD,Automatically fades the window when it is not facing the HMD
+EDIT_MODE.BLENDING_ADDITIVE,Additive blending,Additive blending mode for overlays
+EDIT_MODE.BLOCK_INPUT,Block game input,Block games form receiving controller input while pointing at the window
+EDIT_MODE.CURVATURE,Curvature,Adjust the curvature of the window panel
+EDIT_MODE.DELETE,Long press to remove from current set,Button tooltip to remove this window from the current set. “Set” was previously translated as “${DEFINITIONS.SET}”
+EDIT_MODE.DISABLE_GRAB,Disable grab,Tooltip on a button that disable grabbing/movement on this this window
+EDIT_MODE.GLOBAL,Always visible,Tooltip on a checkbox that makes this window always visible regardless of the active set/workspace
+EDIT_MODE.HINT_POINT_WINDOW,"Point at a window to change its parameters.
+Once done, leave edit mode using the button on the right.",Instructions displayed to the user. “Edit mode” was previously translated as “${DEFINITIONS.EDIT_MODE}”
+EDIT_MODE.INTERPOLATION,Interpolation,Option for smoothing window movement
+EDIT_MODE.KEYBOARD,Keyboard,Button to toggle the keyboard. “Keyboard” was previously translated as “${DEFINITIONS.KEYBOARD}”
+EDIT_MODE.LEAVE,Leave edit mode,Option to exit edit mode. “Edit mode” was previously translated as “${DEFINITIONS.EDIT_MODE}”
+EDIT_MODE.LOCK_INTERACTION,Lock interaction,Option to disable pointer input on this window. The pointer laser will pass through the window completely.
+EDIT_MODE.MOUSE.FLIP180,Flipped 180°,Option to mirror the mouse movement horizontally and rotate 180 degrees. Emphasize the part about mirroring / flipping (not just rotation). Keep the translation as short as possible.
+EDIT_MODE.MOUSE.FLIP270,Flipped 270°,Option to mirror the mouse movement horizontally and rotate 270 degrees. Emphasize the part about mirroring / flipping (not just rotation). Keep the translation as short as possible.
+EDIT_MODE.MOUSE.FLIP90,Flipped 90°,Option to mirror the mouse movement horizontally and rotate 90 degrees. Emphasize the part about mirroring / flipping (not just rotation). Keep the translation as short as possible.
+EDIT_MODE.MOUSE.FLIPPED,Flipped,Option to mirror the mouse movement horizontally. Keep the translation as short as possible.
+EDIT_MODE.MOUSE.NORMAL,Normal,Option to select default mouse movement behavior. Keep the translation as short as possible.
+EDIT_MODE.MOUSE.ROTATE180,Rotated 180°,Option to rotate mouse movement by 180 degrees. Emphasize the part about rotation (no mirroring or flipping). Keep the translation as short as possible.
+EDIT_MODE.MOUSE.ROTATE270,Rotated 270°,Option to rotate mouse movement by 270 degrees. Emphasize the part about rotation (no mirroring or flipping). Keep the translation as short as possible.
+EDIT_MODE.MOUSE.ROTATE90,Rotated 90°,Option to rotate mouse movement by 90 degrees. Emphasize the part about rotation (no mirroring or flipping). Keep the translation as short as possible.
+EDIT_MODE.MOUSE.TITLE,Mouse fixes,Title to adjust quirks in order to get desired mouse movement behavior
+EDIT_MODE.MOUSE.WRONG_SCREEN_SELECTION_HELP,"If the cursor moves on a completely different screen,
+the screens were likely selected wrong. See readme.",Tooltip to explain possible user error.
+EDIT_MODE.MOVE_PRESS_AND_DRAG,Move (press & drag),Tooltip hinting to move the window by pressing and dragging with the pointer
+EDIT_MODE.OPACITY,Opacity,Title. Adjust transparency of the window
+EDIT_MODE.POS_ANCHORED,Anchored: Moves together with set. Default.,"Tooltip for a an option that changes movement/positioning behavior. “Anchored” was previously translated as “${DEFINITIONS.ANCHORED}”, “Set” was previously translated as “${DEFINITIONS.SET}”"
+EDIT_MODE.POS_FLOATING,"Floating: Moves independently, recenters when shown.",Tooltip for a an option that changes movement/positioning behavior. “Floating” was previously translated as “${DEFINITIONS.FLOATING}”
+EDIT_MODE.POS_HAND_L,Follow the left hand.,Tooltip for a an option that changes movement/positioning behavior.
+EDIT_MODE.POS_HAND_R,Follow the right hand.,Tooltip for a an option that changes movement/positioning behavior.
+EDIT_MODE.POS_HMD,Follow the HMD.,Tooltip for a an option that changes movement/positioning behavior.
+EDIT_MODE.POS_STATIC,"Static: Not part of any set, no recenter.","Tooltip for a an option that changes movement/positioning behavior. “Static” was previously translated as “${DEFINITIONS.STATIC}”, “Set” was previously translated as “${DEFINITIONS.SET}”"
+EDIT_MODE.POSITIONING,Positioning,Title for positioning modes for the window
+EDIT_MODE.RESIZE_PRESS_AND_DRAG,Resize (press & drag),Tooltip on the resize button; resize overlay by pressing and dragging
+EDIT_MODE.RESIZE_CORNER,Drag to resize,Tooltip when user is hovering the resize grip of a window
+EDIT_MODE.STEREO_3D_MODE.ADJUST_MOUSE,Adjust mouse,Checkbox to adjust mouse movement for 3D mode
+EDIT_MODE.STEREO_3D_MODE.FULL_FRAME,Full 3D,Checkbox to use full 3D frame
+EDIT_MODE.STEREO_3D_MODE.FULL_FRAME_BAT,Full-BAT,Checkbox to use full frame BAT (bottom-left / top-right) 3D format
+EDIT_MODE.STEREO_3D_MODE.FULL_FRAME_SBS,Full-SBS,Checkbox to use full frame SBS (side-by-side) 3D format
+EDIT_MODE.STEREO_3D_MODE.FULL_FRAME_TAB,Full-TAB,Checkbox to use full frame TAB (top-bottom / left-right) 3D format
+EDIT_MODE.STEREO_3D_MODE.SPLIT_BOTTOM_TOP,BOTTOM→TOP,"Side-by-side 3D mode selection. Bottom half shows to left eye, top half to right eye"
+EDIT_MODE.STEREO_3D_MODE.SPLIT_LEFT_RIGHT,LEFT→RIGHT,"Side-by-side 3D mode selection. Left half shows to left eye, right half to right eye"
+EDIT_MODE.STEREO_3D_MODE.SPLIT_RIGHT_LEFT,RIGHT→LEFT,"Side-by-side 3D mode selection. Right half shows to left eye, left half to right eye"
+EDIT_MODE.STEREO_3D_MODE.SPLIT_TOP_BOTTOM,TOP→BOTTOM,"Side-by-side 3D mode selection. Top half shows to left eye, bottom half to right eye"
+EDIT_MODE.STEREO_3D_MODE.TITLE,3D Stereo Mode,Title for “Stereo 3D display mode” section
+ALTTAB.RELEASE_TO_FOCUS,Aim at an app and release Super to focus that app.,Instructions on how to control the task switcher.
+ALTTAB.WHILE_AIMING,While aiming,Title of a section of key bindings that can be activated while aiming the laser.
+ALTTAB.CLICK,VR pointer click,Key binding action that mimics a click with the VR laser pointer.
+ALTTAB.GRABALL,Move entire set,Key binding action to grab and move the entire set. “Set” was previously translated as “${DEFINITIONS.SET}”
+ALTTAB.GRAB,Move individual overlay,Key binding action to grab and move a single overlay. “Overlay” was previously translated as “{$DEFINITIONS.OVERLAY}”
+ALTTAB.DASH,Toggle dashboard,Key binding action that toggles the dashboard. “Dashboard” was previously translated as “${DEFINITIONS.DASHBOARD}”
+ALTTAB.EDIT,Toggle edit mode,Key binding action that toggles edit mode. “Edit mode” was previously translated as “${DEFINITIONS.EDIT_MODE}”
+ALTTAB.SET,Switch set,Key binding action to switch between sets. “Set” was previously translated as “${DEFINITIONS.SET}”
+ALTTAB.RECENTER,Show/hide/recenter,"Key binding action to show, hide, or recenter the current set. “Set” was previously translated as “${DEFINITIONS.SET}”"
+ALTTAB.GENERAL_BINDS,General bindings,Title for key bindings that don’t need any specific criteria
+ALTTAB.TOGGLE_CAPTURE,Give control back to desktop,Key binding action that releases exclusive input capture
+ALTTAB.FOCUS_MODE,Focus mode (hold Super),"Key binding action to enter into a task-switcher kind of mode, like Alt-Tab."
+ALTTAB.CLOSE,Close focused app,Key binding action to close the application that is being aimed at.
+ALTTAB.MOUSE,Real mouse clicks & scroll also translate to VR pointer,Help text explaining to the user that clicks and scroll with their real (physical) mouse will act as if it was done using a VR controller.
+GRAB.ADJUST_DISTANCE,Adjust distance,Key binding action to adjust distance of the window in 3D space (in a push/pull motion)
+GRAB.ADJUST_SIZE,Adjust size,Key binding action to adjust size of the window
+GRAB.GRABBING_ANCHORED,Anchored overlays move with the set. Separate a single window by grabbing it with the other hand while still grabbing the set.,"Help explanation. “Anchored” was previously translated as “${DEFINITIONS.ANCHORED}”, “Set” was previously translated as “${DEFINITIONS.SET}”"
+GRAB.GRABBING_ANCHORED_EDIT,This overlay will stay anchored to the center marker.,Help text to explain the movement behavior of this window. “Center” was previously translated as “${ANCHOR.CENTER}”
+GRAB.GRABBING_FLOATING,"This overlay is Floating and will stay in place, unless recentered.",Help text to explain the movement behavior of this window. “Floating” was previously translated as “${DEFINITIONS.FLOATING}”
+GRAB.GRABBING_FOLLOW,This overlay will follow the device it is attached to.,Help text to explain the movement behavior of this window.
+GRAB.GRABBING_STATIC,"This overlay is Static and will stay in place, ignoring recenter.",Help text to explain the movement behavior of this window. “Static” was previously translated as “${DEFINITIONS.STATIC}”
+GRAB.GRABBING_WATCH,"To swap hands, move the watch in front and grab it with the other hand.",Help text to explain the user how to switch which hand the watch is on. “Watch” was previously translated as “${DEFINITIONS.WATCH}”
+GRAB.UNRESTRICTED_MOVEMENT,Unrestricted movement,"Option that allows the user to move and rotate this window freely, in a raw manner, without assistance such as angle snapping."
+SCREENCAST.PENDING,Please wait...,Title saying that the operation is not yet completed.
+SCREENCAST.QUEUED,Waiting for a different overlay's screen cast pop-up to be approved.,Instructions asking the user to pay attention to a different screen cast pop-up. “Overlay” was previously translated as “${DEFINITIONS.OVERLAY}”
+SCREENCAST.WAITING_FOR_USER_DESC,"Check your dekstop for a screen cast pop-up.
+Select the following:",Instructions to the user.
+SCREENCAST.WAITING_FOR_USER,Check your desktop for a screen cast pop-up.,Instructions to the user.
+SCREENCAST.FAIL,Could not initialize screen cast source.,Error message on a window that normally displays screen casts.
+TOAST.TITLE_SCREENCAST_FAIL,Could not start screen cast source!,Error message on a window that normally displays screen casts.
+TOAST.CANNOT_ADD_SET,Cannot add set!,Error message telling the user the set could not be added. “Set” was previously translated as “${DEFINITIONS.SET}”
+TOAST.CANNOT_REMOVE_SET,Cannot remove set!,Error message telling the user the set could not be removed. “Set” was previously translated as “${DEFINITIONS.SET}”
+TOAST.DEFAULT_TITLE,Notification,Default title of notifications
+TOAST.EMPTY_SET,Empty set!,Title of a pop-up when the user switches to an empty set. “Set” was previously translated as “${DEFINITIONS.SET}”
+TOAST.ERROR,Error,Default title for error pop-ups
+TOAST.FIXING_FLOOR_IN_X_SECS,Fixing floor in {SECONDS} second(s)...,A countdown pop-up for automatically adjusting floor height. Keep the {SECONDS} part intact as it’s a parameter.
+TOAST.LAST_EXISTING_SET,This is the last existing set.,Notification body explaining that the set cannot be removed because this is the last existing set. “Set” was previously translated as “${DEFINITIONS.SET}”
+TOAST.LETS_ADD_OVERLAYS,Let's add some overlays from the taskbar!,"Instructions prompting the user to add overlays. “Taskbar” was previously translated as “${DEFINITIONS.TASKBAR}”, “Overlay” was previously translated as “${DEFINITIONS.OVERLAY}”"
+TOAST.MAXIMUM_SETS_REACHED,Maximum number of sets reached.,Notification body explaining that a new set could not be added because we’re already at the limit. “Set” was previously translated as “${DEFINITIONS.SET}”
+TOAST.NO_KEYMAPS_CONFIGURED,No keyboard layouts configured,Title of notification
+TOAST.NO_KEYMAPS_CONFIGURED_HELP,Check the wayvr.org on how to set up your keyboard layouts!,Body of notification
+TOAST.NO_SET_SELECTED,No set is selected.,Notification body explaining that the operation could not be executed because the user has not selected a set. “Set” was previously translated as “${DEFINITIONS.SET}”
+TOAST.ONE_CONTROLLER_ON_FLOOR,Place one controller on the floor!,Instructions to the user for automated floor calibration.
+WATCH.ADD_NEW_SET,Add a new set,Button to add a new set. “Set” was previously translated as “${DEFINITIONS.SET}”
+WATCH.CLEANUP_MIRRORS,"Remove mirrors that are
+not currently visible",Button to remove mirrors. “Mirror” was previously translated as “${DEFINITIONS.MIRROR}”
+WATCH.DASHBOARD,Dashboard,Button to toggle “${DEFINITIONS.DASHBOARD}”
+WATCH.EDIT_MODE,Edit Mode,Button to toggle “${DEFINITIONS.EDIT_MODE}”
+WATCH.FIX_FLOOR,Fix floor level,Tooltip for a button that adjusts the height of the VR environment based on the floor level.
+WATCH.LONG_PRESS_TO_DELETE_SET,Hold to delete,Tooltip for a button that deletes a set. “Set” was previously translated as “${DEFINITIONS.SET}”
+WATCH.RECENTER,Recenter playspace,Tooltip for a button that recenters the VR environment around the player.
+WATCH.SWITCH_TO_SET,Switch to set,Tooltip for a button that switches to a different set. “Set” was previously translated as “${DEFINITIONS.SET}”
+WATCH.TOGGLE_FOR_CURRENT_SET,Toggle for current set,Tooltip for a button that toggles the visibility of the current window in the current workspace.
+WHISPER.TRANSCRIBE,Press and hold to transcribe text,Tooltip for a button that needs to be held while transcribing text.
+WHISPER.PASTE,Copy transcription to clipboard,Tooltip for a button that copies the transcribed text to clipboard.
+WHISPER.PASTE_AND_GO,Copy transcription and send Ctrl-V to focused app,Tooltip for a button that copies the transcribed text to clipboard and pastes it to the focused app using an emulated Ctrl-V sequence.
+WHISPER.SEND_OSC,Send transcription to OSC chatbox,Tooltip for a button that sends the transcribed text via OSC.
+WHISPER.UNLOAD_AND_CLOSE,Unload model and close,Unload AI model from VRAM and close the transcription window
+WHISPER.MODEL_NOT_DOWNLOADED,Speech-to-text not set up!,Error message warning the user about an incomplete setup.
+WHISPER.DOWNLOAD_GUIDANCE,"Set up speech-to-text under settings, features!",Help message prompting the user to finish setup in the ${DEFINITIONS.FEATURES} tab of ${DEFINITIONS.SETTINGS}
+WHISPER.INITIAL_TEXT,Press and hold the mic button to start transcribing...,Help message prompting the user to hold down the button with the microphone icon.
+WHISPER.INIT_ERROR,Error while starting Whisper engine,Error message.
+WHISPER.ENTER_KEY,Enter key,Button to send an Enter key on the emulated keyboard

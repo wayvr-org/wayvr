@@ -1,71 +1,5 @@
 {
-	"ANCHOR": {
-		"CENTER": "Center"
-	},
-	"BAR": {
-		"ADD_MIRROR": "Add a new mirror overlay",
-		"ADD_NEW_SET": "Add new set",
-		"ADD_PASSTHRU": "Add a passthrough window",
-		"CLOSE_APP": "Close app",
-		"CLOSE_OVERLAY": "Close overlay",
-		"DELETE_CURRENT_SET": "Delete current set",
-		"EDIT_MODE_TOGGLE": "Toggle edit mode",
-		"FORCE_CLOSE_APP": "Force close app",
-		"HANDSFREE": {
-			"EYE_ONLY": "Eye laser",
-			"EYE_TRACKING": "Eye + pinch",
-			"HMD": "HMD + pinch",
-			"HMD_ONLY": "HMD laser",
-			"NONE": "Off",
-			"TITLE": "Handsfree mode"
-		},
-		"RELOAD_FROM_DISK": "Reload XML from disk",
-		"RESET_POSITION": "Reset position",
-		"TOGGLE_VISIBILITY": "Toggle visibility"
-	},
-	"DEFAULT": "Default",
-	"DISABLED": "Disabled",
-	"DONE": "Done",
 	"EDIT_MODE": {
-		"ADJUST_CURVATURE": "Adjust curvature",
-		"ALIGN_TO_HMD": "Align to HMD",
-		"ALPHA_BLEND_MODE": "Alpha blend mode",
-		"ANGLE_FADE": "Angle fade",
-		"ANGLE_FADE_HELP": "Fade when not facing HMD",
-		"BLENDING_ADDITIVE": "Additive blending",
-		"BLOCK_INPUT": "Block game input",
-		"CURVATURE": "Curvature",
-		"DELETE": "Long press to remove from current set",
-		"DISABLE_GRAB": "Disable grab",
-		"GLOBAL": "Always visible",
-		"HINT_POINT_WINDOW": "Point at a window to change its parameters.\nOnce done, leave edit mode using the button on the right.",
-		"INTERPOLATION": "Interpolation",
-		"KEYBOARD": "Keyboard",
-		"LEAVE": "Leave edit mode",
-		"LOCK_INTERACTION": "Lock interaction",
-		"MOUSE": {
-			"FLIP180": "Flipped 180°",
-			"FLIP270": "Flipped 270°",
-			"FLIP90": "Flipped 90°",
-			"FLIPPED": "Flipped",
-			"NORMAL": "Normal",
-			"ROTATE180": "Rotated 180°",
-			"ROTATE270": "Rotated 270°",
-			"ROTATE90": "Rotated 90°",
-			"TITLE": "Mouse fixes",
-			"WRONG_SCREEN_SELECTION_HELP": "If the cursor moves on a completely different screen,\nthe screens were likely selected wrong. See readme."
-		},
-		"MOVE_PRESS_AND_DRAG": "Move (press & drag)",
-		"OPACITY": "Opacity",
-		"POS_ANCHORED": "Anchored: Moves with center marker. Default.",
-		"POS_FLOATING": "Floating: Moves independently, recenters when shown.",
-		"POS_HAND_L": "Follow the left hand.",
-		"POS_HAND_R": "Follow the right hand.",
-		"POS_HMD": "Follow the HMD.",
-		"POS_STATIC": "Static: Stays in place relative to world.",
-		"POSITIONING": "Positioning",
-		"RESIZE_PRESS_AND_DRAG": "Resize (press & drag)",
-		"RESIZE_CORNER": "Drag to resize",
 		"STEREO_3D_MODE": {
 			"ADJUST_MOUSE": "Adjust mouse",
 			"FULL_FRAME": "Full 3D",
@@ -77,6 +11,18 @@
 			"SPLIT_RIGHT_LEFT": "RIGHT→LEFT",
 			"SPLIT_TOP_BOTTOM": "TOP→BOTTOM",
 			"TITLE": "3D Stereo Mode"
+		},
+		"MOUSE": {
+			"FLIP180": "Flipped 180°",
+			"FLIP270": "Flipped 270°",
+			"FLIP90": "Flipped 90°",
+			"FLIPPED": "Flipped",
+			"NORMAL": "Normal",
+			"ROTATE180": "Rotated 180°",
+			"ROTATE270": "Rotated 270°",
+			"ROTATE90": "Rotated 90°",
+			"TITLE": "Mouse fixes",
+			"WRONG_SCREEN_SELECTION_HELP": "If the cursor moves on a completely different screen,\nthe screens were likely selected wrong. See readme."
 		}
 	},
 	"ALTTAB": {
