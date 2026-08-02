@@ -738,3 +738,81 @@ const KHR_GENERIC_CONTROLLER_USER_PATHS: &[XrInputSubpath] = &[
 		components: &[],
 	},
 ];
+
+pub const MAGNETRA2_CONTROLLER_PROFILE: XrControllerProfile = XrControllerProfile {
+	display_name: "ContactGlove2 + Magnetra2",
+	extension: Some("XR_MND_contactglove2_interaction"),
+	profile_id: "/interaction_profiles/mnd/contactglove2_with_magnetra2_mnd",
+	user_paths: &[
+		XrControllerUserPath {
+			hand: XrInputSide::Left,
+			paths: MAGNETRA2_USER_PATHS,
+		},
+		XrControllerUserPath {
+			hand: XrInputSide::Right,
+			paths: MAGNETRA2_USER_PATHS,
+		},
+	],
+};
+
+const MAGNETRA2_USER_PATHS: &[XrInputSubpath] = &[
+	XrInputSubpath {
+		kind: XrInputSubpathKind::A,
+		components: &[XrInputComponent::Click],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::B,
+		components: &[XrInputComponent::Click],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::X,
+		components: &[XrInputComponent::Click],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::Y,
+		components: &[XrInputComponent::Click],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::System,
+		components: &[XrInputComponent::Click],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::PairingMnd,
+		components: &[XrInputComponent::Click],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::Squeeze,
+		components: &[XrInputComponent::Value],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::Trigger,
+		components: &[
+			XrInputComponent::Click,
+			XrInputComponent::Value,
+		],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::Thumbstick,
+		components: &[
+			XrInputComponent::Click,
+			XrInputComponent::X,
+			XrInputComponent::Y,
+			XrInputComponent::DpadUp,
+			XrInputComponent::DpadDown,
+			XrInputComponent::DpadLeft,
+			XrInputComponent::DpadRight,
+		],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::Grip,
+		components: &[XrInputComponent::Pose],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::Aim,
+		components: &[XrInputComponent::Pose],
+	},
+	XrInputSubpath {
+		kind: XrInputSubpathKind::Haptic,
+		components: &[],
+	},
+];

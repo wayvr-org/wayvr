@@ -95,7 +95,7 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
         enabled_extensions.other.push(xr_extension);
     }
 
-    let xr_extension = b"XR_VALVE_frame_controller_interaction".to_vec();
+    let xr_extension: Vec<u8> = b"XR_MND_contactglove2_interaction\0".to_vec();
     if available_extensions.other.contains(&xr_extension) {
         enabled_extensions.other.push(xr_extension);
     }

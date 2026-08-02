@@ -47,6 +47,7 @@ pub enum XrInputSubpathKind {
 	System,
 	Menu,
 	View,
+	PairingMnd,
 
 	Primary,
 	Secondary,
