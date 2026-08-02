@@ -51,7 +51,7 @@ enum Task {
 
 	// `ProcessList` tab
 	ProcessListRefresh,
-	ProcessListFocusClient(String),
+	ProcessListFocusClient(i64),
 
 	// `DebugTimings` tab
 	DebugTimingsRefreshSessionList,
@@ -157,9 +157,9 @@ impl<T> Tab<T> for TabMonado<T> {
 						process_list.refresh(frontend, data, &self.tasks)?;
 					}
 				}
-				Task::ProcessListFocusClient(client_name) => {
+				Task::ProcessListFocusClient(client_id) => {
 					if let Subtab::ProcessList(process_list) = &mut self.subtab {
-						process_list.focus_client(frontend, data, client_name, &self.tasks)?;
+						process_list.focus_client(frontend, data, client_id, &self.tasks)?;
 					}
 				}
 				Task::DebugTimingsRefreshSessionList => {
@@ -676,10 +676,10 @@ impl SubtabProcessList {
 		let checkbox = state_cell.fetch_component_as::<ComponentCheckbox>("checkbox")?;
 		checkbox.on_toggle({
 			let tasks = tasks.clone();
-			let client_name = client.name.clone();
+			let client_id = client.id;
 			Box::new(move |_common, e| {
 				if e.checked {
-					tasks.push(Task::ProcessListFocusClient(client_name.clone()));
+					tasks.push(Task::ProcessListFocusClient(client_id));
 				}
 				Ok(())
 			})
@@ -694,10 +694,10 @@ impl SubtabProcessList {
 		&mut self,
 		frontend: &mut Frontend<T>,
 		data: &mut T,
-		name: String,
+		client_id: i64,
 		tasks: &Tasks<Task>,
 	) -> anyhow::Result<()> {
-		frontend.interface.monado_client_focus(data, &name)?;
+		frontend.interface.monado_client_focus(data, client_id)?;
 		tasks.push(Task::ProcessListRefresh);
 		Ok(())
 	}

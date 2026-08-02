@@ -80,7 +80,7 @@ pub trait DashInterface<T> {
 	fn process_list(&mut self, data: &mut T) -> anyhow::Result<Vec<WvrProcess>>;
 	fn process_terminate(&mut self, data: &mut T, handle: WvrProcessHandle) -> anyhow::Result<()>;
 	fn monado_client_list(&mut self, data: &mut T, filtered: bool) -> anyhow::Result<Vec<MonadoClient>>;
-	fn monado_client_focus(&mut self, data: &mut T, name: &str) -> anyhow::Result<()>;
+	fn monado_client_focus(&mut self, data: &mut T, client_id: i64) -> anyhow::Result<()>;
 	fn monado_brightness_get(&mut self, data: &mut T) -> Option<f32>;
 	fn monado_brightness_set(&mut self, data: &mut T, brightness: f32) -> Option<()>;
 	fn monado_metrics_set_enabled(&mut self, data: &mut T, enabled: bool) -> bool;

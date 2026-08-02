@@ -620,12 +620,12 @@ impl DashInterface<AppState> for DashInterfaceLive {
     }
 
     #[cfg(feature = "openxr")]
-    fn monado_client_focus(&mut self, app: &mut AppState, name: &str) -> anyhow::Result<()> {
+    fn monado_client_focus(&mut self, app: &mut AppState, client_id: i64) -> anyhow::Result<()> {
         let Some(monado) = &mut app.monado_state else {
             return Ok(()); // no monado available
         };
 
-        monado_client_focus(&mut monado.ipc, name)
+        monado_client_focus(&mut monado.ipc, client_id)
     }
 
     #[cfg(feature = "openxr")]
@@ -736,7 +736,7 @@ impl DashInterface<AppState> for DashInterfaceLive {
         anyhow::bail!("Not supported in this build.")
     }
     #[cfg(not(feature = "openxr"))]
-    fn monado_client_focus(&mut self, _: &mut AppState, _: &str) -> anyhow::Result<()> {
+    fn monado_client_focus(&mut self, _: &mut AppState, _: i64) -> anyhow::Result<()> {
         anyhow::bail!("Not supported in this build.")
     }
     #[cfg(not(feature = "openxr"))]
@@ -804,16 +804,15 @@ fn monado_list_clients_filtered(
 }
 
 #[cfg(feature = "openxr")]
-fn monado_client_focus(monado: &mut libmonado::Monado, name: &str) -> anyhow::Result<()> {
+fn monado_client_focus(monado: &mut libmonado::Monado, client_id: i64) -> anyhow::Result<()> {
     let clients = monado_list_clients_filtered(monado)?;
 
     for mut client in clients {
-        let client_name = client.name()?;
-        if client_name != name {
+        if client.id() != client_id as u32 {
             continue;
         }
 
-        log::info!("Monado focus set to {client_name}");
+        log::info!("Monado focus set to {client_id}");
         client.set_primary()?;
         return Ok(());
     }

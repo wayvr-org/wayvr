@@ -251,14 +251,14 @@ impl DashInterface<()> for DashInterfaceEmulated {
 		Ok(self.monado_clients.clone())
 	}
 
-	fn monado_client_focus(&mut self, _data: &mut (), name: &str) -> anyhow::Result<()> {
+	fn monado_client_focus(&mut self, _data: &mut (), client_id: i64) -> anyhow::Result<()> {
 		for client in self.monado_clients.iter_mut() {
 			client.is_focused = false;
 			client.is_active = false;
 			client.is_primary = false;
 		}
 
-		if let Some(client) = self.monado_clients.iter_mut().find(|m| m.name == name) {
+		if let Some(client) = self.monado_clients.iter_mut().find(|m| m.id == client_id) {
 			client.is_active = true;
 			client.is_focused = true;
 			client.is_primary = true;
