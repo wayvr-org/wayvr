@@ -120,7 +120,7 @@
 		"DEFAULT_CURVATURE": "Default overlay curvature",
 		"DEFAULT_OPACITY": "Default overlay opacity",
 		"DEFAULT_POSITIONING": "Default overlay positioning",
-		"DEFAULT_OVERLAY_DEFAULTS_HELP": "Only applies to new overlays",
+		"OVERLAY_DEFAULTS_HELP": "Only applies to new overlays",
 		"ENABLED": "Enabled",
 		"FEATURES": "Features",
 		"FOCUS_FOLLOWS_MOUSE_MODE": "Mouse move on trigger touch",

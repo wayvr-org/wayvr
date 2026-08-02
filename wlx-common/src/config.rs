@@ -498,7 +498,12 @@ pub struct GeneralConfig {
 	pub sets: Vec<SerializedWindowSet>,
 
 	#[serde(default)]
+	/// Obsolete, only used for reading
+	/// Use `sets` with `name: "global"`
 	pub global_set: SerializedWindowStates,
+
+	#[serde(default)]
+	pub spawn_overlays: Vec<Arc<str>>,
 
 	#[serde(default)]
 	pub autostart_apps: Vec<WvrProcessLaunchParams>,

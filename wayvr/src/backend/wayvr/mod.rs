@@ -956,7 +956,7 @@ impl WvrServerState {
                             tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
                                 OverlaySelector::Name(ALTTAB_HELP_NAME.clone()),
                                 Box::new(move |app, o| {
-                                    o.activate(app);
+                                    o.activate(app, true);
                                 }),
                             )));
                         } else {

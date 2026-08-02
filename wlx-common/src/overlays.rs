@@ -27,6 +27,7 @@ pub enum BackendAttrib {
 	MouseTransform,
 	Icon,
 	Resizable,
+	WindowSize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -122,11 +122,11 @@ impl OverlayWindowConfig {
 
     /// only call this directly for `OverlayCategory::Internal`
     /// for anything else, use `OverlayTask::ToggleOverlay` instead
-    pub fn activate(&mut self, app: &mut AppState) {
+    pub fn activate(&mut self, app: &mut AppState, realign: bool) {
         log::debug!("activate {}", self.name.as_ref());
         self.dirty = true;
         self.active_state = Some(self.default_state.clone());
-        self.reset(app, true);
+        self.reset(app, realign);
     }
 
     /// only call this directly for `OverlayCategory::Internal`

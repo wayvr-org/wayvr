@@ -27,16 +27,22 @@ use crate::{
     },
 };
 
-pub const PASSTHRU_PREFIX: &str = "__wvr_passthru-";
+pub const PASSTHRU_PREFIX: &str = "Passthru-";
 
 static PASSTHRU_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
-pub fn new_passtrhu_name() -> Arc<str> {
-    format!(
-        "{PASSTHRU_PREFIX}{}",
-        PASSTHRU_COUNTER.fetch_add(1, Ordering::Relaxed)
-    )
-    .into()
+pub fn new_passthru_name(existing: &[Arc<str>]) -> Arc<str> {
+    let mut max_num = PASSTHRU_COUNTER.load(Ordering::Relaxed) - 1;
+    for name in existing {
+        if let Some(n) = name
+            .strip_prefix(PASSTHRU_PREFIX)
+            .and_then(|s| s.parse::<usize>().ok())
+        {
+            max_num = max_num.max(n);
+        }
+    }
+    let next = max_num + 1;
+    format!("{PASSTHRU_PREFIX}{next}").into()
 }
 
 pub fn new_passthru(name: Arc<str>, app: &AppState) -> OverlayWindowConfig {

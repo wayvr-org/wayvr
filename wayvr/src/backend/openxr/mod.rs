@@ -354,7 +354,7 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
 
         let watch = overlays.mut_by_id(watch_id).unwrap(); // want panic
         if watch.config.active_state.is_none() {
-            watch.config.activate(&mut app);
+            watch.config.activate(&mut app, true);
         }
         let watch_state = watch.config.active_state.as_mut().unwrap();
         let watch_transform = watch_state.transform;

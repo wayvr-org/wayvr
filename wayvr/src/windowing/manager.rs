@@ -24,6 +24,7 @@ use crate::{
         dashboard::{DASH_NAME, create_dash_frontend},
         edit::EditWrapperManager,
         keyboard::create_keyboard,
+        passthrough::{PASSTHRU_PREFIX, new_passthru},
         screen::create_screens,
         toast::Toast,
         watch::{WATCH_NAME, create_watch},
@@ -42,6 +43,7 @@ use crate::{
 };
 
 pub const MAX_OVERLAY_SETS: usize = 6;
+pub const GLOBAL_SET: &str = "global";
 
 pub struct OverlayWindowManager<T> {
     wrappers: EditWrapperManager,
@@ -163,20 +165,21 @@ where
         let saved_passthrus: Vec<_> = app
             .session
             .config
-            .global_set
+            .spawn_overlays
             .iter()
-            .filter(|(name, _)| name.starts_with(crate::overlays::passthrough::PASSTHRU_PREFIX))
-            .map(|(name, state)| (name.clone(), state.clone()))
+            .filter(|name| name.starts_with(PASSTHRU_PREFIX))
+            .cloned()
             .collect();
-        for (name, saved_state) in saved_passthrus {
+        for name in saved_passthrus {
             if me.lookup(&name).is_none() {
-                let config = crate::overlays::passthrough::new_passthru(name.clone(), app);
-                let id = me.add(OverlayWindowData::from_config(config), app);
-                if let Some(o) = me.mut_by_id(id) {
-                    o.config.active_state = Some(saved_state);
-                    o.config.reset(app, false);
-                    log::debug!("restored passthru {}", name);
-                }
+                let mut config = new_passthru(name.clone(), app);
+                config.show_on_spawn = !me.global_set.hidden_overlays.arc_get(&*name).is_some();
+
+                me.add_with_spawn_pos(
+                    OverlayWindowData::from_config(config),
+                    app,
+                    SpawnPos::FixedNoRealign,
+                );
             }
         }
 
@@ -208,7 +211,7 @@ where
             OverlayTask::ResetOverlay(sel) => {
                 if let Some(o) = self.mut_by_selector(&sel) {
                     let was_active = o.config.is_active();
-                    o.config.activate(app);
+                    o.config.activate(app, true);
                     if !was_active {
                         self.visible_overlays_changed(app)?;
                     }
@@ -260,7 +263,7 @@ where
                     o.config.reset(app, false);
                 } else {
                     // no saved state
-                    o.config.activate(app);
+                    o.config.activate(app, true);
                 }
                 self.visible_overlays_changed(app)?;
             }
@@ -272,7 +275,7 @@ where
                     self.mut_by_selector(&OverlaySelector::Name(DASH_NAME.into()))
                 {
                     if overlay.config.active_state.is_none() {
-                        overlay.config.activate(app);
+                        overlay.config.activate(app, true);
                     } else {
                         overlay.config.deactivate();
                     }
@@ -294,7 +297,7 @@ where
                 }
                 self.sets.push(OverlayWindowSet::default());
                 self.switch_to_set(app, Some(new_idx), false);
-                self.overlays[self.keyboard_id].config.activate(app);
+                self.overlays[self.keyboard_id].config.activate(app, true);
                 self.sets_changed(app);
                 self.visible_overlays_changed(app)?;
             }
@@ -335,7 +338,7 @@ where
                     if watch.config.active_state.is_some() {
                         watch.config.deactivate();
                     } else {
-                        watch.config.activate(app);
+                        watch.config.activate(app, true);
                     }
                 }
 
@@ -481,10 +484,11 @@ where
     }
 }
 
-const SAVED_ATTRIBS: [BackendAttrib; 3] = [
+const SAVED_ATTRIBS: &[BackendAttrib] = &[
     BackendAttrib::Stereo,
     BackendAttrib::StereoFullFrame,
     BackendAttrib::MouseTransform,
+    BackendAttrib::WindowSize,
 ];
 
 impl<T> OverlayWindowManager<T> {
@@ -503,7 +507,7 @@ impl<T> OverlayWindowManager<T> {
     }
 
     pub fn persist_layout(&mut self, app: &mut AppState) {
-        app.session.config.global_set.clear();
+        app.session.config.spawn_overlays.clear();
         app.session.config.sets.clear();
         app.session.config.sets.reserve(self.sets.len());
         app.session.config.last_set = self.restore_set as _;
@@ -533,7 +537,12 @@ impl<T> OverlayWindowManager<T> {
                 }
             }
 
-            let hidden_overlays: HashMap<_, _> = set.hidden_overlays.iter().cloned().collect();
+            let hidden_overlays: HashMap<_, _> = set
+                .hidden_overlays
+                .iter()
+                .filter(|(k, _)| !overlays.contains_key(k.as_ref()))
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect();
 
             let serialized = SerializedWindowSet {
                 name: set.name.clone(),
@@ -543,29 +552,38 @@ impl<T> OverlayWindowManager<T> {
             app.session.config.sets.push(serialized);
         }
 
-        // global overlays
+        for o in self.overlays.values() {
+            if matches!(o.config.category, OverlayCategory::Passthru) {
+                app.session
+                    .config
+                    .spawn_overlays
+                    .push(o.config.name.clone());
+            }
+        }
+
+        // serialize global set into `sets` with key GLOBAL_SET
+        // overlays: active states + inactive states; hidden_overlays: explicitly toggled off
+        let mut global_overlays: HashMap<_, _> =
+            self.global_set.inactive_overlays.iter().cloned().collect();
         for o in self.overlays.values() {
             if o.config.global {
                 if let Some(state) = &o.config.active_state {
-                    app.session
-                        .config
-                        .global_set
-                        .insert(o.config.name.clone(), state.clone());
+                    global_overlays.insert(o.config.name.clone(), state.clone());
                 }
             }
         }
-        for (name, state) in &self.global_set.hidden_overlays {
-            app.session
-                .config
-                .global_set
-                .insert(name.clone(), state.clone());
-        }
-        for (name, state) in &self.global_set.inactive_overlays {
-            app.session
-                .config
-                .global_set
-                .insert(name.clone(), state.clone());
-        }
+        let global_hidden: HashMap<_, _> = self
+            .global_set
+            .hidden_overlays
+            .iter()
+            .filter(|(k, _)| !global_overlays.contains_key(k.as_ref()))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        app.session.config.sets.push(SerializedWindowSet {
+            name: GLOBAL_SET.into(),
+            overlays: global_overlays,
+            hidden_overlays: global_hidden,
+        });
 
         // BackendAttrib
         for o in self.overlays.values() {
@@ -599,6 +617,10 @@ impl<T> OverlayWindowManager<T> {
         self.sets.reserve(app.session.config.sets.len());
 
         for (i, s) in app.session.config.sets.iter().enumerate() {
+            if s.name.as_ref() == GLOBAL_SET {
+                continue;
+            }
+
             let mut overlays = SecondaryMap::new();
             let mut inactive_overlays = AStrMap::new();
 
@@ -628,33 +650,69 @@ impl<T> OverlayWindowManager<T> {
             });
         }
 
-        // global overlays
-        for (name, ows) in app.session.config.global_set.clone() {
-            let mut ows = ows.clone();
+        // global overlays: prefer `sets` with key GLOBAL_SET, fall back to legacy `global_set`
+        if let Some(global_s) = app
+            .session
+            .config
+            .sets
+            .iter()
+            .find(|s| s.name.as_ref() == GLOBAL_SET)
+        {
+            let global_s = global_s.clone();
+            let mut overlays = SecondaryMap::new();
+            let mut inactive_overlays = AStrMap::new();
 
-            // fix angle_fade missing on watch if loading older state
-            if name.as_ref() == WATCH_NAME {
-                ows.angle_fade = true;
+            for (name, o) in &global_s.overlays {
+                if let Some(id) = self.lookup(name) {
+                    log::debug!("global set: loaded state for {name}");
+                    overlays.insert(id, o.clone());
+                    if let Some(ov) = self.mut_by_id(id)
+                        && ov.config.active_state.is_some()
+                    {
+                        ov.config.global = true;
+                        ov.config.active_state = Some(o.clone());
+                        ov.config.reset(app, false);
+                    }
+                } else {
+                    log::debug!(
+                        "global set has saved state for {name} which doesn't exist. will apply state once added."
+                    );
+                    inactive_overlays.arc_set(name.clone(), o.clone());
+                }
             }
 
-            if let Some(oid) = self.lookup(&name)
-                && let Some(o) = self.mut_by_id(oid)
-            {
-                o.config.global = true;
-                if o.config.active_state.is_none() {
-                    self.global_set.hidden_overlays.arc_set(name.clone(), ows);
-                } else {
+            let hidden_overlays: AStrMap<_> = global_s
+                .hidden_overlays
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect();
+
+            self.global_set.overlays = overlays;
+            self.global_set.inactive_overlays = inactive_overlays;
+            self.global_set.hidden_overlays = hidden_overlays;
+        } else {
+            for (name, ows) in app.session.config.global_set.clone() {
+                let mut ows = ows.clone();
+
+                // fix angle_fade missing on watch if loading older state
+                if name.as_ref() == WATCH_NAME {
+                    ows.angle_fade = true;
+                }
+
+                if let Some(oid) = self.lookup(&name)
+                    && let Some(o) = self.mut_by_id(oid)
+                    && o.config.active_state.is_some()
+                {
+                    o.config.global = true;
                     o.config.active_state = Some(ows);
                     o.config.reset(app, false);
+                    log::debug!("global set: loaded state for {name}");
+                } else {
+                    log::debug!(
+                        "global set has saved state for {name} which doesn't exist or is inactive. will apply state once added."
+                    );
+                    self.global_set.inactive_overlays.arc_set(name.clone(), ows);
                 }
-                log::debug!("global set: loaded state for {name}");
-            } else {
-                log::debug!(
-                    "global set has saved state for {name} which doesn't exist. will apply state once added."
-                );
-                self.global_set
-                    .inactive_overlays
-                    .arc_set(name.clone(), ows.clone());
             }
         }
 
@@ -875,7 +933,9 @@ impl<T> OverlayWindowManager<T> {
 
         if !shown && show_on_spawn {
             log::debug!("activating {name} due to show_on_spawn");
-            self.overlays[oid].config.activate(app);
+            self.overlays[oid]
+                .config
+                .activate(app, !spawn_pos.is_fixed_no_realign());
             self.apply_spawn_pos(app, oid, spawn_pos);
         }
         if !internal && let Err(e) = self.overlays_changed(app) {
@@ -889,7 +949,7 @@ impl<T> OverlayWindowManager<T> {
 
     fn apply_spawn_pos(&mut self, app: &mut AppState, oid: OverlayID, spawn_pos: SpawnPos) {
         match spawn_pos {
-            SpawnPos::Fixed => {}
+            SpawnPos::Fixed | SpawnPos::FixedNoRealign => {}
             SpawnPos::Spread => {
                 let Some(parent_id) = self.spread_parent_for(oid) else {
                     return;

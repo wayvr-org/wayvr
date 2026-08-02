@@ -851,7 +851,7 @@ fn start_grab(
     app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
         OverlaySelector::Name(ANCHOR_NAME.clone()),
         Box::new(|app, o| {
-            o.activate(app);
+            o.activate(app, true);
         }),
     )));
 
@@ -870,7 +870,7 @@ fn start_grab(
 
                 o.default_state.positioning = Positioning::FollowHand { hand, lerp: 0.1 };
                 o.default_state.align_to_hmd = true;
-                o.activate(app);
+                o.activate(app, true);
             }),
         )));
     }

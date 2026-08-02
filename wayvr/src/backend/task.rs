@@ -6,6 +6,7 @@ use std::{
 };
 
 use serde::Deserialize;
+use strum::EnumIs;
 
 use crate::{
     backend::input,
@@ -97,10 +98,12 @@ pub enum ToggleMode {
     Toggle,
 }
 
-#[derive(Clone)]
+#[derive(Clone, EnumIs)]
 pub enum SpawnPos {
-    /// Always spawn at the designated pos
+    /// Always spawn at designated position
     Fixed,
+    /// Always spawn at designated position and orientation
+    FixedNoRealign,
     /// Automatically spread out for user experience
     Spread,
     /// Spawn relative to a different overlay

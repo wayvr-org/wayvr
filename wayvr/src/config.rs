@@ -11,7 +11,7 @@ use wlx_common::{
     config::{
         AltModifier, CaptureMethod, ChromaKeyParams, DefaultPositioning, GeneralConfig,
         HandsfreeAltTab, HandsfreePointer, InputCaptureMethod, InputEmulationMethod, PinnedApp,
-        SerializedWindowSet, SerializedWindowStates,
+        SerializedWindowSet,
     },
     config_io,
     locale::Language,
@@ -287,7 +287,7 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
 #[derive(Serialize)]
 pub struct AutoState {
     pub sets: Vec<SerializedWindowSet>,
-    pub global_set: SerializedWindowStates,
+    pub spawn_overlays: Vec<Arc<str>>,
     pub last_set: u32,
     pub attribs: AStrMap<Vec<BackendAttribValue>>,
 }
@@ -302,7 +302,7 @@ pub fn save_state(config: &GeneralConfig) -> anyhow::Result<()> {
     let conf = AutoState {
         sets: config.sets.clone(),
         last_set: config.last_set,
-        global_set: config.global_set.clone(),
+        spawn_overlays: config.spawn_overlays.clone(),
         attribs: config.attribs.clone(),
     };
 

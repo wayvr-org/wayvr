@@ -562,7 +562,9 @@ pub(super) fn setup_custom_button<S: 'static>(
                         return Ok(EventResult::Pass);
                     }
 
-                    let name = crate::overlays::passthrough::new_passtrhu_name();
+                    let name = crate::overlays::passthrough::new_passthru_name(
+                        &app.session.config.spawn_overlays,
+                    );
                     app.tasks.enqueue(TaskType::Overlay(OverlayTask::Spawn(
                         OverlaySelector::Name(name.clone()),
                         SpawnPos::Spread,
