@@ -62,12 +62,11 @@ In case screens were selected in the wrong order:
 
 **WiVRn users**: Select WayVR from the `Application` drop-down. If there's no such entry, select `Custom` and browse to your WayVR executable or AppImage.
 
-**Envision users**: Go to the Plugins menu and select the WayVR plugin. This will download and run the AppImage version of the overlay.
-To run a standalone installation (for instance, from the AUR), create a bash script containing `wayvr --openxr --show` and then set this bash script as a custom Envision plugin.
+**Envision users**: Go to the Plugins menu and toggle on the WayVR plugin. If WayVR isn't in the Plugins list, or the list is empty, ensure you've installed WayVR fully, such that it appears in your Desktop Environment's application menu. If you've *downloaded* the WayVR AppImage, [Gear Lever](https://github.com/mijorus/gearlever) can *install* it, which creates the application menu entry.
+
+**SteamVR users**: WayVR no longer registers itself for auto-start, due to bugs in SteamVR. For now, you must start WayVR manually.
 
 This will show a home environment with headset passthrough enabled by default or a [customizable background](https://wayvr.org/docs/various/openxr-skybox/)!
-
-**SteamVR users**: WayVR will register itself for auto-start, so there is no need to start it every time. Disclaimer: SteamVR will sometimes disregard this and not start WayVR anyway.
 
 **Please continue reading the guide below.**
 
