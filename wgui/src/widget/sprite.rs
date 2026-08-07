@@ -66,7 +66,7 @@ impl WidgetSprite {
 		self.params.glyph_data.clone()
 	}
 
-	pub fn parent_color(&self) -> ParentColor {
+	pub const fn parent_color(&self) -> ParentColor {
 		self.params.parent_color
 	}
 }

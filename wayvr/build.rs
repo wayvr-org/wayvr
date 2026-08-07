@@ -6,14 +6,14 @@ fn main() {
 
     match std::env::var("GITHUB_JOB").as_deref() {
         Ok("make_release") => {
-            wlx_build = format!("{} (Release)", &wlx_build);
+            wlx_build = format!("{} (Release)", wlx_build);
         }
         Ok("build_appimage") => {
-            wlx_build = format!("{} (AppImage)", &wlx_build);
+            wlx_build = format!("{} (AppImage)", wlx_build);
         }
         _ => {}
     }
-    println!("cargo:rustc-env=WLX_BUILD={}", &wlx_build);
+    println!("cargo:rustc-env=WLX_BUILD={}", wlx_build);
 }
 
 fn get_version() -> Result<String, Box<dyn std::error::Error>> {

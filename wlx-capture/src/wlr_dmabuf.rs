@@ -218,7 +218,7 @@ fn request_dmabuf_frame(
                 Ok(_) => (),
                 Err(mpsc::TrySendError::Full(_)) => (),
                 Err(mpsc::TrySendError::Disconnected(_)) => {
-                    log::warn!("{}: disconnected", &name);
+                    log::warn!("{}: disconnected", name);
                 }
             }
         }

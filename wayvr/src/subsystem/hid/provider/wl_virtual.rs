@@ -3,7 +3,7 @@ use std::os::fd::AsFd;
 use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::Context as _;
 use glam::{Vec2, DVec2};
-use input_linux::sys::{*};
+use input_linux::sys::{BTN_LEFT, BTN_MIDDLE, BTN_RIGHT};
 use smithay::reexports::rustix::fs::{memfd_create, MemfdFlags};
 use smithay::reexports::wayland_protocols_wlr::virtual_pointer::v1::client::zwlr_virtual_pointer_manager_v1::ZwlrVirtualPointerManagerV1;
 use smithay::reexports::wayland_protocols_wlr::virtual_pointer::v1::client::zwlr_virtual_pointer_v1::ZwlrVirtualPointerV1;
@@ -19,12 +19,12 @@ use xkbcommon::xkb::{KEYMAP_FORMAT_TEXT_V1};
 use wlx_common::overlays::ToastTopic;
 use crate::overlays::toast::Toast;
 use crate::subsystem::hid::provider::HidProvider;
-use crate::subsystem::hid::{VirtualKey, WheelDelta, *};
+use crate::subsystem::hid::{self, VirtualKey, WheelDelta};
 
-const LOCKED: u8 = CAPS_LOCK | NUM_LOCK;
+const LOCKED: u8 = hid::CAPS_LOCK | hid::NUM_LOCK;
 
 pub struct WlVirtualProvider {
-    _connection: wayland_client::Connection,
+    connection: wayland_client::Connection,
     queue: wayland_client::EventQueue<KbState>,
     state: KbState,
 
@@ -74,14 +74,15 @@ impl HidProvider for WlVirtualProvider {
         self.virtual_pointer.button(
             Self::now_ms(),
             match button {
-                i if i == MOUSE_LEFT => BTN_LEFT as u32,
-                i if i == MOUSE_RIGHT => BTN_RIGHT as u32,
-                i if i == MOUSE_MIDDLE => BTN_MIDDLE as u32,
+                i if i == hid::MOUSE_LEFT => BTN_LEFT as u32,
+                i if i == hid::MOUSE_RIGHT => BTN_RIGHT as u32,
+                i if i == hid::MOUSE_MIDDLE => BTN_MIDDLE as u32,
                 _ => panic!("Invalid mouse button: {button}"),
             },
-            match down {
-                true => ButtonState::Pressed,
-                false => ButtonState::Released,
+            if down {
+                ButtonState::Pressed
+            } else {
+                ButtonState::Released
             },
         );
         self.virtual_pointer.frame();
@@ -128,10 +129,10 @@ impl HidProvider for WlVirtualProvider {
 
     fn set_modifiers(&mut self, mods: u8) {
         let changed = (self.keyboard_mods_state ^ mods) & !LOCKED;
-        for bit in [SHIFT, CTRL, ALT, SUPER] {
+        for bit in [hid::SHIFT, hid::CTRL, hid::ALT, hid::SUPER] {
             if changed & bit != 0 {
                 let down = mods & bit != 0;
-                if let Some(kc) = MODS_TO_KEYS.get(bit) {
+                if let Some(kc) = hid::MODS_TO_KEYS.get(bit) {
                     self.virtual_keyboard
                         .key(Self::now_ms(), kc[0] as u32 - 8, down as u32);
                 }
@@ -143,24 +144,18 @@ impl HidProvider for WlVirtualProvider {
         self.virtual_keyboard.modifiers(depressed, 0, locked, 0);
 
         self.keyboard_mods_state = mods;
-        self._connection.flush().unwrap();
+        self.connection.flush().unwrap();
     }
 
     fn send_key(&mut self, key: VirtualKey, down: bool) {
         #[cfg(debug_assertions)]
         log::trace!("Keyboard key: {key:?} ({}), down: {down}", key as u16);
 
-        self.virtual_keyboard.key(
-            Self::now_ms(),
-            key as u32 - 8,
-            match down {
-                true => 1,
-                false => 0,
-            },
-        );
+        self.virtual_keyboard
+            .key(Self::now_ms(), key as u32 - 8, u32::from(down));
 
         // sending a mod key → also have to update mod state
-        if let Some(m) = KEYS_TO_MODS.get(key) {
+        if let Some(m) = hid::KEYS_TO_MODS.get(key) {
             match (down, m & LOCKED != 0) {
                 (true, true) => self.keyboard_mods_state ^= m,
                 (true, false) => self.keyboard_mods_state |= m,
@@ -173,10 +168,10 @@ impl HidProvider for WlVirtualProvider {
             self.virtual_keyboard.modifiers(depressed, 0, locked, 0);
         }
 
-        self._connection.flush().unwrap();
+        self.connection.flush().unwrap();
     }
 
-    fn set_keymap(&mut self, keymap: &XkbKeymap) {
+    fn set_keymap(&mut self, keymap: &hid::XkbKeymap) {
         #[cfg(debug_assertions)]
         log::trace!(
             "Keyboard keymap: {:?}",
@@ -228,12 +223,12 @@ impl WlVirtualProvider {
 
         let virtual_keyboard = keyboard_manager.create_virtual_keyboard(&seat, &qh, ());
 
-        let keymap =
-            get_keymap_wl().unwrap_or_else(|_| XkbKeymap::from_layout_variant("us", "").unwrap());
+        let keymap = hid::get_keymap_wl()
+            .unwrap_or_else(|_| hid::XkbKeymap::from_layout_variant("us", "").unwrap());
 
         let mut result = Self {
             keymap_file: None,
-            _connection: connection,
+            connection,
             queue,
             state,
             virtual_pointer,

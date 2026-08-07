@@ -160,7 +160,7 @@ impl OverlayBackend for PassthruBackend {
             color.with_alpha(1.0).as_arr().iter(),
         )?;
 
-        let set0 = pipeline.buffer(0, buf_color.clone())?;
+        let set0 = pipeline.buffer(0, buf_color)?;
         let extentf32 = [
             self.frame_meta.extent[0] as f32,
             self.frame_meta.extent[1] as f32,
@@ -183,7 +183,7 @@ impl OverlayBackend for PassthruBackend {
             [0.0, 0.0, 0.0, 1.0].iter(),
         )?;
 
-        let set0 = pipeline.buffer(0, buf_color.clone())?;
+        let set0 = pipeline.buffer(0, buf_color)?;
 
         let pass = pipeline.create_pass(
             [extentf32[0] - 8.0, extentf32[1] - 8.0],

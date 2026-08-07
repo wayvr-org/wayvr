@@ -40,9 +40,7 @@ pub struct WhisperSttConfig {
 
 impl WhisperSttConfig {
     pub fn new(model_path: impl AsRef<Path>) -> Self {
-        let n_threads = std::thread::available_parallelism()
-            .map(|n| n.get().min(4) as i32)
-            .unwrap_or(4);
+        let n_threads = std::thread::available_parallelism().map_or(4, |n| n.get().min(4) as i32);
 
         Self {
             model_path: model_path.as_ref().to_path_buf(),
@@ -117,10 +115,12 @@ impl WhisperStt {
     }
 
     pub fn init(config: WhisperSttConfig) -> Result<Self, WhisperSttError> {
-        let mut ctx_params = WhisperContextParameters::default();
-        ctx_params.use_gpu = config.use_gpu;
-        ctx_params.gpu_device = config.gpu_device;
-        ctx_params.flash_attn = config.flash_attn;
+        let ctx_params = WhisperContextParameters {
+            use_gpu: config.use_gpu,
+            gpu_device: config.gpu_device,
+            flash_attn: config.flash_attn,
+            ..Default::default()
+        };
 
         let ctx = WhisperContext::new_with_params(&config.model_path, ctx_params)
             .map_err(|e| WhisperSttError::ModelLoad(e.to_string()))?;
@@ -260,10 +260,9 @@ impl WhisperStt {
             .active
             .as_ref()
             .is_some_and(|session| Instant::now() >= session.deadline)
+            && let Err(e) = self.stop_active_capture()
         {
-            if let Err(e) = self.stop_active_capture() {
-                self.last_error = Some(e.to_string());
-            }
+            self.last_error = Some(e.to_string());
         }
 
         None
@@ -338,15 +337,12 @@ fn recognizer_thread(
             audio.len().saturating_sub(last_decoded_len) >= partial_stride_samples;
 
         if audio.len() >= min_samples && enough_new_audio {
-            match transcribe_audio(&ctx, &config, &audio) {
-                Ok(text) => {
-                    latest_partial = text;
-                    last_decoded_len = audio.len();
-                }
-                Err(_) => {
-                    // do not fail the session on a speculative decode
-                    // the final decode after PTT end gets reported
-                }
+            if let Ok(text) = transcribe_audio(&ctx, &config, &audio) {
+                latest_partial = text;
+                last_decoded_len = audio.len();
+            } else {
+                // do not fail the session on a speculative decode
+                // the final decode after PTT end gets reported
             }
         }
     }
@@ -401,8 +397,7 @@ fn transcribe_audio(
     let text = state
         .as_iter()
         .map(|segment| segment.to_string())
-        .collect::<Vec<_>>()
-        .join("");
+        .collect::<String>();
 
     Ok(normalize_transcript(text))
 }
@@ -417,10 +412,10 @@ fn rodio_capture_thread(
 
     let result = run_rodio_capture(audio_tx, stop_rx, input_device_name, &mut ready_tx);
 
-    if let Err(e) = result {
-        if let Some(ready_tx) = ready_tx.take() {
-            let _ = ready_tx.send(Err(e.to_string()));
-        }
+    if let Err(e) = result
+        && let Some(ready_tx) = ready_tx.take()
+    {
+        let _ = ready_tx.send(Err(e.to_string()));
     }
 }
 
@@ -510,12 +505,12 @@ fn run_rodio_capture(
 
             // Rodio's default sample type is f32. This cast also keeps the code
             // compiling if the crate is built with rodio's `64bit` feature.
-            interleaved.push(sample as f32);
+            interleaved.push(sample);
         }
 
-        let resampled = resampler.push_interleaved_mono_16k(&interleaved, channels, input_rate);
+        let resampled_vec = resampler.push_interleaved_mono_16k(&interleaved, channels, input_rate);
 
-        if !resampled.is_empty() && audio_tx.send(resampled).is_err() {
+        if !resampled_vec.is_empty() && audio_tx.send(resampled_vec).is_err() {
             break;
         }
     }
@@ -572,6 +567,7 @@ impl StreamingResampler {
             ((self.pending.len() as f64 - self.position) / step).max(0.0) as usize,
         );
 
+        #[allow(clippy::while_float)]
         while self.position + 1.0 < self.pending.len() as f64 {
             let i = self.position.floor() as usize;
             let frac = (self.position - i as f64) as f32;
@@ -594,7 +590,7 @@ impl StreamingResampler {
     }
 }
 
-fn ms_to_samples(ms: u64) -> usize {
+const fn ms_to_samples(ms: u64) -> usize {
     ((ms as usize) * WHISPER_SAMPLE_RATE) / 1000
 }
 

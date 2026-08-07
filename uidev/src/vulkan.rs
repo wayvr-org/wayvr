@@ -31,7 +31,7 @@ pub fn init_window(
 	let event_loop = EventLoop::new().unwrap(); // want panic
 	let mut vk_instance_extensions = Surface::required_extensions(&event_loop).unwrap();
 	vk_instance_extensions.khr_get_physical_device_properties2 = true;
-	log::debug!("Instance exts for runtime: {:?}", &vk_instance_extensions);
+	log::debug!("Instance exts for runtime: {:?}", vk_instance_extensions);
 
 	let instance = Instance::new(
 		get_vulkan_library().clone(),
@@ -57,7 +57,7 @@ pub fn init_window(
 	let mut device_extensions = DeviceExtensions::empty();
 	device_extensions.khr_swapchain = true;
 
-	log::debug!("Device exts for app: {:?}", &device_extensions);
+	log::debug!("Device exts for app: {:?}", device_extensions);
 
 	let (physical_device, mut my_extensions, queue_families) = instance
 		.enumerate_physical_devices()?

@@ -121,7 +121,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 	style.flex_direction = taffy::FlexDirection::Column;
 	style.flex_wrap = taffy::FlexWrap::NoWrap;
 	style.align_items = Some(AlignItems::CENTER);
-	style.gap = length(4.0);
+	style.gap = length(4.0_f32);
 
 	let (root, _) = ess.layout.add_child(ess.parent, WidgetDiv::create(), style)?;
 
@@ -141,8 +141,8 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 				sprite_src,
 				style: taffy::Style {
 					min_size: taffy::Size {
-						width: percent(1.0),
-						height: length(32.0),
+						width: percent(1.0_f32),
+						height: length(32.0_f32),
 					},
 					justify_content: Some(taffy::JustifyContent::START),
 					..Default::default()

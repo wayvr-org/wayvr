@@ -85,8 +85,8 @@ impl View {
 			image,
 			taffy::Style {
 				size: taffy::Size {
-					width: percent(1.0),
-					height: percent(1.0),
+					width: percent(1.0_f32),
+					height: percent(1.0_f32),
 				},
 				..Default::default()
 			},
@@ -125,7 +125,7 @@ impl View {
 				align_self: Some(AlignSelf::BASELINE),
 				justify_self: Some(JustifySelf::CENTER),
 				margin: taffy::Rect {
-					top: length(32.0),
+					top: length(32.0_f32),
 					bottom: auto(),
 					left: auto(),
 					right: auto(),
@@ -199,10 +199,10 @@ impl View {
 			taffy::Style {
 				position: taffy::Position::Absolute,
 				size: taffy::Size {
-					width: percent(1.0),
-					height: percent(1.0),
+					width: percent(1.0_f32),
+					height: percent(1.0_f32),
 				},
-				padding: taffy::Rect::length(2.0),
+				padding: taffy::Rect::length(2.0_f32),
 				align_items: Some(AlignItems::CENTER),
 				justify_content: Some(JustifyContent::CENTER),
 				..Default::default()
@@ -223,7 +223,7 @@ impl View {
 			position: taffy::Position::Absolute,
 			align_self: Some(align_self),
 			size: taffy::Size {
-				width: percent(1.0),
+				width: percent(1.0_f32),
 				height: percent(height),
 			},
 			..Default::default()

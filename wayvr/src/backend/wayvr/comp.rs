@@ -173,10 +173,10 @@ impl Application {
     }
 
     pub fn output_logical_size(&self) -> Size<i32, Logical> {
-        self.output
-            .current_mode()
-            .map(|mode| Size::new(mode.size.w, mode.size.h))
-            .unwrap_or_else(|| Size::new(WAYVR_SCREEN_RES[0], WAYVR_SCREEN_RES[1]))
+        self.output.current_mode().map_or_else(
+            || Size::new(WAYVR_SCREEN_RES[0], WAYVR_SCREEN_RES[1]),
+            |mode| Size::new(mode.size.w, mode.size.h),
+        )
     }
 
     fn surface_logical_size(surface: &WlSurface) -> Option<Size<i32, Logical>> {
@@ -458,7 +458,7 @@ impl XdgShellHandler for Application {
             serial
         );
 
-        let popup = PopupKind::Xdg(surface.clone());
+        let popup = PopupKind::Xdg(surface);
 
         let Ok(root_surface) = find_popup_root_surface(&popup) else {
             log::warn!("xdg_popup.grab: could not find popup root surface");

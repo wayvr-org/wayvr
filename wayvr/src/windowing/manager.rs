@@ -173,7 +173,7 @@ where
         for name in saved_passthrus {
             if me.lookup(&name).is_none() {
                 let mut config = new_passthru(name.clone(), app);
-                config.show_on_spawn = !me.global_set.hidden_overlays.arc_get(&*name).is_some();
+                config.show_on_spawn = me.global_set.hidden_overlays.arc_get(&name).is_none();
 
                 me.add_with_spawn_pos(
                     OverlayWindowData::from_config(config),
@@ -397,7 +397,7 @@ where
                 }
             }
             OverlayTask::Spawn(sel, spawn_pos, f) => {
-                self.spawn_overlay(app, sel, spawn_pos, f)?;
+                self.spawn_overlay(app, sel, spawn_pos, f);
             }
             OverlayTask::Drop(sel) => {
                 let (id, name) = match &sel {
@@ -436,7 +436,7 @@ where
                     ) {
                         log::warn!(
                             "Received command for '{}', but this overlay does not support commands",
-                            &task.overlay
+                            task.overlay
                         );
                         return Ok(());
                     }
@@ -460,15 +460,15 @@ where
         sel: OverlaySelector,
         spawn_pos: SpawnPos,
         f: Box<CreateOverlayTask>,
-    ) -> anyhow::Result<()> {
+    ) {
         let None = self.mut_by_selector(&sel) else {
             log::debug!("Could not spawn {sel:?}: exists");
-            return Ok(());
+            return;
         };
 
         let Some(overlay_config) = f(app) else {
             log::debug!("Could not spawn {sel:?}: empty config");
-            return Ok(());
+            return;
         };
 
         self.add_with_spawn_pos(
@@ -479,8 +479,6 @@ where
             app,
             spawn_pos,
         );
-
-        Ok(())
     }
 }
 
@@ -566,10 +564,10 @@ impl<T> OverlayWindowManager<T> {
         let mut global_overlays: HashMap<_, _> =
             self.global_set.inactive_overlays.iter().cloned().collect();
         for o in self.overlays.values() {
-            if o.config.global {
-                if let Some(state) = &o.config.active_state {
-                    global_overlays.insert(o.config.name.clone(), state.clone());
-                }
+            if o.config.global
+                && let Some(state) = &o.config.active_state
+            {
+                global_overlays.insert(o.config.name.clone(), state.clone());
             }
         }
         let global_hidden: HashMap<_, _> = self

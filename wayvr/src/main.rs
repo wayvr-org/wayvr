@@ -293,7 +293,7 @@ fn logging_init(args: &mut Args) {
         .open(&log_file_path)
     {
         Ok(file) => {
-            println!("Logging to {}", &log_file_path);
+            println!("Logging to {log_file_path}");
             Some(file)
         }
         Err(e) => {

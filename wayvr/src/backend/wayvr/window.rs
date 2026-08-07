@@ -119,6 +119,16 @@ pub struct WindowManager {
     pub keyboard_focus: Option<WindowHandle>,
 }
 
+pub struct CreateWindowParams {
+    pub toplevel: Rc<ToplevelSurface>,
+    pub process: process::ProcessHandle,
+    pub bounds: Size<i32, Logical>,
+    pub min_size: Size<i32, Logical>,
+    pub max_size: Size<i32, Logical>,
+    pub size_x: u32,
+    pub size_y: u32,
+}
+
 impl WindowManager {
     pub fn new() -> Self {
         Self {
@@ -137,18 +147,15 @@ impl WindowManager {
         None
     }
 
-    pub fn create_window(
-        &mut self,
-        toplevel: Rc<ToplevelSurface>,
-        process: process::ProcessHandle,
-        bounds: Size<i32, Logical>,
-        min_size: Size<i32, Logical>,
-        max_size: Size<i32, Logical>,
-        size_x: u32,
-        size_y: u32,
-    ) -> WindowHandle {
-        let mut window = Window::new(toplevel, process, bounds, min_size, max_size);
-        window.remember_committed_size(Size::new(size_x as i32, size_y as i32));
+    pub fn create_window(&mut self, par: CreateWindowParams) -> WindowHandle {
+        let mut window = Window::new(
+            par.toplevel,
+            par.process,
+            par.bounds,
+            par.min_size,
+            par.max_size,
+        );
+        window.remember_committed_size(Size::new(par.size_x as i32, par.size_y as i32));
         self.windows.insert(window)
     }
 
@@ -166,7 +173,7 @@ impl WindowHandle {
         Self::from(slotmap::KeyData::from_ffi(handle.user))
     }
 
-    pub fn as_packet(&self) -> packet_server::WvrWindowHandle {
+    pub fn as_packet(self) -> packet_server::WvrWindowHandle {
         packet_server::WvrWindowHandle {
             user: self.0.as_ffi(),
         }

@@ -192,12 +192,13 @@ impl ClipboardRuntime {
         let _ = self.conn.flush();
     }
 
+    #[allow(clippy::match_same_arms)]
     fn drain_x_events(&mut self) {
         loop {
             match self.conn.poll_for_event() {
                 Ok(Some(event)) => self.handle_x_event(event),
                 Ok(None) => break,
-                Err(xcb::Error::Protocol(_)) => continue,
+                Err(xcb::Error::Protocol(_)) => { /* continue */ }
                 Err(xcb::Error::Connection(_)) => break,
             }
         }
@@ -208,10 +209,10 @@ impl ClipboardRuntime {
             xcb::Event::X(x::Event::SelectionRequest(req)) => {
                 self.handle_selection_request(&req);
             }
-            xcb::Event::X(x::Event::SelectionClear(ev)) => {
-                if ev.selection() == self.atoms.clipboard {
-                    self.owns_clipboard = false;
-                }
+            xcb::Event::X(x::Event::SelectionClear(ev))
+                if ev.selection() == self.atoms.clipboard =>
+            {
+                self.owns_clipboard = false;
             }
             _ => {}
         }
@@ -263,9 +264,7 @@ impl ClipboardRuntime {
         if target == self.atoms.utf8_string
             || target == self.atoms.text_plain_utf8
             || target == self.atoms.text_plain
-        {
-            Some(target)
-        } else if self.content.is_ascii() && (target == self.atoms.text || target == x::ATOM_STRING)
+            || (self.content.is_ascii() && (target == self.atoms.text || target == x::ATOM_STRING))
         {
             Some(target)
         } else {

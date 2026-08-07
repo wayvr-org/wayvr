@@ -204,16 +204,8 @@ impl Color {
 		}
 
 		const fn hex_byte(high: u8, low: u8) -> Option<u8> {
-			let high = match hex_nibble(high) {
-				Some(value) => value,
-				None => return None,
-			};
-
-			let low = match hex_nibble(low) {
-				Some(value) => value,
-				None => return None,
-			};
-
+			let Some(high) = hex_nibble(high) else { return None };
+			let Some(low) = hex_nibble(low) else { return None };
 			Some((high << 4) | low)
 		}
 
@@ -223,19 +215,16 @@ impl Color {
 			return None;
 		}
 
-		let r = match hex_byte(bytes[1], bytes[2]) {
-			Some(value) => value,
-			None => return None,
+		let Some(r) = hex_byte(bytes[1], bytes[2]) else {
+			return None;
 		};
 
-		let g = match hex_byte(bytes[3], bytes[4]) {
-			Some(value) => value,
-			None => return None,
+		let Some(g) = hex_byte(bytes[3], bytes[4]) else {
+			return None;
 		};
 
-		let b = match hex_byte(bytes[5], bytes[6]) {
-			Some(value) => value,
-			None => return None,
+		let Some(b) = hex_byte(bytes[5], bytes[6]) else {
+			return None;
 		};
 
 		let a = if bytes.len() == 9 {

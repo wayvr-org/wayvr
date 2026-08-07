@@ -103,13 +103,13 @@ impl InputState {
     }
 
     pub fn apply_handsfree_action(&mut self, params: HandsfreeParams) {
-        fn set_true(v: &mut bool) {
+        const fn set_true(v: &mut bool) {
             *v = true;
         }
-        fn set_false(v: &mut bool) {
+        const fn set_false(v: &mut bool) {
             *v = false;
         }
-        fn toggle(v: &mut bool) {
+        const fn toggle(v: &mut bool) {
             *v = !*v;
         }
 
@@ -130,10 +130,10 @@ impl InputState {
             HandsfreeAction::Click => apply(&mut self.handsfree_state.click),
             HandsfreeAction::RightModifier => apply(&mut self.handsfree_state.click_modifier_right),
             HandsfreeAction::MiddleModifier => {
-                apply(&mut self.handsfree_state.click_modifier_middle)
+                apply(&mut self.handsfree_state.click_modifier_middle);
             }
             HandsfreeAction::Grab => apply(&mut self.handsfree_state.grab),
-        };
+        }
     }
 
     pub fn handle_task(&mut self, task: InputTask) {
@@ -574,16 +574,16 @@ where
     // grab
     if grab_start && hovered_state.grabbable {
         update_focus(app, hovered.config.input_focus);
-        start_grab(
+        start_grab(StartGrabParams {
             idx,
-            hit.overlay,
-            hovered.config.name.clone(),
-            hovered.config.editing,
-            hovered_state,
+            id: hit.overlay,
+            name: hovered.config.name.clone(),
+            editing: hovered.config.editing,
+            state: hovered_state,
             app,
             edit_mode,
             grab_float,
-        );
+        });
         log::debug!("Hand {}: grabbed {}", hit.pointer, hovered.config.name);
         return (
             Some((hit, raw_hit)),
@@ -772,10 +772,8 @@ where
             continue;
         };
 
-        if uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0 {
-            if !overlay.config.resizing {
-                continue;
-            }
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) && !overlay.config.resizing {
+            continue;
         }
 
         let pointer_hit = PointerHit {
@@ -795,25 +793,29 @@ where
     (None, None)
 }
 
-fn start_grab(
+struct StartGrabParams<'a> {
     idx: usize,
     id: OverlayID,
     name: Arc<str>,
     editing: bool,
-    state: &mut OverlayWindowState,
-    app: &mut AppState,
+    state: &'a mut OverlayWindowState,
+    app: &'a mut AppState,
     edit_mode: bool,
     grab_float: bool,
-) {
-    let pointer = &mut app.input_state.pointers[idx];
+}
+
+fn start_grab(par: StartGrabParams) {
+    let (app, id, state) = (par.app, par.id, par.state);
+
+    let pointer = &mut app.input_state.pointers[par.idx];
 
     // Grab anchor if:
     // - grabbed overlay is Anchored
     // - not in editmode
     // - not using grab_float
     // - grabbing with one hand. (grabbing with the 2nd hand will grab the individual overlay instead)
-    let grab_anchor = !edit_mode
-        && !grab_float
+    let grab_anchor = !par.edit_mode
+        && !par.grab_float
         && !app.anchor_grabbed
         && matches!(state.positioning, Positioning::Anchored);
 
@@ -837,11 +839,18 @@ fn start_grab(
         OverlaySelector::Id(id),
         Box::new({
             let pos = state.positioning;
-            let name = name.clone();
+            let name = par.name.clone();
             move |app, o| {
                 let _ = o
                     .backend
-                    .notify(app, OverlayEventData::OverlayGrabbed { name, pos, editing })
+                    .notify(
+                        app,
+                        OverlayEventData::OverlayGrabbed {
+                            name,
+                            pos,
+                            editing: par.editing,
+                        },
+                    )
                     .inspect_err(|e| log::warn!("Error during Notify OverlayGrabbed: {e:?}"));
             }
         }),
@@ -865,7 +874,14 @@ fn start_grab(
             Box::new(move |app, o| {
                 let _ = o
                     .backend
-                    .notify(app, OverlayEventData::OverlayGrabbed { name, pos, editing })
+                    .notify(
+                        app,
+                        OverlayEventData::OverlayGrabbed {
+                            name: par.name,
+                            pos,
+                            editing: par.editing,
+                        },
+                    )
                     .inspect_err(|e| log::warn!("Error during Notify OverlayGrabbed: {e:?}"));
 
                 o.default_state.positioning = Positioning::FollowHand { hand, lerp: 0.1 };

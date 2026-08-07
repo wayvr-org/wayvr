@@ -833,7 +833,7 @@ fn shell_on_action(state: &ShellButtonState) -> anyhow::Result<()> {
         .arg(&state.exec)
         .stdout(Stdio::piped())
         .spawn()
-        .with_context(|| format!("Failed to run shell script: '{}'", &state.exec))?;
+        .with_context(|| format!("Failed to run shell script: '{}'", state.exec))?;
 
     mut_state.child = Some(child);
 

@@ -27,15 +27,15 @@ pub(super) struct PlayspaceMover {
 }
 
 impl PlayspaceMover {
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new() -> Self {
         log::info!("Monado: using space offset API");
 
-        Ok(Self {
+        Self {
             drag: None,
             rotate: None,
             gravity: SpaceGravity::new(),
             playspace_state: load_playspace_state().unwrap_or_default(),
-        })
+        }
     }
 
     pub fn handle_task(

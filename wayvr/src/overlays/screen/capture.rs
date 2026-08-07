@@ -100,7 +100,7 @@ impl ScreenPipeline {
         self.pass.clear(); // ensure_depth will repopulate
     }
 
-    pub fn set_stereo_adjust_mouse(&mut self, adjust: bool) {
+    pub const fn set_stereo_adjust_mouse(&mut self, adjust: bool) {
         self.stereo_adjust_mouse = adjust;
     }
 
@@ -255,7 +255,7 @@ impl ScreenPipeline {
         mouse: &MouseMeta,
         rdr: &mut RenderResources,
     ) -> anyhow::Result<()> {
-        for cmd_buf in rdr.cmd_bufs.iter_mut() {
+        for cmd_buf in &mut rdr.cmd_bufs {
             let size = CURSOR_SIZE * self.extentf[1];
             let half_size = size * 0.5;
 

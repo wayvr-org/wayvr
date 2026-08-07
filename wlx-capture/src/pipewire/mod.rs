@@ -6,7 +6,7 @@ use std::{
     pin::Pin,
     rc::Rc,
     sync::{Arc, Mutex, MutexGuard},
-    task::{Context, Poll, Wake, Waker},
+    task::{Context, Poll},
     time::Duration,
 };
 
@@ -71,17 +71,14 @@ pub enum ScreenCastResult {
 
 impl PartialEq for ScreenCastResult {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Ok(_), Self::Ok(_)) => true,
-            (Self::Queued, Self::Queued) => true,
-            (Self::Pending, Self::Pending) => true,
-            (Self::WaitingForUser, Self::WaitingForUser) => true,
-            (Self::Failed(_), Self::Failed(_)) => true,
-            _ => false,
-        }
-    }
-    fn ne(&self, other: &Self) -> bool {
-        !self.eq(other)
+        matches!(
+            (self, other),
+            (Self::Ok(_), Self::Ok(_))
+                | (Self::Queued, Self::Queued)
+                | (Self::Pending, Self::Pending)
+                | (Self::WaitingForUser, Self::WaitingForUser)
+                | (Self::Failed(_), Self::Failed(_))
+        )
     }
 }
 
@@ -246,6 +243,7 @@ impl ScreenCastManager {
         while i < self.cleanup.len() {
             match poll_boxed(&mut self.cleanup[i]) {
                 Poll::Ready(_) => {
+                    #[allow(clippy::let_underscore_future)]
                     let _ = self.cleanup.swap_remove(i);
                 }
                 Poll::Pending => i += 1,
@@ -826,26 +824,15 @@ fn poll_unpin<F>(future: &mut F) -> Poll<F::Output>
 where
     F: Future + Unpin,
 {
-    let waker = noop_waker();
-    let mut cx = Context::from_waker(&waker);
+    let waker = std::task::Waker::noop();
+    let mut cx = Context::from_waker(waker);
     Pin::new(future).poll(&mut cx)
 }
 
 fn poll_boxed<T>(future: &mut DbusFuture<T>) -> Poll<Result<T, dbus::Error>> {
-    let waker = noop_waker();
-    let mut cx = Context::from_waker(&waker);
+    let waker = std::task::Waker::noop();
+    let mut cx = Context::from_waker(waker);
     future.as_mut().poll(&mut cx)
-}
-
-fn noop_waker() -> Waker {
-    struct NoopWake;
-
-    impl Wake for NoopWake {
-        fn wake(self: Arc<Self>) {}
-        fn wake_by_ref(self: &Arc<Self>) {}
-    }
-
-    Waker::from(Arc::new(NoopWake))
 }
 
 fn sender_path_component(unique_name: &str) -> String {

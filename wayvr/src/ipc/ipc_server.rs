@@ -1,3 +1,4 @@
+use crate::backend::wayvr::process::ProcessHandle;
 use crate::backend::wayvr::{self, WvrServerState};
 
 use crate::subsystem::input::{HidWrapper, InputFocus};
@@ -208,8 +209,8 @@ impl Connection {
                 .windows
                 .iter()
                 .map(|(handle, win)| packet_server::WvrWindow {
-                    handle: wayvr::window::WindowHandle::as_packet(&handle),
-                    process_handle: wayvr::process::ProcessHandle::as_packet(&win.process),
+                    handle: wayvr::window::WindowHandle::as_packet(handle),
+                    process_handle: wayvr::process::ProcessHandle::as_packet(win.process),
                     size_x: win.size_x,
                     size_y: win.size_y,
                     visible: win.visible,
@@ -228,7 +229,7 @@ impl Connection {
             window.visible = visible;
             params
                 .signals
-                .send(WayVRSignal::WindowVisibilityChanged(window_handle, visible))
+                .send(WayVRSignal::WindowVisibilityChanged(window_handle, visible));
         }
     }
 
@@ -253,7 +254,7 @@ impl Connection {
             packet_params.userdata,
         );
 
-        let res = res.map(|r| r.as_packet()).map_err(|e| e.to_string());
+        let res = res.map(ProcessHandle::as_packet).map_err(|e| e.to_string());
 
         send_packet(
             &mut self.conn,

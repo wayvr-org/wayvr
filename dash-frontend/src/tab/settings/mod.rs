@@ -638,7 +638,7 @@ pub fn horiz_cell(layout: &mut Layout, parent: WidgetID) -> anyhow::Result<Widge
 		taffy::Style {
 			flex_direction: taffy::FlexDirection::Row,
 			align_items: Some(taffy::AlignItems::CENTER),
-			gap: length(8.0),
+			gap: length(8.0_f32),
 			..Default::default()
 		},
 	)?;

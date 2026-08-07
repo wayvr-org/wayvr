@@ -51,7 +51,7 @@ pub struct MultiClickHandler<const COUNT: usize> {
 impl<const COUNT: usize> MultiClickHandler<COUNT> {
     fn new(action_set: &xr::ActionSet, action_name: &str, side: &str) -> anyhow::Result<Self> {
         let name = format!("{side}_{COUNT}-{action_name}");
-        let name_f32 = format!("{}_value", &name);
+        let name_f32 = format!("{name}_value");
 
         let action_bool = action_set.create_action::<bool>(&name, &name, &[])?;
         let action_f32 = action_set.create_action::<f32>(&name_f32, &name_f32, &[])?;
@@ -135,7 +135,7 @@ impl CustomClickAction {
         })
     }
 
-    pub fn set_threshold(&mut self, threshold: [f32; 2]) {
+    pub const fn set_threshold(&mut self, threshold: [f32; 2]) {
         self.threshold = threshold;
     }
 
@@ -238,7 +238,14 @@ impl OpenXrInputSource {
         let mut any_tracked = false;
         let old_handsfree = app.session.config.handsfree_pointer;
 
-        if !app.input_state.picking_focus.is_none() {
+        if app.input_state.picking_focus.is_none() {
+            let should_disable_lerp = app.input_state.should_disable_lerp();
+            for i in 0..2 {
+                let pointer = &mut app.input_state.pointers[i];
+                self.pointers[i].update(pointer, xr, &app.session, !should_disable_lerp)?;
+                any_tracked |= pointer.tracked;
+            }
+        } else {
             app.session.config.handsfree_pointer = app.session.config.handsfree_alt_tab.into();
 
             app.input_state.handsfree_state.scroll_x =
@@ -250,13 +257,6 @@ impl OpenXrInputSource {
             ptr1.before = ptr1.now;
             ptr1.now = PointerState::default();
             ptr1.tracked = false;
-        } else {
-            let should_disable_lerp = app.input_state.should_disable_lerp();
-            for i in 0..2 {
-                let pointer = &mut app.input_state.pointers[i];
-                self.pointers[i].update(pointer, xr, &app.session, !should_disable_lerp)?;
-                any_tracked |= pointer.tracked;
-            }
         }
 
         if !any_tracked {
@@ -709,7 +709,7 @@ fn suggest_bindings(instance: &xr::Instance, hands: &mut [&mut OpenXrHandSource;
     let profiles = load_xr_input_profiles();
 
     for profile in profiles {
-        log::debug!("Loading profile {}", &profile.profile);
+        log::debug!("Loading profile {}", profile.profile);
 
         let Ok(profile_path) = instance.string_to_path(&profile.profile) else {
             log::warn!("Profile not supported: {}", profile.profile);

@@ -93,7 +93,7 @@ impl DashFrontend {
             show_welcome: tutorial,
             has_monado: app.feats.xr_backend.is_open_xr(),
             theme: app.wgui_theme.clone(),
-            color_palette: &*app.session.config.color_palette,
+            color_palette: &app.session.config.color_palette,
             executor: app.executor.clone(),
         })?;
 
@@ -213,18 +213,18 @@ impl OverlayBackend for DashFrontend {
         }
 
         // if we're grabbed, stop following the hmd
-        if let OverlayEventData::OverlayGrabbed { name, .. } = data {
-            if &*name == DASH_NAME {
-                self.tutorial = false;
-                app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
-                    OverlaySelector::Name(name),
-                    Box::new(|_app, owc| {
-                        if let Some(active_state) = owc.active_state.as_mut() {
-                            active_state.positioning = Positioning::Floating;
-                        }
-                    }),
-                )));
-            }
+        if let OverlayEventData::OverlayGrabbed { name, .. } = data
+            && &*name == DASH_NAME
+        {
+            self.tutorial = false;
+            app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                OverlaySelector::Name(name),
+                Box::new(|_app, owc| {
+                    if let Some(active_state) = owc.active_state.as_mut() {
+                        active_state.positioning = Positioning::Floating;
+                    }
+                }),
+            )));
         }
 
         Ok(())
@@ -319,7 +319,7 @@ impl OverlayBackend for DashFrontend {
     }
 }
 
-fn tutorial_spawn_effect(app: &mut AppState) -> anyhow::Result<()> {
+fn tutorial_spawn_effect(app: &mut AppState) {
     let dash_name: Arc<str> = DASH_NAME.into();
 
     app.tasks.enqueue_at(
@@ -360,13 +360,11 @@ fn tutorial_spawn_effect(app: &mut AppState) -> anyhow::Result<()> {
             Instant::now().add(Duration::from_millis(500 + 40 * i)),
         );
     }
-
-    Ok(())
 }
 
 pub fn create_dash_frontend(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     if !app.session.config.tutorial_graduated {
-        tutorial_spawn_effect(app)?;
+        tutorial_spawn_effect(app);
     }
 
     Ok(OverlayWindowConfig {
@@ -401,8 +399,8 @@ impl DashInterface<AppState> for DashInterfaceLive {
             .windows
             .iter()
             .map(|(handle, win)| WvrWindow {
-                handle: WindowHandle::as_packet(&handle),
-                process_handle: ProcessHandle::as_packet(&win.process),
+                handle: WindowHandle::as_packet(handle),
+                process_handle: ProcessHandle::as_packet(win.process),
                 size_x: win.size_x,
                 size_y: win.size_y,
                 visible: win.visible,
@@ -459,7 +457,7 @@ impl DashInterface<AppState> for DashInterfaceLive {
                 params.icon.as_deref(),
                 params.userdata,
             )
-            .map(|x| x.as_packet())
+            .map(ProcessHandle::as_packet)
     }
 
     fn process_list(&mut self, app: &mut AppState) -> anyhow::Result<Vec<WvrProcess>> {

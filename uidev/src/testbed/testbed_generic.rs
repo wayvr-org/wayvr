@@ -237,8 +237,8 @@ impl TestbedGeneric {
 			WidgetDiv::create(),
 			taffy::Style {
 				size: taffy::Size {
-					width: length(128.0),
-					height: length(64.0),
+					width: length(128.0_f32),
+					height: length(64.0_f32),
 				},
 				..Default::default()
 			},

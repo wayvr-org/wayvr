@@ -276,7 +276,7 @@ impl WayVRCompositor {
         delta: DVec2,
         delta_unaccel: DVec2,
     ) {
-        let location: Point<f64, Logical> = (global_pos.x as f64, global_pos.y as f64).into();
+        let location: Point<f64, Logical> = (global_pos.x, global_pos.y).into();
         let delta: Point<f64, Logical> = (delta.x, delta.y).into();
         let delta_unaccel: Point<f64, Logical> = (delta_unaccel.x, delta_unaccel.y).into();
 
@@ -337,6 +337,9 @@ impl WayVRCompositor {
     }
 
     pub fn send_pointer_axis_wheel_raw(&mut self, delta: super::WheelDelta) {
+        // 15 logical axis units for one wheel detent of 120 v120 units
+        const AXIS_VALUE_PER_DETENT: f64 = 15.0;
+
         let time = super::time::get_millis() as u32;
 
         let v120_x = delta.x as i32;
@@ -345,9 +348,6 @@ impl WayVRCompositor {
         if v120_x == 0 && v120_y == 0 {
             return;
         }
-
-        // 15 logical axis units for one wheel detent of 120 v120 units
-        const AXIS_VALUE_PER_DETENT: f64 = 15.0;
 
         let mut frame = AxisFrame::new(time).source(AxisSource::Wheel);
 

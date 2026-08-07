@@ -649,8 +649,8 @@ fn mount_slider_handle(
 ) -> anyhow::Result<SliderHandleData> {
 	let slider_handle_style = taffy::Style {
 		size: taffy::Size {
-			width: length(0.0),
-			height: percent(1.0),
+			width: length(0.0_f32),
+			height: percent(1.0_f32),
 		},
 		position: taffy::Position::Absolute,
 		align_items: Some(taffy::AlignItems::CENTER),
@@ -728,7 +728,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		}),
 		taffy::Style {
 			size: taffy::Size {
-				width: percent(1.0),
+				width: percent(1.0_f32),
 				height: percent(PAD_PERCENT),
 			},
 			position: taffy::Position::Absolute,

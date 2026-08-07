@@ -45,17 +45,16 @@ pub fn create_screen_renderer_wl(
         app.session.config.capture_method,
         CaptureMethod::ScreenCopyCpu | CaptureMethod::ScreenCopyGpu | CaptureMethod::Auto
     ) && has_wlr_screencopy
+        && let Some(mut backend) = ScreenBackend::new_wlr_screencopy(output, app)
     {
-        if let Some(mut backend) = ScreenBackend::new_wlr_screencopy(output, app) {
-            log::info!("{}: Using ScreenCopy capture", &output.name);
-            backend.logical_pos = vec2(output.logical_pos.0 as f32, output.logical_pos.1 as f32);
-            backend.logical_size = vec2(output.logical_size.0 as f32, output.logical_size.1 as f32);
-            backend.apply_mouse_transform_with_override(Transform::Undefined);
-            return Ok(Box::new(backend));
-        }
+        log::info!("{}: Using ScreenCopy capture", output.name);
+        backend.logical_pos = vec2(output.logical_pos.0 as f32, output.logical_pos.1 as f32);
+        backend.logical_size = vec2(output.logical_size.0 as f32, output.logical_size.1 as f32);
+        backend.apply_mouse_transform_with_override(Transform::Undefined);
+        return Ok(Box::new(backend));
     }
 
-    log::info!("{}: Using Pipewire capture", &output.name);
+    log::info!("{}: Using Pipewire capture", output.name);
     let display_name = &*output.name;
 
     // Find existing token by display
@@ -63,7 +62,7 @@ pub fn create_screen_renderer_wl(
         .session
         .pw_tokens
         .arc_get(display_name)
-        .map(|x| x.to_string().into());
+        .map(|x| x.clone().into());
 
     if token.is_some() {
         log::info!("Found existing Pipewire token for display {display_name}");

@@ -285,8 +285,8 @@ impl PopupManager {
 		let id_content = state.get_widget_id("content")?;
 
 		let padding = match popup_padding {
-			PopupPadding::Normal => 16.0,
-			PopupPadding::None => 0.0,
+			PopupPadding::Normal => 16.0_f32,
+			PopupPadding::None => 0.0_f32,
 		};
 
 		layout.tasks.push(LayoutTask::SetWidgetStyle(

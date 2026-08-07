@@ -384,13 +384,15 @@ fn input_controls_for_action(
 
 	input_controls_for_hand(
 		mp,
-		parent,
-		current_left,
-		XrInputSide::Left,
-		action.clone(),
-		click_type,
-		profile,
-		current.threshold_left,
+		InputControlsForHandParams {
+			parent,
+			current: current_left,
+			side: XrInputSide::Left,
+			action: &action,
+			click_type,
+			profile,
+			threshold: current.threshold_left,
+		},
 	)?;
 
 	let current_right = current.right.as_ref().map(|x| match x {
@@ -400,33 +402,40 @@ fn input_controls_for_action(
 
 	input_controls_for_hand(
 		mp,
-		parent,
-		current_right,
-		XrInputSide::Right,
-		action,
-		click_type,
-		profile,
-		current.threshold_right,
-	)
+		InputControlsForHandParams {
+			parent,
+			current: current_right,
+			side: XrInputSide::Right,
+			action: &action,
+			click_type,
+			profile,
+			threshold: current.threshold_right,
+		},
+	)?;
+
+	Ok(())
 }
 
-fn input_controls_for_hand(
-	mp: &mut MacroParams,
+struct InputControlsForHandParams<'a> {
 	parent: WidgetID,
-	current: Option<&str>,
+	current: Option<&'a str>,
 	side: XrInputSide,
-	action: Rc<str>,
+	action: &'a Rc<str>,
 	click_type: ClickType,
-	profile: &XrControllerProfile,
+	profile: &'a XrControllerProfile,
 	threshold: Option<[f32; 2]>,
-) -> anyhow::Result<()> {
-	let Some(user_path) = profile.find_userpath(side) else {
+}
+
+fn input_controls_for_hand(mp: &mut MacroParams, par: InputControlsForHandParams) -> anyhow::Result<()> {
+	let Some(user_path) = par.profile.find_userpath(par.side) else {
 		return Ok(()); // this hand is not available
 	};
 
-	let current = current.and_then(|cur| ParsedOpenXrInputPath::try_from(cur).log_warn(cur).ok());
+	let current = par
+		.current
+		.and_then(|cur| ParsedOpenXrInputPath::try_from(cur).log_warn(cur).ok());
 
-	let parent = horiz_cell(mp.layout, parent)?;
+	let parent = horiz_cell(mp.layout, par.parent)?;
 
 	let available_components: Rc<[XrInputComponent]> = current
 		.as_ref()
@@ -445,8 +454,8 @@ fn input_controls_for_hand(
 	subpath_dropdown(
 		mp,
 		parent,
-		action.clone(),
-		side,
+		par.action.clone(),
+		par.side,
 		available_subpaths,
 		current.as_ref().map(|x| x.subpath),
 	)?;
@@ -454,22 +463,22 @@ fn input_controls_for_hand(
 	if !component_dropdown(
 		mp,
 		parent,
-		action.clone(),
-		side,
+		par.action.clone(),
+		par.side,
 		available_components,
 		current.as_ref().map(|x| x.component),
 	)? {
 		return Ok(());
 	}
 
-	clicks_dropdown(mp, parent, action.clone(), click_type)?;
+	clicks_dropdown(mp, parent, par.action.clone(), par.click_type)?;
 
 	if let Some(component) = current.as_ref().map(|x| x.component)
 		&& component.is_analog()
-		&& &*action != "scroll"
+		&& &**par.action != "scroll"
 	// hax
 	{
-		threshold_slider(mp, parent, action, side, threshold)?;
+		threshold_slider(mp, parent, par.action.clone(), par.side, par.threshold)?;
 	}
 
 	Ok(())

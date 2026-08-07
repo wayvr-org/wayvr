@@ -99,9 +99,7 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
 
     app.late_init();
 
-    let mut playspace_mover = playspace::PlayspaceMover::new()
-        .map_err(|e| log::warn!("Will not use Monado playspace mover: {e}"))
-        .ok();
+    let mut playspace_mover = playspace::PlayspaceMover::new();
 
     let mut blocker = app
         .monado_state
@@ -303,9 +301,7 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
                 .enqueue(TaskType::Overlay(OverlayTask::ToggleDashboard));
         }
 
-        if let Some(ref mut playspace_mover) = playspace_mover {
-            playspace_mover.update(&mut overlays, &mut app);
-        }
+        playspace_mover.update(&mut overlays, &mut app);
 
         for o in overlays.values_mut() {
             o.after_input(&mut app)?;
@@ -492,9 +488,7 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
                     overlays.handle_task(&mut app, task)?;
                 }
                 TaskType::Playspace(task) => {
-                    if let Some(playspace_mover) = playspace_mover.as_mut() {
-                        playspace_mover.handle_task(&mut app, &mut overlays, task);
-                    }
+                    playspace_mover.handle_task(&mut app, &mut overlays, task);
                 }
                 TaskType::OpenXR(task) => {
                     if matches!(task, OpenXrTask::EnvironmentChanged) {

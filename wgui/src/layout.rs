@@ -573,7 +573,7 @@ impl Layout {
 		};
 
 		let size = if params.resize_to_parent {
-			taffy::Size::percent(1.0)
+			taffy::Size::percent(1.0_f32)
 		} else {
 			taffy::Size::auto()
 		};

@@ -216,8 +216,8 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 			margin: taffy::Rect {
 				left: length(pin_left),
 				top: length(pin_top),
-				bottom: length(0.0),
-				right: length(0.0),
+				bottom: length(0.0_f32),
+				right: length(0.0_f32),
 			},
 			/* important, to make it centered! */
 			size: taffy::Size {
@@ -241,12 +241,12 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		}),
 		taffy::Style {
 			position: taffy::Position::Relative,
-			gap: length(4.0),
+			gap: length(4.0_f32),
 			padding: taffy::Rect {
-				left: length(16.0),
-				right: length(16.0),
-				top: length(8.0),
-				bottom: length(8.0),
+				left: length(16.0_f32),
+				right: length(16.0_f32),
+				top: length(8.0_f32),
+				bottom: length(8.0_f32),
 			},
 			..Default::default()
 		},

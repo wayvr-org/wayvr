@@ -119,8 +119,8 @@ impl WguiWindow {
 				taffy::Rect {
 					left: length(params.position.x - window_padding),
 					top: length(params.position.y - header_height - window_padding),
-					bottom: length(0.0),
-					right: length(0.0),
+					bottom: length(0.0_f32),
+					right: length(0.0_f32),
 				},
 				taffy::JustifyContent::START, // x start
 				taffy::AlignItems::START,     // y start
@@ -128,18 +128,18 @@ impl WguiWindow {
 			WguiWindowPlacement::BottomLeft => (
 				taffy::Rect {
 					left: length(params.position.x - window_padding),
-					top: length(0.0),
+					top: length(0.0_f32),
 					bottom: length(params.position.y - window_padding),
-					right: length(0.0),
+					right: length(0.0_f32),
 				},
 				taffy::JustifyContent::START, // x start
 				taffy::AlignItems::END,       // y end
 			),
 			WguiWindowPlacement::TopRight => (
 				taffy::Rect {
-					left: length(0.0),
+					left: length(0.0_f32),
 					top: length(params.position.y - header_height - window_padding),
-					bottom: length(0.0),
+					bottom: length(0.0_f32),
 					right: length(params.position.x - window_padding),
 				},
 				taffy::JustifyContent::END, // x end
@@ -147,8 +147,8 @@ impl WguiWindow {
 			),
 			WguiWindowPlacement::BottomRight => (
 				taffy::Rect {
-					left: length(0.0),
-					top: length(0.0),
+					left: length(0.0_f32),
+					top: length(0.0_f32),
 					bottom: length(params.position.y - window_padding),
 					right: length(params.position.x - window_padding),
 				},
@@ -175,8 +175,8 @@ impl WguiWindow {
 				taffy::Style {
 					position: taffy::Position::Absolute,
 					size: taffy::Size {
-						width: percent(1.0),
-						height: percent(1.0),
+						width: percent(1.0_f32),
+						height: percent(1.0_f32),
 					},
 					..Default::default()
 				},
@@ -207,8 +207,8 @@ impl WguiWindow {
 				justify_content: Some(justify_content),
 				padding,
 				size: taffy::Size {
-					width: percent(1.0),
-					height: percent(1.0),
+					width: percent(1.0_f32),
+					height: percent(1.0_f32),
 				},
 				..Default::default()
 			},

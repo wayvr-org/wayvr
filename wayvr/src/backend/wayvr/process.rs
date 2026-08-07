@@ -221,7 +221,7 @@ impl ProcessHandle {
         Self::from(slotmap::KeyData::from_ffi(handle.user))
     }
 
-    pub fn as_packet(&self) -> packet_server::WvrProcessHandle {
+    pub fn as_packet(self) -> packet_server::WvrProcessHandle {
         packet_server::WvrProcessHandle {
             user: self.0.as_ffi(),
         }

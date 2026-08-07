@@ -35,7 +35,7 @@ impl OverlayWindowData<OpenVrOverlayData> {
         app: &mut AppState,
     ) -> anyhow::Result<OverlayHandle> {
         let key = format!("wlx-{}", self.config.name);
-        log::debug!("Create overlay with key: {}", &key);
+        log::debug!("Create overlay with key: {key}");
         let handle = match overlay.create_overlay(&key, &key) {
             Ok(handle) => handle,
             Err(e) => {

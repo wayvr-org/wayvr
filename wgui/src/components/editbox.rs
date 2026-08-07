@@ -276,11 +276,11 @@ pub fn construct(
 	let text_color = WguiColor::from(WguiColorName::OnBackgroundVariant);
 
 	if params.style.size.width.is_auto() {
-		params.style.size.width = length(128.0);
+		params.style.size.width = length(128.0_f32);
 	}
 
 	if params.style.size.height.is_auto() {
-		params.style.size.height = length(32.0);
+		params.style.size.height = length(32.0_f32);
 	}
 
 	// override style
@@ -312,8 +312,8 @@ pub fn construct(
 			align_content: Some(taffy::AlignContent::CENTER),
 			align_items: Some(taffy::AlignItems::CENTER),
 			size: taffy::Size {
-				width: percent(1.0),
-				height: percent(1.0),
+				width: percent(1.0_f32),
+				height: percent(1.0_f32),
 			},
 			..Default::default()
 		},
@@ -331,7 +331,7 @@ pub fn construct(
 		root.id,
 		WidgetDiv::create(),
 		taffy::Style {
-			padding: taffy::Rect::length(8.0),
+			padding: taffy::Rect::length(8.0_f32),
 			..Default::default()
 		},
 	)?;
@@ -370,8 +370,8 @@ pub fn construct(
 			align_self: Some(taffy::AlignSelf::CENTER),
 			justify_self: Some(taffy::JustifySelf::END),
 			min_size: taffy::Size {
-				width: length(2.0),
-				height: length(16.0),
+				width: length(2.0_f32),
+				height: length(16.0_f32),
 			},
 			..Default::default()
 		},

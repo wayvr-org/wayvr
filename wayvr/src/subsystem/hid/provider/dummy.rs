@@ -1,4 +1,3 @@
-use crate::overlays::toast::Toast;
 use crate::subsystem::hid::provider::HidProvider;
 use crate::subsystem::hid::{VirtualKey, WheelDelta, XkbKeymap};
 use glam::DVec2;
@@ -20,6 +19,6 @@ impl HidProvider for DummyProvider {
     fn commit(&mut self) {}
 }
 
-pub fn initialize_dummy() -> anyhow::Result<Box<dyn HidProvider>, Toast> {
-    Ok(Box::new(DummyProvider {}))
+pub fn initialize_dummy() -> Box<dyn HidProvider> {
+    Box::new(DummyProvider {})
 }

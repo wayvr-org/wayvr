@@ -56,7 +56,7 @@ pub fn create_screens_x11pw(app: &mut AppState) -> anyhow::Result<ScreenCreateDa
             .session
             .pw_tokens
             .arc_get("x11")
-            .map(|x| x.to_string().into()),
+            .map(|x| x.clone().into()),
         embed_mouse: !app.session.config.double_cursor_fix,
         allow_multiple: true,
         persist: true,

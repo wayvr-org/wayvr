@@ -131,7 +131,7 @@ impl WguiColor {
 	/// Gets a matching foreground color from a background color
 	pub fn fg_color(&self) -> Option<Self> {
 		if let Self::Named(name) = self {
-			name.name.fg_color().map(|x| x.into())
+			name.name.fg_color().map(Into::into)
 		} else {
 			None
 		}
@@ -140,7 +140,7 @@ impl WguiColor {
 	/// Gets a matching background color from a foreground color
 	pub fn bg_color(&self) -> Option<Self> {
 		if let Self::Named(name) = self {
-			name.name.bg_color().map(|x| x.into())
+			name.name.bg_color().map(Into::into)
 		} else {
 			None
 		}
@@ -148,7 +148,7 @@ impl WguiColor {
 }
 
 impl WguiColorName {
-	pub fn fg_color(&self) -> Option<Self> {
+	pub const fn fg_color(&self) -> Option<Self> {
 		match self {
 			Self::Primary => Some(Self::OnPrimary),
 			Self::Secondary => Some(Self::OnSecondary),
@@ -161,7 +161,7 @@ impl WguiColorName {
 		}
 	}
 
-	pub fn bg_color(&self) -> Option<Self> {
+	pub const fn bg_color(&self) -> Option<Self> {
 		match self {
 			Self::OnPrimary => Some(Self::Primary),
 			Self::OnSecondary => Some(Self::Secondary),

@@ -65,8 +65,8 @@ impl ToastManager {
 			taffy::Style {
 				position: taffy::Position::Absolute,
 				size: taffy::Size {
-					width: percent(1.0),
-					height: percent(0.8),
+					width: percent(1.0_f32),
+					height: percent(0.8_f32),
 				},
 				align_items: Some(taffy::AlignItems::END),
 				justify_content: Some(taffy::JustifyContent::CENTER),
@@ -85,15 +85,15 @@ impl ToastManager {
 			}),
 			taffy::Style {
 				position: taffy::Position::Relative,
-				gap: length(4.0),
+				gap: length(4.0_f32),
 				padding: taffy::Rect {
-					left: length(16.0),
-					right: length(16.0),
-					top: length(8.0),
-					bottom: length(8.0),
+					left: length(16.0_f32),
+					right: length(16.0_f32),
+					top: length(8.0_f32),
+					bottom: length(8.0_f32),
 				},
 				max_size: taffy::Size {
-					width: length(400.0),
+					width: length(400.0_f32),
 					height: auto(),
 				},
 				..Default::default()

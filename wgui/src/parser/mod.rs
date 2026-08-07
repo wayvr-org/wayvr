@@ -522,7 +522,7 @@ impl ParserContext<'_> {
 	}
 
 	fn populate_extra_variables(&mut self, other: &HashMap<Rc<str>, Rc<str>>) {
-		for (k, v) in other.iter() {
+		for (k, v) in other {
 			self.data_local.var_map.insert(k.clone(), v.clone());
 		}
 	}
@@ -805,7 +805,7 @@ fn process_attrib(template_parameters: &TemplateParams, ctx: &ParserContext, key
 			Some(name) => AttribPair::new(key, name),
 			None => {
 				log::warn!("{}: undefined variable \"{value}\"", ctx.doc_params.path.get_str());
-				AttribPair::new(key, format!("undefined_{}", value))
+				AttribPair::new(key, format!("undefined_{value}"))
 			}
 		}
 	} else {

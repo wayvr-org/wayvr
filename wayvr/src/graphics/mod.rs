@@ -400,7 +400,7 @@ pub fn init_openvr_graphics(
 
     let layers = vec![];
 
-    log::debug!("Instance exts for runtime: {:?}", &vk_instance_extensions);
+    log::debug!("Instance exts for runtime: {vk_instance_extensions:?}");
 
     vk_instance_extensions.khr_get_physical_device_properties2 = true;
 
@@ -452,7 +452,7 @@ pub fn init_openvr_graphics(
             log::debug!(
                 "Device exts for {}: {:?}",
                 p.properties().device_name,
-                &my_extensions
+                my_extensions
             );
             Some((p, my_extensions))
         })

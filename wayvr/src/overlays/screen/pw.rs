@@ -124,7 +124,7 @@ impl ScreenCastBackend {
     ) -> anyhow::Result<Self> {
         if app.screencast_manager.is_none() {
             anyhow::bail!("xdg-desktop-portal screencasts not supported");
-        };
+        }
 
         let panel_params = NewGuiPanelParams {
             extra_vars: HashMap::from([
@@ -135,8 +135,8 @@ impl ScreenCastBackend {
         };
 
         let state = ScreenCastPanelState {
-            name: name.clone(),
-            description: description.clone(),
+            name,
+            description,
             logical_pos,
             logical_size,
             params: Some(params),
@@ -157,18 +157,20 @@ impl OverlayBackend for ScreenCastBackend {
         if let Some(params) = self.panel.state.params.take()
             && let Some(screencast_manager) = app.screencast_manager.as_mut()
         {
-            let request_id = screencast_manager.request(params.clone())?;
+            let request_id = screencast_manager.request(params)?;
             check(
-                self.panel.state.name.clone(),
-                self.panel.state.description.clone(),
-                self.panel.state.logical_pos,
-                self.panel.state.logical_size,
-                0,
-                None,
-                None,
-                request_id.clone(),
+                CheckParams {
+                    name: self.panel.state.name.clone(),
+                    description: self.panel.state.description.clone(),
+                    logical_pos: self.panel.state.logical_pos,
+                    logical_size: self.panel.state.logical_size,
+                    user_wait: 0,
+                    notify_id: None,
+                    request_id,
+                    last_result: None,
+                    app,
+                },
                 self.panel.state.finalize_fn,
-                app,
             );
         }
 
@@ -247,60 +249,63 @@ impl OverlayBackend for ScreenCastBackend {
     }
 }
 
-fn check(
+struct CheckParams<'a> {
     name: Arc<str>,
     description: Arc<str>,
     logical_pos: Vec2,
     logical_size: Vec2,
     user_wait: u32,
-    mut notify_id: Option<u32>,
-    last_result: Option<ScreenCastResult>,
+    notify_id: Option<u32>,
     request_id: ScreenCastRequestId,
-    finalize_fn: ScreenCastFinalizeFn,
-    app: &mut AppState,
-) {
+    last_result: Option<ScreenCastResult>,
+    app: &'a mut AppState,
+}
+
+fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
     const POLL_INTERVAL: Duration = Duration::from_millis(100);
 
-    if let Some(screencast_manager) = app.screencast_manager.as_mut() {
-        let new_result = screencast_manager.check(&request_id);
+    if let Some(screencast_manager) = par.app.screencast_manager.as_mut() {
+        let new_result = screencast_manager.check(&par.request_id);
         match new_result {
             ScreenCastResult::Ok(ref pw_result) => {
                 log::debug!(
                     "{}: PipeWire result streams: {:?}",
-                    name,
-                    &pw_result.streams
+                    par.name,
+                    pw_result.streams
                 );
                 let node_id = pw_result.streams.first().unwrap().node_id; // streams guaranteed to have at least one element
-                log::info!("{}: PipeWire node selected: {}", name, node_id);
+                log::info!("{}: PipeWire node selected: {}", par.name, node_id);
 
-                if let Some(id) = notify_id.take() {
+                if let Some(id) = par.notify_id.take() {
                     let _ = DbusConnector::notify_close(id);
                 }
 
-                let pw_tokens_copy = app.session.pw_tokens.clone();
+                let pw_tokens_copy = par.app.session.pw_tokens.clone();
                 if let Some(restore_token) = pw_result.restore_token.as_ref()
-                    && app
+                    && par
+                        .app
                         .session
                         .pw_tokens
-                        .arc_set(name.clone(), restore_token.clone())
+                        .arc_set(par.name.clone(), restore_token.clone())
                 {
-                    log::info!("Adding Pipewire token for {name}");
+                    log::info!("Adding Pipewire token for {}", par.name);
                 }
-                if pw_tokens_copy != app.session.pw_tokens {
+                if pw_tokens_copy != par.app.session.pw_tokens {
                     // Token list changed, re-create token config file
-                    if let Err(err) = save_pw_token_config(app.session.pw_tokens.clone()) {
+                    if let Err(err) = save_pw_token_config(par.app.session.pw_tokens.clone()) {
                         log::error!("Failed to save Pipewire token config: {err}");
                     }
                 }
-                app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
-                    OverlaySelector::Name(name.clone()),
+                par.app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                    OverlaySelector::Name(par.name.clone()),
                     Box::new(move |app, owc| {
                         let capture = new_wlx_capture!(
                             app.gfx_extras.queue_capture,
-                            PipewireCapture::new(name.clone(), node_id)
+                            PipewireCapture::new(par.name.clone(), node_id)
                         );
 
-                        owc.backend = finalize_fn(name, logical_pos, logical_size, capture, app);
+                        owc.backend =
+                            finalize_fn(par.name, par.logical_pos, par.logical_size, capture, app);
 
                         let _ = owc
                             .backend
@@ -314,10 +319,10 @@ fn check(
             | ScreenCastResult::Pending
             | ScreenCastResult::WaitingForUser => {
                 let user_wait_add = if matches!(new_result, ScreenCastResult::WaitingForUser) {
-                    if user_wait == 2 {
-                        notify_id = DbusConnector::notify_send(
+                    if par.user_wait == 2 {
+                        par.notify_id = DbusConnector::notify_send(
                             "Select screen cast for:",
-                            format!("{name} {description}").as_str(),
+                            format!("{} {}", par.name, par.description).as_str(),
                             1,
                             30000,
                             0,
@@ -330,26 +335,31 @@ fn check(
                     0
                 };
 
-                if last_result.is_none_or(|last_result| last_result != new_result) {
-                    update_status_hack(&name, &description, &new_result, app);
+                if par
+                    .last_result
+                    .is_none_or(|last_result| last_result != new_result)
+                {
+                    update_status_hack(&par.name, &par.description, &new_result, par.app);
                 }
 
-                app.tasks.enqueue_at(
+                par.app.tasks.enqueue_at(
                     TaskType::Overlay(OverlayTask::Modify(
-                        OverlaySelector::Name(name.clone()),
+                        OverlaySelector::Name(par.name.clone()),
                         Box::new({
                             move |app, _owc| {
                                 check(
-                                    name.clone(),
-                                    description.clone(),
-                                    logical_pos,
-                                    logical_size,
-                                    user_wait + user_wait_add,
-                                    notify_id,
-                                    Some(new_result),
-                                    request_id.clone(),
+                                    CheckParams {
+                                        name: par.name.clone(),
+                                        description: par.description.clone(),
+                                        logical_pos: par.logical_pos,
+                                        logical_size: par.logical_size,
+                                        user_wait: par.user_wait + user_wait_add,
+                                        notify_id: par.notify_id,
+                                        request_id: par.request_id,
+                                        last_result: Some(new_result),
+                                        app,
+                                    },
                                     finalize_fn,
-                                    app,
                                 );
                             }
                         }),
@@ -358,11 +368,11 @@ fn check(
                 );
             }
             ScreenCastResult::Failed(ref e) => {
-                if let Some(id) = notify_id.take() {
+                if let Some(id) = par.notify_id.take() {
                     let _ = DbusConnector::notify_close(id);
                 }
 
-                update_status_hack(&name, &description, &new_result, app);
+                update_status_hack(&par.name, &par.description, &new_result, par.app);
 
                 log::warn!("Failed to create mirror due to PipeWire error: {e:?}");
                 Toast::new(
@@ -370,7 +380,7 @@ fn check(
                     "TOAST.TITLE_SCREENCAST_FAIL".into(),
                     format!("{e}"),
                 )
-                .submit(app);
+                .submit(par.app);
             }
         }
     }

@@ -360,7 +360,7 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
     }
 
     fn notify(&mut self, app: &mut AppState, data: OverlayEventData) -> anyhow::Result<()> {
-        if let OverlayEventData::ColorPaletteRefresh = data {
+        if matches!(data, OverlayEventData::ColorPaletteRefresh) {
             self.layout.tasks.push(LayoutTask::RefreshPalette);
         }
         let Some(on_notify) = self.on_notify.take() else {

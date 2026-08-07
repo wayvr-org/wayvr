@@ -44,52 +44,51 @@ pub fn parse_component_tabs<'a>(
 
 				let attribs = process_attribs(file, ctx, &child, false);
 
-				for attrib in attribs.iter() {
+				for attrib in &attribs {
 					match &*attrib.attrib {
 						"name" => name = Some(attrib.value.clone()),
-						"text" => text = Some(Translation::from_raw_text(&*attrib.value)),
-						"translation" => text = Some(Translation::from_translation_key(&*attrib.value)),
+						"text" => text = Some(Translation::from_raw_text(&attrib.value)),
+						"translation" => text = Some(Translation::from_translation_key(&attrib.value)),
 						"sprite_src" | "sprite_src_ext" | "sprite_src_builtin" | "sprite_src_internal" => {
 							sprite_src = Some(get_asset_path_rc_from_kv(
 								"sprite_",
-								&*attrib.attrib,
+								&attrib.attrib,
 								attrib.value.clone(),
 							));
-							continue;
 						}
 						"round" => {
 							parse_round(
 								ctx,
 								tag_name,
-								&*attrib.attrib,
-								&*attrib.value,
+								&attrib.attrib,
+								&attrib.value,
 								&mut round,
 								ctx.layout.state.theme.rounding_mult,
 							);
 						}
 						"color" => {
-							parse_color_opt(ctx, tag_name, &*attrib.attrib, &*attrib.value, &mut color);
+							parse_color_opt(ctx, tag_name, &attrib.attrib, &attrib.value, &mut color);
 						}
 						"border" => {
-							ctx.parse_check_f32(tag_name, &*attrib.attrib, &*attrib.value, &mut border);
+							ctx.parse_check_f32(tag_name, &attrib.attrib, &attrib.value, &mut border);
 						}
 						"border_color" => {
-							parse_color_opt(ctx, tag_name, &*attrib.attrib, &*attrib.value, &mut border_color);
+							parse_color_opt(ctx, tag_name, &attrib.attrib, &attrib.value, &mut border_color);
 						}
 						"hover_color" => {
-							parse_color_opt(ctx, tag_name, &*attrib.attrib, &*attrib.value, &mut hover_color);
+							parse_color_opt(ctx, tag_name, &attrib.attrib, &attrib.value, &mut hover_color);
 						}
 						"hover_border_color" => {
-							parse_color_opt(ctx, tag_name, &*attrib.attrib, &*attrib.value, &mut hover_border_color);
+							parse_color_opt(ctx, tag_name, &attrib.attrib, &attrib.value, &mut hover_border_color);
 						}
 						"sticky_color" => {
-							parse_color_opt(ctx, tag_name, &*attrib.attrib, &*attrib.value, &mut sticky_color);
+							parse_color_opt(ctx, tag_name, &attrib.attrib, &attrib.value, &mut sticky_color);
 						}
 						"sticky_border_color" => {
-							parse_color_opt(ctx, tag_name, &*attrib.attrib, &*attrib.value, &mut sticky_border_color);
+							parse_color_opt(ctx, tag_name, &attrib.attrib, &attrib.value, &mut sticky_border_color);
 						}
 						other_key => {
-							ctx.print_invalid_attrib("Tab", other_key, &*attrib.value);
+							ctx.print_invalid_attrib("Tab", other_key, &attrib.value);
 						}
 					}
 				}

@@ -147,7 +147,7 @@ where
             match data.tx_ctrl.send(PwChangeRequest::Pause) {
                 Ok(_) => (),
                 Err(_) => {
-                    log::warn!("{}: disconnected, stopping stream", &self.name);
+                    log::warn!("{}: disconnected, stopping stream", self.name);
                 }
             }
         }
@@ -158,12 +158,12 @@ where
                 Ok(_) => {
                     log::debug!(
                         "{}: dropped {} old frames before resuming",
-                        &self.name,
+                        self.name,
                         data.rx_frame.try_iter().count()
                     );
                 }
                 Err(_) => {
-                    log::warn!("{}: disconnected, stopping stream", &self.name);
+                    log::warn!("{}: disconnected, stopping stream", self.name);
                 }
             }
         }
@@ -184,7 +184,7 @@ where
     U: Any,
     R: Any,
 {
-    log::debug!("{}: pipewire main_loop start", &name);
+    log::debug!("{}: pipewire main_loop start", name);
     let main_loop = MainLoopRc::new(None)?;
     let context = ContextRc::new(&main_loop, None)?;
     let core = context.connect_rc(None)?;
@@ -212,7 +212,7 @@ where
         .state_changed({
             let name = name.clone();
             move |_, _, old, new| {
-                log::info!("{}: stream state changed: {:?} -> {:?}", &name, old, new);
+                log::info!("{}: stream state changed: {:?} -> {:?}", name, old, new);
             }
         })
         .param_changed({
@@ -240,16 +240,16 @@ where
                     "SHM"
                 };
 
-                log::info!("{}: got {} video format:", &name, &kind);
+                log::info!("{}: got {} video format:", name, kind);
                 log::info!("  format: {} ({:?})", info.format().as_raw(), info.format());
                 log::info!("  size: {}x{}", info.size().width, info.size().height);
                 log::info!("  modifier: {}", info.modifier());
                 let Ok(params_bytes) = obj_to_bytes(get_buffer_params()) else {
-                    log::warn!("{}: failed to serialize buffer params", &name);
+                    log::warn!("{}: failed to serialize buffer params", name);
                     return;
                 };
                 let Some(params_pod) = Pod::from_bytes(&params_bytes) else {
-                    log::warn!("{}: failed to deserialize buffer params", &name);
+                    log::warn!("{}: failed to deserialize buffer params", name);
                     return;
                 };
 
@@ -269,7 +269,7 @@ where
 
                 let mut pods = [params_pod, header_pod, xform_pod];
                 if let Err(e) = stream.update_params(&mut pods) {
-                    log::error!("{}: failed to update params: {}", &name, e);
+                    log::error!("{}: failed to update params: {}", name, e);
                 }
             }
         })
@@ -287,7 +287,7 @@ where
                     if let Some(header) = buffer.find_meta::<MetaHeader>()
                         && header.flags().contains(MetaHeaderFlags::CORRUPTED)
                     {
-                        log::warn!("{}: PipeWire buffer is corrupt.", &name);
+                        log::warn!("{}: PipeWire buffer is corrupt.", name);
                         return;
                     }
 
@@ -303,7 +303,7 @@ where
                             MetaVideoTransformValue::FLIPPED270 => Transform::Flipped270,
                             _ => Transform::Undefined,
                         };
-                        log::debug!("{}: Transform: {:?}", &name, &format.transform);
+                        log::debug!("{}: Transform: {:?}", name, format.transform);
                     }
 
                     let mouse_meta = buffer
@@ -316,7 +316,7 @@ where
 
                     let datas = buffer.datas_mut();
                     if datas.is_empty() {
-                        log::debug!("{}: no data", &name);
+                        log::debug!("{}: no data", name);
                         return;
                     }
 
@@ -346,7 +346,7 @@ where
                                     Ok(_) => (),
                                     Err(mpsc::TrySendError::Full(_)) => (),
                                     Err(mpsc::TrySendError::Disconnected(_)) => {
-                                        log::warn!("{}: disconnected, stopping stream", &name);
+                                        log::warn!("{}: disconnected, stopping stream", name);
                                         let _ = stream.disconnect();
                                     }
                                 }
@@ -369,7 +369,7 @@ where
                                     Ok(_) => (),
                                     Err(mpsc::TrySendError::Full(_)) => (),
                                     Err(mpsc::TrySendError::Disconnected(_)) => {
-                                        log::warn!("{}: disconnected, stopping stream", &name);
+                                        log::warn!("{}: disconnected, stopping stream", name);
                                         let _ = stream.disconnect();
                                     }
                                 }
@@ -389,7 +389,7 @@ where
                                     Ok(_) => (),
                                     Err(mpsc::TrySendError::Full(_)) => (),
                                     Err(mpsc::TrySendError::Disconnected(_)) => {
-                                        log::warn!("{}: disconnected, stopping stream", &name);
+                                        log::warn!("{}: disconnected, stopping stream", name);
                                         let _ = stream.disconnect();
                                     }
                                 }
@@ -459,7 +459,7 @@ where
     });
 
     main_loop.run();
-    log::info!("{}: pipewire loop exited", &name);
+    log::info!("{}: pipewire loop exited", name);
     Ok::<(), Error>(())
 }
 

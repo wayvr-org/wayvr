@@ -68,6 +68,8 @@ pub struct ScreenCreateData {
     pub screens: Vec<(ScreenMeta, OverlayWindowConfig)>,
 }
 
+// clippy suggests broken code
+#[allow(clippy::needless_return)]
 pub fn create_screens(app: &mut AppState) -> anyhow::Result<(ScreenCreateData, DesktopBackend)> {
     app.screens.clear();
 

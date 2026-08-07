@@ -426,7 +426,7 @@ fn on_enter_anim(
             let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();
             set_anim_color(&common.globals().palette, &key_state, rect, data.pos);
 
-            for child in key_state.labels.iter() {
+            for child in &key_state.labels {
                 let mut widget = common
                     .state
                     .widgets
@@ -439,7 +439,7 @@ fn on_enter_anim(
                 widget.set_color(common, color, true);
             }
 
-            for child in key_state.sprites.iter() {
+            for child in &key_state.sprites {
                 let mut widget = common
                     .state
                     .widgets
@@ -474,7 +474,7 @@ fn on_leave_anim(
             let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();
             set_anim_color(&common.globals().palette, &key_state, rect, 1.0 - data.pos);
 
-            for child in key_state.labels.iter() {
+            for child in &key_state.labels {
                 let color = child.base_color.lerp(
                     &common.globals().palette,
                     &HOVER_TEXT_COLOR,
@@ -488,7 +488,7 @@ fn on_leave_anim(
                 widget.set_color(common, color, true);
             }
 
-            for child in key_state.sprites.iter() {
+            for child in &key_state.sprites {
                 let color = child.base_color.lerp(
                     &common.globals().palette,
                     &HOVER_TEXT_COLOR,

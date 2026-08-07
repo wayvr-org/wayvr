@@ -80,7 +80,7 @@ impl Provider {
                 tx,
                 _thread: thread,
             }),
-            Err(err) => anyhow::bail!("{}", err),
+            Err(err) => anyhow::bail!("{err}"),
         }
     }
 }

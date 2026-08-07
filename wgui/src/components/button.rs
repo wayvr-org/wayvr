@@ -603,16 +603,20 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 	let id_rect = root.id;
 
 	let default_margin = taffy::Rect {
-		top: length(4.0),
-		bottom: length(4.0),
-		left: length(4.0),
-		right: length(4.0),
+		top: length(4.0_f32),
+		bottom: length(4.0_f32),
+		left: length(4.0_f32),
+		right: length(4.0_f32),
 	};
 
 	let id_sprite = if let Some(sprite_path) = params.sprite_src {
 		let sprite = WidgetSprite::create(WidgetSpriteParams {
 			glyph_data: Some(CustomGlyphData::from_assets(&ess.layout.state.globals, sprite_path)?),
-			color: Some(params.sprite_color.unwrap_or(WguiColorName::OnBackground.into())),
+			color: Some(
+				params
+					.sprite_color
+					.unwrap_or_else(|| WguiColorName::OnBackground.into()),
+			),
 			..Default::default()
 		});
 
@@ -621,8 +625,8 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 			sprite,
 			taffy::Style {
 				min_size: taffy::Size {
-					width: length(20.0),
-					height: length(20.0),
+					width: length(20.0_f32),
+					height: length(20.0_f32),
 				},
 				margin: default_margin,
 				..Default::default()
@@ -715,7 +719,7 @@ fn color_to_apply(parent_color: ParentColor, bg_color: WguiColor) -> Option<Wgui
 	}
 }
 
-fn color_to_apply2(parent_color: ParentColor, bg_color: WguiColor, fg_color: WguiColor) -> Option<WguiColor> {
+const fn color_to_apply2(parent_color: ParentColor, bg_color: WguiColor, fg_color: WguiColor) -> Option<WguiColor> {
 	match parent_color {
 		ParentColor::Foreground => Some(fg_color),
 		ParentColor::Background => Some(bg_color),

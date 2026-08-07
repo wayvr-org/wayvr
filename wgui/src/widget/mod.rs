@@ -563,12 +563,12 @@ impl WidgetState {
 	}
 
 	// this is called before calling children of this widget
-	pub fn process_event_priority<'a>(
+	pub fn process_event_priority(
 		&mut self,
 		params: &mut EventParams,
 		widget_id: WidgetID,
 		event: &Event,
-		event_result: &'a mut EventResult,
+		event_result: &mut EventResult,
 	) -> anyhow::Result<EventResult> {
 		match &event {
 			Event::MouseCancel => {

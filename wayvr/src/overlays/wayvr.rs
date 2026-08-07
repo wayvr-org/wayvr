@@ -46,7 +46,7 @@ use crate::{
                 rendered_surfaces_dirty,
             },
             process::KillSignal,
-            window::WindowHandle,
+            window::{Window, WindowHandle},
         },
     },
     config::none_if_0,
@@ -99,8 +99,7 @@ pub fn create_wl_window_overlay(
         .wvr_server
         .as_mut()
         .and_then(|wvr| wvr.wm.windows.get(window))
-        .map(|w| w.resizable())
-        .unwrap_or(false);
+        .is_some_and(Window::resizable);
 
     Ok(OverlayWindowConfig {
         name: name.clone(),
@@ -287,8 +286,7 @@ impl WvrWindowBackend {
                     .wvr_server
                     .as_mut()
                     .and_then(|wvr| wvr.wm.windows.get(self.window))
-                    .map(|w| w.resizable())
-                    .unwrap_or(false);
+                    .is_some_and(Window::resizable);
 
                 app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
                     OverlaySelector::Id(self.overlay_id),
@@ -366,6 +364,17 @@ impl WvrWindowBackend {
     }
 
     fn update_decor(&mut self, wvr_server: &mut WvrServerState) {
+        const COLORS: [(WguiColor, WguiColor); 2] = [
+            (
+                WguiColorName::Outline.to_wgui_color(),
+                WguiColorName::OnBackground.to_wgui_color(),
+            ),
+            (
+                WguiColorName::Tertiary.to_wgui_color(),
+                WguiColorName::Tertiary.to_wgui_color(),
+            ),
+        ];
+
         let now_focused = wvr_server
             .get_focused_window()
             .is_some_and(|w| w == self.window);
@@ -380,17 +389,6 @@ impl WvrWindowBackend {
             state: &self.panel.layout.state,
             alterables: &mut self.panel.layout.alterables,
         };
-
-        const COLORS: [(WguiColor, WguiColor); 2] = [
-            (
-                WguiColorName::Outline.to_wgui_color(),
-                WguiColorName::OnBackground.to_wgui_color(),
-            ),
-            (
-                WguiColorName::Tertiary.to_wgui_color(),
-                WguiColorName::Tertiary.to_wgui_color(),
-            ),
-        ];
 
         let (rect_col, label_col) = COLORS[now_focused as usize];
 
@@ -411,7 +409,7 @@ impl WvrWindowBackend {
         }
     }
 
-    fn mouse_index_from_mode(mode: input::PointerMode) -> Option<wayvr::MouseIndex> {
+    const fn mouse_index_from_mode(mode: input::PointerMode) -> Option<wayvr::MouseIndex> {
         match mode {
             input::PointerMode::Left => Some(wayvr::MouseIndex::Left),
             input::PointerMode::Middle => Some(wayvr::MouseIndex::Center),
@@ -464,13 +462,9 @@ impl WvrWindowBackend {
         Ok(())
     }
 
-    fn sync_committed_toplevel_size(
-        &mut self,
-        app: &mut AppState,
-        inner_extent: [u32; 2],
-    ) -> anyhow::Result<()> {
+    fn sync_committed_toplevel_size(&mut self, app: &mut AppState, inner_extent: [u32; 2]) {
         let Some(wvr_server) = app.wvr_server.as_mut() else {
-            return Ok(());
+            return;
         };
 
         let bounds = wvr_server.manager.state.output_logical_size();
@@ -478,7 +472,7 @@ impl WvrWindowBackend {
         let committed = Size::new(inner_extent[0].max(1) as i32, inner_extent[1].max(1) as i32);
 
         let Some(window) = wvr_server.wm.windows.get_mut(self.window) else {
-            return Ok(());
+            return;
         };
 
         let clamped = window.clamp_configure_size(committed, bounds);
@@ -494,8 +488,6 @@ impl WvrWindowBackend {
                 window.pending_configure_size,
             );
         }
-
-        Ok(())
     }
 }
 
@@ -575,7 +567,7 @@ impl OverlayBackend for WvrWindowBackend {
                 tree_dirty |= state.take_redraw_request(&surface.surface_id);
                 tree_dirty |= state.has_pending_frame_callbacks(&surface.surface_id);
             }
-            for popup in popups.iter() {
+            for popup in &popups {
                 tree_dirty |= state.take_redraw_request(&popup.surface_id);
                 tree_dirty |= state.has_pending_frame_callbacks(&popup.surface_id);
             }
@@ -617,7 +609,7 @@ impl OverlayBackend for WvrWindowBackend {
         }
 
         let inner_extent = meta.extent;
-        self.sync_committed_toplevel_size(app, inner_extent)?;
+        self.sync_committed_toplevel_size(app, inner_extent);
 
         let hit_context = WvrHitContext {
             surfaces: hit_surfaces,
@@ -713,7 +705,6 @@ impl OverlayBackend for WvrWindowBackend {
         }
 
         let image = self.cur_image.as_ref().unwrap().clone();
-        let mut callback_surfaces = Vec::with_capacity(self.surfaces.len() + self.popups.len());
 
         self.pipeline
             .as_mut()
@@ -722,12 +713,10 @@ impl OverlayBackend for WvrWindowBackend {
 
         for surface in self.surfaces.iter() {
             self.render_subsurface(app, rdr, surface)?;
-            callback_surfaces.push(&surface.surface_id);
         }
 
         for popup in self.popups.iter() {
             self.render_subsurface(app, rdr, popup)?;
-            callback_surfaces.push(&popup.surface_id);
         }
 
         // frame callbacks for toplevel + subsurf + popup
@@ -832,16 +821,18 @@ impl OverlayBackend for WvrWindowBackend {
                 self.panel_hovered = true;
                 self.panel.on_hover(app, &hit2)
             }
-            Some(WvrHitTarget::Popup {
-                surface,
-                global_pos,
-                origin,
-            })
-            | Some(WvrHitTarget::Surface {
-                surface,
-                global_pos,
-                origin,
-            }) => {
+            Some(
+                WvrHitTarget::Popup {
+                    surface,
+                    global_pos,
+                    origin,
+                }
+                | WvrHitTarget::Surface {
+                    surface,
+                    global_pos,
+                    origin,
+                },
+            ) => {
                 if self.panel_hovered {
                     self.panel.on_left(app, hit.pointer);
                     self.panel_hovered = false;
@@ -930,7 +921,7 @@ impl OverlayBackend for WvrWindowBackend {
             && app
                 .wvr_server
                 .as_ref()
-                .is_some_and(|server| server.pointer_is_grabbed());
+                .is_some_and(WvrServerState::pointer_is_grabbed);
 
         let outside_grabbed_popup =
             popup_grab_active && !matches!(&target, Some(WvrHitTarget::Popup { .. }));
@@ -958,16 +949,18 @@ impl OverlayBackend for WvrWindowBackend {
                 self.panel.on_pointer(app, &hit2, pressed);
             }
 
-            Some(WvrHitTarget::Popup {
-                surface,
-                global_pos,
-                origin,
-            })
-            | Some(WvrHitTarget::Surface {
-                surface,
-                global_pos,
-                origin,
-            }) => {
+            Some(
+                WvrHitTarget::Popup {
+                    surface,
+                    global_pos,
+                    origin,
+                }
+                | WvrHitTarget::Surface {
+                    surface,
+                    global_pos,
+                    origin,
+                },
+            ) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap();
 
                 wvr_server.send_mouse_button(
@@ -1011,9 +1004,9 @@ impl OverlayBackend for WvrWindowBackend {
                 self.panel.on_scroll(app, &hit2, delta);
                 let _ = hit2;
             }
-
-            Some(WvrHitTarget::Popup { global_pos, .. })
-            | Some(WvrHitTarget::Surface { global_pos, .. }) => {
+            Some(
+                WvrHitTarget::Popup { global_pos, .. } | WvrHitTarget::Surface { global_pos, .. },
+            ) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap();
                 wvr_server.send_mouse_scroll(self.window, global_pos, delta);
             }
@@ -1050,7 +1043,7 @@ impl OverlayBackend for WvrWindowBackend {
                 if let Some(stereo) = self.stereo.as_mut() {
                     log::debug!("{}: stereo: {stereo:?} → {new:?}", self.name);
                     *stereo = new;
-                    if let Some(meta) = self.meta.clone() {
+                    if let Some(meta) = self.meta {
                         let _ = self.apply_extent(app, &meta);
                     }
                     if let Some(pipeline) = self.pipeline.as_mut() {

@@ -170,10 +170,11 @@ impl AppState {
         let mut assets = Box::new(gui::asset::GuiAsset {});
         audio_sample_player.register_wgui_samples(assets.as_mut())?;
 
-        let mut theme = WguiTheme::default();
-
-        theme.animation_mult = 1. / session.config.ui_animation_speed;
-        theme.rounding_mult = session.config.ui_round_multiplier;
+        let mut theme = WguiTheme {
+            animation_mult: 1. / session.config.ui_animation_speed,
+            rounding_mult: session.config.ui_round_multiplier,
+            ..Default::default()
+        };
 
         let dbus = DbusConnector::default();
 
@@ -284,7 +285,11 @@ impl AppState {
 
         #[cfg(feature = "whisper")]
         {
-            if self.whisper_sst.as_ref().is_some_and(|x| x.should_unload()) {
+            if self
+                .whisper_sst
+                .as_ref()
+                .is_some_and(WhisperStt::should_unload)
+            {
                 log::info!("Unloading Whisper model due to timeout");
                 self.whisper_sst = None;
             }

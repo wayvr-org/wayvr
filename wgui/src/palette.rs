@@ -84,7 +84,7 @@ const fn hex(hex: &str) -> drawing::Color {
 	}
 }
 
-pub static PALETTES: &[(&'static str, &WguiColorPalette)] = &[
+pub static PALETTES: &[(&str, &WguiColorPalette)] = &[
 	("Default", DEFAULT),
 	("Ayu Dusk", AYU),
 	("Catppuccin", CATPPUCCIN),

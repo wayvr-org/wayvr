@@ -117,26 +117,26 @@ where
                                         })
                                     }),
                                 };
-                                log::trace!("{}: captured frame", &monitor.name());
+                                log::trace!("{}: captured frame", monitor.name());
 
                                 let frame = WlxFrame::MemPtr(memptr_frame);
                                 if let Some(r) = receive_callback(&user_data, frame) {
                                     match tx_frame.try_send(r) {
                                         Ok(_) => (),
                                         Err(mpsc::TrySendError::Full(_)) => {
-                                            log::debug!("{}: channel full", &monitor.name());
+                                            log::debug!("{}: channel full", monitor.name());
                                         }
                                         Err(mpsc::TrySendError::Disconnected(_)) => {
                                             log::warn!(
                                                 "{}: capture thread channel closed (send)",
-                                                &monitor.name(),
+                                                monitor.name(),
                                             );
                                             break;
                                         }
                                     }
                                 }
                             } else {
-                                log::debug!("{}: XShmGetImage failed", &monitor.name());
+                                log::debug!("{}: XShmGetImage failed", monitor.name());
                             }
                         }
                         Err(_) => {
@@ -166,7 +166,7 @@ where
         if let Some(rx) = self.receiver.as_ref() {
             log::debug!(
                 "{}: dropped {} old frames before resuming",
-                &self.screen.name,
+                self.screen.name,
                 rx.try_iter().count()
             );
         }

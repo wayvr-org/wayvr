@@ -111,7 +111,7 @@ pub fn construct(
 	mut params: Params,
 ) -> anyhow::Result<(WidgetPair, Rc<ComponentBarGraph>)> {
 	params.style.flex_direction = FlexDirection::Row;
-	params.style.gap = length(4.0);
+	params.style.gap = length(4.0_f32);
 
 	// override style
 	let (root, _) = ess.layout.add_child(ess.parent, WidgetDiv::create(), params.style)?;
@@ -124,7 +124,7 @@ pub fn construct(
 			flex_direction: FlexDirection::Column,
 			size: taffy::Size {
 				width: auto(),
-				height: percent(1.0),
+				height: percent(1.0_f32),
 			},
 			..Default::default()
 		},
@@ -143,8 +143,8 @@ pub fn construct(
 		taffy::Style {
 			position: taffy::Position::Relative,
 			size: taffy::Size {
-				width: percent(1.0),
-				height: percent(1.0),
+				width: percent(1.0_f32),
+				height: percent(1.0_f32),
 			},
 			..Default::default()
 		},
@@ -194,8 +194,8 @@ pub fn construct(
 		}),
 		taffy::Style {
 			size: taffy::Size {
-				width: percent(1.0),
-				height: percent(1.0),
+				width: percent(1.0_f32),
+				height: percent(1.0_f32),
 			},
 			..Default::default()
 		},

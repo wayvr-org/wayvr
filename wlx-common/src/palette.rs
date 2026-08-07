@@ -128,7 +128,7 @@ struct SerializedWguiColorPalette {
 }
 
 impl SerializedWguiColorPalette {
-	pub fn into_palette(&self) -> WguiColorPalette {
+	pub fn into_palette(self) -> WguiColorPalette {
 		// order must stay the same as per WguiColorName
 		WguiColorPalette::from_inner([
 			self.primary,

@@ -550,11 +550,10 @@ fn prepare_glyph(par: &mut PrepareGlyphParams) -> Option<GlyphVertex> {
 	let details = if let Some(details) = par.atlas.mask_atlas.glyph_cache.get(&glyph.cache_key) {
 		par.atlas.mask_atlas.glyphs_in_use.insert(glyph.cache_key);
 		details
-	} else if let Some(details) = par.atlas.color_atlas.glyph_cache.get(&glyph.cache_key) {
+	} else {
+		let details = par.atlas.color_atlas.glyph_cache.get(&glyph.cache_key)?;
 		par.atlas.color_atlas.glyphs_in_use.insert(glyph.cache_key);
 		details
-	} else {
-		return None;
 	};
 
 	let mut x = glyph.x + i32::from(details.left);

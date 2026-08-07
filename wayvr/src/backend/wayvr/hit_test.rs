@@ -237,6 +237,7 @@ fn surface_accepts_input(surface: &RenderedSurface, global_pos: Vec2) -> bool {
         return false;
     }
 
+    #[allow(clippy::significant_drop_tightening)]
     with_states(&surface.surface, |states| {
         let mut guard = states.cached_state.get::<SurfaceAttributes>();
         let attrs = guard.current();
@@ -252,6 +253,7 @@ fn surface_accepts_input(surface: &RenderedSurface, global_pos: Vec2) -> bool {
     })
 }
 
+#[allow(clippy::significant_drop_tightening)]
 fn surface_accepts_input_states(
     states: &smithay::wayland::compositor::SurfaceData,
     local: Vec2,
@@ -357,14 +359,13 @@ pub fn build_hit_context(
     toplevel: &WlSurface,
     _popup_manager: &PopupManager,
     inner_extent: [u32; 2],
-) -> Option<WvrHitContext> {
+) -> WvrHitContext {
     let (mouse_transform, uv_range) = compute_transforms(inner_extent);
     let panel_height = BORDER_SIZE * 2 + BAR_SIZE;
 
     let surfaces = collect_rendered_surface_tree(toplevel);
 
     let mut popup_roots = Vec::new();
-    let mut popups = Vec::new();
 
     for (popup, point) in PopupManager::popups_for_surface(toplevel) {
         let configured = with_states(popup.wl_surface(), |states| {
@@ -387,20 +388,14 @@ pub fn build_hit_context(
             surface: popup.wl_surface().clone(),
             surface_origin: Vec2::new(popup_origin.x as f32, popup_origin.y as f32),
         });
-
-        popups.extend(collect_rendered_surface_tree_at(
-            popup.wl_surface(),
-            popup_origin,
-            true,
-        ));
     }
 
-    Some(WvrHitContext {
+    WvrHitContext {
         surfaces,
         popup_roots: popup_roots.into(),
         mouse_transform,
         uv_range,
         inner_extent,
         panel_height,
-    })
+    }
 }
