@@ -1,5 +1,5 @@
 <layout>
   <template name="Separator">
-    <rectangle width="100%" min_height="2" color="#FFFFFF10" />
+    <rectangle width="100%" min_height="2" color="outline" />
   </template>
 </layout>

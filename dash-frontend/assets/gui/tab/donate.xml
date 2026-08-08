@@ -1,47 +1,65 @@
 <layout>
-  <include src="../t_group_box.xml" />
+  <include src="../t_separator.xml" />
+
+  <template name="TierCell">
+    <div gap="8" align_items="center">
+      <sprite width="28" height="28" src_builtin="dashboard/medal.svg" color="${color}"/>
+      <label text="${text}" weight="bold" size="18" color="${color}" shadow="shadow"/>
+    </div>
+  </template>
+
+  <template name="SupporterCell">
+    <rectangle padding="8" color="background(transparent)" round="8" border="2" border_color="outline" gap="8" align_items="center" flex_direction="row" >
+      <sprite width="24" height="24" src_builtin="dashboard/person.svg"/>
+      <label text="${username}" weight="bold"/>
+    </rectangle>
+  </template>
 
   <!-- icon, nickname -->
   <template name="Avatar">
     <div flex_direction="column" gap="12" align_items="center">
-      <image src_builtin="${icon}" width="72" height="72" round="100%" position="relative">
-        <rectangle position="absolute" margin_left="-2" margin_top="-2" width="76" height="76" color="highlight" round="100%"/>
+      <image src_builtin="${icon}" width="64" height="64" round="100%" position="relative">
+        <rectangle position="absolute" margin_left="-2" margin_top="-2" width="68" height="68" color="highlight" round="100%"/>
       </image>
       <label size="14" text="${nickname}"/>
     </div>
   </template>
+
+  <macro name="half"
+    width="50%" gap="16" flex_direction="column" overflow_y="scroll"
+    align_items="center"/>
   
   <elements>
-    <div position="absolute" width="100%" height="100%" padding="4">
-      <!-- <rectangle width="100%" height="100%" color="#000000" round="6"/> -->
-    </div>    
-    <div margin="32" flex_direction="column" align_items="center" justify_content="center" gap="16" height="100%">
-      <div gap="16" align_items="center" width="100%">
-        <sprite color="#FFAAAA" src_builtin="dashboard/donate.svg" min_width="64" min_height="64"/>
-        <label wrap="1" size="20" translation="DONATE.DESCRIPTION" color="on_background"/>
+    <div flex_direction="row" width="100%" min_height="100%" gap="16">
+      <div macro="half">
+          <sprite color="#FFAAAA" src_builtin="dashboard/donate.svg" min_width="48" min_height="48"/>
+        <div gap="16" align_items="center" width="100%">
+          <label align="justified" wrap="1" size="18" translation="DONATE.DESCRIPTION" color="on_background"/>
+        </div>
+
+        <div flex_direction="column" gap="8" align_items="center">
+          <Button id="btn_donate" tooltip="DONATE.BUTTON_TOOLTIP" align_self="baseline">
+            <image src_builtin="dashboard/opencollective_logo.svg" width="200" height="32" margin="8" margin_left="16" margin_right="16"/>
+          </Button>
+          <label text="opencollective.com/wayvr-org"/>
+        </div>
+
+        <label weight="bold" size="20" translation="DONATE.THANK_YOU_WAYVR" color="on_background"/>
+
+        <div gap="32">
+          <Avatar icon="dashboard/avatars/galister.png" nickname="galister"/>
+          <Avatar icon="dashboard/avatars/oo8dev.png" nickname="oo8dev"/>
+        </div>
       </div>
-
-      <div flex_direction="column" gap="8" align_items="center" margin_top="16">
-        <Button id="btn_donate" tooltip="DONATE.BUTTON_TOOLTIP" align_self="baseline">
-          <image src_builtin="dashboard/opencollective_logo.svg" width="252" height="42" margin="8" margin_left="16" margin_right="16"/>
-        </Button>
-        <label text="opencollective.com/wayvr-org"/>
+      <!-- vertical separator -->
+      <rectangle height="100%" min_width="2" color="outline"/>
+      <div macro="half">
+        <div gap="8" align_items="center">
+          <label translation="DONATE.CURRENT_SUPPORTERS" size="18" weight="bold" />
+          <Button round="100%" text="?" tooltip_str="In last 30 days; the list is updated each day" width="24" height="24"/>
+        </div>
+        <div id="current_supporters" flex_direction="column" gap="8" width="100%"/>
       </div>
-
-      <label weight="bold" size="24" translation="DONATE.THANK_YOU_WAYVR" color="on_background"/>
-
-      <div gap="32" margin_top="16">
-        <Avatar icon="dashboard/avatars/galister.png" nickname="galister"/>
-        <Avatar icon="dashboard/avatars/oo8dev.png" nickname="oo8dev"/>
-      </div>
-  
-      <!--
-      <rectangle color="#FFFFFF33" width="100%" height="2"/>
-
-      <rectangle macro="group_box" align_self="start" width="100%">
-        <label weight="bold" size="18" translation="DONATE.CURRENT_SUPPORTERS"/>
-      </rectangle>
-      -->
     </div>
   </elements>
 </layout>

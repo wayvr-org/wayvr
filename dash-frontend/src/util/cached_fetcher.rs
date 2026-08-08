@@ -1,14 +1,73 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use crate::util::{networking::http_client, steam_utils::AppID};
 use anyhow::Context;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use wlx_common::cache_dir;
+
+fn get_unix_timestamp() -> u64 {
+	SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Supporter {
+	pub username: String,
+	pub date: String,
+	pub tier: String,
+	pub contribution_count: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Supporters {
+	pub time_window_days: u32,
+	pub supporters: Vec<Supporter>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SupportersFile {
+	fetch_timestamp: u64,
+	supporters: Option<Supporters>, // empty in case of server/network failure
+}
+
+pub async fn request_supporters() -> Option<Supporters> {
+	let cache_file_path = "supporters_v1.json";
+	const CACHE_DURATION_SECS: u64 = 7200;
+	let current_timestamp = get_unix_timestamp();
+
+	if let Some(data) = cache_dir::get_data(cache_file_path).await
+		&& let Ok(string) = str::from_utf8(&data)
+		&& let Ok(file) = serde_json::from_str::<SupportersFile>(string)
+		&& file.fetch_timestamp + CACHE_DURATION_SECS > current_timestamp
+	{
+		return file.supporters;
+	}
+
+	// perform request
+	let mut supporters_file = SupportersFile {
+		fetch_timestamp: current_timestamp,
+		supporters: None,
+	};
+
+	let url = "https://wayvr.org/files/supporters_v1.json";
+	if let Ok(res) = http_client::get_simple(url).await
+		&& let Ok(supporters) = res.into_json::<Supporters>()
+	{
+		supporters_file.supporters = Some(supporters);
+	}
+
+	let json = serde_json::to_string_pretty(&supporters_file).unwrap() /* safe */;
+
+	cache_dir::set_data(cache_file_path, json.as_bytes()).await.ok()?;
+
+	supporters_file.supporters
+}
 
 pub struct CoverArt {
 	// can be empty in case if data couldn't be fetched (use a fallback image then)
 	pub compressed_image_data: Vec<u8>,
 }
 
-pub async fn request_image(app_id: AppID) -> anyhow::Result<CoverArt> {
+pub async fn request_cover_art(app_id: AppID) -> anyhow::Result<CoverArt> {
 	let cache_file_path = format!("cover_arts/{}.bin", app_id);
 
 	// check if file already exists in cache directory

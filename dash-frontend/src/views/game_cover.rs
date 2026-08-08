@@ -62,7 +62,7 @@ const GAME_COVER_SIZE_Y: f32 = 210.0;
 
 impl View {
 	async fn request_cover_image(manifest: steam_utils::AppManifest, on_loaded: Box<dyn FnOnce(CoverArt)>) {
-		let cover_art = match cached_fetcher::request_image(manifest.app_id.clone()).await {
+		let cover_art = match cached_fetcher::request_cover_art(manifest.app_id.clone()).await {
 			Ok(cover_art) => cover_art,
 			Err(e) => {
 				log::error!("request_cover_image failed: {:?}", e);
@@ -75,7 +75,7 @@ impl View {
 
 	fn mount_image(&self, layout: &mut Layout, glyph: &CustomGlyphData) -> anyhow::Result<()> {
 		let image = WidgetImage::create(WidgetImageParams {
-			round: WLength::Units(10.0),
+			round: WLength::Units(6.0),
 			glyph_data: Some(glyph.clone()),
 			..Default::default()
 		});
@@ -173,7 +173,7 @@ impl View {
 				color: Some(drawing::Color::new(1.0, 1.0, 1.0, 0.0).into()),
 				border_color: Some(BORDER_COLOR_DEFAULT.into()),
 				hover_border_color: Some(BORDER_COLOR_HOVERED.into()),
-				round: WLength::Units(12.0),
+				round: WLength::Units(8.0),
 				border: 2.0,
 				tooltip: Some(TooltipInfo {
 					side: TooltipSide::Bottom,
@@ -209,11 +209,11 @@ impl View {
 			},
 		)?;
 
-		let rect_gradient = |color: drawing::Color, color2: drawing::Color| {
+		let rect_gradient = |color: drawing::Color, color2: drawing::Color, round: f32| {
 			rectangle::WidgetRectangle::create(rectangle::WidgetRectangleParams {
 				color: color.into(),
 				color2: color2.into(),
-				round: WLength::Units(12.0),
+				round: WLength::Units(round),
 				gradient: GradientMode::Vertical,
 				..Default::default()
 			})
@@ -234,7 +234,8 @@ impl View {
 			widget_button.id,
 			rect_gradient(
 				drawing::Color::new(1.0, 1.0, 1.0, 0.2),
-				drawing::Color::new(1.0, 1.0, 1.0, 0.02),
+				drawing::Color::new(1.0, 1.0, 1.0, 0.01),
+				8.0,
 			),
 			rect_gradient_style(taffy::AlignSelf::BASELINE, 0.05),
 		)?;
@@ -248,6 +249,7 @@ impl View {
 			rect_gradient(
 				drawing::Color::new(1.0, 1.0, 1.0, 0.15),
 				drawing::Color::new(1.0, 1.0, 1.0, 0.0),
+				8.0,
 			),
 			rect_gradient_style(taffy::AlignSelf::BASELINE, 0.5),
 		)?;
@@ -258,6 +260,7 @@ impl View {
 			rect_gradient(
 				drawing::Color::new(0.0, 0.0, 0.0, 0.0),
 				drawing::Color::new(0.0, 0.0, 0.0, 0.25),
+				8.0,
 			),
 			rect_gradient_style(taffy::AlignSelf::END, 0.5),
 		)?;
@@ -268,6 +271,7 @@ impl View {
 			rect_gradient(
 				drawing::Color::new(0.0, 0.0, 0.0, 0.1),
 				drawing::Color::new(0.0, 0.0, 0.0, 0.9),
+				8.0,
 			),
 			rect_gradient_style(taffy::AlignSelf::END, 0.05),
 		)?;

@@ -30,12 +30,7 @@ impl<T> Tab<T> for TabHome<T> {
 }
 
 fn configure_label_hello(common: &mut CallbackDataCommon, label_hello: Widget, config: &GeneralConfig) {
-	let mut username = various::get_username();
-	// first character as uppercase
-	if let Some(first) = username.chars().next() {
-		let first = first.to_uppercase().to_string();
-		username.replace_range(0..1, &first);
-	}
+	let username = wlx_common::locale::capitalize_string(&various::get_username());
 
 	let translated = if !config.hide_username {
 		common.i18n().translate_and_replace("HELLO_USER", ("{USER}", &username))

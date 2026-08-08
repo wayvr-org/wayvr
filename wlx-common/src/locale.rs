@@ -89,3 +89,11 @@ impl WayVRLangProvider {
 		Self::default()
 	}
 }
+
+pub fn capitalize_string(s: &str) -> String {
+	let mut chars = s.chars();
+	match chars.next() {
+		None => String::new(),
+		Some(first) => first.to_ascii_uppercase().to_string() + chars.as_str(),
+	}
+}

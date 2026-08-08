@@ -24,7 +24,7 @@ pub enum TabType {
 impl TabType {
 	pub fn get_preferred_padding(&self) -> f32 {
 		match self {
-			TabType::Welcome | TabType::Donate => 0.0,
+			TabType::Welcome => 0.0,
 			_ => 16.0,
 		}
 	}
