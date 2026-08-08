@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-	animation::Animations,
+	animation::{Animation, Animations},
 	components::{self, Component, ComponentWeak, DestroyData, FocusChangeData, RefreshData},
 	drawing::{
 		self, ANSI_BOLD_CODE, ANSI_RESET_CODE, Boundary, PushScissorStackResult, push_scissor_stack, push_transform_stack,
@@ -153,6 +153,7 @@ pub enum LayoutTask {
 	SetWidgetVisible(WidgetID, bool), // if true, sets Display to Flex; None, otherwise
 	ModifyLayoutState(LayoutModifyStateFunc),
 	PlaySound(WguiSoundType),
+	PlayAnimation(Animation),
 	Dispatch(LayoutDispatchFunc),
 	SetFocus(ComponentWeak),
 	RefreshPalette,
@@ -653,7 +654,10 @@ impl Layout {
 		}
 	}
 
-	fn try_recompute_layout(&mut self, size: Vec2) -> anyhow::Result<()> {
+	fn try_recompute_layout(&mut self, mut size: Vec2) -> anyhow::Result<()> {
+		size.x = size.x.round();
+		size.y = size.y.round();
+
 		if !self.state.tree.dirty(self.tree_root_node)? && self.prev_size == size {
 			// Nothing to do
 			return Ok(());
@@ -749,6 +753,9 @@ impl Layout {
 		let mut tasks = self.tasks.drain();
 		while let Some(task) = tasks.pop_front() {
 			match task {
+				LayoutTask::PlayAnimation(animation) => {
+					self.animations.add(animation);
+				}
 				LayoutTask::RefreshPalette => {
 					let root = self.tree_root_widget;
 					LayoutState::refresh_palette_recur(&mut self.common(), root);

@@ -271,7 +271,10 @@
 		"DESCRIPTION": "Siamo un piccolo team di 2 sviluppatori che realizza WayVR nel tempo libero. Se ti piace usare questo software, considera di supportarci: ogni donazione ci aiuta a continuare.",
 		"THANK_YOU_WAYVR": "Grazie dal team di WayVR!",
 		"BUTTON_TOOLTIP": "Donazione tramite Open Collective",
-		"CURRENT_SUPPORTERS": "Supporter attuali"
+		"CURRENT_SUPPORTERS": "Supporter attuali",
+		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "Supportato da {USER}|Speciale ringraziamento a {USER}|Sponsorizzato da {USER}|Sostenuto da {USER}|Grazie ai membri della community come {USER}|Reso possibile da {USER}|Mantenuto da {USER}|Contribuito da {USER}|Finanziato da {USER}",
+		"BROUGHT_TO_YOU_VARIANTS_RARE": "Caffè offerto da {USER}|Alimentato da {USER}|Un saluto a {USER}!|Ci tiene in moto: {USER}|Ci aiuta a crescere: {USER}|Mantiene attivi i server: {USER}|Con gratitudine verso {USER}|Powered by {USER}|Supportato da amici come {USER}",
+		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "Supportato da leggende come {USER}|Caffeina fornita da {USER}|Una vera leggenda: {USER}|Il nostro eroe del giorno: {USER}|Una superstar assoluta: {USER}|Sta pagando la bolletta della luce: {USER}|Il salvatore della nostra sanità mentale: {USER}|Stabilità mentale sponsorizzata da: {USER}|Convertitore caffeina-codice fornito da {USER}|Mantenendo la produzione stabile: {USER}|L'unico e inimitabile: {USER}|Passa buffer dmabuf: {USER}"
 	},
 	"DOWNLOAD": "Scarica",
 	"DOWNLOADER": "Download",

@@ -1406,6 +1406,7 @@ dependencies = [
  "keyvalues-parser",
  "log",
  "lz4_flex",
+ "rand 0.10.2",
  "rust-embed",
  "serde",
  "serde_json",

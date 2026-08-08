@@ -440,12 +440,15 @@ impl WidgetState {
 				&& (scrolling_cur.y - scrolling_target.y).abs() < epsilon
 			{
 				*scrolling_cur = *scrolling_target;
+				perform_next_tick = false;
 			}
 		}
 
 		if perform_next_tick {
 			alterables.mark_tick(this_widget_id);
 			alterables.mark_redraw();
+		} else {
+			self.data.scrolling_cur_prev = self.data.scrolling_cur;
 		}
 	}
 

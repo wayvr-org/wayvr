@@ -271,7 +271,10 @@
 		"DESCRIPTION": "我们是由两名开发者组成的小团队，在业余时间构建 WayVR。如果你喜欢这款软件，请考虑支持我们 —— 每一份捐赠都能帮助我们坚持下去。",
 		"THANK_YOU_WAYVR": "WayVR 团队向您致谢！",
 		"BUTTON_TOOLTIP": "通过 Open Collective 捐赠",
-		"CURRENT_SUPPORTERS": "当前支持者"
+		"CURRENT_SUPPORTERS": "当前支持者",
+		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "由 {USER} 提供支持|特别感谢 {USER}|由 {USER} 赞助|由 {USER} 提供后援|由社区成员 {USER} 等驱动|由 {USER} 助力实现|由 {USER} 维持运行|由 {USER} 贡献|由 {USER} 资助",
+		"BROUGHT_TO_YOU_VARIANTS_RARE": "咖啡由 {USER} 提供|由 {USER} 提供动力|感谢 {USER}!|让我们可以持续下去的人: {USER}|帮助我们成长的人: {USER}|维持服务器运行的人: {USER}|诚挚感谢 {USER}|由 {USER} 提供支持|得到了像 {USER} 这样的朋友的支持",
+		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "由传奇人物支持：{USER}|由 {USER} 提供咖啡因|真正的传奇：{USER}|今日英雄：{USER}|绝对的超级巨星：{USER}|在付电费：{USER}|我们精神状态的救星：{USER}|精神稳定性由 {USER} 赞助|由 {USER} 提供咖啡因转代码服务|维持生产稳定：{USER}|独一无二的：{USER}|正在传递 dmabuf 缓冲区：{USER}"
 	},
 	"DOWNLOAD": "下载",
 	"DOWNLOADER": "下载管理器",

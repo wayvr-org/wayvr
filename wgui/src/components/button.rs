@@ -211,6 +211,14 @@ impl ComponentButton {
 		label.set_text(common, text);
 	}
 
+	pub fn set_text_color(&self, common: &mut CallbackDataCommon, color: WguiColor) {
+		let state = self.state.borrow();
+		let Some(mut label) = common.state.widgets.get_as::<WidgetLabel>(state.id_label) else {
+			return;
+		};
+		label.set_color(common, color, true);
+	}
+
 	pub fn set_color(&self, common: &mut CallbackDataCommon, color: WguiColor) {
 		let gradient_intensity = common.state.theme.gradient_intensity;
 

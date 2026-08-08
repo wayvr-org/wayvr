@@ -3,7 +3,7 @@ use strum::{EnumCount, EnumString};
 // Primary: button color
 // OnPrimary: text color placed on the Primary-colored button
 
-#[derive(Debug, Copy, Clone, EnumCount, EnumString)]
+#[derive(Debug, Copy, Clone, PartialEq, EnumCount, EnumString)]
 #[repr(usize)]
 #[strum(serialize_all = "snake_case")]
 pub enum WguiColorName {
@@ -26,7 +26,7 @@ pub enum WguiColorName {
 	Highlight,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct WguiNamedColor {
 	name: WguiColorName,
 	rgb_multiplier: f32,
@@ -43,7 +43,7 @@ pub enum ParentColor {
 	Ignore,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum WguiColor {
 	Raw(drawing::Color),
 	Named(WguiNamedColor),
@@ -203,6 +203,15 @@ impl Default for WguiColor {
 }
 
 impl WguiNamedColor {
+	pub const fn with_alpha(name: WguiColorName, alpha: f32) -> WguiNamedColor {
+		WguiNamedColor {
+			name,
+			rgb_multiplier: 1.0,
+			rgb_addition: 0.0,
+			alpha,
+		}
+	}
+
 	pub fn resolve(&self, palette: &WguiColorPalette) -> drawing::Color {
 		let mut color = palette[self.name];
 		if self.alpha != 1.0 {

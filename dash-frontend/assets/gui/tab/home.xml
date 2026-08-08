@@ -7,12 +7,17 @@
       justify_content="center"
       align_items="center"
       flex_grow="1"
-      gap="24">
+      gap="8"
+      >
       <image src_builtin="dashboard/splash.png" width="300" height="89" />
-      <label id="label_hello" size="32" weight="bold" color="on_background" />
+
+      <!-- supporters -->
+      <Button id="btn_supporter" width="fit_content" height="24" text=" " border="0" color="background_variant(transparent)"/>
+
+      <label id="label_hello" margin_top="24" size="32" weight="bold" color="on_background" />
 
       <!-- main button list -->
-      <div flex_direction="row" gap="8">
+      <div flex_direction="row" gap="8" margin_top="32">
         <MenuButton id="btn_apps" icon="dashboard/apps.svg" translation="APPLICATIONS" />
         <MenuButton id="btn_games" icon="dashboard/games.svg" translation="GAMES" />
         <MenuButton id="btn_monado" icon="dashboard/monado.svg" text="Monado" />

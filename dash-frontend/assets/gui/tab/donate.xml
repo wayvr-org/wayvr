@@ -34,7 +34,7 @@
       <div macro="half">
           <sprite color="#FFAAAA" src_builtin="dashboard/donate.svg" min_width="48" min_height="48"/>
         <div gap="16" align_items="center" width="100%">
-          <label align="justified" wrap="1" size="18" translation="DONATE.DESCRIPTION" color="on_background"/>
+          <label align="justified" wrap="1" size="15" translation="DONATE.DESCRIPTION" color="on_background"/>
         </div>
 
         <div flex_direction="column" gap="8" align_items="center">
