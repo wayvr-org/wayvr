@@ -64,35 +64,22 @@ async fn request_supporters(tasks: Tasks<Task>) {
 	}
 }
 
-fn tier_pretty_print(tier: &str) -> String {
-	format!("{} Tier", wlx_common::locale::capitalize_string(tier))
-}
-
-fn tier_color(tier: &str) -> &'static str {
-	match tier {
-		"platinum" => "#aaffff",
-		"gold" => "#ffffaa",
-		"silver" => "#cccccc",
-		"bronze" => "#ffaa66",
-		_ => "on_background",
-	}
-}
 
 impl<T> TabDonate<T> {
 	fn set_supporters(&mut self, layout: &mut Layout, supporters: cached_fetcher::Supporters) -> anyhow::Result<()> {
 		let globals = layout.state.globals.clone();
 		layout.remove_children(self.id_current_supporters);
 
-		let mut current_tier = "";
+		let mut current_tier = None;
 		let mut tier_parent = WidgetID::default();
 
 		for supporter in &supporters.supporters {
-			if supporter.tier != current_tier {
-				current_tier = &supporter.tier;
+			if Some(supporter.tier) != current_tier {
+				current_tier = Some(supporter.tier);
 
 				let mut params = TemplateParams::new();
-				params.insert_str("text", tier_pretty_print(&supporter.tier));
-				params.insert("color", tier_color(&supporter.tier));
+				params.insert_str("text", supporter.tier.pretty_str());
+				params.insert("color", supporter.tier.color_str());
 				self.state.realize_template(
 					&doc_params(&globals),
 					"TierCell",
