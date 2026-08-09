@@ -1,5 +1,6 @@
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
+	tab::TabType,
 	util::popup_manager::{MountPopupOnceParams, PopupHolder},
 	views::{ViewTrait, ViewUpdateParams},
 };
@@ -52,6 +53,8 @@ impl ViewTrait for View {
 					globals.palette = new_palette;
 					par.general_config.color_palette = profile.into();
 					par.layout.tasks.push(LayoutTask::RefreshPalette);
+					// this works because LookAndFeel is the first tab
+					self.frontend_tasks.push(FrontendTask::SetTab(TabType::Settings));
 					par.config_change_kind.replace(ConfigChangeKind::WguiColorPaletteChange);
 					if let Some(c) = self.on_close_request.take() {
 						c();

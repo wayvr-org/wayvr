@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::util::{networking::http_client, steam_utils::AppID};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use strum::{AsRefStr};
+use strum::AsRefStr;
 use wlx_common::cache_dir;
 
 fn get_unix_timestamp() -> u64 {
@@ -23,7 +23,7 @@ impl SupporterTier {
 	pub fn pretty_str(self) -> String {
 		format!("{self:?} Tier")
 	}
-	
+
 	pub const fn color_str(self) -> &'static str {
 		match self {
 			Self::Platinum => "#aaffff",

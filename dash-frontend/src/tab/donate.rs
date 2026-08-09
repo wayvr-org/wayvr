@@ -64,7 +64,6 @@ async fn request_supporters(tasks: Tasks<Task>) {
 	}
 }
 
-
 impl<T> TabDonate<T> {
 	fn set_supporters(&mut self, layout: &mut Layout, supporters: cached_fetcher::Supporters) -> anyhow::Result<()> {
 		let globals = layout.state.globals.clone();
