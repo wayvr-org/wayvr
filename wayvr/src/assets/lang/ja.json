@@ -166,5 +166,15 @@
 		"INITIAL_TEXT": "マイクボタンを長押しして文字起こしを開始...",
 		"INIT_ERROR": "Whisperエンジンの起動中にエラーが発生しました",
 		"ENTER_KEY": "Enterキー"
+	},
+	"NOTIFICATION": {
+		"NOT_RUNNING_XR_VR": "Monado、WiVRn、またはSteamVRが実行されていることを確認してください。",
+		"NOT_RUNNING_VR": "Monado、WiVRn、またはSteamVRが実行されているか確認してください。",
+		"NOT_RUNNING_XR": "Monado または WiVRn が実行されているか確認してください。",
+		"INVALID_ARGS": "起動引数を確認してください。",
+		"COUD_NOT_CONNECT_TO_VR_RUNTIME": "VRランタイムに接続できませんでした。",
+		"SELECT_SCREEN_CAST_FOR": "ディスプレイ {DISPLAY} のスクリーンキャストを選択してください",
+		"CANNOT_CAPTURE_KBD_MOUSE": "キーボード/マウスのキャプチャを初期化できませんでした！\nユーザーが 'input' グループに所属しているか確認してください。",
+		"WE_ARE_GRABBING": "WayVR がキーボードとマウスを制御しています。\n解除するには、Super+Zを押してください。"
 	}
 }

@@ -20,7 +20,7 @@ mod tests {
         let text = std::str::from_utf8(data).expect("en.csv is not valid UTF-8");
         let mut keys = Vec::new();
         let mut chars = text.chars().peekable();
-        while let Some(_) = chars.peek() {
+        while chars.peek().is_some() {
             let key = read_csv_field(&mut chars);
             // skip comma separator
             if chars.peek() == Some(&',') {

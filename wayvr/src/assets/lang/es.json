@@ -166,5 +166,15 @@
 		"INITIAL_TEXT": "Mantén pulsado el botón del micro para empezar a transcribir...",
 		"INIT_ERROR": "Error al iniciar el motor Whisper",
 		"ENTER_KEY": "Tecla Enter"
+	},
+	"NOTIFICATION": {
+		"NOT_RUNNING_XR_VR": "Asegúrate de que Monado, WiVRn o SteamVR estén ejecutándose.",
+		"NOT_RUNNING_VR": "Asegúrate de que Monado, WiVRn o SteamVR estén ejecutándose.",
+		"NOT_RUNNING_XR": "Asegúrate de que Monado o WiVRn se estén ejecutando.",
+		"INVALID_ARGS": "Revisa tus argumentos de lanzamiento.",
+		"COUD_NOT_CONNECT_TO_VR_RUNTIME": "No se pudo conectar al entorno de ejecución de VR.",
+		"SELECT_SCREEN_CAST_FOR": "Seleccionar transmisión de pantalla para la pantalla {DISPLAY}",
+		"CANNOT_CAPTURE_KBD_MOUSE": "¡No se pudo inicializar la captura de teclado/ratón!\nComprueba que tu usuario esté en el grupo 'input'.",
+		"WE_ARE_GRABBING": "¡WayVR tiene el control de tu teclado y ratón!\nPulsa Super+Z para liberarlos."
 	}
 }

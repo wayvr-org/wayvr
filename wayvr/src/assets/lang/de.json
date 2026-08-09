@@ -166,5 +166,15 @@
 		"INITIAL_TEXT": "Mic-Taste gedrückt halten, um die Transkription zu starten...",
 		"INIT_ERROR": "Fehler beim Starten der Whisper-Engine",
 		"ENTER_KEY": "Enter-Taste"
+	},
+	"NOTIFICATION": {
+		"NOT_RUNNING_XR_VR": "Stelle sicher, dass Monado, WiVRn oder SteamVR läuft.",
+		"NOT_RUNNING_VR": "Stelle sicher, dass Monado, WiVRn oder SteamVR läuft.",
+		"NOT_RUNNING_XR": "Stelle sicher, dass Monado oder WiVRn läuft.",
+		"INVALID_ARGS": "Prüfe deine Startargumente.",
+		"COUD_NOT_CONNECT_TO_VR_RUNTIME": "Verbindung zum VR-Runtime fehlgeschlagen.",
+		"SELECT_SCREEN_CAST_FOR": "Screen-Cast für Display {DISPLAY} auswählen",
+		"CANNOT_CAPTURE_KBD_MOUSE": "Tastatur/Maus-Erfassung konnte nicht initialisiert werden!\nPrüfe, ob dein Benutzer in der Gruppe 'input' ist.",
+		"WE_ARE_GRABBING": "WayVR steuert jetzt deine Tastatur und Maus!\nDrücke Super+Z, um die Steuerung freizugeben."
 	}
 }

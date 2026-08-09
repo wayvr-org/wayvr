@@ -144,3 +144,13 @@ WHISPER.DOWNLOAD_GUIDANCE,"Set up speech-to-text under settings, features!",Help
 WHISPER.INITIAL_TEXT,Press and hold the mic button to start transcribing...,Help message prompting the user to hold down the button with the microphone icon.
 WHISPER.INIT_ERROR,Error while starting Whisper engine,Error message.
 WHISPER.ENTER_KEY,Enter key,Button to send an Enter key on the emulated keyboard
+NOTIFICATION.COUD_NOT_CONNECT_TO_VR_RUNTIME,"Could not connect to VR runtime.",A system notification which shows up on initialization failure.
+NOTIFICATION.NOT_RUNNING_XR_VR,"Make sure that Monado, WiVRn or SteamVR is running.",A system notification which shows up on initialization failure.
+NOTIFICATION.NOT_RUNNING_VR,"Make sure that Monado, WiVRn or SteamVR is running.",A system notification which shows up on initialization failure.
+NOTIFICATION.NOT_RUNNING_XR,"Make sure that Monado or WiVRn is running.",A system notification which shows up on initialization failure.
+NOTIFICATION.INVALID_ARGS,"Check your launch arguments.",A system notification which shows up on initialization failure.
+NOTIFICATION.SELECT_SCREEN_CAST_FOR,"Select screen cast for display {DISPLAY}",A system notification which shows up on monitor selection request. DISPLAY is the monitor name.
+NOTIFICATION.CANNOT_CAPTURE_KBD_MOUSE,"Could not initialize keyboard/mouse capture!
+Check that your user is in the 'input' group.",A system notification which shows up in case if we can't control the computer via keyboard or mouse. Leave `input` key as-is - it's a linux group name.
+NOTIFICATION.WE_ARE_GRABBING,"WayVR has your keyboard and mouse!
+Press Super+Z to release.",A system notification which shows up in case if WayVR starts capturing physical keyboard and mouse events. The user consciously chose this option - it's just a message for him how to exit the mode later. Emphasis on user discretion

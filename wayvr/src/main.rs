@@ -44,9 +44,16 @@ use signal_hook::iterator::Signals;
 use sysinfo::Pid;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+use wgui::{font_config::WguiFontConfig, globals::WguiGlobals};
 
-use crate::subsystem::dbus::DbusConnector;
-use wlx_common::XrBackend;
+use crate::{config::load_general_config, subsystem::dbus::DbusConnector};
+use wlx_common::{
+    XrBackend,
+    config::GeneralConfig,
+    config_io::{self, get_config_file_path},
+    locale::WayVRLangProvider,
+    palette::load_palette,
+};
 
 pub static FRAME_COUNTER: AtomicUsize = AtomicUsize::new(0);
 pub static RUNNING: AtomicBool = AtomicBool::new(true);
@@ -104,6 +111,33 @@ struct Args {
     log_to: Option<String>,
 }
 
+fn load_config() -> GeneralConfig {
+    let config_root_path = config_io::ConfigRoot::Generic.ensure_dir();
+    log::info!("Config root path: {}", config_root_path.display());
+    load_general_config()
+}
+
+fn init_run_params() -> backend::RunParams {
+    let assets = Box::new(gui::asset::GuiAsset {});
+    let config = load_config();
+    let lang_provider = WayVRLangProvider::from_config(&config);
+    let theme_path = config.theme_path.clone();
+
+    let wgui_globals = WguiGlobals::new(
+        assets,
+        &lang_provider,
+        &WguiFontConfig::default(),
+        get_config_file_path(&theme_path),
+        load_palette(&config.color_palette),
+    )
+    .expect("Failed to init Globals, can't proceed");
+
+    backend::RunParams {
+        wgui_globals,
+        config,
+    }
+}
+
 #[allow(clippy::unnecessary_wraps)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = if std::env::args().skip(1).any(|a| !a.is_empty()) {
@@ -141,7 +175,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_signal_hooks()?;
 
     let mut used_backend = None;
-
     auto_run(args, &mut used_backend);
 
     if RESTART.load(Ordering::Relaxed) {
@@ -171,7 +204,7 @@ fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
         if !args_get_openvr(&args) {
             use crate::backend::{BackendError, openxr::openxr_run};
             tried_xr = true;
-            match openxr_run(&args) {
+            match openxr_run(&args, init_run_params()) {
                 Ok(()) => {
                     used_backend.replace(XrBackend::OpenXR);
                     return;
@@ -189,7 +222,7 @@ fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
         if !args_get_openxr(&args) {
             use crate::backend::{BackendError, openvr::openvr_run};
             tried_vr = true;
-            match openvr_run(&args) {
+            match openvr_run(&args, init_run_params()) {
                 Ok(()) => {
                     used_backend.replace(XrBackend::OpenVR);
                     return;
@@ -219,14 +252,23 @@ fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
 
     log::error!("No more backends to try");
 
-    let instructions = match (tried_xr, tried_vr) {
-        (true, true) => "Make sure that Monado, WiVRn or SteamVR is running.",
-        (false, true) => "Make sure that SteamVR is running.",
-        (true, false) => "Make sure that Monado or WiVRn is running.",
-        _ => "Check your launch arguments.",
+    let instructions_key = match (tried_xr, tried_vr) {
+        (true, true) => "NOTIFICATION.NOT_RUNNING_XR_VR",
+        (false, true) => "NOTIFICATION.NOT_RUNNING_VR",
+        (true, false) => "NOTIFICATION.NOT_RUNNING_XR",
+        _ => "NOTIFICATION.INVALID_ARGS",
     };
 
-    let instructions = format!("Could not connect to runtime.\n{instructions}");
+    let run_params = init_run_params();
+
+    let instructions_str = run_params.wgui_globals.i18n().translate(instructions_key);
+
+    let instructions_title = run_params
+        .wgui_globals
+        .i18n()
+        .translate("NOTIFICATION.COUD_NOT_CONNECT_TO_VR_RUNTIME");
+
+    let instructions = format!("{instructions_title}\n{instructions_str}");
 
     let _ = DbusConnector::notify_send("WayVR", &instructions, 1, 30000, 0, false);
 

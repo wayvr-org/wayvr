@@ -54,7 +54,7 @@ use std::{
 use vulkano::image::view::ImageView;
 use wayland_protocols::xdg::shell::server::xdg_toplevel;
 use wayvr_ipc::packet_client::PositionMode;
-use wgui::{gfx::WGfx, log::LogErr};
+use wgui::{gfx::WGfx, globals::WguiGlobals, log::LogErr};
 use wlx_capture::frame::Transform;
 use wlx_common::{
     audio::{AudioSystem, SamplePlayer},
@@ -654,6 +654,7 @@ impl WvrServerState {
             &mut app.hid_provider,
             &mut app.audio_sample_player,
             &mut app.audio_system,
+            &app.wgui_globals,
             &app.session.config,
         );
 
@@ -767,6 +768,7 @@ impl WvrServerState {
         self.manager.seat_pointer.is_grabbed()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn process_input_capture(
         &mut self,
         input_state: &mut InputState,
@@ -774,6 +776,7 @@ impl WvrServerState {
         hid_wrapper: &mut HidWrapper,
         audio_sample_player: &mut SamplePlayer,
         audio_system: &mut AudioSystem,
+        globals: &WguiGlobals,
         config: &GeneralConfig,
     ) {
         let input_capture = match (self.input_capture.as_mut(), config.wvr_input_capture) {
@@ -790,14 +793,10 @@ impl WvrServerState {
                 if let Some(cap) = self.input_capture.as_mut() {
                     cap
                 } else {
-                    let _ = DbusConnector::notify_send(
-                        "Could not initialize keyboard/mouse capture!",
-                        "Check that your user is in the input group.",
-                        1,
-                        5000,
-                        0,
-                        true,
-                    );
+                    let text = &globals
+                        .i18n()
+                        .translate("NOTIFICATION.CANNOT_CAPTURE_KBD_MOUSE");
+                    let _ = DbusConnector::notify_send("WayVR", text, 1, 5000, 0, true);
                     return;
                 }
             }
@@ -928,15 +927,8 @@ impl WvrServerState {
                     audio_sample_player.play_sample(audio_system, "input_grab");
                     if !self.grab_toast_sent {
                         self.grab_toast_sent = true;
-                        //TODO: translate
-                        let _ = DbusConnector::notify_send(
-                            "WayVR has your keyboard and mouse!",
-                            "Super+Z to release",
-                            1,
-                            5000,
-                            0,
-                            true,
-                        );
+                        let text = &globals.i18n().translate("NOTIFICATION.WE_ARE_GRABBING");
+                        let _ = DbusConnector::notify_send("WayVR", &text, 1, 5000, 0, true);
                     }
                 }
                 input_capture::CapturedEvent::Ungrabbed => {

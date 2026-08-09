@@ -166,5 +166,15 @@
 		"INITIAL_TEXT": "Press and hold the mic button to start transcribing...",
 		"INIT_ERROR": "Error while starting Whisper engine",
 		"ENTER_KEY": "Enter key"
+	},
+	"NOTIFICATION": {
+		"COUD_NOT_CONNECT_TO_VR_RUNTIME": "Could not connect to VR runtime.",
+		"NOT_RUNNING_XR_VR": "Make sure that Monado, WiVRn or SteamVR is running.",
+		"NOT_RUNNING_VR": "Make sure that Monado, WiVRn or SteamVR is running.",
+		"NOT_RUNNING_XR": "Make sure that Monado or WiVRn is running.",
+		"INVALID_ARGS": "Check your launch arguments.",
+		"SELECT_SCREEN_CAST_FOR": "Select screen cast for display {DISPLAY}",
+		"CANNOT_CAPTURE_KBD_MOUSE": "Could not initialize keyboard/mouse capture!\nCheck that your user is in the 'input' group.",
+		"WE_ARE_GRABBING": "WayVR has your keyboard and mouse!\nPress Super+Z to release."
 	}
 }

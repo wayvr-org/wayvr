@@ -3,7 +3,7 @@ use strum::{EnumCount, EnumString};
 // Primary: button color
 // OnPrimary: text color placed on the Primary-colored button
 
-#[derive(Debug, Copy, Clone, PartialEq, EnumCount, EnumString)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumCount, EnumString)]
 #[repr(usize)]
 #[strum(serialize_all = "snake_case")]
 pub enum WguiColorName {

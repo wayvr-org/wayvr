@@ -19,7 +19,7 @@ use wlx_common::{
 use crate::{
     Args, FRAME_COUNTER, RUNNING, XrBackend,
     backend::{
-        BackendError,
+        BackendError, RunParams,
         input::interact,
         openxr::{helpers::try_apply_chroma_key, lines::LinePool, overlay::OpenXrOverlayData},
         task::{OpenXrTask, OverlayTask, TaskType},
@@ -56,7 +56,7 @@ struct XrState {
 }
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
+pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     let (xr_instance, system) = match helpers::init_xr() {
         Ok((xr_instance, system)) => (xr_instance, system),
         Err(e) => {
@@ -77,7 +77,7 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
 
     let mut app = {
         let (gfx, gfx_extras) = init_openxr_graphics(xr_instance.clone(), system)?;
-        AppState::from_graphics(gfx, gfx_extras, feats)?
+        AppState::from_graphics(gfx, gfx_extras, feats, params)?
     };
 
     app.session.no_autostart = args.no_autostart;
@@ -325,7 +325,7 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
             app.input_state.ipd = ipd;
             Toast::new(
                 ToastTopic::IpdChange,
-                Some(Translation::from_translation_key("IPD")),
+                Some(Translation::from_raw_text("IPD")),
                 Translation::from_raw_text_string(format!("{ipd:.1} mm")),
             )
             .submit(&mut app);

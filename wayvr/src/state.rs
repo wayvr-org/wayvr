@@ -1,3 +1,4 @@
+use crate::backend::RunParams;
 use glam::Affine3A;
 use idmap::IdMap;
 use serde::{Deserialize, Serialize};
@@ -8,18 +9,15 @@ use std::sync::Arc;
 use wgui::log::LogErr;
 use wgui::theme::WguiTheme;
 use wgui::{
-    font_config::WguiFontConfig, gfx::WGfx, globals::WguiGlobals,
-    renderer_vk::context::SharedContext as WSharedContext,
+    gfx::WGfx, globals::WguiGlobals, renderer_vk::context::SharedContext as WSharedContext,
 };
 #[cfg(feature = "pipewire")]
 use wlx_capture::pipewire::ScreenCastManager;
 use wlx_common::config::PwTokenMap;
-use wlx_common::locale::WayVRLangProvider;
-use wlx_common::palette::load_palette;
 use wlx_common::{
     audio,
     config::GeneralConfig,
-    config_io::{self, get_config_file_path},
+    config_io::{self},
     desktop_finder::DesktopFinder,
     overlays::{ToastDisplayMethod, ToastTopic},
 };
@@ -37,9 +35,7 @@ use crate::subsystem::osc::OscSender;
 use crate::subsystem::whisper_stt::WhisperStt;
 use crate::{
     backend::{input::InputState, task::TaskContainer},
-    config::load_general_config,
     graphics::WGfxExtras,
-    gui,
     ipc::{event_queue::SyncEventQueue, ipc_server, signal::WayVRSignal},
     subsystem::{dbus::DbusConnector, input::HidWrapper},
 };
@@ -101,11 +97,12 @@ impl AppState {
         gfx: Arc<WGfx>,
         gfx_extras: WGfxExtras,
         mut feats: InterfaceFeats,
+        mut params: RunParams,
     ) -> anyhow::Result<Self> {
         // insert shared resources
         let mut tasks = TaskContainer::new();
 
-        let session = AppSession::load();
+        let session = AppSession::load(params.config);
         let wvr_signals = SyncEventQueue::new();
 
         let wvr_server = {
@@ -124,7 +121,6 @@ impl AppState {
         let osc_sender = crate::subsystem::osc::OscSender::new(session.config.osc_out_port).ok();
 
         let wgui_shared = WSharedContext::new(gfx.clone())?;
-        let theme_path = session.config.theme_path.clone();
 
         let mut audio_sample_player = audio::SamplePlayer::new();
         audio_sample_player.register_sample(
@@ -167,8 +163,7 @@ impl AppState {
             ))?,
         )?;
 
-        let mut assets = Box::new(gui::asset::GuiAsset {});
-        audio_sample_player.register_wgui_samples(assets.as_mut())?;
+        audio_sample_player.register_wgui_samples(params.wgui_globals.assets_builtin().as_mut())?;
 
         let mut theme = WguiTheme {
             animation_mult: 1. / session.config.ui_animation_speed,
@@ -182,8 +177,6 @@ impl AppState {
 
         let mut desktop_finder = DesktopFinder::new();
         desktop_finder.refresh();
-
-        let lang_provider = WayVRLangProvider::from_config(&session.config);
 
         #[cfg(feature = "pipewire")]
         let screencast_manager = ScreenCastManager::new()
@@ -212,14 +205,8 @@ impl AppState {
             screens: smallvec![],
             anchor: Affine3A::IDENTITY,
             anchor_grabbed: false,
-            wgui_globals: WguiGlobals::new(
-                assets,
-                &lang_provider,
-                &WguiFontConfig::default(),
-                get_config_file_path(&theme_path),
-                load_palette(&session.config.color_palette),
-            )?,
             wgui_theme: Rc::new(theme),
+            wgui_globals: params.wgui_globals,
             executor,
             dbus,
             feats,
@@ -310,11 +297,7 @@ pub struct AppSession {
 }
 
 impl AppSession {
-    pub fn load() -> Self {
-        let config_root_path = config_io::ConfigRoot::Generic.ensure_dir();
-        log::info!("Config root path: {}", config_root_path.display());
-        let config = load_general_config();
-
+    pub fn load(config: GeneralConfig) -> Self {
         let mut toast_topics = IdMap::new();
         toast_topics.insert(ToastTopic::System, ToastDisplayMethod::Center);
         toast_topics.insert(ToastTopic::Error, ToastDisplayMethod::Center);

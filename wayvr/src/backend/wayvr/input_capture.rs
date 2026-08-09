@@ -486,10 +486,12 @@ fn worker_main(
                     }
                 }
                 Err(error) => {
-                    //TODO: translate
+                    //TODO: we can't easily translate it at this stage, i18n lies on a separate thread
                     let _ = DbusConnector::notify_send(
-                        "Could not capture input",
-                        &format!("Linux user must be in input group!\n Error: \n{error}"),
+                        "WayVR",
+                        &format!(
+                            "Could not capture input! Linux user must be in 'input' group!\n Error: \n{error}"
+                        ),
                         1,
                         5000,
                         0,

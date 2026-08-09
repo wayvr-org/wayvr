@@ -274,7 +274,7 @@
 		"CURRENT_SUPPORTERS": "Current Supporters",
 		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "Supported by {USER}|Special thanks to {USER}|Sponsored by {USER}|Backed by {USER}|Driven by community members like {USER}|Made possible by {USER}|Sustained by {USER}|Contributed by {USER}|Funded by {USER}",
 		"BROUGHT_TO_YOU_VARIANTS_RARE": "Coffee provided by {USER}|Fuelled by {USER}|Shoutout to {USER}!|Keeping us going: {USER}|Helping us grow: {USER}|Keeping the servers running: {USER}|With gratitude to {USER}|Powered by {USER}|Supported by friends like {USER}",
-		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "Supported by legends like {USER}|Caffeine supplied by {USER}|A true legend: {USER}|Our hero of the day: {USER}|An absolute superstar: {USER}|Paying for the electricity bill: {USER}|The savior of our sanity: {USER}|Leading the way: {USER}|Caffeine-to-code converter provided by {USER}|Keeping the production stable: {USER}|The one and only: {USER}|Passing dmabuf buffers: {USER}"
+		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "Supported by legends like {USER}|Caffeine supplied by {USER}|A true legend: {USER}|Our hero of the day: {USER}|An absolute superstar: {USER}|Paying for the electricity bill: {USER}|Leading the way: {USER}|Caffeine-to-code converter provided by {USER}|Keeping the production stable: {USER}|The one and only: {USER}|Passing dmabuf buffers: {USER}"
 	},
 	"DOWNLOAD": "Download",
 	"DOWNLOADER": "Downloader",

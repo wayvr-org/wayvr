@@ -18,7 +18,7 @@ use wlx_common::{dash_interface::InterfaceFeats, overlays::ToastTopic};
 use crate::{
     Args, FRAME_COUNTER, RUNNING, XrBackend,
     backend::{
-        BackendError,
+        BackendError, RunParams,
         input::interact,
         openvr::{
             helpers::adjust_gain,
@@ -58,7 +58,7 @@ pub fn openvr_uninstall() {
 }
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
-pub fn openvr_run(args: &Args) -> Result<(), BackendError> {
+pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     let app_type = EVRApplicationType::VRApplication_Overlay;
     let Ok(context) = ovr_overlay::Context::init(app_type) else {
         if !args.wait {
@@ -92,7 +92,7 @@ pub fn openvr_run(args: &Args) -> Result<(), BackendError> {
 
     let mut app = {
         let (gfx, gfx_extras) = init_openvr_graphics(instance_extensions, device_extensions_fn)?;
-        AppState::from_graphics(gfx, gfx_extras, feats)?
+        AppState::from_graphics(gfx, gfx_extras, feats, params)?
     };
 
     app.session.no_autostart = args.no_autostart;
@@ -196,7 +196,7 @@ pub fn openvr_run(args: &Args) -> Result<(), BackendError> {
                                 log::info!("IPD: {:.1} mm -> {:.1} mm", app.input_state.ipd, ipd);
                                 Toast::new(
                                     ToastTopic::IpdChange,
-                                    Some(Translation::from_translation_key("IPD")),
+                                    Some(Translation::from_raw_text("IPD")),
                                     Translation::from_raw_text_string(format!("{ipd:.1} mm")),
                                 )
                                 .submit(&mut app);

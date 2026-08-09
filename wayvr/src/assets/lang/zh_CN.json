@@ -166,5 +166,15 @@
 		"INITIAL_TEXT": "按住麦克风按钮开始转写...",
 		"INIT_ERROR": "启动 Whisper 引擎时出错",
 		"ENTER_KEY": "回车键"
+	},
+	"NOTIFICATION": {
+		"NOT_RUNNING_XR_VR": "请确保 Monado、WiVRn 或 SteamVR 正在运行。",
+		"NOT_RUNNING_VR": "请确保 Monado、WiVRn 或 SteamVR 正在运行。",
+		"NOT_RUNNING_XR": "请确保 Monado 或 WiVRn 正在运行。",
+		"INVALID_ARGS": "检查你的启动参数。",
+		"COUD_NOT_CONNECT_TO_VR_RUNTIME": "无法连接到 VR 运行时。",
+		"SELECT_SCREEN_CAST_FOR": "为显示器 {DISPLAY} 选择屏幕投射",
+		"CANNOT_CAPTURE_KBD_MOUSE": "无法初始化键盘/鼠标捕获！\n请检查您的用户是否在 'input' 组中。",
+		"WE_ARE_GRABBING": "WayVR 正在接管你的键盘和鼠标！\n按 Super+Z 释放。"
 	}
 }

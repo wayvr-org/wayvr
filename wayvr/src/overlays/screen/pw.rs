@@ -320,15 +320,15 @@ fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
             | ScreenCastResult::WaitingForUser => {
                 let user_wait_add = if matches!(new_result, ScreenCastResult::WaitingForUser) {
                     if par.user_wait == 2 {
-                        par.notify_id = DbusConnector::notify_send(
-                            "Select screen cast for:",
-                            format!("{} {}", par.name, par.description).as_str(),
-                            1,
-                            30000,
-                            0,
-                            true,
-                        )
-                        .ok();
+                        let text = par.app.wgui_globals.i18n().translate_and_replace(
+                            "NOTIFICATION.SELECT_SCREEN_CAST_FOR",
+                            (
+                                "{DISPLAY}",
+                                format!("{} {}", par.name, par.description).as_str(),
+                            ),
+                        );
+                        par.notify_id =
+                            DbusConnector::notify_send("WayVR", &text, 1, 30000, 0, true).ok();
                     }
                     1
                 } else {

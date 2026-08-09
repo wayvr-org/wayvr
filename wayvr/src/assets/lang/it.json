@@ -166,5 +166,15 @@
 		"INITIAL_TEXT": "Tieni premuto il tasto del microfono per trascrivere...",
 		"INIT_ERROR": "Errore durante l'avvio del motore Whisper",
 		"ENTER_KEY": "Tasto Invio"
+	},
+	"NOTIFICATION": {
+		"NOT_RUNNING_XR_VR": "Assicurati che Monado, WiVRn o SteamVR siano attivi.",
+		"NOT_RUNNING_VR": "Assicurati che Monado, WiVRn o SteamVR siano attivi.",
+		"NOT_RUNNING_XR": "Assicurati che Monado o WiVRn siano attivi.",
+		"INVALID_ARGS": "Controlla gli argomenti di avvio.",
+		"COUD_NOT_CONNECT_TO_VR_RUNTIME": "Impossibile connettersi al VR runtime.",
+		"SELECT_SCREEN_CAST_FOR": "Seleziona la trasmissione schermo per il display {DISPLAY}",
+		"CANNOT_CAPTURE_KBD_MOUSE": "Impossibile inizializzare la cattura di tastiera/mouse!\nControlla che il tuo utente sia nel gruppo 'input'.",
+		"WE_ARE_GRABBING": "WayVR sta controllando tastiera e mouse!\nPremi Super+Z per rilasciare il controllo."
 	}
 }
