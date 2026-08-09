@@ -272,9 +272,9 @@
 		"THANK_YOU_WAYVR": "Danke vom WayVR-Team!",
 		"BUTTON_TOOLTIP": "Via Open Collective spenden",
 		"CURRENT_SUPPORTERS": "Aktuelle Unterstützer",
-		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "Unterstützt durch {USER}|Besonderer Dank an {USER}|Gesponsert von {USER}|Gefördert durch {USER}|Angetrieben durch Community-Mitglieder wie {USER}|Möglich gemacht durch {USER}|Aufrechterhalten durch {USER}|Beigesteuert von {USER}|Finanziert durch {USER}",
-		"BROUGHT_TO_YOU_VARIANTS_RARE": "Kaffee gesponsert von {USER}|Angetrieben durch {USER}|Ein Shoutout an {USER}!|Hält uns am Laufen: {USER}|Hilft uns zu wachsen: {USER}|Hält die Server am Laufen: {USER}|Mit Dank an {USER}|Powered by {USER}|Unterstützt durch Freunde wie {USER}",
-		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "Unterstützt von Legenden wie {USER}|Koffein geliefert von {USER}|Eine wahre Legende: {USER}|Unser Held des Tages: {USER}|Ein absoluter Superstar: {USER}|Bezahlt die Stromrechnung: {USER}|Der Retter unseres Verstands: {USER}|Mentale Stabilität gesponsert von: {USER}|Koffein-zu-Code-Konverter bereitgestellt von {USER}|Hält die Produktion stabil: {USER}|Der Einzigartige: {USER}|Reicht dmabuf-Buffer weiter: {USER}"
+		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "Unterstützt von {USER}|Besonderer Dank an {USER}|Gesponsert von {USER}|Ermöglicht durch {USER}|Getragen von Community-Mitgliedern wie {USER}|Mit Hilfe von {USER}|Aufrechterhalten durch {USER}|Ein Beitrag von {USER}|Finanziert durch {USER}",
+		"BROUGHT_TO_YOU_VARIANTS_RARE": "Kaffee spendiert von {USER}|Angetrieben von {USER}|Ein großes Shoutout an {USER}!|{USER} hält uns am Laufen|Mit {USER} wachsen wir weiter|{USER} hält die Server stabil|In voller Dankbarkeit gegenüber {USER}|Power-up durch {USER}|Unterstützt von Freunden wie {USER}",
+		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "Unterstützt von Legenden wie {USER}|Koffein-Zufuhr gesichert durch {USER}|Eine echte Legende: {USER}|Unser Held des Tages: {USER}|Ein absoluter Superstar: {USER}|Bezahlt gerade die Stromrechnung: {USER}|Der Retter unserer Nerven: {USER}|Der Ruhepol im Chaos: {USER}|Kaffee-zu-Code-Konverter: {USER}|Hält die Production stabil: {USER}|Die eine und einzige(r): {USER}|Bezwinger des dmabuf-Buffers: {USER}"
 	},
 	"DOWNLOAD": "Herunterladen",
 	"DOWNLOADER": "Downloader",

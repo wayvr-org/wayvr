@@ -272,9 +272,9 @@
 		"THANK_YOU_WAYVR": "Dzięki od zespołu WayVR!",
 		"BUTTON_TOOLTIP": "Wesprzyj projekt przez Open Collective",
 		"CURRENT_SUPPORTERS": "Obecni darczyńcy",
-		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "Wspierane przez {USER}|Specjalne podziękowania dla {USER}|Sponsorowane przez {USER}|Wspierane przez {USER}|Napędzane przez członków społeczności, takich jak {USER}|Umożliwione przez {USER}|Utrzymywane przez {USER}|Wniesiony wkład: {USER}|Sfinansowane przez {USER}",
-		"BROUGHT_TO_YOU_VARIANTS_RARE": "Kawa od {USER}|Napędza nas {USER}|Pozdrowienia dla {USER}!|Utrzymuje nas przy życiu: {USER}|Pomaga nam rosnąć: {USER}|Utrzymuje serwery: {USER}|Z wdzięcznością dla {USER}|Napędzane przez {USER}|Wspierane przez przyjaciół takich jak {USER}",
-		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "Wspierane przez legendy, takie jak {USER}|Kofeina dostarczona przez {USER}|Prawdziwa legenda: {USER}|Nasz dzisiejszy bohater: {USER}|Absolutna gwiazda: {USER}|Opłacanie rachunków za prąd: {USER}|Zbawca naszego zdrowia psychicznego: {USER}|Stabilność psychiczna sponsorowana przez: {USER}|Konwerter kofeiny na kod dostarczony przez {USER}|Dbanie o stabilność produkcji: {USER}|Jedyny i niepowtarzalny: {USER}|Przekazywanie buforów dmabuf: {USER}"
+		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "Wspierane przez {USER}|Dzięki dla {USER}|Sponsor: {USER}|Z pomocą {USER}|Wkład od {USER}|Umożliwione przez {USER}|Dzięki wsparciu {USER}|Patron: {USER}|Działamy dzięki {USER}",
+		"BROUGHT_TO_YOU_VARIANTS_RARE": "Kawa od {USER}|Energia dostarczona przez {USER}|Wielkie brawa dla {USER}!|Dzięki {USER} idziemy do przodu|Razem z {USER} rośniemy w siłę|Serwery napędzane przez {USER}|Z ogromną wdzięcznością dla {USER}|Napędzane przez {USER}|Wsparcie od przyjaciół takich jak {USER}",
+		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "Wspierane przez legendę: {USER}|Dostawa kofeiny od {USER}|Prawdziwa legenda: {USER}|Gwiazda dnia: {USER}|Absolutna supergwiazda: {USER}|Opłaca rachunki za prąd: {USER}|Ludzie, którzy czynią to możliwe: {USER}|Sponsor spokoju ducha: {USER}|Konwerter kawy na kod: {USER}|Strażnik stabilności produkcji: {USER}|Jedyny w swoim rodzaju: {USER}|Przesyła bufory dmabuf: {USER}"
 	},
 	"DOWNLOAD": "Pobierz",
 	"DOWNLOADER": "Menedżer pobierania",

@@ -272,9 +272,9 @@
 		"THANK_YOU_WAYVR": "WayVRチームより、感謝を込めて！",
 		"BUTTON_TOOLTIP": "Open Collectiveで寄付する",
 		"CURRENT_SUPPORTERS": "現在のサポーター",
-		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "{USER} の支援を受けています|{USER} に特別な感謝を|{USER} のスポンサーシップにより|{USER} のバックアップにより|{USER} などのコミュニティメンバーによって推進|{USER} の協力により実現|{USER} の支援により継続|{USER} の寄付により|{USER} の資金提供により",
-		"BROUGHT_TO_YOU_VARIANTS_RARE": "{USER}が提供してくれたコーヒー|{USER}のエネルギーを注入！|{USER}に感謝！|活動を支えてくれているのは: {USER}|成長を助けてくれているのは: {USER}|サーバーを維持してくれているのは: {USER}|{USER}に感謝を込めて|Powered by {USER}|{USER}のような友人たちの支援により",
-		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "{USER}のような伝説的存在が支援してくれました|{USER}がカフェインを供給|真の伝説：{USER}|今日のヒーロー：{USER}|超スーパースター：{USER}|電気代を負担：{USER}|精神の安定を守る救世主：{USER}|心の平穏のスポンサー：{USER}|{USER}提供のカフェイン・コード変換機|安定した稼働を支える：{USER}|唯一無二の存在：{USER}|dmabufバッファをパス：{USER}"
+		"BROUGHT_TO_YOU_VARIANTS_OFTEN": "{USER}さんにサポートされています|{USER}さんに感謝！|{USER}さんのご支援で成り立っています|{USER}さんが支えてくれています|{USER}さんの後押しのおかげです|{USER}さんが後援しています|{USER}さんのご協力に感謝|{USER}さんが応援してくれています|本日のサポーターは{USER}さんです",
+		"BROUGHT_TO_YOU_VARIANTS_RARE": "{USER}さんの優しさに感謝|{USER}さんが背中を押してくれました|{USER}さんの心強いサポート|{USER}さんが彩りを添えてくれました|{USER}さんのおかげで前進しています|{USER}さんの温かいご支援|{USER}さんが笑顔を届けてくれました|{USER}さんが道を照らしてくれました|{USER}さんに心から感謝して",
+		"BROUGHT_TO_YOU_VARIANTS_VERY_RARE": "今日のMVPは{USER}さん！|{USER}さんが神降臨！|{USER}さんが限界突破させてくれた！|{USER}さんのパワーで爆走中！|救世主、現る：{USER}さん！|{USER}さんが文明を支えています|{USER}さんの情熱が燃料です！|本日のスーパーヒーロー：{USER}さん！|{USER}さんがバグをなぎ倒してくれた！|{USER}さんの応援でテンションMAX！|全宇宙から{USER}さんに拍手を！"
 	},
 	"DOWNLOAD": "ダウンロード",
 	"DOWNLOADER": "ダウンローダー",
