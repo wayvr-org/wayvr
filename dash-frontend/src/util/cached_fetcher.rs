@@ -24,12 +24,21 @@ impl SupporterTier {
 		format!("{self:?} Tier")
 	}
 	
-	pub fn color_str(self) -> &'static str {
+	pub const fn color_str(self) -> &'static str {
 		match self {
 			Self::Platinum => "#aaffff",
 			Self::Gold => "#ffffaa",
 			Self::Silver => "#cccccc",
 			Self::Bronze => "#ffaa66",
+		}
+	}
+
+	pub const fn tickets(self) -> u32 {
+		match self {
+			Self::Platinum => 20,
+			Self::Gold => 10,
+			Self::Silver => 5,
+			Self::Bronze => 1,
 		}
 	}
 }
@@ -40,6 +49,12 @@ pub struct Supporter {
 	pub date: String,
 	pub tier: SupporterTier,
 	pub contribution_count: u32,
+}
+
+impl Supporter {
+	pub const fn tickets(&self) -> u32 {
+		self.tier.tickets()
+	}
 }
 
 #[derive(Serialize, Deserialize)]

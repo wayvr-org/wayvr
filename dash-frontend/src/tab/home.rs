@@ -39,7 +39,13 @@ fn get_supporter_anim(
 	prev_supporter_name: String,
 ) -> Animation {
 	let username = loop {
-		let random_supporter = &supporters.supporters[rand::random_range(0..supporters.supporters.len() - 1)];
+		let total_tickets: u32 = supporters.supporters.iter().map(|s| s.tickets()).sum();
+		let jackpot = rand::random_range(0..total_tickets);
+		let mut cumulative = 0u32;
+		let random_supporter = supporters.supporters.iter().find(|s| {
+			cumulative += s.tickets();
+			cumulative >= jackpot
+		}).unwrap();
 		let username = random_supporter.username.clone();
 		if username != prev_supporter_name {
 			break username;
