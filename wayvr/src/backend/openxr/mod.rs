@@ -10,6 +10,7 @@ use input::OpenXrInputSource;
 use openxr as xr;
 use skybox::{Skybox, create_skybox};
 use vulkano::{Handle, VulkanObject};
+use wgui::i18n::Translation;
 use wlx_common::{
     dash_interface::InterfaceFeats,
     overlays::{StereoMode, ToastTopic},
@@ -322,8 +323,12 @@ pub fn openxr_run(args: &Args) -> Result<(), BackendError> {
         if (app.input_state.ipd - ipd).abs() > 0.05 {
             log::info!("IPD changed: {} -> {}", app.input_state.ipd, ipd);
             app.input_state.ipd = ipd;
-            Toast::new(ToastTopic::IpdChange, "IPD".into(), format!("{ipd:.1} mm"))
-                .submit(&mut app);
+            Toast::new(
+                ToastTopic::IpdChange,
+                Some(Translation::from_translation_key("IPD")),
+                Translation::from_raw_text_string(format!("{ipd:.1} mm")),
+            )
+            .submit(&mut app);
         }
 
         overlays.values_mut().for_each(|o| o.config.tick(&mut app));

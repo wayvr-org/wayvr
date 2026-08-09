@@ -132,8 +132,10 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
                                     Err(e) => {
                                         Toast::new(
                                             ToastTopic::System,
-                                            "WHISPER.INIT_ERROR".into(),
-                                            e.to_string(),
+                                            Some(Translation::from_translation_key(
+                                                "WHISPER.INIT_ERROR",
+                                            )),
+                                            Translation::from_raw_text_string(e.to_string()),
                                         )
                                         .with_timeout(5.)
                                         .with_sound(true)
@@ -144,8 +146,10 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
                             } else {
                                 Toast::new(
                                     ToastTopic::System,
-                                    "WHISPER.MODEL_NOT_DOWNLOADED".into(),
-                                    "WHISPER.DOWNLOAD_GUIDANCE".into(),
+                                    Some(Translation::from_translation_key(
+                                        "WHISPER.MODEL_NOT_DOWNLOADED",
+                                    )),
+                                    Translation::from_translation_key("WHISPER.DOWNLOAD_GUIDANCE"),
                                 )
                                 .with_timeout(5.)
                                 .with_sound(true)

@@ -13,6 +13,7 @@ use std::fs::File;
 use std::mem::transmute;
 use std::sync::atomic::AtomicBool;
 use strum::IntoEnumIterator;
+use wgui::i18n::Translation;
 use wlx_common::overlays::ToastTopic;
 
 pub struct UInputProvider {
@@ -247,8 +248,8 @@ Check if you're in input group, run: id -nG";
         log::info!("{UINPUT_DISABLED}");
         return Err(Toast::new(
             ToastTopic::System,
-            String::with_capacity(0),
-            String::from(UINPUT_DISABLED),
+            None,
+            Translation::from_raw_text(UINPUT_DISABLED),
         )
         .with_timeout(5.0));
     }
@@ -272,8 +273,8 @@ Check if you're in input group, run: id -nG";
     }
     Err(Toast::new(
         ToastTopic::Error,
-        String::with_capacity(0),
-        full_uinput_error,
+        None,
+        Translation::from_raw_text_string(full_uinput_error),
     )
     .with_timeout(30.0))
 }

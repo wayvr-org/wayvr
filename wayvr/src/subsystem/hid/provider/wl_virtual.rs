@@ -15,6 +15,7 @@ use wayland_client::protocol::wl_registry::WlRegistry;
 use wayland_client::protocol::wl_seat::{WlSeat};
 use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::zwp_virtual_keyboard_manager_v1::ZwpVirtualKeyboardManagerV1;
 use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::zwp_virtual_keyboard_v1::ZwpVirtualKeyboardV1;
+use wgui::i18n::Translation;
 use xkbcommon::xkb::{KEYMAP_FORMAT_TEXT_V1};
 use wlx_common::overlays::ToastTopic;
 use crate::overlays::toast::Toast;
@@ -275,8 +276,8 @@ pub fn initialize_wl_virtual() -> anyhow::Result<Box<dyn HidProvider>, Toast> {
     let provider = WlVirtualProvider::try_new().map_err(|e| {
         Toast::new(
             ToastTopic::System,
-            String::with_capacity(0),
-            format!("Could not initialize wl_virtual: {e}"),
+            None,
+            Translation::from_raw_text_string(format!("Could not initialize wl_virtual: {e}")),
         )
     })?;
     Ok(Box::new(provider))

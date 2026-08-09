@@ -7,7 +7,7 @@ use std::{
 use anyhow::Context;
 use glam::{Affine3A, Vec3, Vec3A};
 use slotmap::{Key, SecondaryMap, SlotMap};
-use wgui::log::LogErr;
+use wgui::{i18n::Translation, log::LogErr};
 use wlx_common::{
     astr_containers::{AStrMap, AStrMapExt},
     config::SerializedWindowSet,
@@ -287,8 +287,8 @@ where
                 if new_idx >= MAX_OVERLAY_SETS {
                     Toast::new(
                         ToastTopic::System,
-                        "TOAST.CANNOT_ADD_SET".into(),
-                        "TOAST.MAXIMUM_SETS_REACHED".into(),
+                        Some(Translation::from_translation_key("TOAST.CANNOT_ADD_SET")),
+                        Translation::from_translation_key("TOAST.MAXIMUM_SETS_REACHED"),
                     )
                     .with_timeout(5.)
                     .with_sound(true)
@@ -305,8 +305,8 @@ where
                 let Some(set) = self.current_set else {
                     Toast::new(
                         ToastTopic::System,
-                        "TOAST.CANNOT_REMOVE_SET".into(),
-                        "TOAST.NO_SET_SELECTED".into(),
+                        Some(Translation::from_translation_key("TOAST.CANNOT_REMOVE_SET")),
+                        Translation::from_translation_key("TOAST.NO_SET_SELECTED"),
                     )
                     .with_timeout(5.)
                     .with_sound(true)
@@ -317,8 +317,8 @@ where
                 if self.sets.len() <= 1 {
                     Toast::new(
                         ToastTopic::System,
-                        "TOAST.CANNOT_REMOVE_SET".into(),
-                        "TOAST.LAST_EXISTING_SET".into(),
+                        Some(Translation::from_translation_key("TOAST.CANNOT_REMOVE_SET")),
+                        Translation::from_translation_key("TOAST.LAST_EXISTING_SET"),
                     )
                     .with_timeout(5.)
                     .with_sound(true)
@@ -1077,8 +1077,8 @@ impl<T> OverlayWindowManager<T> {
             if !self.edit_mode && self.initialized && num_overlays < 1 {
                 Toast::new(
                     ToastTopic::System,
-                    "TOAST.EMPTY_SET".into(),
-                    "TOAST.LETS_ADD_OVERLAYS".into(),
+                    Some(Translation::from_translation_key("TOAST.EMPTY_SET")),
+                    Translation::from_translation_key("TOAST.LETS_ADD_OVERLAYS"),
                 )
                 .with_timeout(3.)
                 .submit(app);

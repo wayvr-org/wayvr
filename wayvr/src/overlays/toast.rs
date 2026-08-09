@@ -6,7 +6,10 @@ use std::{
 
 use anyhow::Context;
 use glam::{Affine3A, Quat, Vec3, vec3};
-use wgui::{i18n::Translation, widget::label::WidgetLabel};
+use wgui::{
+    i18n::{I18n, Translation},
+    widget::label::WidgetLabel,
+};
 use wlx_common::{
     common::LeftRight,
     overlays::{ToastDisplayMethod, ToastTopic},
@@ -22,9 +25,8 @@ use crate::{
 
 static TOAST_NAME: LazyLock<Arc<str>> = LazyLock::new(|| "toast".into());
 
-pub struct Toast {
-    pub title: String,
-    pub body: String,
+#[derive(Clone)]
+pub struct ToastParams {
     pub opacity: f32,
     pub timeout: f32,
     pub lerp_amount: f32,
@@ -32,44 +34,102 @@ pub struct Toast {
     pub topic: ToastTopic,
 }
 
+pub struct Toast {
+    pub title: Option<Translation>,
+    pub body: Translation,
+    pub params: ToastParams,
+}
+
+pub struct BakedToast {
+    title_raw: String, // ready-to-display text
+    body_raw: String,  // ready-to-display text
+    params: ToastParams,
+}
+
 #[allow(dead_code)]
 impl Toast {
-    pub const fn new(topic: ToastTopic, title: String, body: String) -> Self {
+    pub const fn new(topic: ToastTopic, title: Option<Translation>, body: Translation) -> Self {
         Self {
             title,
             body,
-            opacity: 1.0,
-            lerp_amount: 0.1,
-            timeout: 3.0,
-            sound: false,
-            topic,
+            params: ToastParams {
+                opacity: 1.0,
+                lerp_amount: 0.1,
+                timeout: 3.0,
+                sound: false,
+                topic,
+            },
         }
     }
+
     pub const fn with_timeout(mut self, timeout: f32) -> Self {
-        self.timeout = timeout;
+        self.params.timeout = timeout;
         self
     }
+
     pub const fn with_lerp_amount(mut self, lerp: f32) -> Self {
-        self.lerp_amount = lerp;
+        self.params.lerp_amount = lerp;
         self
     }
+
     pub const fn with_opacity(mut self, opacity: f32) -> Self {
-        self.opacity = opacity;
+        self.params.opacity = opacity;
         self
     }
+
     pub const fn with_sound(mut self, sound: bool) -> Self {
-        self.sound = sound;
+        self.params.sound = sound;
         self
     }
+
+    pub fn submit(self, app: &mut AppState) {
+        self.submit_at(app, Instant::now());
+    }
+
+    pub fn submit_at(self, app: &mut AppState, instant: Instant) {
+        let globals = app.wgui_globals.clone();
+        let baked_toast = self.build(&mut globals.i18n());
+        baked_toast.submit_at(app, instant);
+    }
+
+    // bake it
+    pub fn build(&self, lang: &mut I18n) -> BakedToast {
+        let title = if let Some(title) = &self.title {
+            title.clone()
+        } else {
+            Translation::from_translation_key("TOAST.DEFAULT_TITLE")
+        };
+
+        BakedToast {
+            title_raw: String::from(title.generate(lang).as_ref()),
+            body_raw: String::from(self.body.generate(lang).as_ref()),
+            params: self.params.clone(),
+        }
+    }
+
+    pub fn build_raw(&self) -> BakedToast {
+        BakedToast {
+            title_raw: String::from(if let Some(title) = &self.title {
+                title.text.as_ref()
+            } else {
+                ""
+            }),
+            body_raw: String::from(self.body.text.as_ref()),
+            params: self.params.clone(),
+        }
+    }
+}
+
+impl BakedToast {
     pub fn submit(self, app: &mut AppState) {
         self.submit_at(app, Instant::now());
     }
     pub fn submit_at(self, app: &mut AppState, instant: Instant) {
         let selector = OverlaySelector::Name(TOAST_NAME.clone());
 
-        let destroy_at = instant.add(std::time::Duration::from_secs_f32(self.timeout));
+        let destroy_at = instant.add(std::time::Duration::from_secs_f32(self.params.timeout));
 
-        if self.sound && app.session.config.notifications_sound_enabled {
+        if self.params.sound && app.session.config.notifications_sound_enabled {
             app.audio_sample_player
                 .play_sample(&mut app.audio_system, "toast");
         }
@@ -106,11 +166,11 @@ impl Toast {
     }
 }
 
-fn new_toast(toast: Toast, app: &mut AppState) -> Option<OverlayWindowConfig> {
+fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfig> {
     let current_method = app
         .session
         .toast_topics
-        .get(toast.topic)
+        .get(toast.params.topic)
         .copied()
         .unwrap_or(ToastDisplayMethod::Hide);
 
@@ -123,7 +183,7 @@ fn new_toast(toast: Toast, app: &mut AppState) -> Option<OverlayWindowConfig> {
             vec3(0., -0.2, -0.5),
             Quat::IDENTITY,
             Positioning::FollowHead {
-                lerp: toast.lerp_amount,
+                lerp: toast.params.lerp_amount,
             },
         ),
         ToastDisplayMethod::Watch => {
@@ -135,19 +195,8 @@ fn new_toast(toast: Toast, app: &mut AppState) -> Option<OverlayWindowConfig> {
         }
     };
 
-    let title = if toast.title.is_empty() {
-        Translation::from_translation_key("TOAST.DEFAULT_TITLE")
-    } else if matches!(toast.topic, ToastTopic::System | ToastTopic::Error) {
-        Translation::from_translation_key(&toast.title)
-    } else {
-        Translation::from_raw_text(&toast.title)
-    };
-
-    let body = if matches!(toast.topic, ToastTopic::System) {
-        Translation::from_translation_key(&toast.body)
-    } else {
-        Translation::from_raw_text(&toast.body)
-    };
+    let title = Translation::from_raw_text(&toast.title_raw);
+    let body = Translation::from_raw_text(&toast.body_raw);
 
     let on_custom_id: OnCustomIdFunc<()> =
         Box::new(move |id, widget, _doc_params, layout, _parser_state, ()| {

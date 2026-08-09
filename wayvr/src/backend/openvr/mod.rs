@@ -12,6 +12,7 @@ use ovr_overlay::{
 };
 use smallvec::smallvec;
 use vulkano::{Handle, VulkanObject, device::physical::PhysicalDevice};
+use wgui::i18n::Translation;
 use wlx_common::{dash_interface::InterfaceFeats, overlays::ToastTopic};
 
 use crate::{
@@ -195,8 +196,8 @@ pub fn openvr_run(args: &Args) -> Result<(), BackendError> {
                                 log::info!("IPD: {:.1} mm -> {:.1} mm", app.input_state.ipd, ipd);
                                 Toast::new(
                                     ToastTopic::IpdChange,
-                                    "IPD".into(),
-                                    format!("{ipd:.1} mm"),
+                                    Some(Translation::from_translation_key("IPD")),
+                                    Translation::from_raw_text_string(format!("{ipd:.1} mm")),
                                 )
                                 .submit(&mut app);
                             }

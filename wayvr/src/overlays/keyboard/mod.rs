@@ -36,6 +36,7 @@ use smallvec::SmallVec;
 use wgui::{
     color::WguiColor,
     event::{InternalStateChangeEvent, MouseButtonEvent, MouseButtonIndex},
+    i18n::Translation,
     layout::WidgetID,
 };
 use wlx_common::windowing::{OverlayWindowState, Positioning};
@@ -520,8 +521,10 @@ fn handle_press(
             if layouts.is_empty() {
                 Toast::new(
                     ToastTopic::System,
-                    "TOAST.NO_KEYMAPS_CONFIGURED".into(),
-                    "TOAST.NO_KEYMAPS_CONFIGURED_HELP".into(),
+                    Some(Translation::from_translation_key(
+                        "TOAST.NO_KEYMAPS_CONFIGURED",
+                    )),
+                    Translation::from_translation_key("TOAST.NO_KEYMAPS_CONFIGURED_HELP"),
                 )
                 .with_timeout(5.)
                 .submit(app);

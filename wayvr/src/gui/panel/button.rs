@@ -14,6 +14,7 @@ use wgui::{
         CallbackData, CallbackMetadata, EventCallback, EventListenerKind, MouseButtonIndex,
         StyleSetRequest,
     },
+    i18n::Translation,
     layout::Layout,
     log::LogErr,
     parser::{self, AttribPair, CustomAttribsInfoOwned, Fetchable, ParserState, TemplateParams},
@@ -613,13 +614,14 @@ pub(super) fn setup_custom_button<S: 'static>(
                     let now = Instant::now();
 
                     for i in 0..duration_secs {
+                        let text = globals.i18n().translate_and_replace(
+                            "TOAST.FIXING_FLOOR_IN_X_SECS",
+                            ("{SECONDS}", &format!("{}", duration_secs - i)),
+                        );
                         Toast::new(
                             ToastTopic::System,
-                            globals.i18n().translate_and_replace(
-                                "TOAST.FIXING_FLOOR_IN_X_SECS",
-                                ("{SECONDS}", &format!("{}", duration_secs - i)),
-                            ),
-                            "TOAST.ONE_CONTROLLER_ON_FLOOR".into(),
+                            Some(Translation::from_raw_text_string(text)),
+                            Translation::from_translation_key("TOAST.ONE_CONTROLLER_ON_FLOOR"),
                         )
                         .with_timeout(1.0)
                         .with_lerp_amount(1.0)
@@ -635,9 +637,13 @@ pub(super) fn setup_custom_button<S: 'static>(
                     app.tasks
                         .enqueue_at(TaskType::Playspace(PlayspaceTask::FixFloor), deadline);
 
-                    Toast::new(ToastTopic::System, "DONE".into(), String::new())
-                        .with_timeout(2.0)
-                        .submit_at(app, deadline);
+                    Toast::new(
+                        ToastTopic::System,
+                        Some(Translation::from_translation_key("DONE")),
+                        Translation::from_raw_text(""),
+                    )
+                    .with_timeout(2.0)
+                    .submit_at(app, deadline);
                     Ok(EventResult::Consumed)
                 }),
                 "::Shutdown" => Box::new(move |_common, data, app, _| {

@@ -377,8 +377,10 @@ fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
                 log::warn!("Failed to create mirror due to PipeWire error: {e:?}");
                 Toast::new(
                     ToastTopic::Error,
-                    "TOAST.TITLE_SCREENCAST_FAIL".into(),
-                    format!("{e}"),
+                    Some(Translation::from_translation_key(
+                        "TOAST.TITLE_SCREENCAST_FAIL",
+                    )),
+                    Translation::from_raw_text_string(format!("{e}")),
                 )
                 .submit(par.app);
             }

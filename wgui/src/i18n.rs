@@ -49,9 +49,9 @@ impl Translation {
 		}
 	}
 
-	pub fn from_translation_key(translated: &str) -> Self {
+	pub fn from_translation_key(key: &str) -> Self {
 		Self {
-			text: Rc::from(translated),
+			text: Rc::from(key),
 			translated: true,
 		}
 	}

@@ -9,13 +9,18 @@ use std::{
     },
     time::Duration,
 };
+use wgui::i18n::Translation;
 use wlx_common::overlays::ToastTopic;
 
-use crate::{overlays::toast::Toast, state::AppSession, subsystem::dbus::DbusConnector};
+use crate::{
+    overlays::toast::{BakedToast, Toast},
+    state::AppSession,
+    subsystem::dbus::DbusConnector,
+};
 
 pub struct NotificationManager {
-    rx_toast: mpsc::Receiver<Toast>,
-    tx_toast: mpsc::SyncSender<Toast>,
+    rx_toast: mpsc::Receiver<BakedToast>,
+    tx_toast: mpsc::SyncSender<BakedToast>,
     running: Arc<AtomicBool>,
 }
 
@@ -29,7 +34,7 @@ impl NotificationManager {
         }
     }
 
-    pub fn drain_pending(&self, session: &AppSession) -> Vec<Toast> {
+    pub fn drain_pending(&self, session: &AppSession) -> Vec<BakedToast> {
         if session.config.notifications_enabled {
             self.rx_toast.try_iter().collect()
         } else {
@@ -125,13 +130,15 @@ impl NotificationManager {
 
                     let toast = Toast::new(
                         ToastTopic::XSNotification,
-                        msg.title,
-                        msg.content.unwrap_or(String::new()),
+                        Some(Translation::from_raw_text_string(msg.title)),
+                        Translation::from_raw_text_string(msg.content.unwrap_or(String::new())),
                     )
                     .with_timeout(msg.timeout.unwrap_or(5.))
                     .with_sound(msg.volume.unwrap_or(-1.) >= 0.); // XSOverlay still plays at 0,
 
-                    match sender.try_send(toast) {
+                    match sender.try_send(
+                        toast.build_raw(), /* we don't use translation keys here */
+                    ) {
                         Ok(()) => {}
                         Err(e) => {
                             log::error!("Failed to send notification: {e:?}");
@@ -150,7 +157,7 @@ impl Drop for NotificationManager {
     }
 }
 
-fn parse_dbus(msg: &dbus::Message) -> anyhow::Result<Toast> {
+fn parse_dbus(msg: &dbus::Message) -> anyhow::Result<BakedToast> {
     let mut args = msg.iter_init();
     let app_name: String = args.read()?;
     let _replaces_id: u32 = args.read()?;
@@ -164,9 +171,15 @@ fn parse_dbus(msg: &dbus::Message) -> anyhow::Result<Toast> {
         summary
     };
 
-    Ok(Toast::new(ToastTopic::DesktopNotification, title, body)
-        .with_timeout(5.0)
-        .with_opacity(1.0))
+    let toast = Toast::new(
+        ToastTopic::DesktopNotification,
+        Some(Translation::from_raw_text_string(title)),
+        Translation::from_raw_text_string(body),
+    )
+    .with_timeout(5.0)
+    .with_opacity(1.0);
+
+    Ok(toast.build_raw())
     // leave the audio part to the desktop env
 }
 
