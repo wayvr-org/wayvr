@@ -11,7 +11,7 @@ use wgui::{
 use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
-		SettingType, SettingsMountParams, SettingsTab, horiz_cell,
+		SettingType, SettingsMountParams, SettingsTab, UpdateExtra, horiz_cell,
 		macros::{options_category, options_checkbox, options_dropdown, options_slider_f32},
 		mount_requires_restart,
 	},
@@ -32,7 +32,7 @@ pub struct State {
 }
 
 impl SettingsTab for State {
-	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+	fn update(&mut self, par: &mut ViewUpdateParams, _extra: &UpdateExtra) -> anyhow::Result<()> {
 		self.popup_color_palettes.update(par)?;
 
 		for task in self.tasks.drain() {

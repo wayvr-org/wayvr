@@ -243,7 +243,11 @@
 		"GRID_OPACITY_HELP": "Przezroczystość siatki podłogi przy włączonym Skymapie",
 		"XWAYLAND_BY_DEFAULT": "Uruchamiaj aplikacje domyślnie w trybie kompatybilności",
 		"SAVE": "Zapisz",
-		"CANCEL": "Anuluj"
+		"CANCEL": "Anuluj",
+		"STATISTICS": "Statystyki",
+		"ROTATIONS": "Obroty HMD",
+		"SESSION_TIME": "Czas sesji",
+		"LENS_SEPARATION_MM": "Rozstaw soczewek (mm)"
 	},
 	"APPLICATION_LAUNCHER": "Launcher aplikacji",
 	"APPLICATION_STARTED": "Uruchomiono aplikację",

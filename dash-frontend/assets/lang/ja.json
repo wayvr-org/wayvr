@@ -243,7 +243,11 @@
 		"GRID_OPACITY_HELP": "スカイマップ有効時のフロアグリッドの不透明度",
 		"XWAYLAND_BY_DEFAULT": "デフォルトで互換モードでアプリを起動",
 		"SAVE": "保存",
-		"CANCEL": "キャンセル"
+		"CANCEL": "キャンセル",
+		"STATISTICS": "統計",
+		"ROTATIONS": "HMD回転数",
+		"SESSION_TIME": "セッション時間",
+		"LENS_SEPARATION_MM": "レンズ間隔 (mm)"
 	},
 	"APPLICATION_LAUNCHER": "アプリランチャー",
 	"APPLICATION_STARTED": "アプリが起動しました",

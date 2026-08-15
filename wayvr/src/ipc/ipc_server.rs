@@ -181,7 +181,7 @@ impl Connection {
                         pos: to_arr(&params.input_state.pointers[0].raw_pose.translation),
                     },
                     right: WlxInputStatePointer {
-                        pos: to_arr(&params.input_state.pointers[0].raw_pose.translation),
+                        pos: to_arr(&params.input_state.pointers[1].raw_pose.translation),
                     },
                 },
             )),

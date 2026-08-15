@@ -243,7 +243,11 @@
 		"GRID_OPACITY_HELP": "启用天空盒时地面网格的不透明度",
 		"XWAYLAND_BY_DEFAULT": "默认以兼容模式运行应用程序",
 		"SAVE": "保存",
-		"CANCEL": "取消"
+		"CANCEL": "取消",
+		"STATISTICS": "统计数据",
+		"ROTATIONS": "HMD 旋转次数",
+		"SESSION_TIME": "会话时间",
+		"LENS_SEPARATION_MM": "瞳距 (mm)"
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",
 	"APPLICATION_STARTED": "应用程序已启动",

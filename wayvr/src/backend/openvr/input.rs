@@ -185,7 +185,9 @@ impl OpenVrInputSource {
         let _ = input.update_actions(&mut [aas_left, aas_right]);
 
         let devices = system.get_device_to_absolute_tracking_pose(universe.clone(), 0.005);
-        app.input_state.hmd = devices[0].mDeviceToAbsoluteTracking.to_affine();
+        if devices[0].bPoseIsValid {
+            app.input_state.hmd = devices[0].mDeviceToAbsoluteTracking.to_affine();
+        }
 
         for i in 0..2 {
             let hand = &mut self.hands[i];

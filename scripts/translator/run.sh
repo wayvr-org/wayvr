@@ -15,10 +15,10 @@ cd "$(dirname "$0")"
 bun install
 
 # model URL:
-# https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF
+# https://huggingface.co/unsloth/gemma-4-31B-it-GGUF
 # you can specify your own if you want to.
 if [ -z "${MODEL}" ]; then
-	export MODEL="gemma-4-26B-A4B-it-UD-Q3_K_M"
+	export MODEL="gemma-4-31B-it-Q4_K_M"
 fi
 
 if [ -z "${LLAMA_BASE_URL}" ]; then

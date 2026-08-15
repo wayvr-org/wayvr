@@ -35,6 +35,20 @@ pub fn options_category(
 	mp.parser_state.get_widget_id(&id)
 }
 
+pub fn options_stat_row(mp: &mut MacroParams, parent: WidgetID, translation: &str) -> anyhow::Result<WidgetID> {
+	let id = mp.idx.to_string();
+	mp.idx += 1;
+
+	let mut params = TemplateParams::new();
+	params.insert("id", &id);
+	params.insert("translation", translation);
+
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "StatRow", mp.layout, parent, params)?;
+
+	mp.parser_state.get_widget_id(&id)
+}
+
 pub fn options_checkbox(mp: &mut MacroParams, parent: WidgetID, setting: SettingType) -> anyhow::Result<()> {
 	let id = mp.idx.to_string();
 	mp.idx += 1;

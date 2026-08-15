@@ -23,7 +23,7 @@ use wgui::{
 use wlx_common::{
 	config::GeneralConfig,
 	config_io::ConfigRoot,
-	dash_interface::{ConfigChangeKind, DashPlayspaceTask, InterfaceFeats},
+	dash_interface::{ConfigChangeKind, DashPlayspaceTask, HmdStats, InterfaceFeats},
 };
 
 use crate::{
@@ -40,6 +40,7 @@ mod tab_look_and_feel;
 mod tab_misc;
 mod tab_skybox;
 mod tab_space_drag;
+mod tab_statistics;
 mod tab_troubleshooting;
 
 #[derive(Clone)]
@@ -51,6 +52,7 @@ pub(crate) enum TabNameEnum {
 	Misc,
 	Skybox,
 	SpaceDrag,
+	Statistics,
 	Troubleshooting,
 }
 
@@ -64,6 +66,7 @@ impl TabNameEnum {
 			"misc" => Some(TabNameEnum::Misc),
 			"skybox" => Some(TabNameEnum::Skybox),
 			"space_drag" => Some(TabNameEnum::SpaceDrag),
+			"statistics" => Some(TabNameEnum::Statistics),
 			"troubleshooting" => Some(TabNameEnum::Troubleshooting),
 			_ => None,
 		}
@@ -101,8 +104,12 @@ struct SettingUpdatedParams<'a> {
 	setting_type: SettingType,
 }
 
+struct UpdateExtra {
+	hmd_stats: HmdStats,
+}
+
 trait SettingsTab {
-	fn update(&mut self, _par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+	fn update(&mut self, _par: &mut ViewUpdateParams, _extra: &UpdateExtra) -> anyhow::Result<()> {
 		Ok(())
 	}
 
@@ -144,12 +151,17 @@ impl<T> Tab<T> for TabSettings<T> {
 		if let Some(tab) = &mut self.current_tab {
 			let mut config_change_kind = None;
 
-			tab.update(&mut ViewUpdateParams {
-				layout: &mut frontend.layout,
-				executor: &frontend.executor,
-				general_config: frontend.interface.general_config(data),
-				config_change_kind: &mut config_change_kind,
-			})?;
+			let hmd_stats = frontend.interface.hmd_stats(data);
+
+			tab.update(
+				&mut ViewUpdateParams {
+					layout: &mut frontend.layout,
+					executor: &frontend.executor,
+					general_config: frontend.interface.general_config(data),
+					config_change_kind: &mut config_change_kind,
+				},
+				&UpdateExtra { hmd_stats },
+			)?;
 
 			if let Some(kind) = config_change_kind {
 				frontend.interface.config_changed(data, kind);
@@ -733,6 +745,9 @@ impl<T> TabSettings<T> {
 			}
 			TabNameEnum::Skybox => {
 				self.current_tab = Some(Box::new(tab_skybox::State::mount(settings_mount_params)?));
+			}
+			TabNameEnum::Statistics => {
+				self.current_tab = Some(Box::new(tab_statistics::State::mount(settings_mount_params)?));
 			}
 		}
 

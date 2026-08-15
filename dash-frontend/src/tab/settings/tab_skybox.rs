@@ -3,7 +3,7 @@ use wgui::{assets::AssetPath, i18n::Translation, layout::Layout, task::Tasks};
 use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
-		SettingType, SettingsMountParams, SettingsTab,
+		SettingType, SettingsMountParams, SettingsTab, UpdateExtra,
 		macros::{options_category, options_checkbox, options_slider_f32},
 	},
 	util::{popup_manager::PopupHolder, wgui_simple},
@@ -22,7 +22,7 @@ pub struct State {
 }
 
 impl SettingsTab for State {
-	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+	fn update(&mut self, par: &mut ViewUpdateParams, _extra: &UpdateExtra) -> anyhow::Result<()> {
 		self.popup_skymap_list.update(par)?;
 
 		for task in self.tasks.drain() {

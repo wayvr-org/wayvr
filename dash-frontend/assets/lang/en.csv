@@ -132,6 +132,7 @@ APP_SETTINGS.INPUT_PROFILES,Change Input Bindings,Button label in Settings > Con
 APP_SETTINGS.INPUT_PROFILES_HELP,OpenXR controller input bindings,Tooltip for the Change Input Bindings button.
 APP_SETTINGS.INVERT_SCROLL_DIRECTION_X,Invert horizontal scroll direction,Checkbox label in Settings > Features tab. Inverts the horizontal scroll direction.
 APP_SETTINGS.INVERT_SCROLL_DIRECTION_Y,Invert vertical scroll direction,Checkbox label in Settings > Features tab. Inverts the vertical scroll direction.
+APP_SETTINGS.LENS_SEPARATION_MM,Lens separation (mm),"Distance between lens, in milimeters."
 APP_SETTINGS.KEYBOARD_MIDDLE_CLICK,Keyboard middle click,Dropdown label in Settings > Features tab. Selects the modifier key used for middle-click when typing with the laser pointer.
 APP_SETTINGS.KEYBOARD_MIDDLE_CLICK_HELP,"Modifier to use when typing
 with purple laser",Tooltip for the keyboard middle-click setting.
@@ -225,6 +226,9 @@ APP_SETTINGS.SPACE_GRAVITY_GROUND_FRICTION_HELP,"Amount of friction slowing you 
 APP_SETTINGS.SPACE_GRAVITY_FLOOR_HEIGHT,Floor height,Setting in the space gravity physics panel. The Y position where the virtual floor is.
 APP_SETTINGS.SPACE_GRAVITY_FLOOR_HEIGHT_HELP,The Y position where the floor is. Gravity stops when you reach this height.,Tooltip for the floor height setting.
 APP_SETTINGS.SPACE_ROTATE_UNLOCKED,Allow space rotate on all axes,"Checkbox in Settings > Space Drag tab. Unlocks space rotate to work on all axes. ""Space"" in this context refers to ""Playspace"" which was translated as ""${DEFINITIONS.PLAYSPACE}""."
+APP_SETTINGS.ROTATIONS,HMD rotations,Number of full 360-degree rotations of the HMD since startup. Shown in Settings > Statistics.
+APP_SETTINGS.SESSION_TIME,Session time,Time since WayVR started. Shown in Settings > Statistics.
+APP_SETTINGS.STATISTICS,Statistics,Category header in Settings.
 APP_SETTINGS.TROUBLESHOOTING,Troubleshooting,"Category header in Settings. Groups diagnostic/reset actions like clearing tokens, wiping config, and restarting."
 APP_SETTINGS.UI_GRADIENT_INTENSITY,UI Gradient intensity,Slider in Settings > Look & Feel tab. Controls the intensity of gradient effects on the UI (range 0.0-1.0).
 APP_SETTINGS.UPRIGHT_SCREEN_FIX,Upright screen fix,Checkbox in Settings > Miscellaneous tab. Fixes upright screen orientation on some desktop environments.

@@ -243,7 +243,11 @@
 		"GRID_OPACITY_HELP": "Opacità della griglia del pavimento quando lo skymap è attivo",
 		"XWAYLAND_BY_DEFAULT": "Avvia le app in modalità compatibilità per impostazione predefinita",
 		"SAVE": "Salva",
-		"CANCEL": "Annulla"
+		"CANCEL": "Annulla",
+		"STATISTICS": "Statistiche",
+		"ROTATIONS": "Rotazioni HMD",
+		"SESSION_TIME": "Tempo sessione",
+		"LENS_SEPARATION_MM": "Distanza lenti (mm)"
 	},
 	"APPLICATION_LAUNCHER": "Avvio applicazioni",
 	"APPLICATION_STARTED": "Applicazione avviata",

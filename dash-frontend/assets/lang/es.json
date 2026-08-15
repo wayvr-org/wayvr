@@ -243,7 +243,11 @@
 		"GRID_OPACITY_HELP": "Opacidad de la rejilla del suelo cuando el skymap está activado",
 		"XWAYLAND_BY_DEFAULT": "Ejecutar apps en modo de compatibilidad por defecto",
 		"SAVE": "Guardar",
-		"CANCEL": "Cancelar"
+		"CANCEL": "Cancelar",
+		"STATISTICS": "Estadísticas",
+		"ROTATIONS": "Rotaciones del HMD",
+		"SESSION_TIME": "Tiempo de sesión",
+		"LENS_SEPARATION_MM": "Separación de lentes (mm)"
 	},
 	"APPLICATION_LAUNCHER": "Lanzador de aplicaciones",
 	"APPLICATION_STARTED": "Aplicación iniciada",

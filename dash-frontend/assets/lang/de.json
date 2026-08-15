@@ -243,7 +243,11 @@
 		"GRID_OPACITY_HELP": "Deckkraft des Bodengitters, wenn die Skymap aktiviert ist",
 		"XWAYLAND_BY_DEFAULT": "Apps standardmäßig im Kompatibilitätsmodus starten",
 		"SAVE": "Speichern",
-		"CANCEL": "Abbrechen"
+		"CANCEL": "Abbrechen",
+		"STATISTICS": "Statistiken",
+		"ROTATIONS": "HMD-Rotationen",
+		"SESSION_TIME": "Sitzungszeit",
+		"LENS_SEPARATION_MM": "Linsenabstand (mm)"
 	},
 	"APPLICATION_LAUNCHER": "Programmstarter",
 	"APPLICATION_STARTED": "Anwendung gestartet",

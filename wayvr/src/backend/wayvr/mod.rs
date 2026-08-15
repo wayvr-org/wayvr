@@ -928,7 +928,7 @@ impl WvrServerState {
                     if !self.grab_toast_sent {
                         self.grab_toast_sent = true;
                         let text = &globals.i18n().translate("NOTIFICATION.WE_ARE_GRABBING");
-                        let _ = DbusConnector::notify_send("WayVR", &text, 1, 5000, 0, true);
+                        let _ = DbusConnector::notify_send("WayVR", text, 1, 5000, 0, true);
                     }
                 }
                 input_capture::CapturedEvent::Ungrabbed => {

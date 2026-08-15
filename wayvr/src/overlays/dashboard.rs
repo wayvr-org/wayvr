@@ -25,7 +25,7 @@ use wlx_common::{
     overlays::{BackendAttrib, BackendAttribValue},
 };
 use wlx_common::{
-    timestep::Timestep,
+    timestep::{self, Timestep},
     windowing::{OverlayWindowState, Positioning},
 };
 
@@ -577,6 +577,14 @@ impl DashInterface<AppState> for DashInterfaceLive {
 
     fn get_feats(&mut self, data: &mut AppState) -> dash_interface::InterfaceFeats {
         data.feats
+    }
+
+    fn hmd_stats(&mut self, data: &mut AppState) -> dash_interface::HmdStats {
+        dash_interface::HmdStats {
+            rotations_rad: data.input_state.head_yaw_total as f32,
+            session_time_ms: timestep::get_micros() / 1000,
+            ipd: data.input_state.ipd,
+        }
     }
 
     #[cfg(feature = "openxr")]

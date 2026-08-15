@@ -4,7 +4,7 @@ use wgui::{
 	components::button::ComponentButton, globals::WguiGlobals, layout::WidgetID, parser::Fetchable, task::Tasks,
 };
 
-use crate::tab::settings::{horiz_cell, mount_requires_restart};
+use crate::tab::settings::{UpdateExtra, horiz_cell, mount_requires_restart};
 use crate::util::popup_manager::PopupHolder;
 
 use crate::{
@@ -29,7 +29,7 @@ pub struct State {
 }
 
 impl SettingsTab for State {
-	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+	fn update(&mut self, par: &mut ViewUpdateParams, _extra: &UpdateExtra) -> anyhow::Result<()> {
 		self.popup_input_profiles.update(par)?;
 
 		for task in self.tasks.drain() {

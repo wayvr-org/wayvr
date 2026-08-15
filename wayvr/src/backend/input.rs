@@ -3,7 +3,7 @@ use std::process::{Child, Command};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use glam::{Affine3A, Vec2, Vec3A, Vec3Swizzles};
+use glam::{Affine3A, Quat, Vec2, Vec3A, Vec3Swizzles};
 
 use idmap_derive::IntegerId;
 use smallvec::{SmallVec, smallvec};
@@ -75,6 +75,8 @@ pub struct InputState {
     pub picking_focus: FocusPickState,
     processes: Vec<Child>,
     disable_lerp_until: Instant,
+    pub head_yaw_total: f64,
+    head_last_yaw: Option<f64>,
 }
 
 impl InputState {
@@ -88,6 +90,8 @@ impl InputState {
             handsfree_state: PointerState::default(),
             picking_focus: FocusPickState::None,
             disable_lerp_until: Instant::now(),
+            head_yaw_total: 0.0,
+            head_last_yaw: None,
         }
     }
 
@@ -100,6 +104,40 @@ impl InputState {
             self.picking_focus = FocusPickState::None;
             self.disable_lerp_until = Instant::now() + Duration::from_millis(250);
         }
+    }
+
+    fn update_head_rot(&mut self) {
+        let orientation = Quat::from_mat3a(&self.hmd.matrix3);
+
+        let qy = orientation.y as f64;
+        let qw = orientation.w as f64;
+
+        if qy * qy + qw * qw < 1e-10 {
+            debug_assert!(false);
+            return;
+        }
+
+        let yaw = 2.0 * qy.atan2(qw);
+        if !yaw.is_finite() {
+            debug_assert!(false);
+            return;
+        }
+
+        let Some(last) = self.head_last_yaw else {
+            self.head_last_yaw = Some(yaw);
+            return;
+        };
+
+        let mut delta = (yaw - last).rem_euclid(std::f64::consts::TAU);
+        if delta > std::f64::consts::PI {
+            delta -= std::f64::consts::TAU;
+        }
+
+        if delta.abs() <= std::f64::consts::PI / 4.0 {
+            self.head_yaw_total -= delta;
+        }
+
+        self.head_last_yaw = Some(yaw);
     }
 
     pub fn apply_handsfree_action(&mut self, params: HandsfreeParams) {
@@ -154,6 +192,8 @@ impl InputState {
     }
 
     pub fn post_update(&mut self, session: &AppSession) {
+        self.update_head_rot();
+
         for hand in &mut self.pointers {
             #[cfg(debug_assertions)]
             debug_print_hand(hand);

@@ -66,6 +66,13 @@ impl InterfaceFeats {
 	}
 }
 
+#[derive(Clone, Copy, Default)]
+pub struct HmdStats {
+	pub rotations_rad: f32, // total raw in radians
+	pub session_time_ms: u64,
+	pub ipd: f32,
+}
+
 pub trait DashInterface<T> {
 	fn window_list(&mut self, data: &mut T) -> anyhow::Result<Vec<WvrWindow>>;
 	fn window_set_visible(&mut self, data: &mut T, handle: WvrWindowHandle, visible: bool) -> anyhow::Result<()>;
@@ -92,6 +99,7 @@ pub trait DashInterface<T> {
 	fn restart(&mut self, data: &mut T);
 	fn toggle_dashboard(&mut self, data: &mut T);
 	fn get_feats(&mut self, data: &mut T) -> InterfaceFeats;
+	fn hmd_stats(&mut self, data: &mut T) -> HmdStats;
 }
 
 #[derive(Default, Clone, Copy)]

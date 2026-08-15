@@ -16,7 +16,7 @@ use wlx_common::{async_executor::AsyncExecutor, config::GeneralConfig, dash_inte
 use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
-		SettingType, SettingsMountParams, SettingsTab, TabNameEnum, Task as ParentTask, horiz_cell,
+		SettingType, SettingsMountParams, SettingsTab, TabNameEnum, Task as ParentTask, UpdateExtra, horiz_cell,
 		macros::{MacroParams, options_category, options_checkbox, options_range_f32},
 	},
 	util::{
@@ -50,7 +50,7 @@ pub struct State {
 }
 
 impl SettingsTab for State {
-	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+	fn update(&mut self, par: &mut ViewUpdateParams, _extra: &UpdateExtra) -> anyhow::Result<()> {
 		self.popup_download.update(par)?;
 		self.popup_dialog.update(par)?;
 
@@ -79,7 +79,7 @@ impl SettingsTab for State {
 						par.general_config.whisper_model = model.file_name.into();
 						par.config_change_kind.replace(ConfigChangeKind::Other);
 
-						// reload tab so that the downloaded checkmarks get populated
+						// reload tab so that the downloaded check marks get populated
 						self.parent_tasks.push(ParentTask::SetTab(TabNameEnum::Features));
 					}
 				}

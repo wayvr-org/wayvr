@@ -243,6 +243,14 @@ impl DashInterface<()> for DashInterfaceEmulated {
 		}
 	}
 
+	fn hmd_stats(&mut self, _data: &mut ()) -> dash_interface::HmdStats {
+		dash_interface::HmdStats {
+			rotations_rad: 0.42,
+			session_time_ms: crate::timestep::get_micros() / 1000,
+			ipd: 0.0,
+		}
+	}
+
 	fn monado_client_list(
 		&mut self,
 		_data: &mut (),

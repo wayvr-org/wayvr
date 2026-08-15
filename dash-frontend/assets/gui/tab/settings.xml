@@ -31,6 +31,13 @@
     <RadioBox text="${text}" translation="${translation}" value="${value}" tooltip="${tooltip}" />
   </template>
 
+  <template name="StatRow">
+    <div flex_direction="row" justify_content="space_between" align_items="center" gap="12" width="100%">
+      <label weight="bold" translation="${translation}" />
+      <label id="${id}" weight="bold" />
+    </div>
+  </template>
+
   <template name="ButtonText">
     <Button id="${id}" height="32" tooltip="${translation}_HELP" padding="4" gap="8">
       <sprite src_builtin="${icon}" height="24" width="24" />
@@ -69,6 +76,7 @@
         <Tab macro="tab_style" name="space_drag" translation="APP_SETTINGS.SPACE_DRAG" sprite_src_builtin="dashboard/drag.svg" />
         <Tab macro="tab_style" name="misc" translation="APP_SETTINGS.MISC" sprite_src_builtin="dashboard/blocks.svg" />
         <Tab macro="tab_style" name="autostart_apps" translation="APP_SETTINGS.AUTOSTART_APPS" sprite_src_builtin="dashboard/apps.svg" />
+        <Tab macro="tab_style" name="statistics" translation="APP_SETTINGS.STATISTICS" sprite_src_builtin="dashboard/barchart.svg" />
         <Tab macro="tab_style" name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="dashboard/cpu.svg" />
       </Tabs>
       <div flex_wrap="wrap" justify_content="stretch" gap="4" id="settings_root" width="100%">
