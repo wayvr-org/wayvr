@@ -1,13 +1,18 @@
-use std::{rc::Rc, time::Duration};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use glam::Affine3A;
 use wgui::{
+    animation::{Animation, AnimationEasing},
+    color::WguiColor,
     components::button::ComponentButton,
-    event::EventCallback,
+    drawing::Color,
+    event::{CallbackDataCommon, EventCallback, StyleSetRequest},
     i18n::Translation,
+    layout::{LayoutTask, WidgetID},
     log::LogErr,
     parser::Fetchable,
-    widget::{EventResult, label::WidgetLabel},
+    taffy,
+    widget::{EventResult, label::WidgetLabel, rectangle::WidgetRectangle},
 };
 use wlx_common::{
     data_dir,
@@ -30,7 +35,7 @@ use crate::{
         clipboard::{self, ClipboardProvider},
         hid::VirtualKey,
         input::InputFocus,
-        whisper_stt::WhisperStt,
+        whisper_stt::{PttProgress, WhisperStt},
     },
     windowing::{
         OverlaySelector,
@@ -45,6 +50,8 @@ const WHISPER_NAME: &str = "whisper";
 struct WhisperState {
     clipboard_provider: Option<Box<dyn ClipboardProvider>>,
     last_transcription: Option<Rc<str>>,
+    id_rect_vu_meter: WidgetID,
+    id_label_progress: WidgetID,
 }
 
 impl WhisperState {
@@ -71,6 +78,101 @@ impl WhisperState {
     }
 }
 
+fn start_progress_state(
+    common: &mut CallbackDataCommon,
+    state: &WhisperState,
+    progress_rx: std::sync::mpsc::Receiver<PttProgress>,
+) {
+    struct S {
+        sent_samples: u32,
+        processed_samples: u32,
+    }
+
+    // TODO: animation user data?
+    let st = Rc::new(RefCell::new(S {
+        sent_samples: 0,
+        processed_samples: 0,
+    }));
+
+    let id_rect_vu_meter = state.id_rect_vu_meter;
+    let id_label_progress = state.id_label_progress;
+
+    common.alterables.animate(Animation::new_ex(
+        id_rect_vu_meter, /* any tbh */
+        0,
+        60 * 120, // max 120 seconds (whisper_stt MAX_DURATION is currently set to 30, account for processing time)
+        AnimationEasing::Linear,
+        Box::new(move |common, data| {
+            let rect_vu_meter = data.obj.cast_mut::<WidgetRectangle>().unwrap();
+            let mut st = st.borrow_mut();
+            let mut update_text = false;
+
+            while let Ok(msg) = progress_rx.try_recv() {
+                match msg {
+                    PttProgress::VuVolume(volume) => {
+                        common.alterables.set_widget_visible(id_rect_vu_meter, true);
+                        let color = if volume < 0.90 {
+                            Color::new(0.0, 1.0, 0.0, 1.0) // ok (green)
+                        } else if volume < 0.98 {
+                            Color::new(1.0, 1.0, 0.0, 1.0) // almost clipping (yellow)
+                        } else {
+                            Color::new(1.0, 0.0, 0.0, 1.0) // clipping (red)
+                        };
+
+                        rect_vu_meter.set_color(common, WguiColor::Raw(color));
+
+                        common.alterables.set_style(
+                            id_rect_vu_meter,
+                            StyleSetRequest::Width(taffy::prelude::percent(volume.sqrt())),
+                        );
+                    }
+                    PttProgress::SentSamples(count) => {
+                        st.sent_samples = count;
+                        update_text = true;
+                    }
+                    PttProgress::ProcessedSamples(count) => {
+                        st.processed_samples = count;
+                        update_text = true;
+                    }
+                }
+            }
+
+            if update_text
+                && let Some(mut label) = common
+                    .state
+                    .widgets
+                    .get_as::<WidgetLabel>(id_label_progress)
+            {
+                common
+                    .alterables
+                    .set_widget_visible(id_label_progress, true);
+                label.set_text(
+                    common,
+                    Translation::from_raw_text_string(format!(
+                        "{}%",
+                        ((st.processed_samples as f32 / st.sent_samples as f32) * 100.0).round()
+                            as i32
+                    )),
+                );
+            }
+        }),
+    ));
+}
+
+fn reset_progress_state(common: &mut CallbackDataCommon, state: &WhisperState) {
+    common
+        .alterables
+        .set_widget_visible(state.id_rect_vu_meter, false);
+    common
+        .alterables
+        .set_widget_visible(state.id_label_progress, false);
+
+    common
+        .alterables
+        .tasks
+        .push(LayoutTask::StopAnimation(state.id_rect_vu_meter, 0));
+}
+
 pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     let clipboard_provider: Option<Box<dyn ClipboardProvider>> = match app.feats.desktop_backend {
         #[cfg(feature = "wayland")]
@@ -89,6 +191,8 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
     let state = WhisperState {
         clipboard_provider,
         last_transcription: None,
+        id_rect_vu_meter: Default::default(),
+        id_label_progress: Default::default(),
     };
     let xml = "gui/whisper.xml";
 
@@ -114,7 +218,7 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
                 let button = button.clone();
 
                 let callback: EventCallback<AppState, WhisperState> = match command {
-                    "::WhisperTranscribeStart" => Box::new(move |_common, data, app, _state| {
+                    "::WhisperTranscribeStart" => Box::new(move |common, data, app, state| {
                         if !test_button(data) || !test_duration(&button, app) {
                             return Ok(EventResult::Pass);
                         }
@@ -160,9 +264,12 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
                             app.whisper_sst.as_mut().unwrap()
                         };
 
-                        let _ = whisper
-                            .ptt_start()
-                            .log_err("Could not start Whisper transcription");
+                        match whisper.ptt_start() {
+                            Ok(progress_rx) => {
+                                start_progress_state(common, state, progress_rx);
+                            }
+                            Err(e) => log::error!("Could not start Whisper transcription: {e:?}"),
+                        }
 
                         Ok(EventResult::Consumed)
                     }),
@@ -176,6 +283,7 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
                                 .ptt_end()
                                 .log_err("Could not stop Whisper transcription");
                         }
+
                         Ok(EventResult::Consumed)
                     }),
                     "::WhisperPaste" => Box::new(move |_common, data, app, state| {
@@ -272,6 +380,9 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
         BackendAttrib::Icon,
         BackendAttribValue::Icon("icons/mic.svg".into()),
     );
+    let id_label_transcription = panel.parser_state.get_widget_id("transcription")?;
+    panel.state.id_label_progress = panel.parser_state.get_widget_id("label_progress")?;
+    panel.state.id_rect_vu_meter = panel.parser_state.get_widget_id("rect_vu_meter")?;
 
     #[cfg(not(feature = "osc"))]
     {
@@ -289,8 +400,6 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
         );
     }
 
-    let label = panel.parser_state.get_widget_id("transcription")?;
-
     panel
         .timers
         .push(GuiTimer::new(Duration::from_millis(100), 0));
@@ -300,6 +409,8 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
             if let Some(whisper_stt) = app.whisper_sst.as_mut()
                 && let Some(text) = whisper_stt.take_transcription()
             {
+                reset_progress_state(common, state);
+
                 let text: Rc<str> = text.into();
                 state.last_transcription = Some(text.clone());
                 let label = data.obj.get_as_mut::<WidgetLabel>().unwrap();
@@ -309,7 +420,7 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
         });
 
     panel.layout.add_event_listener(
-        label,
+        id_label_transcription,
         wgui::event::EventListenerKind::InternalStateChange,
         on_label_tick,
     );

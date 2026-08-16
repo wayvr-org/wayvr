@@ -149,6 +149,7 @@ pub type LayoutDispatchFunc = Box<dyn FnOnce(&mut CallbackDataCommon) -> anyhow:
 
 pub enum LayoutTask {
 	RemoveWidget(WidgetID),
+	StopAnimation(WidgetID, u32 /* animation id */),
 	SetWidgetStyle(WidgetID, event::StyleSetRequest),
 	SetWidgetVisible(WidgetID, bool), // if true, sets Display to Flex; None, otherwise
 	ModifyLayoutState(LayoutModifyStateFunc),
@@ -793,6 +794,9 @@ impl Layout {
 					}
 				}
 				LayoutTask::Unfocus => self.set_focus(None)?,
+				LayoutTask::StopAnimation(widget_id, animation_id) => {
+					self.animations.stop_by_widget(widget_id, Some(animation_id));
+				}
 			}
 		}
 

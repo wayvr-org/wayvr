@@ -1,6 +1,6 @@
 <layout>
   <macro name="button_style" border="2" round="6"
-    align_items="center" justify_content="center" padding="6" width="60" height="60" overflow="visible" />
+    align_items="center" justify_content="center" padding="6" width="64" height="64" overflow="visible" />
 
   <macro name="bg_rect" width="100%" color="background" border_color="outline" round="10" border="2" />
 
@@ -11,8 +11,14 @@
   <elements>
     <div flex_direction="column" width="600" >
       <rectangle macro="bg_rect" padding="10" align_items="center" justify_content="space_between">
-        <div gap="10">
-          <Button macro="button_style" _press="::WhisperTranscribeStart" _release="::WhisperTranscribeStop" tooltip="WHISPER.TRANSCRIBE" tooltip_side="right">
+        <div gap="8">
+          <Button macro="button_style" _press="::WhisperTranscribeStart" _release="::WhisperTranscribeStop" tooltip="WHISPER.TRANSCRIBE" tooltip_side="right" position="relative">
+            <div position="absolute" width="100%" height="100%" flex_direction="row" justify_content="space_between">
+              <div position="absolute" width="100%" flex_direction="column" align_items="center">
+                <label text="%" display="none" position="absolute" id="label_progress" color="on_background" weight="bold"/>
+              </div>
+              <rectangle display="none" position="absolute" id="rect_vu_meter" width="50%" height="8" color="#00FF00" align_self="end" round="4"/>
+            </div>
             <sprite width="38" height="38" src="icons/mic.svg"  />
           </Button>
           <VerticalSeparator />
@@ -31,14 +37,14 @@
             <sprite width="38" height="38" src_builtin="icons/chat.svg" />
           </Button>
         </div>
-        <div gap="10">
+        <div gap="8">
           <Button macro="button_style" _press="::WhisperUnloadAndClose" tooltip="WHISPER.UNLOAD_AND_CLOSE" tooltip_side="left"
             hover_color="danger" hover_border_color="danger(rgb-mult-0.5)">
             <sprite width="38" height="38" src_builtin="edit/close.svg" />
           </Button>
         </div>
       </rectangle>
-      <div width="100%" height="13" interactable="0" />
+      <div width="100%" height="8" interactable="0" />
       <rectangle macro="bg_rect" flex_direction="column" padding="10">
         <div>
           <label id="transcription" wrap="1" size="20" padding_left="16" padding_right="16" translation="WHISPER.INITIAL_TEXT" />

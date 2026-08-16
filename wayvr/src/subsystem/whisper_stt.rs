@@ -109,6 +109,12 @@ pub struct WhisperStt {
     unload_at: Instant,
 }
 
+pub enum PttProgress {
+    VuVolume(f32),
+    SentSamples(u32),
+    ProcessedSamples(u32),
+}
+
 impl WhisperStt {
     pub fn new(model_path: impl AsRef<Path>) -> Result<Self, WhisperSttError> {
         Self::init(WhisperSttConfig::new(model_path))
@@ -140,7 +146,7 @@ impl WhisperStt {
     }
 
     /// starts a fresh capture stream and a transcription worker
-    pub fn ptt_start(&mut self) -> Result<(), WhisperSttError> {
+    pub fn ptt_start(&mut self) -> Result<mpsc::Receiver<PttProgress>, WhisperSttError> {
         self.unload_at = Instant::now() + UNLOAD_AFTER;
         self.reap_finished_recognizers();
 
@@ -151,12 +157,14 @@ impl WhisperStt {
         let (audio_tx, audio_rx) = mpsc::channel::<Vec<f32>>();
         let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
         let (stop_tx, stop_rx) = mpsc::channel::<StopCapture>();
+        let (progress_tx, progress_rx) = mpsc::channel::<PttProgress>();
 
         let recognizer_thread = spawn_recognizer_thread(
             Arc::clone(&self.ctx),
             self.config.clone(),
             audio_rx,
             self.completed_tx.clone(),
+            progress_tx.clone(),
         )?;
 
         let input_device_name = self.config.rodio_input_device_name.clone();
@@ -164,7 +172,7 @@ impl WhisperStt {
         let capture_thread = thread::Builder::new()
             .name("whisper-stt-rodio-capture".to_string())
             .spawn(move || {
-                rodio_capture_thread(audio_tx, stop_rx, input_device_name, ready_tx);
+                rodio_capture_thread(audio_tx, stop_rx, input_device_name, ready_tx, progress_tx);
             })
             .map_err(|e| WhisperSttError::ThreadSpawn(e.to_string()))?;
 
@@ -177,7 +185,7 @@ impl WhisperStt {
                     deadline: Instant::now() + MAX_DURATION,
                 });
 
-                Ok(())
+                Ok(progress_rx)
             }
             Ok(Err(e)) => {
                 let _ = stop_tx.send(StopCapture);
@@ -303,11 +311,12 @@ fn spawn_recognizer_thread(
     config: WhisperSttConfig,
     audio_rx: mpsc::Receiver<Vec<f32>>,
     completed_tx: mpsc::Sender<Result<String, String>>,
+    progress_tx: mpsc::Sender<PttProgress>,
 ) -> Result<JoinHandle<()>, WhisperSttError> {
     thread::Builder::new()
         .name("whisper-stt-recognizer".to_string())
         .spawn(move || {
-            recognizer_thread(ctx, config, audio_rx, completed_tx);
+            recognizer_thread(ctx, config, audio_rx, completed_tx, progress_tx);
         })
         .map_err(|e| WhisperSttError::ThreadSpawn(e.to_string()))
 }
@@ -317,6 +326,7 @@ fn recognizer_thread(
     config: WhisperSttConfig,
     audio_rx: mpsc::Receiver<Vec<f32>>,
     completed_tx: mpsc::Sender<Result<String, String>>,
+    progress_tx: mpsc::Sender<PttProgress>,
 ) {
     let partial_stride_samples =
         ms_to_samples(config.partial_decode_interval_ms).max(WHISPER_SAMPLE_RATE / 4);
@@ -325,6 +335,7 @@ fn recognizer_thread(
     let mut audio = Vec::<f32>::new();
     let mut last_decoded_len = 0usize;
     let mut latest_partial = String::new();
+    let mut processed_samples = 0;
 
     while let Ok(chunk) = audio_rx.recv() {
         if chunk.is_empty() {
@@ -337,6 +348,8 @@ fn recognizer_thread(
             audio.len().saturating_sub(last_decoded_len) >= partial_stride_samples;
 
         if audio.len() >= min_samples && enough_new_audio {
+            let _ = progress_tx.send(PttProgress::ProcessedSamples(processed_samples));
+            processed_samples += (audio.len() - last_decoded_len) as u32;
             if let Ok(text) = transcribe_audio(&ctx, &config, &audio) {
                 latest_partial = text;
                 last_decoded_len = audio.len();
@@ -407,10 +420,17 @@ fn rodio_capture_thread(
     stop_rx: mpsc::Receiver<StopCapture>,
     input_device_name: Option<String>,
     ready_tx: mpsc::Sender<Result<(), String>>,
+    progress_tx: mpsc::Sender<PttProgress>,
 ) {
     let mut ready_tx = Some(ready_tx);
 
-    let result = run_rodio_capture(audio_tx, stop_rx, input_device_name, &mut ready_tx);
+    let result = run_rodio_capture(
+        audio_tx,
+        stop_rx,
+        input_device_name,
+        &mut ready_tx,
+        progress_tx,
+    );
 
     if let Err(e) = result
         && let Some(ready_tx) = ready_tx.take()
@@ -424,6 +444,7 @@ fn run_rodio_capture(
     stop_rx: mpsc::Receiver<StopCapture>,
     input_device_name: Option<String>,
     ready_tx: &mut Option<mpsc::Sender<Result<(), String>>>,
+    progress_tx: mpsc::Sender<PttProgress>,
 ) -> Result<(), WhisperSttError> {
     let builder = MicrophoneBuilder::new();
 
@@ -485,6 +506,8 @@ fn run_rodio_capture(
     // ~20 ms of input frames; whisper still receives 16 kHz mono chunks
     let chunk_input_samples = ((input_rate / 50).max(1)) * channels.max(1);
 
+    let mut sent_samples: u32 = 0;
+
     'capture: loop {
         if stop_rx.try_recv().is_ok() {
             break;
@@ -510,8 +533,19 @@ fn run_rodio_capture(
 
         let resampled_vec = resampler.push_interleaved_mono_16k(&interleaved, channels, input_rate);
 
-        if !resampled_vec.is_empty() && audio_tx.send(resampled_vec).is_err() {
-            break;
+        if !resampled_vec.is_empty() {
+            let mut loudest_sample: f32 = 0.0;
+            for sample in &resampled_vec {
+                loudest_sample = loudest_sample.max(*sample);
+            }
+
+            let _ = progress_tx.send(PttProgress::VuVolume(loudest_sample));
+            let _ = progress_tx.send(PttProgress::SentSamples(sent_samples));
+            sent_samples += resampled_vec.len() as u32;
+
+            if audio_tx.send(resampled_vec).is_err() {
+                break;
+            }
         }
     }
 
