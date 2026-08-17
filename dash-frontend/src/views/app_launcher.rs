@@ -2,7 +2,7 @@ use std::{collections::HashMap, rc::Rc, str::FromStr};
 use strum::VariantNames;
 use wayvr_ipc::packet_client::{PositionMode, WvrProcessLaunchParams};
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::{
 		ComponentTrait, button::ComponentButton, checkbox::ComponentCheckbox, radio_group::ComponentRadioGroup,
 	},
@@ -100,7 +100,7 @@ impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
 		let doc_params = &ParseDocumentParams {
 			globals: params.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/app_launcher.xml"),
+			path: AssetPathRef::BuiltIn("gui/view/app_launcher.xml"),
 			extra: Default::default(),
 		};
 

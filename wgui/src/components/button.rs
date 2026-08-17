@@ -1,6 +1,6 @@
 use crate::{
 	animation::{Animation, AnimationEasing},
-	assets::AssetPath,
+	assets::AssetPathRef,
 	color::{ParentColor, WguiColor, WguiColorName},
 	components::{
 		self, Component, ComponentBase, ComponentTrait, RefreshData,
@@ -34,7 +34,7 @@ use taffy::{AlignItems, JustifyContent, prelude::length};
 
 pub struct Params<'a> {
 	pub text: Option<Translation>, // if unset, label will not be populated
-	pub sprite_src: Option<AssetPath<'a>>,
+	pub sprite_src: Option<AssetPathRef<'a>>,
 	pub sprite_color: Option<WguiColor>,
 	pub color: Option<WguiColor>,
 	pub border: f32,

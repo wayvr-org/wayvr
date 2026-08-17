@@ -62,7 +62,7 @@ fn create_input_profiles_button(
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
 	params.insert("translation", "APP_SETTINGS.INPUT_PROFILES");
-	params.insert("icon", "dashboard/controller.svg");
+	params.insert("icon", "@/dashboard/controller.svg");
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "ButtonText", mp.layout, id_cell, params)?;
@@ -90,7 +90,7 @@ impl State {
 			par.mp,
 			par.id_parent,
 			"APP_SETTINGS.CONTROLS",
-			"dashboard/controller.svg",
+			"@/dashboard/controller.svg",
 		)?;
 		if par.feats.xr_backend.is_open_xr() {
 			create_input_profiles_button(par.mp, c, tasks.clone(), &popup)?;

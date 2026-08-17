@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <template name="ColorPaletteButton">
     <Button id="${id}" width="350" flex_direction="column" justify_content="space_around" tooltip="${tooltip}" tooltip_side="bottom"
       color="${background}" hover_color="${background_variant}" border_color="${outline}" hover_border_color="${highlight}" padding="16" margin="4" >

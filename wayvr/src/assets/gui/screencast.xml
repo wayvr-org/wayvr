@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <elements>
     <rectangle width="1280" height="720" padding="10" align_items="center" justify_content="space_evenly" flex_direction="column" color="background" color2="background_variant" border="2" border_color="primary" gradient="radial">
       <div width="100%" align_items="center">

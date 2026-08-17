@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <template name="Separator">
     <rectangle width="100%" min_height="2" color="outline" />
   </template>

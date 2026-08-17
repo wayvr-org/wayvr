@@ -3,7 +3,7 @@ use taffy::prelude::percent;
 
 use crate::{
 	animation::Animation,
-	assets::AssetPath,
+	assets::AssetPathRef,
 	color::WguiColorName,
 	components::{Component, ComponentBase, ComponentTrait, RefreshData},
 	event::EventAlterables,
@@ -27,7 +27,7 @@ use std::{
 #[derive(Default)]
 pub struct Params<'a> {
 	pub style: taffy::Style,
-	pub src: Option<AssetPath<'a>>,
+	pub src: Option<AssetPathRef<'a>>,
 	pub looping: bool,
 	pub speed: f32,
 }
@@ -206,8 +206,8 @@ impl ComponentVideo {
 }
 
 impl State {
-	fn set_source(&mut self, globals: &WguiGlobals, src: AssetPath) -> anyhow::Result<()> {
-		let video_data = globals.get_asset(src)?;
+	fn set_source(&mut self, globals: &WguiGlobals, src: AssetPathRef) -> anyhow::Result<()> {
+		let video_data = globals.get_asset(src)?.0;
 		let demuxer = IvfReader::new(video_data)?;
 		let decoder = Av1Decoder::new()?;
 

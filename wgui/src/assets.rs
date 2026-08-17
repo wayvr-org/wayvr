@@ -1,37 +1,19 @@
+use crate::i18n::LangsList;
 use flate2::read::GzDecoder;
 use std::ffi::OsStr;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
 
-use crate::i18n::LangsList;
-
-pub enum AssetPathRc {
-	WguiInternal(Rc<str>),  // tied to internal wgui AssetProvider. Used internally
-	BuiltIn(Rc<str>),       // tied to user AssetProvider
-	FileOrBuiltIn(Rc<str>), // attempts to load from a path relative to asset_folder, falls back to BuiltIn
-	File(Rc<str>),          // load from filesystem
-}
-
-impl AssetPathRc {
-	pub fn as_borrowed(&self) -> AssetPath<'_> {
-		match self {
-			Self::WguiInternal(path) => AssetPath::WguiInternal(path.as_ref()),
-			Self::BuiltIn(path) => AssetPath::BuiltIn(path.as_ref()),
-			Self::FileOrBuiltIn(path) => AssetPath::FileOrBuiltIn(path.as_ref()),
-			Self::File(path) => AssetPath::File(path.as_ref()),
-		}
-	}
-}
-
-impl<'a> From<&'a AssetPathRc> for AssetPath<'a> {
-	fn from(path: &'a AssetPathRc) -> Self {
-		path.as_borrowed()
-	}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssetPathSource {
+	Internal,
+	BuiltIn,
+	Filesystem,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum AssetPath<'a> {
+pub enum AssetPathRef<'a> {
 	WguiInternal(&'a str),  // tied to internal wgui AssetProvider. Used internally
 	BuiltIn(&'a str),       // tied to user AssetProvider
 	FileOrBuiltIn(&'a str), // attempts to load from a path relative to asset_folder, falls back to BuiltIn
@@ -40,74 +22,76 @@ pub enum AssetPath<'a> {
 
 // see AssetPath above for documentation
 #[derive(Debug, Clone)]
-pub enum AssetPathOwned {
-	WguiInternal(PathBuf),
-	BuiltIn(PathBuf),
-	FileOrBuiltIn(PathBuf),
-	File(PathBuf),
+pub enum AssetPathRc {
+	WguiInternal(Rc<Path>),
+	BuiltIn(Rc<Path>),
+	FileOrBuiltIn(Rc<Path>),
+	File(Rc<Path>),
 }
 
-impl AssetPath<'_> {
+impl AssetPathRef<'_> {
 	pub const fn get_str(&self) -> &str {
 		match &self {
-			AssetPath::WguiInternal(path) => path,
-			AssetPath::BuiltIn(path) => path,
-			AssetPath::FileOrBuiltIn(path) => path,
-			AssetPath::File(path) => path,
+			AssetPathRef::WguiInternal(path) => path,
+			AssetPathRef::BuiltIn(path) => path,
+			AssetPathRef::FileOrBuiltIn(path) => path,
+			AssetPathRef::File(path) => path,
 		}
 	}
 
-	pub fn to_owned(&self) -> AssetPathOwned {
+	pub fn to_rc(&self) -> AssetPathRc {
 		match self {
-			AssetPath::WguiInternal(path) => AssetPathOwned::WguiInternal(PathBuf::from(path)),
-			AssetPath::BuiltIn(path) => AssetPathOwned::BuiltIn(PathBuf::from(path)),
-			AssetPath::FileOrBuiltIn(path) => AssetPathOwned::FileOrBuiltIn(PathBuf::from(path)),
-			AssetPath::File(path) => AssetPathOwned::File(PathBuf::from(path)),
+			AssetPathRef::WguiInternal(path) => AssetPathRc::WguiInternal(Rc::from(Path::new(path))),
+			AssetPathRef::BuiltIn(path) => AssetPathRc::BuiltIn(Rc::from(Path::new(path))),
+			AssetPathRef::FileOrBuiltIn(path) => AssetPathRc::FileOrBuiltIn(Rc::from(Path::new(path))),
+			AssetPathRef::File(path) => AssetPathRc::File(Rc::from(Path::new(path))),
 		}
 	}
 }
 
-impl AssetPathOwned {
-	pub fn as_ref(&'_ self) -> AssetPath<'_> {
+impl AssetPathRc {
+	pub fn as_ref(&'_ self) -> AssetPathRef<'_> {
 		match self {
-			AssetPathOwned::WguiInternal(buf) => AssetPath::WguiInternal(buf.to_str().unwrap()),
-			AssetPathOwned::BuiltIn(buf) => AssetPath::BuiltIn(buf.to_str().unwrap()),
-			AssetPathOwned::FileOrBuiltIn(buf) => AssetPath::FileOrBuiltIn(buf.to_str().unwrap()),
-			AssetPathOwned::File(buf) => AssetPath::File(buf.to_str().unwrap()),
+			AssetPathRc::WguiInternal(buf) => AssetPathRef::WguiInternal(buf.to_str().unwrap()),
+			AssetPathRc::BuiltIn(buf) => AssetPathRef::BuiltIn(buf.to_str().unwrap()),
+			AssetPathRc::FileOrBuiltIn(buf) => AssetPathRef::FileOrBuiltIn(buf.to_str().unwrap()),
+			AssetPathRc::File(buf) => AssetPathRef::File(buf.to_str().unwrap()),
 		}
 	}
 
-	pub const fn get_path_buf(&self) -> &PathBuf {
-		match self {
-			AssetPathOwned::WguiInternal(buf) => buf,
-			AssetPathOwned::BuiltIn(buf) => buf,
-			AssetPathOwned::FileOrBuiltIn(buf) => buf,
-			AssetPathOwned::File(buf) => buf,
-		}
-	}
-}
-
-impl AssetPathOwned {
 	#[must_use]
-	pub fn push_include(&self, include: &str) -> AssetPathOwned {
-		let buf = self.get_path_buf();
-		let mut new_path = buf.parent().unwrap_or_else(|| Path::new("/")).to_path_buf();
-		new_path.push(include);
-		let new_path = normalize_path(&new_path);
-
+	pub const fn replace_path(&self, new_path: Rc<Path>) -> AssetPathRc {
 		match self {
-			AssetPathOwned::WguiInternal(_) => AssetPathOwned::WguiInternal(new_path),
-			AssetPathOwned::BuiltIn(_) => AssetPathOwned::BuiltIn(new_path),
-			AssetPathOwned::FileOrBuiltIn(_) => AssetPathOwned::FileOrBuiltIn(new_path),
-			AssetPathOwned::File(_) => AssetPathOwned::File(new_path),
+			AssetPathRc::WguiInternal(_) => AssetPathRc::WguiInternal(new_path),
+			AssetPathRc::BuiltIn(_) => AssetPathRc::BuiltIn(new_path),
+			AssetPathRc::FileOrBuiltIn(_) => AssetPathRc::FileOrBuiltIn(new_path),
+			AssetPathRc::File(_) => AssetPathRc::File(new_path),
+		}
+	}
+
+	pub fn get_path(&self) -> &Path {
+		match self {
+			AssetPathRc::WguiInternal(buf) => buf.as_ref(),
+			AssetPathRc::BuiltIn(buf) => buf.as_ref(),
+			AssetPathRc::FileOrBuiltIn(buf) => buf.as_ref(),
+			AssetPathRc::File(buf) => buf.as_ref(),
+		}
+	}
+
+	#[must_use]
+	pub fn strip_filename(&self) -> AssetPathRc {
+		let res = strip_filename_from_path(self.get_path());
+		match self {
+			AssetPathRc::WguiInternal(_) => AssetPathRc::WguiInternal(res.into()),
+			AssetPathRc::BuiltIn(_) => AssetPathRc::BuiltIn(res.into()),
+			AssetPathRc::FileOrBuiltIn(_) => AssetPathRc::FileOrBuiltIn(res.into()),
+			AssetPathRc::File(_) => AssetPathRc::File(res.into()),
 		}
 	}
 }
 
-impl Default for AssetPathOwned {
-	fn default() -> Self {
-		Self::WguiInternal(PathBuf::default())
-	}
+fn strip_filename_from_path(path: &Path) -> PathBuf {
+	path.parent().unwrap_or_else(|| Path::new("/")).to_path_buf()
 }
 
 pub trait LangProvider {
@@ -127,7 +111,7 @@ pub trait AssetProvider {
 }
 
 // replace "./foo/bar/../file.txt" with "foo/file.txt"
-pub fn normalize_path(path: &Path) -> PathBuf {
+pub fn normalize_path(path: &Path, remove_root_slash: bool) -> PathBuf {
 	let mut stack = Vec::new();
 
 	for component in path.components() {
@@ -157,7 +141,13 @@ pub fn normalize_path(path: &Path) -> PathBuf {
 	stack
 		.into_iter()
 		.map(|comp| match comp {
-			Component::RootDir => OsStr::new("/"),
+			Component::RootDir => {
+				if remove_root_slash {
+					OsStr::new("")
+				} else {
+					OsStr::new("/")
+				}
+			}
 			Component::Prefix(p) => p.as_os_str(), // should not occur on Unix
 			Component::ParentDir => OsStr::new(".."),
 			Component::Normal(s) => s,

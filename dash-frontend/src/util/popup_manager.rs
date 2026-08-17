@@ -4,7 +4,7 @@ use std::{
 };
 
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	event::{EventAlterables, StyleSetRequest},
 	globals::WguiGlobals,
@@ -276,7 +276,7 @@ impl PopupManager {
 	) -> anyhow::Result<(PopupHandle, WidgetID /* content widget ID */)> {
 		let doc_params = &ParseDocumentParams {
 			globals: globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/popup_window.xml"),
+			path: AssetPathRef::BuiltIn("gui/view/popup_window.xml"),
 			extra: Default::default(),
 		};
 		let state = wgui::parser::parse_from_assets(doc_params, layout, self.parent_id)?;

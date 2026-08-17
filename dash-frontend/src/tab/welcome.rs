@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, rc::Rc};
 
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	layout::{Layout, WidgetID},
@@ -68,7 +68,7 @@ impl<T> Tab<T> for TabWelcome<T> {
 fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/tab/welcome.xml"),
+		path: AssetPathRef::BuiltIn("gui/tab/welcome.xml"),
 		extra: Default::default(),
 	}
 }
@@ -135,7 +135,7 @@ impl<T> TabWelcome<T> {
 		let state = wgui::parser::parse_from_assets(
 			&ParseDocumentParams {
 				globals,
-				path: AssetPath::BuiltIn(&format!("gui/tab/welcome_page_{}.xml", self.current_page)),
+				path: AssetPathRef::BuiltIn(&format!("gui/tab/welcome_page_{}.xml", self.current_page)),
 				extra: Default::default(),
 			},
 			layout,

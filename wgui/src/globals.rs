@@ -10,7 +10,7 @@ use anyhow::Context;
 use regex::Regex;
 
 use crate::{
-	assets::{AssetPath, AssetProvider, LangProvider},
+	assets::{AssetPathRef, AssetPathSource, AssetProvider, LangProvider},
 	assets_internal,
 	font_config::{WguiFontConfig, WguiFontSystem},
 	i18n::I18n,
@@ -53,21 +53,25 @@ impl WguiGlobals {
 		}))))
 	}
 
-	pub fn get_asset(&self, asset_path: AssetPath) -> anyhow::Result<Vec<u8>> {
+	pub fn get_asset(&self, asset_path: AssetPathRef) -> anyhow::Result<(Vec<u8>, AssetPathSource)> {
 		match asset_path {
-			AssetPath::WguiInternal(path) => self.assets_internal().load_from_path(path),
-			AssetPath::BuiltIn(path) => self.assets_builtin().load_from_path(path),
-			AssetPath::File(path) => self.load_asset_from_fs(path),
-			AssetPath::FileOrBuiltIn(path) => self
-				.load_asset_from_fs(path)
-				.inspect_err(|e| log::debug!("{e:?}"))
-				.or_else(|_| self.assets_builtin().load_from_path(path)),
+			AssetPathRef::WguiInternal(path) => Ok((self.assets_internal().load_from_path(path)?, AssetPathSource::Internal)),
+			AssetPathRef::BuiltIn(path) => Ok((self.assets_builtin().load_from_path(path)?, AssetPathSource::BuiltIn)),
+			AssetPathRef::File(path) => Ok((self.load_asset_from_fs(path)?, AssetPathSource::Filesystem)),
+			AssetPathRef::FileOrBuiltIn(path) => match self.load_asset_from_fs(path) {
+				Ok(data) => Ok((data, AssetPathSource::Filesystem)),
+				Err(e) => {
+					log::debug!("{e:?}");
+					Ok((self.assets_builtin().load_from_path(path)?, AssetPathSource::BuiltIn))
+				}
+			},
 		}
 	}
 
 	fn load_asset_from_fs(&self, path: &str) -> anyhow::Result<Vec<u8>> {
 		let path = expand_env_vars(path);
 		let path = self.0.borrow().asset_folder.join(path);
+
 		let mut file =
 			std::fs::File::open(path.as_path()).with_context(|| format!("Could not open asset from {}", path.display()))?;
 

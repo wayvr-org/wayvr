@@ -1,11 +1,11 @@
-<layout>
-  <theme>
+<layout version="2">
+  <vars>
     <var key="clock0_size" value="46" />
     <var key="clock0_date_size" value="16" />
     <var key="clock0_dow_size" value="16" />
     <var key="clock_alt_size" value="24" />
     <var key="clock_alt_tz_size" value="14" />
-  </theme>
+  </vars>
 
   <macro name="decorative_rect"
     padding="8" color="background"
@@ -21,21 +21,21 @@
   </template>
 
   <template name="Hmd">
-    <Device idx="${idx}" src="watch/hmd.svg" />
+    <Device idx="${idx}" src="@/watch/hmd.svg" />
   </template>
   <template name="LeftHand">
-    <Device idx="${idx}" src="watch/controller_l.svg" />
+    <Device idx="${idx}" src="@/watch/controller_l.svg" />
   </template>
   <template name="RightHand">
-    <Device idx="${idx}" src="watch/controller_r.svg" />
+    <Device idx="${idx}" src="@/watch/controller_r.svg" />
   </template>
   <template name="Tracker">
-    <Device idx="${idx}" src="watch/track.svg" />
+    <Device idx="${idx}" src="@/watch/track.svg" />
   </template>
 
   <template name="Screen">
     <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
-      <sprite width="38" height="38" src_builtin="edit/screen.svg" />
+      <sprite width="38" height="38" src_builtin="@/edit/screen.svg" />
       <div position="absolute" margin_top="-7" margin_left="-1">
         <label text="${display}" size="18" weight="bold" parent_color="background" />
       </div>
@@ -43,12 +43,12 @@
   </template>
   <template name="Panel">
     <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
-      <sprite width="38" height="38" src_builtin="edit/panel.svg" />
+      <sprite width="38" height="38" src_builtin="@/edit/panel.svg" />
     </Button>
   </template>
   <template name="Mirror">
     <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
-      <sprite width="38" height="38" src_builtin="edit/mirror.svg" />
+      <sprite width="38" height="38" src_builtin="@/edit/mirror.svg" />
       <div position="absolute" margin_top="5" margin_left="13">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
       </div>
@@ -56,7 +56,7 @@
   </template>
   <template name="Passthru">
     <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
-      <sprite width="38" height="38" src_builtin="icons/landscape.svg" />
+      <sprite width="38" height="38" src_builtin="@/icons/landscape.svg" />
       <div position="absolute" margin_top="5" margin_left="13">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
       </div>
@@ -70,7 +70,7 @@
     
   <template name="Set">
     <Button macro="button_style" id="set_${idx}" _press="::SetToggle ${idx}" tooltip="WATCH.SWITCH_TO_SET" tooltip_side="top">
-      <sprite width="38" height="38" src_builtin="watch/set2.svg" />
+      <sprite width="38" height="38" src_builtin="@/watch/set2.svg" />
       <div position="absolute" margin_top="9">
         <label text="${display}" size="24" weight="bold" parent_color="background" />
       </div>
@@ -131,18 +131,18 @@
           <div flex_direction="column" gap="8">
             <div gap="8">
               <Button id="btn_keyboard" macro="button_style" _press="::OverlayToggle kbd" tooltip="EDIT_MODE.KEYBOARD" tooltip_side="left">
-                <sprite src_builtin="watch/keyboard.svg" width="40" height="40" />
+                <sprite src_builtin="@/watch/keyboard.svg" width="40" height="40" />
               </Button>
               <Button id="btn_edit_mode" macro="button_style" _press="::EditToggle" tooltip="WATCH.EDIT_MODE" tooltip_side="left">
-                <sprite width="40" height="40" src="watch/edit.svg" />
+                <sprite width="40" height="40" src="@/watch/edit.svg" />
               </Button>
             </div>
             <div gap="8">
               <Button macro="button_style" _press="::PlayspaceRecenter" tooltip="WATCH.RECENTER" tooltip_side="left">
-                <sprite width="40" height="40" src="watch/recenter.svg" />
+                <sprite width="40" height="40" src="@/watch/recenter.svg" />
               </Button>
               <Button macro="button_style" _press="::PlayspaceFixFloor" tooltip="WATCH.FIX_FLOOR" tooltip_side="left">
-                <sprite width="40" height="40" src="watch/fix-floor.svg" />
+                <sprite width="40" height="40" src="@/watch/fix-floor.svg" />
               </Button>
             </div>
           </div>
@@ -152,7 +152,7 @@
         <div flex_direction="row" gap="8">
           <div gap="4">
             <Button id="btn_dashboard" macro="button_style" _press="::DashToggle" tooltip="WATCH.DASHBOARD" tooltip_side="top">
-              <sprite width="40" height="40" src="watch/wayvr_dashboard_mono.svg" />
+              <sprite width="40" height="40" src="@/watch/wayvr_dashboard_mono.svg" />
             </Button>
           </div>
           <VerticalSeparator />

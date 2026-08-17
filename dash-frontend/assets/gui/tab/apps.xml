@@ -1,5 +1,5 @@
-<layout>
-  <include src="../t_group_box.xml" />
+<layout version="2">
+  <include src="@/gui/t_group_box.xml" />
 
   <!-- tooltip, src, src_ext, name -->
   <template name="AppEntry">
@@ -28,12 +28,12 @@
     <!--
     <div gap="4" align_items="center">
       <Button width="48" height="38">
-        <sprite src_builtin="dashboard/alphabetical.svg" width="24" height="24" />
+        <sprite src_builtin="@/dashboard/alphabetical.svg" width="24" height="24" />
       </Button>
       <Button width="48" height="38">
-        <sprite src_builtin="dashboard/category_search.svg" width="24" height="24" />
+        <sprite src_builtin="@/dashboard/category_search.svg" width="24" height="24" />
       </Button>
-      <sprite src_builtin="dashboard/search.svg" width="24" height="24" />
+      <sprite src_builtin="@/dashboard/search.svg" width="24" height="24" />
       <rectangle flex_grow="1" height="100%" color="#1d2e51" border_color="#294774" border="2" round="4" align_items="center" padding_left="12">
         <label text="Search" color="#FFFFFF88" weight="bold" />
       </rectangle>
@@ -41,7 +41,7 @@
     -->
     <rectangle macro="group_box">
       <div align_items="center" gap="8">
-        <sprite src_builtin="dashboard/heart_plus.svg" color="primary"  min_width="24" min_height="24"/>
+        <sprite src_builtin="@/dashboard/heart_plus.svg" color="primary"  min_width="24" min_height="24"/>
         <label translation="PINNED_APPS"/>
       </div>
       <div id="pinned_apps_parent" flex_direction="row" flex_wrap="wrap" gap="4">

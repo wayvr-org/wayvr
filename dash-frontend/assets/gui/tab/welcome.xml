@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <template name="Pip">
     <rectangle id="pip" width="8" height="8" round="100%" color="${COLOR}"/>
   </template>
@@ -12,11 +12,11 @@
       <!-- Page buttons -->
       <div position="absolute" align_self="end" justify_self="end" width="100%" flex_direction="column" align_items="center" margin_bottom="8">
         <div flex_direction="row" gap="8" align_items="center">
-          <Button id="btn_prev" width="32" height="32" round="100%" sprite_src_builtin="dashboard/arrow_left.svg" />
+          <Button id="btn_prev" width="32" height="32" round="100%" sprite_src_builtin="@/dashboard/arrow_left.svg" />
           <div id="pips" gap="4" align_items="center">
             <!-- filled-in at runtime -->
           </div>
-          <Button id="btn_next" width="32" height="32" round="100%" sprite_src_builtin="dashboard/arrow_right.svg" />
+          <Button id="btn_next" width="32" height="32" round="100%" sprite_src_builtin="@/dashboard/arrow_right.svg" />
         </div>
       </div>
     </div>

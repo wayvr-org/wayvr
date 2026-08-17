@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="group_box"
     flex_direction="column"
     align_items="baseline"

@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::VecDeque, marker::PhantomData, rc::Rc};
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::{ButtonClickCallback, ComponentButton},
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -170,7 +170,7 @@ fn on_app_click(
 fn doc_params(globals: WguiGlobals) -> ParseDocumentParams<'static> {
 	ParseDocumentParams {
 		globals,
-		path: AssetPath::BuiltIn("gui/tab/apps.xml"),
+		path: AssetPathRef::BuiltIn("gui/tab/apps.xml"),
 		extra: Default::default(),
 	}
 }
@@ -359,7 +359,7 @@ fn mount_entry<T>(
 		params.insert(
 			"src",
 			if entry.icon_path.is_none() {
-				"dashboard/terminal.svg"
+				"@/dashboard/terminal.svg"
 			} else {
 				""
 			},

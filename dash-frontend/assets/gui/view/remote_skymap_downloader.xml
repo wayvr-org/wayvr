@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
 
   <!--
   parameters:
@@ -12,7 +12,7 @@
     <Button id="button" sprite_src_builtin="${sprite}" text="${text}"/>
   </template>
 
-  <include src="../t_separator.xml"/>
+  <include src="@/gui/t_separator.xml"/>
 
   <elements>
     <div gap="8" flex_direction="column" min_width="100%" overflow_y="scroll">

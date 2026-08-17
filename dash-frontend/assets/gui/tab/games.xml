@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <elements>
     <div id="running_games_list_parent" align_self="center" />
     <div id="game_list_parent" align_items="center" flex_direction="column" gap="8" />

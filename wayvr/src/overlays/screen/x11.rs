@@ -51,7 +51,7 @@ pub fn create_screen_renderer_x11pw(
         .session
         .pw_tokens
         .arc_get(display_name)
-        .map(|x| x.to_string().into());
+        .map(|x| x.clone().into());
 
     if token.is_some() {
         log::info!("Found existing Pipewire token for display {display_name}");

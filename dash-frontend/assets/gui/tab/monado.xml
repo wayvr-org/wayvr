@@ -1,10 +1,10 @@
-<layout>
+<layout version="2">
   <elements>
     <div gap="4">
       <Tabs id="tabs">
-        <Tab name="process_list" translation="PROCESS_LIST" sprite_src_builtin="dashboard/cpu.svg" />
-        <Tab name="general_settings" translation="GENERAL_SETTINGS" sprite_src_builtin="dashboard/settings.svg" />
-        <Tab name="debug_timings" translation="DEBUG_INFO" sprite_src_builtin="dashboard/not_a_bug.svg" />
+        <Tab name="process_list" translation="PROCESS_LIST" sprite_src_builtin="@/dashboard/cpu.svg" />
+        <Tab name="general_settings" translation="GENERAL_SETTINGS" sprite_src_builtin="@/dashboard/settings.svg" />
+        <Tab name="debug_timings" translation="DEBUG_INFO" sprite_src_builtin="@/dashboard/not_a_bug.svg" />
       </Tabs>
       <div gap="4" id="content" width="100%">
         <!-- filled-in at runtime -->

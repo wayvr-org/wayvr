@@ -1,5 +1,5 @@
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	i18n::Translation,
 	layout::{Layout, LayoutTask, WidgetID},
 	parser::{Fetchable, ParseDocumentParams},
@@ -36,14 +36,14 @@ impl SettingsTab for State {
 
 impl State {
 	pub fn mount(par: SettingsMountParams) -> anyhow::Result<State> {
-		let c = options_category(par.mp, par.id_parent, "APP_SETTINGS.SPACE_DRAG", "dashboard/drag.svg")?;
+		let c = options_category(par.mp, par.id_parent, "APP_SETTINGS.SPACE_DRAG", "@/dashboard/drag.svg")?;
 
 		let globals = par.mp.layout.state.globals.clone();
 
 		let tab_state = wgui::parser::parse_from_assets(
 			&ParseDocumentParams {
 				globals,
-				path: AssetPath::BuiltIn("gui/tab/settings_tab_space_drag.xml"),
+				path: AssetPathRef::BuiltIn("gui/tab/settings_tab_space_drag.xml"),
 				extra: Default::default(),
 			},
 			par.mp.layout,
@@ -61,7 +61,7 @@ impl State {
 				par.mp,
 				c,
 				"APP_SETTINGS.RESET_PLAYSPACE",
-				"dashboard/refresh.svg",
+				"@/dashboard/refresh.svg",
 				super::Task::ResetPlayspace,
 			)?;
 
@@ -69,7 +69,7 @@ impl State {
 				par.mp,
 				c,
 				"APP_SETTINGS.SAVE_PLAYSPACE_CENTER",
-				"dashboard/recenter.svg",
+				"@/dashboard/recenter.svg",
 				super::Task::SavePlayspaceCenter,
 			)?;
 
@@ -77,7 +77,7 @@ impl State {
 				par.mp,
 				c,
 				"APP_SETTINGS.RESET_PLAYSPACE_CENTER",
-				"dashboard/trash.svg",
+				"@/dashboard/trash.svg",
 				super::Task::ResetPlayspaceCenter,
 			)?;
 

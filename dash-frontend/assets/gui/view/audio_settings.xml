@@ -1,5 +1,5 @@
-<layout>
-  <include src_builtin="../t_group_box.xml" />
+<layout version="2">
+  <include src_builtin="@/gui/t_group_box.xml" />
 
   <!-- device_name, device_icon -->
   <template name="DeviceSlider">
@@ -29,7 +29,7 @@
   <template name="SelectAudioProfileText">
     <div align_items="center" gap="8">
       <Button width="48" height="32" id="btn_back">
-        <sprite src_builtin="dashboard/back.svg" width="24" height="24" color="on_background" />
+        <sprite src_builtin="@/dashboard/back.svg" width="24" height="24" color="on_background" />
       </Button>
       <label translation="AUDIO.SELECT_AUDIO_CARD_PROFILE" size="14" weight="bold" />
     </div>
@@ -55,16 +55,16 @@
       <div flex_direction="row" gap="4">
         <Button
           id="btn_auto"
-          sprite_src_builtin="dashboard/magic_wand.svg"
+          sprite_src_builtin="@/dashboard/magic_wand.svg"
           min_width="32"
           tooltip="AUDIO.AUTO_SWITCH_TO_VR_AUDIO"
           color="primary"
           sprite_color="on_primary"
           tooltip_side="right" />
 
-        <BottomButton id="btn_sinks" src_builtin="dashboard/volume.svg" translation="AUDIO.SPEAKERS" />
-        <BottomButton id="btn_sources" src_builtin="dashboard/microphone.svg" translation="AUDIO.MICROPHONES" />
-        <BottomButton id="btn_cards" src_builtin="dashboard/cpu.svg" translation="AUDIO.CARDS" />
+        <BottomButton id="btn_sinks" src_builtin="@/dashboard/volume.svg" translation="AUDIO.SPEAKERS" />
+        <BottomButton id="btn_sources" src_builtin="@/dashboard/microphone.svg" translation="AUDIO.MICROPHONES" />
+        <BottomButton id="btn_cards" src_builtin="@/dashboard/cpu.svg" translation="AUDIO.CARDS" />
       </div>
     </div>
   </elements>

@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="window_button" min_width="40" min_height="40" padding="4" align_items="center" />
   <macro name="window_button_icon" width="32" height="32" />
 
@@ -17,13 +17,13 @@
         <label id="title" text="~title" margin_left="8" color="on_background" size="22" weight="bold" />
         <div gap="4">
           <Button macro="window_button" _release="::EditToggle">
-            <sprite macro="window_button_icon" src="watch/edit.svg" />
+            <sprite macro="window_button_icon" src="@/watch/edit.svg" />
           </Button>
 
           <Button macro="window_button" _release="::DecorCloseWindow"
             color="danger" border_color="danger(rgb-mult-0.5)" 
             hover_color="danger(rgb-add-0.2)" hover_border_color="danger">
-            <sprite macro="window_button_icon" src="edit/close.svg" />
+            <sprite macro="window_button_icon" src="@/edit/close.svg" />
           </Button>
         </div>
 

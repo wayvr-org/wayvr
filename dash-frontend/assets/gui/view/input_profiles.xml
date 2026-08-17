@@ -1,8 +1,8 @@
-<layout>
+<layout version="2">
   <!-- id, text -->
   <template name="InputProfileButton">
     <Button id="${id}" width="350" gap="8" justify_content="start" >
-      <sprite margin_left="8" src_builtin="dashboard/controller.svg" min_width="24" min_height="24" />
+      <sprite margin_left="8" src_builtin="@/dashboard/controller.svg" min_width="24" min_height="24" />
       <label text="${text}" weight="bold"/>
     </Button>
   </template>

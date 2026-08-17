@@ -25,10 +25,10 @@ pub fn parse_widget_sprite<'a>(
 		let (key, value) = (pair.attrib.as_ref(), pair.value.as_ref());
 		match key {
 			"src" | "src_ext" | "src_builtin" | "src_internal" => {
-				let asset_path = get_asset_path_from_kv("", key, value);
+				let asset_path = get_asset_path_from_kv(file, "", key, value);
 
 				if !value.is_empty() {
-					glyph = match CustomGlyphData::from_assets(&ctx.layout.state.globals, asset_path) {
+					glyph = match CustomGlyphData::from_assets(&ctx.layout.state.globals, asset_path.as_ref()) {
 						Ok(glyph) => Some(glyph),
 						Err(e) => {
 							log::warn!("failed to load {value}: {e}");

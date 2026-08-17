@@ -1,6 +1,5 @@
-use std::{sync::Arc, time::Duration};
-
 use glam::{Affine3A, Quat, Vec3, vec3};
+use std::{sync::Arc, time::Duration};
 use wgui::globals::expand_env_vars;
 use wlx_common::{
     overlays::{BackendAttrib, BackendAttribValue},

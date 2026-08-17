@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <elements>
     <div flex_direction="row" gap="16" align_items="center">
       <div id="cover_art_parent" />
@@ -10,7 +10,7 @@
         </div>
         <label id="label_description" wrap="1" text="No description available" />
         <Button id="btn_launch" align_self="baseline" color="primary" border_color="primary(rgb-mult-0.5)" padding_top="4" padding_bottom="4" round="8" padding_right="12" min_width="200" min_height="40">
-          <sprite src_builtin="dashboard/play.svg" width="32" height="32" />
+          <sprite src_builtin="@/dashboard/play.svg" width="32" height="32" />
           <label text="Launch" weight="bold" size="17" />
         </Button>
       </div>

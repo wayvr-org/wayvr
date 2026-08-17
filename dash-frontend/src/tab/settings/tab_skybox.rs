@@ -1,4 +1,4 @@
-use wgui::{assets::AssetPath, i18n::Translation, layout::Layout, task::Tasks};
+use wgui::{assets::AssetPathRef, i18n::Translation, layout::Layout, task::Tasks};
 
 use crate::{
 	frontend::FrontendTasks,
@@ -37,7 +37,7 @@ impl SettingsTab for State {
 
 impl State {
 	pub fn mount(par: SettingsMountParams) -> anyhow::Result<Self> {
-		let id_category = options_category(par.mp, par.id_parent, "APP_SETTINGS.SKYBOX", "dashboard/globe.svg")?;
+		let id_category = options_category(par.mp, par.id_parent, "APP_SETTINGS.SKYBOX", "@/dashboard/globe.svg")?;
 		options_checkbox(par.mp, id_category, SettingType::UseSkybox)?;
 		options_checkbox(par.mp, id_category, SettingType::UsePassthrough)?;
 		options_slider_f32(par.mp, id_category, SettingType::GridOpacity, 0.0, 1.0, 0.05)?;
@@ -49,7 +49,7 @@ impl State {
 			id_parent: id_category,
 			layout: par.mp.layout,
 			content: Translation::from_translation_key("APP_SETTINGS.BROWSE_SKYMAPS"),
-			icon_builtin: AssetPath::BuiltIn("dashboard/globe.svg"),
+			icon_builtin: AssetPathRef::BuiltIn("dashboard/globe.svg"),
 			on_click: tasks.get_button_click_callback(Task::ShowSkymapList),
 		})?;
 

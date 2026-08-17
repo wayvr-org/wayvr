@@ -5,7 +5,7 @@ use taffy::prelude::{length, percent};
 
 use crate::{
 	animation::{Animation, AnimationEasing},
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	drawing,
 	event::{EventListenerKind, StyleSetRequest},
@@ -217,7 +217,7 @@ impl WguiWindow {
 		let globals = params.layout.state.globals.clone();
 
 		let content_id = if params.extra.with_decorations {
-			let xml_path: AssetPath = AssetPath::WguiInternal("wgui/window_frame.xml");
+			let xml_path: AssetPathRef = AssetPathRef::WguiInternal("wgui/window_frame.xml");
 
 			let state = parser::parse_from_assets(
 				&parser::ParseDocumentParams {

@@ -1,5 +1,4 @@
-
-<layout>
+<layout version="2">
   <elements>
     <div width="192" height="192" padding="8">
       <rectangle

@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <elements>
     <div interactable="0">
       <rectangle
@@ -10,7 +10,7 @@
 
         <!-- Toast title -->
         <div flex_direction="row" align_items="center" gap="8">
-          <sprite src="icons/bell.svg" color="primary" min_width="32" min_height="32" max_width="32" max_height="32" flex_grow="1" />
+          <sprite src="@/icons/bell.svg" color="primary" min_width="32" min_height="32" max_width="32" max_height="32" flex_grow="1" />
           <label wrap="1" id="toast_title" color="primary" weight="bold" size="25" padding_left="16" padding_right="16" />
         </div>
 

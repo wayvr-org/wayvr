@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <elements>
     <sprite width="32" height="32" src="/usr/share/icons/nvtop.svg" />
     <sprite width="64" height="64" src="/usr/share/icons/nvtop.svg" />

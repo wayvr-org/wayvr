@@ -4,7 +4,7 @@ use chrono::Timelike;
 use glam::Vec2;
 use strum::EnumCount;
 use wgui::{
-	assets::{AssetPath, AssetProvider},
+	assets::{AssetPathRef, AssetProvider},
 	components::button::ComponentButton,
 	event::{CallbackDataCommon, StyleSetRequest},
 	font_config::WguiFontConfig,
@@ -151,7 +151,7 @@ impl<T: 'static> Frontend<T> {
 		let (layout, state) = wgui::parser::new_layout_from_assets(
 			&ParseDocumentParams {
 				globals: globals.clone(),
-				path: AssetPath::BuiltIn("gui/dashboard.xml"),
+				path: AssetPathRef::BuiltIn("gui/dashboard.xml"),
 				extra: Default::default(),
 			},
 			LayoutParams {
@@ -401,7 +401,10 @@ impl<T: 'static> Frontend<T> {
 				.cast_as::<WidgetSprite>(self.widgets.id_sprite_titlebar_icon)?;
 			sprite.set_content(
 				common.alterables,
-				Some(CustomGlyphData::from_assets(&self.globals, AssetPath::BuiltIn(icon))?),
+				Some(CustomGlyphData::from_assets(
+					&self.globals,
+					AssetPathRef::BuiltIn(icon),
+				)?),
 			);
 		}
 

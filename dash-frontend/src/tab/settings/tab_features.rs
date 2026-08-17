@@ -143,7 +143,12 @@ impl State {
 		let popup_download = PopupHolder::<views::download_file::View>::default();
 		let popup_dialog = PopupHolder::<views::dialog_box::View>::default();
 
-		let c = options_category(par.mp, par.id_parent, "APP_SETTINGS.FEATURES", "dashboard/options.svg")?;
+		let c = options_category(
+			par.mp,
+			par.id_parent,
+			"APP_SETTINGS.FEATURES",
+			"@/dashboard/options.svg",
+		)?;
 
 		if par.feats.whisper {
 			whisper_models_dropdown(par.mp, c)?;
@@ -213,12 +218,12 @@ impl State {
 				entries: vec![
 					views::dialog_box::ButtonEntry {
 						content: Translation::from_translation_key("APP_SETTINGS.CANCEL"),
-						icon: "dashboard/close.svg",
+						icon: "@/dashboard/close.svg",
 						action: ACTION_CANCEL,
 					},
 					views::dialog_box::ButtonEntry {
 						content: Translation::from_translation_key("DOWNLOAD"),
-						icon: "dashboard/download.svg",
+						icon: "@/dashboard/download.svg",
 						action: ACTION_DOWNLOAD,
 					},
 				],
@@ -254,12 +259,12 @@ impl State {
 				entries: vec![
 					views::dialog_box::ButtonEntry {
 						content: Translation::from_translation_key("APP_SETTINGS.CANCEL"),
-						icon: "dashboard/close.svg",
+						icon: "@/dashboard/close.svg",
 						action: ACTION_CANCEL,
 					},
 					views::dialog_box::ButtonEntry {
 						content: Translation::from_translation_key("REMOVE"),
-						icon: "dashboard/trash.svg",
+						icon: "@/dashboard/trash.svg",
 						action: ACTION_REMOVE,
 					},
 				],

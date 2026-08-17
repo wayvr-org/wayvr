@@ -16,7 +16,7 @@ use glam::{FloatExt, Mat4, Vec2, vec2, vec3};
 use smallvec::{SmallVec, smallvec};
 use wgui::{
     animation::{Animation, AnimationEasing},
-    assets::AssetPath,
+    assets::AssetPathRef,
     color::{WguiColor, WguiColorName},
     event::{self, CallbackMetadata, EventListenerKind},
     layout::{LayoutUpdateParams, WidgetID},
@@ -41,7 +41,7 @@ const PIXELS_PER_UNIT: f32 = 60.;
 fn new_doc_params(panel: &mut GuiPanel<KeyboardState>) -> ParseDocumentParams<'static> {
     ParseDocumentParams {
         globals: panel.layout.state.globals.clone(),
-        path: AssetPath::FileOrBuiltIn("gui/keyboard.xml"),
+        path: AssetPathRef::FileOrBuiltIn("gui/keyboard.xml"),
         extra: panel.doc_extra.take().unwrap_or_default(),
     }
 }

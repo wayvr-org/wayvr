@@ -10,7 +10,7 @@ use crate::{
 	views::{ViewTrait, ViewUpdateParams, game_cover},
 };
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -82,7 +82,7 @@ impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
 		let doc_params = &ParseDocumentParams {
 			globals: params.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/game_launcher.xml"),
+			path: AssetPathRef::BuiltIn("gui/view/game_launcher.xml"),
 			extra: Default::default(),
 		};
 

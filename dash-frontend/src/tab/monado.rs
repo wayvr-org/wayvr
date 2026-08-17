@@ -1,7 +1,7 @@
 use std::{collections::HashMap, marker::PhantomData, rc::Rc};
 
 use wgui::{
-	assets::AssetPath,
+	assets::{AssetPathRef},
 	components::{
 		bar_graph::{ComponentBarGraph, ValueCell},
 		button::ComponentButton,
@@ -229,7 +229,7 @@ impl<T> Tab<T> for TabMonado<T> {
 fn doc_params_monado(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/tab/monado.xml"),
+		path: AssetPathRef::BuiltIn("gui/tab/monado.xml"),
 		extra: Default::default(),
 	}
 }
@@ -237,7 +237,7 @@ fn doc_params_monado(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
 fn doc_params_tab_process_list(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/tab/monado_tab_process_list.xml"),
+		path: AssetPathRef::BuiltIn("gui/tab/monado_tab_process_list.xml"),
 		extra: Default::default(),
 	}
 }
@@ -245,7 +245,7 @@ fn doc_params_tab_process_list(globals: &'_ WguiGlobals) -> ParseDocumentParams<
 fn doc_params_tab_general_settings(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/tab/monado_tab_general_settings.xml"),
+		path: AssetPathRef::BuiltIn("gui/tab/monado_tab_general_settings.xml"),
 		extra: Default::default(),
 	}
 }
@@ -253,7 +253,7 @@ fn doc_params_tab_general_settings(globals: &'_ WguiGlobals) -> ParseDocumentPar
 fn doc_params_tab_debug_timings(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/tab/monado_tab_debug_timings.xml"),
+		path: AssetPathRef::BuiltIn("gui/tab/monado_tab_debug_timings.xml"),
 		extra: Default::default(),
 	}
 }

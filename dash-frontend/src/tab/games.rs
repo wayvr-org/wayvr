@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	layout::WidgetID,
 	parser::{Fetchable, ParseDocumentParams, ParserState},
 };
@@ -53,7 +53,7 @@ impl<T> TabGames<T> {
 		let state = wgui::parser::parse_from_assets(
 			&ParseDocumentParams {
 				globals: globals.clone(),
-				path: AssetPath::BuiltIn("gui/tab/games.xml"),
+				path: AssetPathRef::BuiltIn("gui/tab/games.xml"),
 				extra: Default::default(),
 			},
 			&mut frontend.layout,

@@ -1,9 +1,9 @@
-<layout>
-  <theme>
+<layout version="2">
+  <vars>
     <var key="aqua1" value="#00AAFF" />
     <var key="aqua2" value="#00CCFF" />
     <var key="aqua3" value="#00FFFF" />
-  </theme>
+  </vars>
 
   <elements>
     <rectangle width="750" height="550" color="#FFFFFF" flex_direction="column" overflow_y="scroll">
@@ -33,7 +33,7 @@
           </rectangle>
 
           <!-- Embed sprites -->
-          <sprite width="64" height="64" src="raster.png" />
+          <sprite width="64" height="64" src="@/raster.png" />
         </rectangle>
         <!-- 2/3 green rects -->
         <div flex_direction="column">

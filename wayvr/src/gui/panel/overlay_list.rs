@@ -73,7 +73,7 @@ impl OverlayList {
                             let icon: Rc<str> = if let Some(icon) = meta.icon.as_ref() {
                                 icon.to_string().into()
                             } else {
-                                "edit/panel.svg".into()
+                                "@/edit/panel.svg".into()
                             };
 
                             params.insert_rc("icon", icon);

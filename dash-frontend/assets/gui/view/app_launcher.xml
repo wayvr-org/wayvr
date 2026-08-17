@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <template name="Subtext">
     <div flex_direction="row" gap="8" max_width="100%">
       <label weight="bold" text="${title}" wrap="1" />
@@ -10,8 +10,8 @@
     <sprite src_ext="${path}" width="96" height="96" />
   </template>
 
-  <include src="../t_separator.xml" />
-  <include src="../t_group_box.xml" />
+  <include src="@/gui/t_separator.xml" />
+  <include src="@/gui/t_group_box.xml" />
 
   <elements>
     <div flex_direction="row" gap="16" flex_grow="1">
@@ -45,15 +45,15 @@
         <CheckBox id="cb_autostart" translation="APP_LAUNCHER.AUTOSTART" align_self="baseline"/>
         <div flex_direction="row" align_items="end" justify_content="center" gap="8" margin_top="8">
           <Button id="btn_unpin" color="danger" padding_left="8" padding_right="8" round="8" min_height="40">
-            <sprite src_builtin="dashboard/heart_minus.svg" width="32" height="32" />
+            <sprite src_builtin="@/dashboard/heart_minus.svg" width="32" height="32" />
             <label translation="REMOVE_FROM_FAVOURITES" weight="bold" size="17" />
           </Button>
           <Button id="btn_pin" color="secondary" padding_left="8" padding_right="8" round="8" min_height="40" tooltip="ADD_TO_FAVOURITES_HINT">
-            <sprite src_builtin="dashboard/heart_plus.svg" width="32" height="32" />
+            <sprite src_builtin="@/dashboard/heart_plus.svg" width="32" height="32" />
             <label translation="ADD_TO_FAVOURITES" weight="bold" size="17" />
           </Button>
           <Button id="btn_launch" color="primary" padding_left="8" padding_right="8" round="8" min_width="200" min_height="40">
-            <sprite src_builtin="dashboard/play.svg" width="32" height="32" />
+            <sprite src_builtin="@/dashboard/play.svg" width="32" height="32" />
             <label translation="APP_LAUNCHER.LAUNCH" weight="bold" size="17" />
           </Button>
         </div>

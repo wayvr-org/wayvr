@@ -1,12 +1,12 @@
-<layout>
+<layout version="2">
   <elements>
     <div flex_direction="column" padding_top="8" padding_bottom="8">
       <div id="list_parent" gap="8" flex_direction="row" flex_wrap="wrap" justify_content="center" />
     </div>
     <div align_items="center" justify_content="center" gap="16">
-      <Button id="btn_prev" sprite_src_builtin="dashboard/arrow_left.svg" width="32" height="32" />
+      <Button id="btn_prev" sprite_src_builtin="@/dashboard/arrow_left.svg" width="32" height="32" />
       <label id="label_page" text="Page X" weight="bold" />
-      <Button id="btn_next" sprite_src_builtin="dashboard/arrow_right.svg" width="32" height="32" />
+      <Button id="btn_next" sprite_src_builtin="@/dashboard/arrow_right.svg" width="32" height="32" />
     </div>
   </elements>
 </layout>

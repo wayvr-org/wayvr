@@ -1,5 +1,5 @@
 use crate::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::{
 		Component, ComponentBase, ComponentTrait, RefreshData,
 		button::{self, ComponentButton},
@@ -154,7 +154,7 @@ impl ComponentColorSelector {
 		let parser_state = parser::parse_from_assets(
 			&ParseDocumentParams {
 				globals: layout.state.globals.clone(),
-				path: AssetPath::WguiInternal("wgui/color_selector.xml"),
+				path: AssetPathRef::WguiInternal("wgui/color_selector.xml"),
 				extra: Default::default(),
 			},
 			layout,

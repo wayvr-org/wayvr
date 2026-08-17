@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="button_style" border="2" round="6"
     align_items="center" justify_content="center" padding="6" width="64" height="64" overflow="visible" />
 
@@ -19,28 +19,28 @@
               </div>
               <rectangle display="none" position="absolute" id="rect_vu_meter" width="50%" height="8" color="#00FF00" align_self="end" round="4"/>
             </div>
-            <sprite width="38" height="38" src="icons/mic.svg"  />
+            <sprite width="38" height="38" src="@/icons/mic.svg"  />
           </Button>
           <VerticalSeparator />
           <Button macro="button_style" _press="::WhisperPaste" tooltip="WHISPER.PASTE" tooltip_side="right">
-            <sprite width="38" height="38" src_builtin="icons/paste.svg" />
+            <sprite width="38" height="38" src_builtin="@/icons/paste.svg" />
           </Button>
           <Button macro="button_style" _press="::WhisperPasteAndGo" tooltip="WHISPER.PASTE_AND_GO" tooltip_side="right">
-            <sprite width="38" height="38" src_builtin="icons/paste-go.svg" />
+            <sprite width="38" height="38" src_builtin="@/icons/paste-go.svg" />
           </Button>
           <VerticalSeparator />
           <Button macro="button_style" _press="::SendKey Return down" _release="::SendKey Return up" tooltip="WHISPER.ENTER_KEY" tooltip_side="right">
-            <sprite width="38" height="38" src_builtin="keyboard/return.svg" />
+            <sprite width="38" height="38" src_builtin="@/keyboard/return.svg" />
           </Button>
           <VerticalSeparator />
           <Button macro="button_style" _press="::WhisperSendOSC" tooltip="WHISPER.SEND_OSC" id="btn_osc_send" tooltip_side="right">
-            <sprite width="38" height="38" src_builtin="icons/chat.svg" />
+            <sprite width="38" height="38" src_builtin="@/icons/chat.svg" />
           </Button>
         </div>
         <div gap="8">
           <Button macro="button_style" _press="::WhisperUnloadAndClose" tooltip="WHISPER.UNLOAD_AND_CLOSE" tooltip_side="left"
             hover_color="danger" hover_border_color="danger(rgb-mult-0.5)">
-            <sprite width="38" height="38" src_builtin="edit/close.svg" />
+            <sprite width="38" height="38" src_builtin="@/edit/close.svg" />
           </Button>
         </div>
       </rectangle>

@@ -7,7 +7,7 @@ use crate::{
 use std::{rc::Rc, sync::Arc};
 use wgui::color::WguiColorName;
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -93,7 +93,7 @@ impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
 		let doc_params = &ParseDocumentParams {
 			globals: params.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/color_palettes.xml"),
+			path: AssetPathRef::BuiltIn("gui/view/color_palettes.xml"),
 			extra: Default::default(),
 		};
 

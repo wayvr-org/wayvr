@@ -1,5 +1,5 @@
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	event::StyleSetRequest,
 	globals::WguiGlobals,
@@ -44,7 +44,7 @@ pub struct View {
 fn doc_params(globals: WguiGlobals) -> ParseDocumentParams<'static> {
 	ParseDocumentParams {
 		globals,
-		path: AssetPath::BuiltIn("gui/view/running_games_list.xml"),
+		path: AssetPathRef::BuiltIn("gui/view/running_games_list.xml"),
 		extra: Default::default(),
 	}
 }

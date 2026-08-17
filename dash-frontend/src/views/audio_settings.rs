@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	color::{WguiColor, WguiColorName},
 	components::{
 		self,
@@ -124,7 +124,7 @@ fn mount_multi_selector(params: MultiSelectorParams) -> anyhow::Result<()> {
 			params.ess,
 			components::button::Params {
 				text: Some(Translation::from_raw_text(&cell.display_text)),
-				sprite_src: Some(AssetPath::BuiltIn(cell.icon_path)),
+				sprite_src: Some(AssetPathRef::BuiltIn(cell.icon_path)),
 				color,
 				..Default::default()
 			},
@@ -211,7 +211,7 @@ fn get_profile_display_name(profile_name: &str, card: &pactl_wrapper::Card) -> P
 		// fallback
 		return ProfileDisplayName {
 			name: profile_name.into(),
-			icon_path: "dashboard/binary.svg",
+			icon_path: "@/dashboard/binary.svg",
 			is_vr: false,
 		};
 	};
@@ -221,26 +221,26 @@ fn get_profile_display_name(profile_name: &str, card: &pactl_wrapper::Card) -> P
 
 	let prof = profile_name.to_lowercase();
 	if prof.contains("analog") {
-		out_icon_path = "dashboard/minijack.svg";
+		out_icon_path = "@/dashboard/minijack.svg";
 	} else if prof.contains("iec" /* digital */) {
-		out_icon_path = "dashboard/binary.svg";
+		out_icon_path = "@/dashboard/binary.svg";
 	} else if prof.contains("hdmi") {
-		out_icon_path = "dashboard/displayport.svg";
+		out_icon_path = "@/dashboard/displayport.svg";
 	} else if prof.contains("off") {
-		out_icon_path = "dashboard/sleep.svg";
+		out_icon_path = "@/dashboard/sleep.svg";
 	} else if prof.contains("input") {
-		out_icon_path = "dashboard/microphone.svg";
+		out_icon_path = "@/dashboard/microphone.svg";
 	} else {
-		out_icon_path = "dashboard/volume.svg"; // Default fallback
+		out_icon_path = "@/dashboard/volume.svg"; // Default fallback
 	}
 
 	// All ports are tied to this VR headset, assign all of them to the VR icon
 	if is_card_mentioning_hmd(card) {
 		if prof.contains("mic") {
 			// Probably microphone
-			out_icon_path = "dashboard/microphone.svg";
+			out_icon_path = "@/dashboard/microphone.svg";
 		} else {
-			out_icon_path = "dashboard/vr.svg";
+			out_icon_path = "@/dashboard/vr.svg";
 		}
 	}
 
@@ -266,11 +266,11 @@ fn get_profile_display_name(profile_name: &str, card: &pactl_wrapper::Card) -> P
 
 			if does_string_mention_hmd_sink(product_name) {
 				// VR icon
-				out_icon_path = "dashboard/vr.svg";
+				out_icon_path = "@/dashboard/vr.svg";
 				is_vr = true;
 			} else {
 				// Monitor icon
-				out_icon_path = "dashboard/displayport.svg";
+				out_icon_path = "@/dashboard/displayport.svg";
 			}
 
 			break;
@@ -291,7 +291,7 @@ fn get_profile_display_name(profile_name: &str, card: &pactl_wrapper::Card) -> P
 fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/view/audio_settings.xml"),
+		path: AssetPathRef::BuiltIn("gui/view/audio_settings.xml"),
 		extra: Default::default(),
 	}
 }
@@ -776,9 +776,9 @@ impl View {
 			par.insert("device_icon", disp.icon_path);
 		} else {
 			let icon_path = if params.alt_desc.contains("WiVRn") {
-				"dashboard/wivrn_head_symbolic.svg"
+				"@/dashboard/wivrn_head_symbolic.svg"
 			} else {
-				"dashboard/binary.svg"
+				"@/dashboard/binary.svg"
 			};
 
 			par.insert("device_name", &params.alt_desc);
@@ -788,9 +788,9 @@ impl View {
 		par.insert(
 			"volume_icon",
 			if params.muted {
-				"dashboard/volume_off.svg"
+				"@/dashboard/volume_off.svg"
 			} else {
-				"dashboard/volume.svg"
+				"@/dashboard/volume.svg"
 			},
 		);
 

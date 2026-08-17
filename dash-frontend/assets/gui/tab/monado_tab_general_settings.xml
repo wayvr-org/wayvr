@@ -1,22 +1,22 @@
-<layout>
-  <include src="../t_group_box.xml" />
+<layout version="2">
+  <include src="@/gui/t_group_box.xml" />
 
   <macro name="slider" width="100%" height="24"/>
 
-  <theme>
+  <vars>
     <var key="s_width" value="500"/>
-  </theme>
+  </vars>
 
   <elements>
     <div flex_direction="column" gap="8">
       <rectangle macro="group_box">
-        <GroupBoxTitle src_builtin="dashboard/settings.svg" translation="GENERAL_SETTINGS" />
+        <GroupBoxTitle src_builtin="@/dashboard/settings.svg" translation="GENERAL_SETTINGS" />
 
         <label translation="DISPLAY_BRIGHTNESS" />
         <Slider id="slider_brightness" width="300" height="24" min_value="0" max_value="140" />
       </rectangle>
       <rectangle macro="group_box">
-        <GroupBoxTitle src_builtin="dashboard/settings.svg" translation="APP_SETTINGS.COLOR_KEYING" />
+        <GroupBoxTitle src_builtin="@/dashboard/settings.svg" translation="APP_SETTINGS.COLOR_KEYING" />
         <div gap="8" width="~s_width">
           <div gap="8" flex_direction="column" width="100%">
             <label text="Color"/>

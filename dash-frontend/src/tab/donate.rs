@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, rc::Rc};
 
 use wgui::{
-	assets::AssetPath,
+	assets::{AssetPathRef},
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	layout::{Layout, WidgetID},
@@ -53,7 +53,7 @@ impl<T> Tab<T> for TabDonate<T> {
 fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/tab/donate.xml"),
+		path: AssetPathRef::BuiltIn("gui/tab/donate.xml"),
 		extra: Default::default(),
 	}
 }
