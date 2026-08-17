@@ -6,7 +6,7 @@ use crate::{
 };
 use glam::Vec2;
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::{
 		Component,
 		button::{ButtonClickCallback, ComponentButton},
@@ -80,7 +80,7 @@ impl TestbedGeneric {
 	fn doc_params(globals: &'_ WguiGlobals, extra: ParseDocumentExtra) -> ParseDocumentParams<'_> {
 		ParseDocumentParams {
 			globals: globals.clone(),
-			path: AssetPath::BuiltIn("gui/various_widgets.xml"),
+			path: AssetPathRef::BuiltIn("gui/various_widgets.xml"),
 			extra,
 		}
 	}

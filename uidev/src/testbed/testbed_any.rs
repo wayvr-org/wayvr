@@ -6,12 +6,12 @@ use crate::{
 };
 use glam::Vec2;
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	font_config::WguiFontConfig,
 	globals::WguiGlobals,
 	layout::{Layout, LayoutParams, LayoutUpdateParams},
 	palette::WguiColorPalette,
-	parser::{ParseDocumentParams, ParserState},
+	parser::{ParseDocumentExtra, ParseDocumentParams, ParserState},
 };
 use wlx_common::locale::WayVRLangProvider;
 
@@ -25,9 +25,9 @@ pub struct TestbedAny {
 impl TestbedAny {
 	pub fn new(assets: Box<assets::Asset>, name: &str) -> anyhow::Result<Self> {
 		let path = if name.ends_with(".xml") {
-			AssetPath::FileOrBuiltIn(name)
+			AssetPathRef::FileOrBuiltIn(name)
 		} else {
-			AssetPath::BuiltIn(&format!("gui/{name}.xml"))
+			AssetPathRef::BuiltIn(&format!("gui/{name}.xml"))
 		};
 
 		let lang_provider = WayVRLangProvider::default();
@@ -45,7 +45,10 @@ impl TestbedAny {
 			&ParseDocumentParams {
 				globals,
 				path,
-				extra: Default::default(),
+				extra: ParseDocumentExtra {
+					root_dir: Some(path.to_rc().strip_filename()),
+					..Default::default()
+				},
 			},
 			LayoutParams::default(),
 		)?;

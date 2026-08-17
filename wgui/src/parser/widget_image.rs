@@ -25,8 +25,10 @@ pub fn parse_widget_image<'a>(
 		match key {
 			"src" | "src_ext" | "src_builtin" | "src_internal" => {
 				if !value.is_empty() {
-					glyph = match CustomGlyphData::from_assets(&ctx.layout.state.globals, get_asset_path_from_kv("", key, value))
-					{
+					glyph = match CustomGlyphData::from_assets(
+						&ctx.layout.state.globals,
+						get_asset_path_from_kv(file, "", key, value).as_ref(),
+					) {
 						Ok(glyph) => Some(glyph),
 						Err(e) => {
 							log::warn!("failed to load {value}: {e}");

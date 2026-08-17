@@ -1,5 +1,5 @@
 use crate::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::{ComponentTrait, button::ComponentButton},
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -48,7 +48,7 @@ pub struct ContextMenu {
 fn doc_params<'a>(globals: &WguiGlobals) -> parser::ParseDocumentParams<'a> {
 	parser::ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::WguiInternal("wgui/context_menu.xml"),
+		path: AssetPathRef::WguiInternal("wgui/context_menu.xml"),
 		extra: Default::default(),
 	}
 }

@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="rect"
     color="#000000aa"
     round="4" border="2"
@@ -29,7 +29,20 @@
       <rectangle macro="rect">
         <label text="Raw text" color="#FFFFFF" />
         <label translation="TESTBED.HELLO_WORLD" color="#FFFFFF" />
+
+        <div>
+          <!-- find from expanded path -->
+          <sprite width="64" height="64" src="@/raster.png">
+            <label size="9" weight="bold" color="#000000" text="@/raster.png"/>
+          </sprite>
+
+          <!-- find from upper dir -->
+          <sprite width="64" height="64" src="../raster.png">
+            <label size="9" weight="bold" color="#000000" text="../raster.png"/>
+          </sprite>
+        </div>
       </rectangle>
+
 
       <rectangle macro="rect">
         <label id="label_current_option" text="Click any of these buttons" size="20" weight="bold" />

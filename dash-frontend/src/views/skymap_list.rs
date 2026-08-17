@@ -1,6 +1,6 @@
 use anyhow::Context;
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -89,7 +89,7 @@ impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
 		let doc_params = &ParseDocumentParams {
 			globals: params.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/skymap_list.xml"),
+			path: AssetPathRef::BuiltIn("gui/view/skymap_list.xml"),
 			extra: Default::default(),
 		};
 
@@ -162,7 +162,7 @@ impl View {
 			if entry.is_downloaded(resolution).unwrap_or(false) {
 				entries.push(views::dialog_box::ButtonEntry {
 					content: Translation::from_raw_text(resolution.get_display_str()),
-					icon: "dashboard/globe.svg",
+					icon: "@/dashboard/globe.svg",
 					action: resolution.get_display_str_simple(),
 				});
 			}

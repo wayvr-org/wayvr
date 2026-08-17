@@ -16,7 +16,7 @@ use idmap::IdMap;
 use label::setup_custom_label;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use wgui::{
-    assets::AssetPath,
+    assets::AssetPathRef,
     components::{
         button::ComponentButton, checkbox::ComponentCheckbox, radio_group::ComponentRadioGroup,
         slider::ComponentSlider,
@@ -129,9 +129,9 @@ impl<S: 'static> GuiPanel<S> {
         let doc_params = wgui::parser::ParseDocumentParams {
             globals: app.wgui_globals.clone(),
             path: if params.external_xml {
-                AssetPath::File(path)
+                AssetPathRef::File(path)
             } else {
-                AssetPath::FileOrBuiltIn(path)
+                AssetPathRef::FileOrBuiltIn(path)
             },
             extra: wgui::parser::ParseDocumentExtra {
                 on_custom_attribs: Some(on_custom_attrib_inner.clone()),
@@ -462,21 +462,21 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
 fn log_missing_attrib(parser_state: &ParserState, tag_name: &str, attrib: &str) {
     log::warn!(
         "{:?}: <{tag_name}> is missing \"{attrib}\"",
-        parser_state.path.get_path_buf().display()
+        parser_state.xml_path.get_path().display()
     );
 }
 
 fn log_invalid_attrib(parser_state: &ParserState, tag_name: &str, attrib: &str, value: &str) {
     log::warn!(
         "{:?}: <{tag_name}> value for \"{attrib}\" is invalid: {value}",
-        parser_state.path.get_path_buf().display()
+        parser_state.xml_path.get_path().display()
     );
 }
 
 fn log_cmd_missing_arg(parser_state: &ParserState, tag_name: &str, attrib: &str, command: &str) {
     log::warn!(
         "{:?}: <{tag_name}> \"{attrib}\": \"{command}\" has missing arguments",
-        parser_state.path.get_path_buf().display()
+        parser_state.xml_path.get_path().display()
     );
 }
 
@@ -489,7 +489,7 @@ fn log_cmd_invalid_arg(
 ) {
     log::warn!(
         "{:?}: <{tag_name}> \"{attrib}\": \"{command}\" has invalid argument: {arg}",
-        parser_state.path.get_path_buf().display()
+        parser_state.xml_path.get_path().display()
     );
 }
 
@@ -521,7 +521,7 @@ pub fn apply_custom_command<T>(
             if let Ok(pair) = panel.parser_state.fetch_widget(com.state, element) {
                 let data = CustomGlyphData::from_assets(
                     &app.wgui_globals,
-                    wgui::assets::AssetPath::File(path),
+                    wgui::assets::AssetPathRef::File(path),
                 )
                 .context("Could not load content from supplied path.")?;
 

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::{
 		self,
 		button::ComponentButton,
@@ -311,7 +311,7 @@ impl ViewCommon {
 
 	fn get_placeholder_image(&mut self) -> anyhow::Result<&CustomGlyphData> {
 		if self.img_placeholder.is_none() {
-			let c = CustomGlyphData::from_assets(&self.globals, AssetPath::BuiltIn("dashboard/placeholder_cover.png"))?;
+			let c = CustomGlyphData::from_assets(&self.globals, AssetPathRef::BuiltIn("dashboard/placeholder_cover.png"))?;
 			self.img_placeholder = Some(c);
 		}
 

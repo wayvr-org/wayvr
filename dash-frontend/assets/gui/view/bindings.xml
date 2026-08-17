@@ -1,8 +1,8 @@
-<layout>
-  <include src="../t_group_box.xml" />
+<layout version="2">
+  <include src="@/gui/t_group_box.xml" />
 
   <!-- used at runtime [!!!] -->
-  <include src="../t_dropdown_button.xml" />
+  <include src="@/gui/t_dropdown_button.xml" />
 
   <!-- id, min, max, step, value, value2, tooltip -->
   <template name="ThresholdSlider">
@@ -14,7 +14,7 @@
     <rectangle macro="group_box" id="${id}">
       <!-- top row -->
       <div flex_direction="row" gap="8" align_items="center">
-        <sprite src_builtin="dashboard/controller.svg" width="24" height="24" color="on_background"/>
+        <sprite src_builtin="@/dashboard/controller.svg" width="24" height="24" color="on_background"/>
         <label translation="${translation}" color="primary" weight="bold" size="14" />
       </div>
       <!-- filled-in at runtime -->
@@ -27,8 +27,8 @@
         <div id="list_parent" flex_direction="column" gap="6" width="100%"></div>
       </div>
       <rectangle color="background_contrast" flex_direction="row" gap="8" justify_content="end" padding="8">
-        <Button id="btn_cancel" sprite_src_builtin="dashboard/cancel.svg" min_width="100" height="32" translation="APP_SETTINGS.CANCEL" />
-        <Button id="btn_save" sprite_src_builtin="dashboard/check.svg" min_width="100" height="32" translation="APP_SETTINGS.SAVE" />
+        <Button id="btn_cancel" sprite_src_builtin="@/dashboard/cancel.svg" min_width="100" height="32" translation="APP_SETTINGS.CANCEL" />
+        <Button id="btn_save" sprite_src_builtin="@/dashboard/check.svg" min_width="100" height="32" translation="APP_SETTINGS.SAVE" />
       </rectangle>
     </div>
   </elements>

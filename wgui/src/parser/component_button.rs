@@ -1,5 +1,5 @@
 use crate::{
-	assets::AssetPath,
+	assets::AssetPathRc,
 	color::WguiColor,
 	components::{Component, button},
 	i18n::Translation,
@@ -33,7 +33,7 @@ pub fn parse_component_button<'a>(
 	let mut tooltip = TooltipAttribs::default();
 	let mut sticky: bool = false;
 	let mut long_press_time = 0.0;
-	let mut sprite_src: Option<AssetPath> = None;
+	let mut sprite_src: Option<AssetPathRc> = None;
 
 	let mut translation: Option<Translation> = None;
 
@@ -88,7 +88,7 @@ pub fn parse_component_button<'a>(
 				parse_color_opt(ctx, tag_name, key, value, &mut sticky_border_color);
 			}
 			"sprite_src" | "sprite_src_ext" | "sprite_src_builtin" | "sprite_src_internal" => {
-				let asset_path = get_asset_path_from_kv("sprite_", key, value);
+				let asset_path = get_asset_path_from_kv(file, "sprite_", key, value);
 
 				if !value.is_empty() {
 					sprite_src = Some(asset_path);
@@ -125,7 +125,7 @@ pub fn parse_component_button<'a>(
 			tooltip: tooltip.get_info(),
 			sticky,
 			long_press_time,
-			sprite_src,
+			sprite_src: sprite_src.as_ref().map(|s| s.as_ref()),
 		},
 	)?;
 

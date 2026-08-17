@@ -1,6 +1,6 @@
-<layout>
-  <include src="../t_group_box.xml" />
-  <include src="../t_dropdown_button.xml" />
+<layout version="2">
+  <include src="@/gui/t_group_box.xml" />
+  <include src="@/gui/t_dropdown_button.xml" />
 
   <template name="SettingsGroupBox">
     <rectangle macro="group_box" id="${id}" flex_grow="1">
@@ -56,7 +56,7 @@
     <div id="${id}_root" flex_direction="row">
       <Button id="${id}" color="#AA3333" height="24" padding="4" margin_top="-2" margin_bottom="-2"
         hover_color="danger" hover_border_color="danger(rgb-mult-0.5)" >
-        <sprite src_builtin="dashboard/close.svg" height="20" width="20" />
+        <sprite src_builtin="@/dashboard/close.svg" height="20" width="20" />
       </Button>
       <div padding_left="8">
         <label align="left" text="${text}" weight="bold" overflow="hidden" />
@@ -69,15 +69,15 @@
   <elements>
     <div gap="4">
       <Tabs id="tabs">
-        <Tab macro="tab_style" name="look_and_feel" translation="APP_SETTINGS.LOOK_AND_FEEL" sprite_src_builtin="dashboard/palette.svg" />
-        <Tab macro="tab_style" name="skybox" translation="APP_SETTINGS.SKYBOX" sprite_src_builtin="dashboard/globe.svg" />
-        <Tab macro="tab_style" name="features" translation="APP_SETTINGS.FEATURES" sprite_src_builtin="dashboard/options.svg" />
-        <Tab macro="tab_style" name="controls" translation="APP_SETTINGS.CONTROLS" sprite_src_builtin="dashboard/controller.svg" />
-        <Tab macro="tab_style" name="space_drag" translation="APP_SETTINGS.SPACE_DRAG" sprite_src_builtin="dashboard/drag.svg" />
-        <Tab macro="tab_style" name="misc" translation="APP_SETTINGS.MISC" sprite_src_builtin="dashboard/blocks.svg" />
-        <Tab macro="tab_style" name="autostart_apps" translation="APP_SETTINGS.AUTOSTART_APPS" sprite_src_builtin="dashboard/apps.svg" />
-        <Tab macro="tab_style" name="statistics" translation="APP_SETTINGS.STATISTICS" sprite_src_builtin="dashboard/barchart.svg" />
-        <Tab macro="tab_style" name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="dashboard/cpu.svg" />
+        <Tab macro="tab_style" name="look_and_feel" translation="APP_SETTINGS.LOOK_AND_FEEL" sprite_src_builtin="@/dashboard/palette.svg" />
+        <Tab macro="tab_style" name="skybox" translation="APP_SETTINGS.SKYBOX" sprite_src_builtin="@/dashboard/globe.svg" />
+        <Tab macro="tab_style" name="features" translation="APP_SETTINGS.FEATURES" sprite_src_builtin="@/dashboard/options.svg" />
+        <Tab macro="tab_style" name="controls" translation="APP_SETTINGS.CONTROLS" sprite_src_builtin="@/dashboard/controller.svg" />
+        <Tab macro="tab_style" name="space_drag" translation="APP_SETTINGS.SPACE_DRAG" sprite_src_builtin="@/dashboard/drag.svg" />
+        <Tab macro="tab_style" name="misc" translation="APP_SETTINGS.MISC" sprite_src_builtin="@/dashboard/blocks.svg" />
+        <Tab macro="tab_style" name="autostart_apps" translation="APP_SETTINGS.AUTOSTART_APPS" sprite_src_builtin="@/dashboard/apps.svg" />
+        <Tab macro="tab_style" name="statistics" translation="APP_SETTINGS.STATISTICS" sprite_src_builtin="@/dashboard/barchart.svg" />
+        <Tab macro="tab_style" name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="@/dashboard/cpu.svg" />
       </Tabs>
       <div flex_wrap="wrap" justify_content="stretch" gap="4" id="settings_root" width="100%">
         <!-- filled-in at runtime -->

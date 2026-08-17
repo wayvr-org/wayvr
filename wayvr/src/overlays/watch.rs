@@ -1,16 +1,3 @@
-use std::time::Duration;
-
-use glam::{Affine3A, Quat, Vec3, vec3};
-use wgui::{
-    assets::AssetPath,
-    components::button::ComponentButton,
-    parser::{Fetchable, ParseDocumentParams},
-};
-use wlx_common::{
-    common::LeftRight,
-    windowing::{OverlayWindowState, Positioning},
-};
-
 use crate::{
     gui::{
         panel::{
@@ -22,9 +9,19 @@ use crate::{
     state::AppState,
     windowing::{Z_ORDER_WATCH, backend::OverlayEventData, window::OverlayWindowConfig},
 };
+use glam::{Affine3A, Quat, Vec3, vec3};
+use std::time::Duration;
+use wgui::{
+    assets::AssetPathRef,
+    components::button::ComponentButton,
+    parser::{Fetchable, ParseDocumentParams},
+};
+use wlx_common::{
+    common::LeftRight,
+    windowing::{OverlayWindowState, Positioning},
+};
 
 pub const WATCH_NAME: &str = "watch";
-
 pub const WATCH_POS: Vec3 = vec3(-0.03, -0.01, 0.125);
 pub const WATCH_ROT: Quat = Quat::from_xyzw(-0.707_106_6, 0.000_796_361_8, 0.707_106_6, 0.0);
 
@@ -50,7 +47,7 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
 
     let doc_params = ParseDocumentParams {
         globals: panel.layout.state.globals.clone(),
-        path: AssetPath::FileOrBuiltIn(watch_xml),
+        path: AssetPathRef::FileOrBuiltIn(watch_xml),
         extra: panel.doc_extra.take().unwrap_or_default(),
     };
 

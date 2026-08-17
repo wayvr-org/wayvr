@@ -60,7 +60,7 @@ impl State {
 			par.mp,
 			par.id_parent,
 			"APP_SETTINGS.LOOK_AND_FEEL",
-			"dashboard/palette.svg",
+			"@/dashboard/palette.svg",
 		)?;
 		create_color_palettes_button(par.mp, c, tasks.clone(), &popup)?;
 		options_dropdown::<wlx_common::locale::Language>(par.mp, c, &SettingType::Language)?;
@@ -100,7 +100,7 @@ fn create_color_palettes_button(
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
 	params.insert("translation", "APP_SETTINGS.COLOR_PALETTE");
-	params.insert("icon", "dashboard/palette.svg");
+	params.insert("icon", "@/dashboard/palette.svg");
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "ButtonText", mp.layout, id_cell, params)?;

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use uuid::Uuid;
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
@@ -178,7 +178,7 @@ impl View {
 	) -> anyhow::Result<()> {
 		let doc_params = &ParseDocumentParams {
 			globals: self.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/remote_skymap_list.xml"),
+			path: AssetPathRef::BuiltIn("gui/view/remote_skymap_list.xml"),
 			extra: Default::default(),
 		};
 

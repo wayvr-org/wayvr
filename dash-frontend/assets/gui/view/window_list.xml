@@ -1,5 +1,5 @@
-<layout>
-  <include src="../t_group_box.xml" />
+<layout version="2">
+  <include src="@/gui/t_group_box.xml" />
 
   <elements>
     <rectangle macro="group_box" flex_direction="row" align_items="center">

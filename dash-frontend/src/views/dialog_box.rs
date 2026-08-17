@@ -4,7 +4,7 @@ use crate::{
 	views::{ViewTrait, ViewUpdateParams},
 };
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -45,7 +45,7 @@ pub struct View {
 fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/view/dialog_box.xml"),
+		path: AssetPathRef::BuiltIn("gui/view/dialog_box.xml"),
 		extra: Default::default(),
 	}
 }

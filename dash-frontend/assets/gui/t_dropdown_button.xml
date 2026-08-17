@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="dropdown_button"
     flex_direction="row"
     border="2"
@@ -17,7 +17,7 @@
         <div padding_top="4" padding_bottom="4">
           <rectangle width="2" height="100%" color="outline" />
         </div>
-        <sprite margin_left="-4" width="30" height="30" src_builtin="dashboard/down.svg" />
+        <sprite margin_left="-4" width="30" height="30" src_builtin="@/dashboard/down.svg" />
       </div>
     </Button>
   </template>

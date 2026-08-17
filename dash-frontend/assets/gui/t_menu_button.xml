@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="home_button" round="8" hover_color="primary" hover_border_color="on_primary" />
 
   <template name="MenuButton">

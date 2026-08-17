@@ -1,8 +1,8 @@
-<layout>
-  <include src="../t_separator.xml"/>
+<layout version="2">
+  <include src="@/gui/t_separator.xml"/>
 
   <template name="btn_close">
-    <Button id="btn" translation="CLOSE_WINDOW" align_self="start" sprite_src_builtin="dashboard/check.svg"/>
+    <Button id="btn" translation="CLOSE_WINDOW" align_self="start" sprite_src_builtin="@/dashboard/check.svg"/>
   </template>
   
   <elements>

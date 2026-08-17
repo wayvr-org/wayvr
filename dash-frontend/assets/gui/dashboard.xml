@@ -1,10 +1,10 @@
-<layout>
-  <theme>
+<layout version="2">
+  <vars>
     <var key="side_size" value="48" />
     <var key="top_size" value="40" />
     <var key="side_sprite_size" value="26" />
     <var key="side_button_size" value="48" />
-  </theme>
+  </vars>
 
   <template name="SideButton">
     <Button
@@ -41,12 +41,12 @@
           align_items="center"
           gap="4"
         >
-          <SideButton id="btn_side_home" src_builtin="dashboard/wayvr_dashboard_mono.svg" tooltip="HOME_SCREEN" tooltip_side="right" />
-          <SideButton id="btn_side_apps" src_builtin="dashboard/apps.svg" tooltip="APPLICATIONS" tooltip_side="right" />
-          <SideButton id="btn_side_games" src_builtin="dashboard/games.svg" tooltip="GAMES" tooltip_side="right" />
-          <SideButton id="btn_side_monado" src_builtin="dashboard/monado.svg" tooltip="MONADO_RUNTIME" tooltip_side="right" />
+          <SideButton id="btn_side_home" src_builtin="@/dashboard/wayvr_dashboard_mono.svg" tooltip="HOME_SCREEN" tooltip_side="right" />
+          <SideButton id="btn_side_apps" src_builtin="@/dashboard/apps.svg" tooltip="APPLICATIONS" tooltip_side="right" />
+          <SideButton id="btn_side_games" src_builtin="@/dashboard/games.svg" tooltip="GAMES" tooltip_side="right" />
+          <SideButton id="btn_side_monado" src_builtin="@/dashboard/monado.svg" tooltip="MONADO_RUNTIME" tooltip_side="right" />
           <rectangle height="2" color="outline" width="~side_sprite_size" />
-          <SideButton id="btn_side_settings" src_builtin="dashboard/settings.svg" tooltip="SETTINGS" tooltip_side="right" />
+          <SideButton id="btn_side_settings" src_builtin="@/dashboard/settings.svg" tooltip="SETTINGS" tooltip_side="right" />
         </rectangle>
       </div>
       <!-- REST -->
@@ -69,7 +69,7 @@
           <!-- Close button -->
           <Button position="absolute" id="btn_close" color="background_contrast" border_color="background_contrast" round="100%" width="~top_size" height="~top_size" tooltip="CLOSE_WINDOW" tooltip_side="left"
             hover_color="danger" hover_border_color="danger(rgb-mult-0.5)" >
-            <sprite src_builtin="dashboard/close.svg" width="32" height="32" />
+            <sprite src_builtin="@/dashboard/close.svg" width="32" height="32" />
           </Button>
         </div>
 
@@ -137,10 +137,10 @@
           <!-- Left bottom side -->
           <div margin_left="8">
             <Button id="btn_audio" color="background(transparent)" border_color="background(transparent)" tooltip="AUDIO.VOLUME" tooltip_side="top">
-              <sprite src_builtin="dashboard/volume.svg" width="24" height="24" margin="8" />
+              <sprite src_builtin="@/dashboard/volume.svg" width="24" height="24" margin="8" />
             </Button>
             <Button id="btn_recenter" color="background(transparent)" border_color="background(transparent)" tooltip="ACTIONS.RECENTER_PLAYSPACE" tooltip_side="top">
-              <sprite src_builtin="dashboard/recenter.svg" width="24" height="24" margin="8" />
+              <sprite src_builtin="@/dashboard/recenter.svg" width="24" height="24" margin="8" />
             </Button>
           </div>
 

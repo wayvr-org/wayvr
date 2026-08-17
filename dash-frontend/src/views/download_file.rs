@@ -10,7 +10,7 @@ use crate::{
 use glam::Vec2;
 use std::path::PathBuf;
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -59,7 +59,7 @@ pub struct View {
 fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/view/download_file.xml"),
+		path: AssetPathRef::BuiltIn("gui/view/download_file.xml"),
 		extra: Default::default(),
 	}
 }
@@ -92,7 +92,7 @@ impl ViewTrait for View {
 							par.layout,
 							self.id_loading_parent,
 							Vec2::splat(32.0),
-							AssetPath::BuiltIn("dashboard/check.svg"),
+							AssetPathRef::BuiltIn("@/dashboard/check.svg"),
 						)?;
 
 						// "Close window" button
@@ -114,7 +114,7 @@ impl ViewTrait for View {
 							par.layout,
 							self.id_loading_parent,
 							Vec2::splat(32.0),
-							AssetPath::BuiltIn("dashboard/error.svg"),
+							AssetPathRef::BuiltIn("@/dashboard/error.svg"),
 						)?;
 					}
 					Task::Close => {

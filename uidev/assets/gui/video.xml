@@ -1,24 +1,24 @@
-<layout>
-  <theme>
+<layout version="2">
+  <vars>
     <var key="width" value="426.666" />
     <var key="height" value="133.333" />
-  </theme>
+  </vars>
   <elements>
     <rectangle position="absolute" width="10000" height="10000" color="#112233"/>
     <div flex_direction="row">
       <div margin="16" gap="8" flex_direction="column" overflow_y="scroll" >
         <label text="640x200, looping"/>
-        <Video src_builtin="video.ivf" width="~width" height="~height" looping="1"/>
+        <Video src_builtin="@/video.ivf" width="~width" height="~height" looping="1"/>
         <label text="640x200, non-looping "/>
-        <Video src_builtin="video.ivf" width="~width" height="~height" looping="0"/>
+        <Video src_builtin="@/video.ivf" width="~width" height="~height" looping="0"/>
       </div>
       <div margin="16" gap="8" flex_direction="column" overflow_y="scroll" >
         <label text="640x200, looping, speed 2x"/>
-        <Video src_builtin="video.ivf" width="~width" height="~height" looping="1" speed="2"/>
+        <Video src_builtin="@/video.ivf" width="~width" height="~height" looping="1" speed="2"/>
         <label text="640x200, looping, speed 0.5x"/>
-        <Video src_builtin="video.ivf" width="~width" height="~height" looping="1" speed="0.5"/>
+        <Video src_builtin="@/video.ivf" width="~width" height="~height" looping="1" speed="0.5"/>
         <label text="640x200, looping, speed 4x"/>
-        <Video src_builtin="video.ivf" width="~width" height="~height" looping="1" speed="4"/>
+        <Video src_builtin="@/video.ivf" width="~width" height="~height" looping="1" speed="4"/>
       </div>
     </div>
   </elements>

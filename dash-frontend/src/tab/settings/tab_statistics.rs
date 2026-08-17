@@ -83,7 +83,7 @@ impl State {
 			par.mp,
 			par.id_parent,
 			"APP_SETTINGS.STATISTICS",
-			"dashboard/barchart.svg",
+			"@/dashboard/barchart.svg",
 		)?;
 
 		let id_label_rotations = options_stat_row(par.mp, c, "APP_SETTINGS.ROTATIONS")?;

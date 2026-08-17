@@ -18,7 +18,7 @@ impl State {
 				par.mp,
 				par.id_parent,
 				"APP_SETTINGS.AUTOSTART_APPS",
-				"dashboard/apps.svg",
+				"@/dashboard/apps.svg",
 			)?;
 
 			// todo: prevent clone

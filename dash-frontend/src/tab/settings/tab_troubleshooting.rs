@@ -13,34 +13,34 @@ impl State {
 			par.mp,
 			par.id_parent,
 			"APP_SETTINGS.TROUBLESHOOTING",
-			"dashboard/cpu.svg",
+			"@/dashboard/cpu.svg",
 		)?;
 		options_danger_button(
 			par.mp,
 			c,
 			"APP_SETTINGS.CLEAR_PIPEWIRE_TOKENS",
-			"dashboard/display.svg",
+			"@/dashboard/display.svg",
 			Task::ClearPipewireTokens,
 		)?;
 		options_danger_button(
 			par.mp,
 			c,
 			"APP_SETTINGS.CLEAR_SAVED_STATE",
-			"dashboard/binary.svg",
+			"@/dashboard/binary.svg",
 			Task::ClearSavedState,
 		)?;
 		options_danger_button(
 			par.mp,
 			c,
 			"APP_SETTINGS.DELETE_ALL_CONFIGS",
-			"dashboard/circle.svg",
+			"@/dashboard/circle.svg",
 			Task::DeleteAllConfigs,
 		)?;
 		options_danger_button(
 			par.mp,
 			c,
 			"APP_SETTINGS.RESTART_SOFTWARE",
-			"dashboard/refresh.svg",
+			"@/dashboard/refresh.svg",
 			Task::RestartSoftware,
 		)?;
 		Ok(State {})

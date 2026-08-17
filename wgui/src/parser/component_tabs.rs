@@ -7,7 +7,7 @@ use crate::{
 	i18n::Translation,
 	layout::WidgetID,
 	parser::{
-		AttribPair, ParserContext, ParserFile, get_asset_path_rc_from_kv, process_attribs, process_component,
+		AttribPair, ParserContext, ParserFile, get_asset_path_from_kv, process_attribs, process_component,
 		style::{parse_color_opt, parse_round, parse_style},
 	},
 	widget::util::WLength,
@@ -50,11 +50,7 @@ pub fn parse_component_tabs<'a>(
 						"text" => text = Some(Translation::from_raw_text(&attrib.value)),
 						"translation" => text = Some(Translation::from_translation_key(&attrib.value)),
 						"sprite_src" | "sprite_src_ext" | "sprite_src_builtin" | "sprite_src_internal" => {
-							sprite_src = Some(get_asset_path_rc_from_kv(
-								"sprite_",
-								&attrib.attrib,
-								attrib.value.clone(),
-							));
+							sprite_src = Some(get_asset_path_from_kv(file, "sprite_", &attrib.attrib, &attrib.value));
 						}
 						"round" => {
 							parse_round(

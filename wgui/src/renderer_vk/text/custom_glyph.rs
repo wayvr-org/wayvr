@@ -13,7 +13,7 @@ use cosmic_text::SubpixelBin;
 use image::RgbaImage;
 use resvg::usvg::{Options, Tree};
 
-use crate::{assets::AssetPath, globals::WguiGlobals};
+use crate::{assets::AssetPathRef, globals::WguiGlobals};
 
 static AUTO_INCREMENT: AtomicUsize = AtomicUsize::new(0);
 
@@ -142,9 +142,9 @@ impl CustomGlyphData {
 		}
 	}
 
-	pub fn from_assets(globals: &WguiGlobals, asset_path: AssetPath) -> anyhow::Result<Self> {
+	pub fn from_assets(globals: &WguiGlobals, asset_path: AssetPathRef) -> anyhow::Result<Self> {
 		let path_str = asset_path.get_str();
-		let data = globals.get_asset(asset_path)?;
+		let data = globals.get_asset(asset_path)?.0;
 		let path = Path::new(path_str);
 		let is_svg = path
 			.extension()

@@ -1,5 +1,5 @@
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::{ButtonClickCallback, ComponentButton},
 	event::EventAlterables,
 	globals::WguiGlobals,
@@ -37,7 +37,7 @@ pub struct View {
 fn doc_params(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/view/skymap_list_cell.xml"),
+		path: AssetPathRef::BuiltIn("gui/view/skymap_list_cell.xml"),
 		extra: Default::default(),
 	}
 }

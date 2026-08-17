@@ -2,7 +2,7 @@ use glam::Vec2;
 use std::{marker::PhantomData, rc::Rc, str::FromStr};
 use strum::{AsRefStr, EnumProperty, EnumString};
 use wgui::{
-	assets::AssetPath,
+	assets::{AssetPathRef},
 	color::WguiColorName,
 	components::tabs::ComponentTabs,
 	event::StyleSetRequest,
@@ -687,7 +687,7 @@ fn mount_requires_restart(layout: &mut Layout, parent: WidgetID) -> anyhow::Resu
 fn doc_params(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/tab/settings.xml"),
+		path: AssetPathRef::BuiltIn("gui/tab/settings.xml"),
 		extra: Default::default(),
 	}
 }
@@ -757,7 +757,7 @@ impl<T> TabSettings<T> {
 	pub fn new(frontend: &mut Frontend<T>, parent_id: WidgetID, data: &mut T) -> anyhow::Result<Self> {
 		let doc_params = ParseDocumentParams {
 			globals: frontend.layout.state.globals.clone(),
-			path: AssetPath::BuiltIn("gui/tab/settings.xml"),
+			path: AssetPathRef::BuiltIn("gui/tab/settings.xml"),
 			extra: Default::default(),
 		};
 

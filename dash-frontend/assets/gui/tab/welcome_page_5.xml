@@ -1,9 +1,9 @@
-<layout>
+<layout version="2">
   <include src_builtin="welcome_common.xml"/>
   
   <elements>
     <div flex_direction="row" align_items="center">
-      <image src_builtin="dashboard/check_3d.png" width="256" height="256"/>
+      <image src_builtin="@/dashboard/check_3d.png" width="256" height="256"/>
       <div flex_direction="column" gap="16" max_width="480">
         <TextDescBig translation="WELCOME.ALL_SET" color="tertiary"/>
         
@@ -12,14 +12,14 @@
         <label size="16" wrap="1" translation="WELCOME.BASICS"/>
         <label size="16" wrap="1" translation="WELCOME.FEATURES_DOCUMENTATION"/>
         <Button id="btn_wayvr_org" align_self="baseline" min_height="32">
-          <sprite src_builtin="dashboard/globe.svg" width="24" height="24" margin="8"/>
+          <sprite src_builtin="@/dashboard/globe.svg" width="24" height="24" margin="8"/>
           <label size="18" weight="bold" text="wayvr.org" margin_right="8" />
         </Button>
 
         <rectangle color="#FFFFFF33" width="100%" min_height="2"/>
         
         <Button id="btn_home_screen" min_height="48" >
-          <sprite src_builtin="dashboard/check.svg" width="32" height="32"  margin="8"/>
+          <sprite src_builtin="@/dashboard/check.svg" width="32" height="32"  margin="8"/>
           <label color="on_background" size="20" weight="bold" translation="WELCOME.FINISH_TUTORIAL" margin_right="8" />
         </Button>
       </div>

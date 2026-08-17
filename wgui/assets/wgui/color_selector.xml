@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="slider" min_value="0" max_value="255" width="200" height="24" />
   <macro name="color_pip" width="16" height="16" round="100%" />
   <macro name="slider_flow" align_items="center" gap="8" />

@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::Context;
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	color::WguiColorName,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
@@ -78,8 +78,8 @@ fn mount_resolution_button(
 	t.insert(
 		"sprite",
 		match already_downloaded {
-			true => "dashboard/check.svg",
-			false => "dashboard/download.svg",
+			true => "@/dashboard/check.svg",
+			false => "@/dashboard/download.svg",
 		},
 	);
 	let data = parser_state.realize_template(doc_params, "ResolutionButton", layout, parent_id, t)?;
@@ -135,7 +135,7 @@ impl ViewTrait for View {
 fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
 	ParseDocumentParams {
 		globals: globals.clone(),
-		path: AssetPath::BuiltIn("gui/view/remote_skymap_downloader.xml"),
+		path: AssetPathRef::BuiltIn("gui/view/remote_skymap_downloader.xml"),
 		extra: Default::default(),
 	}
 }
@@ -264,17 +264,17 @@ impl View {
 				entries: vec![
 					views::dialog_box::ButtonEntry {
 						content: Translation::from_translation_key("REMOVE"),
-						icon: "dashboard/trash.svg",
+						icon: "@/dashboard/trash.svg",
 						action: ACTION_REMOVE,
 					},
 					views::dialog_box::ButtonEntry {
 						content: Translation::from_translation_key("DOWNLOAD_AGAIN"),
-						icon: "dashboard/download.svg",
+						icon: "@/dashboard/download.svg",
 						action: ACTION_DOWNLOAD_AGAIN,
 					},
 					views::dialog_box::ButtonEntry {
 						content: Translation::from_translation_key("APPLY"),
-						icon: "dashboard/check.svg",
+						icon: "@/dashboard/check.svg",
 						action: ACTION_APPLY,
 					},
 				],

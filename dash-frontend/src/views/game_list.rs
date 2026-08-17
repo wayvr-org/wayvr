@@ -1,7 +1,7 @@
 use std::{collections::HashMap, rc::Rc};
 
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -92,7 +92,7 @@ impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
 		let doc_params = &ParseDocumentParams {
 			globals: params.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/game_list.xml"),
+			path: AssetPathRef::BuiltIn("gui/view/game_list.xml"),
 			extra: Default::default(),
 		};
 

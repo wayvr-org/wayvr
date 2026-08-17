@@ -1,16 +1,16 @@
-<layout>
+<layout version="2">
   <include src_builtin="welcome_common.xml"/>
   
   <elements>
     <rectangle color="#0A2939" width="100%" height="100%" position="absolute"/>
-    <Video macro="video_overlay_component" src_builtin="video/onboarding_center_marker.ivf" aspect_ratio="1.33333">
+    <Video macro="video_overlay_component" src_builtin="@/video/onboarding_center_marker.ivf" aspect_ratio="1.33333">
       <div macro="video_overlay_content">
-        <PageTitle icon="dashboard/panorama.svg" translation="WELCOME.MOVING_YOUR_SET"/>
+        <PageTitle icon="@/dashboard/panorama.svg" translation="WELCOME.MOVING_YOUR_SET"/>
         <div position="relative" align_self="end" padding="16" flex_direction="column" gap="4">
           <label shadow="#000000" size="14" weight="bold" wrap="1" color="#aaffcc" translation="WELCOME.GRAB_ONE_HAND"/>
           <label shadow="#000000" size="14" weight="bold" wrap="1" color="#ccaaff" translation="WELCOME.GRAB_BOTH_HANDS"/>
           <div align_items="center" gap="8">
-            <sprite src_builtin="dashboard/info.svg" min_width="48" min_height="48" max_width="48" max_height="48" color="#ffff00"/>
+            <sprite src_builtin="@/dashboard/info.svg" min_width="48" min_height="48" max_width="48" max_height="48" color="#ffff00"/>
             <label shadow="#000000" size="16" weight="bold" wrap="1" color="#ffff00" translation="WELCOME.CENTER_MARKER"/>
           </div>
         </div>

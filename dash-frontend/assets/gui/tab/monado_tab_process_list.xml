@@ -1,5 +1,5 @@
-<layout>
-  <include src="../t_group_box.xml" />
+<layout version="2">
+  <include src="@/gui/t_group_box.xml" />
 
   <!-- key: str, value: str -->
   <template name="BoolFlag">
@@ -26,7 +26,7 @@
 
   <elements>
     <rectangle macro="group_box">
-      <GroupBoxTitle src_builtin="dashboard/cpu.svg" translation="PROCESS_LIST" />
+      <GroupBoxTitle src_builtin="@/dashboard/cpu.svg" translation="PROCESS_LIST" />
       <div id="list_parent" flex_direction="column" gap="8">
         <!-- filled at runtime -->
       </div>

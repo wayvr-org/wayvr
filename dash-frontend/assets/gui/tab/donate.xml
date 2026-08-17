@@ -1,16 +1,16 @@
-<layout>
-  <include src="../t_separator.xml" />
+<layout version="2">
+  <include src="@/gui/t_separator.xml" />
 
   <template name="TierCell">
     <div gap="8" align_items="center">
-      <sprite width="28" height="28" src_builtin="dashboard/medal.svg" color="${color}"/>
+      <sprite width="28" height="28" src_builtin="@/dashboard/medal.svg" color="${color}"/>
       <label text="${text}" weight="bold" size="18" color="${color}" shadow="shadow"/>
     </div>
   </template>
 
   <template name="SupporterCell">
     <rectangle padding="8" color="background(transparent)" round="8" border="2" border_color="outline" gap="8" align_items="center" flex_direction="row" >
-      <sprite width="24" height="24" src_builtin="dashboard/person.svg"/>
+      <sprite width="24" height="24" src_builtin="@/dashboard/person.svg"/>
       <label text="${username}" weight="bold"/>
     </rectangle>
   </template>
@@ -32,14 +32,14 @@
   <elements>
     <div flex_direction="row" width="100%" min_height="100%" gap="16">
       <div macro="half">
-          <sprite color="#FFAAAA" src_builtin="dashboard/donate.svg" min_width="48" min_height="48"/>
+          <sprite color="#FFAAAA" src_builtin="@/dashboard/donate.svg" min_width="48" min_height="48"/>
         <div gap="16" align_items="center" width="100%">
           <label align="justified" wrap="1" size="15" translation="DONATE.DESCRIPTION" color="on_background"/>
         </div>
 
         <div flex_direction="column" gap="8" align_items="center">
           <Button id="btn_donate" tooltip="DONATE.BUTTON_TOOLTIP" align_self="baseline">
-            <image src_builtin="dashboard/opencollective_logo.svg" width="200" height="32" margin="8" margin_left="16" margin_right="16"/>
+            <image src_builtin="@/dashboard/opencollective_logo.svg" width="200" height="32" margin="8" margin_left="16" margin_right="16"/>
           </Button>
           <label text="opencollective.com/wayvr-org"/>
         </div>
@@ -47,8 +47,8 @@
         <label weight="bold" size="20" translation="DONATE.THANK_YOU_WAYVR" color="on_background"/>
 
         <div gap="32">
-          <Avatar icon="dashboard/avatars/galister.png" nickname="galister"/>
-          <Avatar icon="dashboard/avatars/oo8dev.png" nickname="oo8dev"/>
+          <Avatar icon="@/dashboard/avatars/galister.png" nickname="galister"/>
+          <Avatar icon="@/dashboard/avatars/oo8dev.png" nickname="oo8dev"/>
         </div>
       </div>
       <!-- vertical separator -->

@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <template name="DialogBoxButton">
     <Button id="btn" translation="CLOSE_WINDOW" align_self="start" sprite_src_builtin="${icon}"/>
   </template>

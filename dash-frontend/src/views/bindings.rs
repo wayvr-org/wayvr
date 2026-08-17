@@ -2,7 +2,7 @@ use glam::Vec2;
 use std::rc::Rc;
 use strum::EnumProperty;
 use wgui::{
-	assets::AssetPath,
+	assets::AssetPathRef,
 	components::{
 		button::{ButtonClickEvent, ComponentButton},
 		slider::ComponentSlider,
@@ -157,7 +157,7 @@ impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
 		let doc_params = &ParseDocumentParams {
 			globals: params.globals.clone(),
-			path: AssetPath::BuiltIn("gui/view/bindings.xml"),
+			path: AssetPathRef::BuiltIn("gui/view/bindings.xml"),
 			extra: Default::default(),
 		};
 
@@ -228,7 +228,7 @@ impl View {
 			parser_state: &mut self.parser_state,
 			doc_params: &ParseDocumentParams {
 				globals: self.globals.clone(),
-				path: AssetPath::BuiltIn("gui/view/bindings.xml"),
+				path: AssetPathRef::BuiltIn("gui/view/bindings.xml"),
 				extra: Default::default(),
 			},
 			layout,
@@ -501,7 +501,7 @@ fn subpath_dropdown(
 		mp.layout,
 		parent,
 		Vec2::new(32.0, 32.0),
-		AssetPath::BuiltIn(&format!("dashboard/hand_{}.svg", side.as_ref())),
+		AssetPathRef::BuiltIn(&format!("@/dashboard/hand_{}.svg", side.as_ref())),
 	)?;
 
 	let current_text = current

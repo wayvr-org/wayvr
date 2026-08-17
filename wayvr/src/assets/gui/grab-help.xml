@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <elements>
     <div interactable="0">
       <rectangle
@@ -10,15 +10,15 @@
 
         <div flex_direction="row" padding="8" justify_content="space_between">
           <div flex_direction="column" align_items="center" gap="8" max_width="160" min_width="160">
-            <sprite src="grab-help/controller-grip-joy.svg" min_width="128" min_height="128" max_width="128" max_height="128" flex_grow="1" color="primary" />
+            <sprite src="@/grab-help/controller-grip-joy.svg" min_width="128" min_height="128" max_width="128" max_height="128" flex_grow="1" color="primary" />
             <label wrap="1" size="25" padding_left="16" padding_right="16" translation="GRAB.ADJUST_DISTANCE" align="center" />
           </div>
           <div flex_direction="column" align_items="center" gap="8" max_width="160" min_width="160">
-            <sprite src="grab-help/controller-grip-trigger-joy.svg" min_width="128" min_height="128" max_width="128" max_height="128" flex_grow="1" color="primary" />
+            <sprite src="@/grab-help/controller-grip-trigger-joy.svg" min_width="128" min_height="128" max_width="128" max_height="128" flex_grow="1" color="primary" />
             <label wrap="1" size="25" padding_left="16" padding_right="16" translation="GRAB.ADJUST_SIZE" align="center" />
           </div>
           <div flex_direction="column" align_items="center" gap="8" max_width="160" min_width="160">
-            <sprite src="grab-help/controller-grip-b.svg" min_width="128" min_height="128" max_width="128" max_height="128" flex_grow="1" color="primary" />
+            <sprite src="@/grab-help/controller-grip-b.svg" min_width="128" min_height="128" max_width="128" max_height="128" flex_grow="1" color="primary" />
             <label wrap="1" size="25" padding_left="16" padding_right="16" translation="GRAB.UNRESTRICTED_MOVEMENT" align="center" />
           </div>
         </div>

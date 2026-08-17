@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="button_style"
     margin="2" overflow="hidden" box_sizing="border_box" align_items="center" justify_content="center"
     border="2" round="50%" padding="8" gradient="vertical" tooltip_side="bottom" />
@@ -35,30 +35,30 @@
           <rectangle padding="16" gap="8" round="32" color="background(opacity-0.9)" border="2" border_color="outline" justify_content="center">
             <div flex_direction="column" gap="8">
               <div flex_direction="row" gap="4">
-                <TopButton sticky="0" id="top_lock" src="edit/lock_open.svg" tooltip="EDIT_MODE.LOCK_INTERACTION" press="::EditModeToggleLock" />
-                <TopButton sticky="1" id="top_grab" src="edit/disable-grab.svg" tooltip="EDIT_MODE.DISABLE_GRAB" press="::EditModeToggleGrab" />
-                <TopButton sticky="0" id="top_pos" src="edit/anchor.svg" tooltip="EDIT_MODE.POSITIONING" press="::EditModeTab pos" />
-                <TopButton sticky="0" id="top_alpha" src="edit/fade.svg" tooltip="EDIT_MODE.OPACITY" press="::EditModeTab alpha" />
-                <TopButton sticky="0" id="top_curve" src="edit/curve.svg" tooltip="EDIT_MODE.ADJUST_CURVATURE" press="::EditModeTab curve" />
-                <TopButton sticky="0" id="top_stereo" src="edit/3d.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.TITLE" press="::EditModeTab stereo" />
-                <TopButton sticky="0" id="top_mouse" src="edit/normal.svg" tooltip="EDIT_MODE.MOUSE.TITLE" press="::EditModeTab mouse" />
-                <!-- TopButton sticky="0" id="top_move" src="edit/move-all.svg" tooltip="EDIT_MODE.MOVE_PRESS_AND_DRAG" / -->
-                <!-- TopButton sticky="0" id="top_resize" src="edit/resize.svg" tooltip="EDIT_MODE.RESIZE_PRESS_AND_DRAG" / -->
-                <TopButtonDanger src="edit/delete.svg" tooltip="EDIT_MODE.DELETE" release="::EditModeDelete" />
+                <TopButton sticky="0" id="top_lock" src="@/edit/lock_open.svg" tooltip="EDIT_MODE.LOCK_INTERACTION" press="::EditModeToggleLock" />
+                <TopButton sticky="1" id="top_grab" src="@/edit/disable-grab.svg" tooltip="EDIT_MODE.DISABLE_GRAB" press="::EditModeToggleGrab" />
+                <TopButton sticky="0" id="top_pos" src="@/edit/anchor.svg" tooltip="EDIT_MODE.POSITIONING" press="::EditModeTab pos" />
+                <TopButton sticky="0" id="top_alpha" src="@/edit/fade.svg" tooltip="EDIT_MODE.OPACITY" press="::EditModeTab alpha" />
+                <TopButton sticky="0" id="top_curve" src="@/edit/curve.svg" tooltip="EDIT_MODE.ADJUST_CURVATURE" press="::EditModeTab curve" />
+                <TopButton sticky="0" id="top_stereo" src="@/edit/3d.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.TITLE" press="::EditModeTab stereo" />
+                <TopButton sticky="0" id="top_mouse" src="@/edit/normal.svg" tooltip="EDIT_MODE.MOUSE.TITLE" press="::EditModeTab mouse" />
+                <!-- TopButton sticky="0" id="top_move" src="@/edit/move-all.svg" tooltip="EDIT_MODE.MOVE_PRESS_AND_DRAG" / -->
+                <!-- TopButton sticky="0" id="top_resize" src="@/edit/resize.svg" tooltip="EDIT_MODE.RESIZE_PRESS_AND_DRAG" / -->
+                <TopButtonDanger src="@/edit/delete.svg" tooltip="EDIT_MODE.DELETE" release="::EditModeDelete" />
                 <div width="8" height="100%" />
-                <TopButtonTertiary src="edit/check.svg" tooltip="EDIT_MODE.LEAVE" press="::EditToggle" />
+                <TopButtonTertiary src="@/edit/check.svg" tooltip="EDIT_MODE.LEAVE" press="::EditToggle" />
               </div>
               <div id="tab_none" display="none" height="100">
                 <label align="center" translation="EDIT_MODE.HINT_POINT_WINDOW" />
               </div>
               <div id="tab_pos" display="none" height="100" flex_direction="column">
                 <div padding="8" gap="8" justify_content="center" align_items="center">
-                  <PosButton id="pos_static" src="edit/pin.svg" tooltip="EDIT_MODE.POS_STATIC" press="::EditModeSetPos static" />
-                  <PosButton id="pos_anchored" src="edit/anchor.svg" tooltip="EDIT_MODE.POS_ANCHORED" press="::EditModeSetPos anchored" />
-                  <PosButton id="pos_floating" src="edit/float.svg" tooltip="EDIT_MODE.POS_FLOATING" press="::EditModeSetPos floating" />
-                  <PosButton id="pos_hmd" src="watch/hmd.svg" tooltip="EDIT_MODE.POS_HMD" press="::EditModeSetPos hmd" />
-                  <PosButton id="pos_hand_l" src="watch/controller_l.svg" tooltip="EDIT_MODE.POS_HAND_L" press="::EditModeSetPos hand_l" />
-                  <PosButton id="pos_hand_r" src="watch/controller_r.svg" tooltip="EDIT_MODE.POS_HAND_R" press="::EditModeSetPos hand_r" />
+                  <PosButton id="pos_static" src="@/edit/pin.svg" tooltip="EDIT_MODE.POS_STATIC" press="::EditModeSetPos static" />
+                  <PosButton id="pos_anchored" src="@/edit/anchor.svg" tooltip="EDIT_MODE.POS_ANCHORED" press="::EditModeSetPos anchored" />
+                  <PosButton id="pos_floating" src="@/edit/float.svg" tooltip="EDIT_MODE.POS_FLOATING" press="::EditModeSetPos floating" />
+                  <PosButton id="pos_hmd" src="@/watch/hmd.svg" tooltip="EDIT_MODE.POS_HMD" press="::EditModeSetPos hmd" />
+                  <PosButton id="pos_hand_l" src="@/watch/controller_l.svg" tooltip="EDIT_MODE.POS_HAND_L" press="::EditModeSetPos hand_l" />
+                  <PosButton id="pos_hand_r" src="@/watch/controller_r.svg" tooltip="EDIT_MODE.POS_HAND_R" press="::EditModeSetPos hand_r" />
                 </div>
                 <div flex_direction="row" gap="8" justify_content="center" align_items="center">
                   <div id="pos_interpolation" gap="6">
@@ -74,11 +74,11 @@
               </div>
               <div id="tab_stereo" display="none" height="100" flex_direction="column">
                 <div padding="8" gap="8" justify_content="center" align_items="center">
-                  <PosButton id="stereo_none" src="edit/close.svg" tooltip="DISABLED" press="::EditModeSetStereo none" />
-                  <PosButton id="stereo_leftright" src="edit/3d_leftright.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.SPLIT_LEFT_RIGHT" press="::EditModeSetStereo leftright" />
-                  <PosButton id="stereo_rightleft" src="edit/3d_rightleft.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.SPLIT_RIGHT_LEFT" press="::EditModeSetStereo rightleft" />
-                  <PosButton id="stereo_topbottom" src="edit/3d_topbottom.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.SPLIT_TOP_BOTTOM" press="::EditModeSetStereo topbottom" />
-                  <PosButton id="stereo_bottomtop" src="edit/3d_bottomtop.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.SPLIT_BOTTOM_TOP" press="::EditModeSetStereo bottomtop" />
+                  <PosButton id="stereo_none" src="@/edit/close.svg" tooltip="DISABLED" press="::EditModeSetStereo none" />
+                  <PosButton id="stereo_leftright" src="@/edit/3d_leftright.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.SPLIT_LEFT_RIGHT" press="::EditModeSetStereo leftright" />
+                  <PosButton id="stereo_rightleft" src="@/edit/3d_rightleft.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.SPLIT_RIGHT_LEFT" press="::EditModeSetStereo rightleft" />
+                  <PosButton id="stereo_topbottom" src="@/edit/3d_topbottom.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.SPLIT_TOP_BOTTOM" press="::EditModeSetStereo topbottom" />
+                  <PosButton id="stereo_bottomtop" src="@/edit/3d_bottomtop.svg" tooltip="EDIT_MODE.STEREO_3D_MODE.SPLIT_BOTTOM_TOP" press="::EditModeSetStereo bottomtop" />
                 </div>
                 <div justify_content="center" align_items="center" flex_direction="row" gap="16">
                   <CheckBox id="stereo_full_frame_box" translation="EDIT_MODE.STEREO_3D_MODE.FULL_FRAME" tooltip_side="top" />
@@ -87,15 +87,15 @@
               </div>
               <div id="tab_mouse" display="none" height="100" flex_direction="column">
                 <div padding_left="8" padding_right="8" gap="8" justify_content="center" align_items="center">
-                  <PosButton id="mouse_default" src="edit/close.svg" tooltip="DEFAULT" press="::EditModeSetMouse default" />
-                  <PosButton id="mouse_normal" src="edit/normal.svg" tooltip="EDIT_MODE.MOUSE.NORMAL" press="::EditModeSetMouse normal" />
-                  <PosButton id="mouse_rotate90" src="edit/rotate90.svg" tooltip="EDIT_MODE.MOUSE.ROTATE90" press="::EditModeSetMouse rotate90" />
-                  <PosButton id="mouse_rotate180" src="edit/rotate180.svg" tooltip="EDIT_MODE.MOUSE.ROTATE180" press="::EditModeSetMouse rotate180" />
-                  <PosButton id="mouse_rotate270" src="edit/rotate270.svg" tooltip="EDIT_MODE.MOUSE.ROTATE270" press="::EditModeSetMouse rotate270" />
-                  <PosButton id="mouse_flipped" src="edit/flipped.svg" tooltip="EDIT_MODE.MOUSE.FLIPPED" press="::EditModeSetMouse flipped" />
-                  <PosButton id="mouse_flip90" src="edit/flip90.svg" tooltip="EDIT_MODE.MOUSE.FLIP90" press="::EditModeSetMouse flip90" />
-                  <PosButton id="mouse_flip180" src="edit/flip180.svg" tooltip="EDIT_MODE.MOUSE.FLIP180" press="::EditModeSetMouse flip180" />
-                  <PosButton id="mouse_flip270" src="edit/flip270.svg" tooltip="EDIT_MODE.MOUSE.FLIP270" press="::EditModeSetMouse flip270" />
+                  <PosButton id="mouse_default" src="@/edit/close.svg" tooltip="DEFAULT" press="::EditModeSetMouse default" />
+                  <PosButton id="mouse_normal" src="@/edit/normal.svg" tooltip="EDIT_MODE.MOUSE.NORMAL" press="::EditModeSetMouse normal" />
+                  <PosButton id="mouse_rotate90" src="@/edit/rotate90.svg" tooltip="EDIT_MODE.MOUSE.ROTATE90" press="::EditModeSetMouse rotate90" />
+                  <PosButton id="mouse_rotate180" src="@/edit/rotate180.svg" tooltip="EDIT_MODE.MOUSE.ROTATE180" press="::EditModeSetMouse rotate180" />
+                  <PosButton id="mouse_rotate270" src="@/edit/rotate270.svg" tooltip="EDIT_MODE.MOUSE.ROTATE270" press="::EditModeSetMouse rotate270" />
+                  <PosButton id="mouse_flipped" src="@/edit/flipped.svg" tooltip="EDIT_MODE.MOUSE.FLIPPED" press="::EditModeSetMouse flipped" />
+                  <PosButton id="mouse_flip90" src="@/edit/flip90.svg" tooltip="EDIT_MODE.MOUSE.FLIP90" press="::EditModeSetMouse flip90" />
+                  <PosButton id="mouse_flip180" src="@/edit/flip180.svg" tooltip="EDIT_MODE.MOUSE.FLIP180" press="::EditModeSetMouse flip180" />
+                  <PosButton id="mouse_flip270" src="@/edit/flip270.svg" tooltip="EDIT_MODE.MOUSE.FLIP270" press="::EditModeSetMouse flip270" />
                 </div>
                 <div justify_content="center" align_items="center">
                   <label align="center" translation="EDIT_MODE.MOUSE.WRONG_SCREEN_SELECTION_HELP" />
@@ -123,7 +123,7 @@
         <div width="100%" justify_content="end" flex_direction="row">
           <div>
             <Button id="resize_corner" macro="button_style" tooltip="EDIT_MODE.RESIZE_CORNER" tooltip_side="left" _press="::EditModeResizeStart" _release="::EditModeResizeStop">
-              <sprite width="48" height="48" src="edit/resize-corner.svg" />
+              <sprite width="48" height="48" src="@/edit/resize-corner.svg" />
             </Button>
           </div>
         </div>

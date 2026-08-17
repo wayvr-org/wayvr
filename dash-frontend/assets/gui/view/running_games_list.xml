@@ -1,18 +1,18 @@
-<layout>
-  <include src="../t_group_box.xml" />
+<layout version="2">
+  <include src="@/gui/t_group_box.xml" />
 
   <template name="RunningGameCell">
     <rectangle macro="group_box" flex_direction="row">
-      <Button id="btn_stop" sprite_src_builtin="dashboard/remove_circle.svg" tooltip="PROCESS.STOP" />
-      <Button id="btn_kill" sprite_src_builtin="dashboard/knife.svg" tooltip="PROCESS.FORCE_KILL" />
+      <Button id="btn_stop" sprite_src_builtin="@/dashboard/remove_circle.svg" tooltip="PROCESS.STOP" />
+      <Button id="btn_kill" sprite_src_builtin="@/dashboard/knife.svg" tooltip="PROCESS.FORCE_KILL" />
       <label id="label_name" weight="bold" />
     </rectangle>
   </template>
 
   <elements>
     <div align_items="center" gap="8">
-      <Button id="btn_refresh" tooltip="REFRESH" width="32" height="32" sprite_src_builtin="dashboard/refresh.svg" />
-      <sprite src_builtin="dashboard/cpu.svg" width="24" height="24" />
+      <Button id="btn_refresh" tooltip="REFRESH" width="32" height="32" sprite_src_builtin="@/dashboard/refresh.svg" />
+      <sprite src_builtin="@/dashboard/cpu.svg" width="24" height="24" />
       <label translation="GAME_LIST.RUNNING_GAMES_LIST" />
     </div>
     <div id="list_parent" gap="8" />

@@ -129,7 +129,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 
 	// Mount entries
 	for (idx, entry) in params.entries.into_iter().enumerate() {
-		let sprite_src = entry.sprite_src.as_ref().map(AssetPathRc::as_borrowed);
+		let sprite_src = entry.sprite_src.as_ref().map(|s| s.as_ref());
 
 		let (_, button) = button::construct(
 			&mut ConstructEssentials {

@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <macro name="keycap_rect"
     margin="2" width="100%" overflow="hidden" box_sizing="border_box"
     border_color="outline" border="2" round="6" color="background_variant" color2="background" gradient="vertical"
@@ -13,9 +13,9 @@
     width="${width}" height="${height}" min_width="${width}" min_height="${height}" max_width="${width}" max_height="${height}"
   />
 
-  <theme>
+  <vars>
     <var key="text_size" value="20" />
-  </theme>
+  </vars>
 
   <template name="VerticalSeparator">
     <rectangle width="2" height="100%" color="primary" />
@@ -28,7 +28,7 @@
   <template name="KeySpecial">
     <div macro="keycap_div">
       <rectangle id="${id}" macro="keycap_rect">
-        <sprite color="on_background" width="24" height="24" src="keyboard/${text}.svg" />
+        <sprite color="on_background" width="24" height="24" src="@/keyboard/${text}.svg" />
       </rectangle>
     </div>
   </template>
@@ -127,7 +127,7 @@
   <!-- A screen with a shortened connector name, e.g. "H1" for HDMI-A-1 or "D2" for DP-2 -->
   <template name="Screen">
     <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_screen" _press_right="::OverlayToggle ${name}">
-      <sprite width="38" height="38" src_builtin="edit/screen.svg" />
+      <sprite width="38" height="38" src_builtin="@/edit/screen.svg" />
       <div position="absolute" margin_top="-7" margin_left="-1">
         <label text="${display}" size="~text_size" weight="bold" parent_color="background" />
       </div>
@@ -160,7 +160,7 @@
 
   <template name="Mirror">
     <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_mirror" _press_right="::OverlayToggle ${name}">
-      <sprite width="38" height="38" src_builtin="edit/mirror.svg" />
+      <sprite width="38" height="38" src_builtin="@/edit/mirror.svg" />
       <div position="absolute" margin_top="5" margin_left="13">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
       </div>
@@ -170,7 +170,7 @@
   <!-- mirror with a different icon -->
   <template name="Passthru">
     <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_mirror" _press_right="::OverlayToggle ${name}">
-      <sprite width="38" height="38" src_builtin="icons/landscape.svg" />
+      <sprite width="38" height="38" src_builtin="@/icons/landscape.svg" />
       <div position="absolute" margin_top="5" margin_left="13">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
       </div>
@@ -200,7 +200,7 @@
 
   <template name="Set">
     <Button macro="button_style" id="set_${idx}" _press="::SetSwitch ${idx}" tooltip="WATCH.SWITCH_TO_SET" tooltip_side="bottom">
-      <sprite width="38" height="38" src_builtin="watch/set2.svg" />
+      <sprite width="38" height="38" src_builtin="@/watch/set2.svg" />
       <div position="absolute" margin_top="10" margin_left="-7">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
       </div>
@@ -220,7 +220,7 @@
       <rectangle macro="bg_rect" padding="10" align_items="center" justify_content="space_between">
         <div gap="10">
           <Button macro="button_style" id="btn_dashboard" _press="::DashToggle">
-            <sprite width="38" height="38" src="watch/wayvr_dashboard_mono.svg"  />
+            <sprite width="38" height="38" src="@/watch/wayvr_dashboard_mono.svg"  />
           </Button>
           <VerticalSeparator />
           <div id="panels_root" gap="6">
@@ -231,7 +231,7 @@
         </div>
         <div id="tray_root" flex_direction="row" gap="10">
           <Button macro="button_style" _press="::ContextMenuOpen menu_burger">
-            <sprite width="38" height="38" src_builtin="keyboard/burger.svg" />
+            <sprite width="38" height="38" src_builtin="@/keyboard/burger.svg" />
           </Button>
 
           <VerticalSeparator />

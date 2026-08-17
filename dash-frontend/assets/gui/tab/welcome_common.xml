@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <!-- icon, title -->
   <template name="PageTitle">
     <div position="absolute" align_self="start" justify_self="center" width="100%" margin_top="16" gap="8" align_items="center" justify_content="center">

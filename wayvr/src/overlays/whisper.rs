@@ -378,7 +378,7 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
     let mut panel = GuiPanel::new_from_template(app, xml, state, params)?;
     panel.extra_attribs.insert(
         BackendAttrib::Icon,
-        BackendAttribValue::Icon("icons/mic.svg".into()),
+        BackendAttribValue::Icon("@/icons/mic.svg".into()),
     );
     let id_label_transcription = panel.parser_state.get_widget_id("transcription")?;
     panel.state.id_label_progress = panel.parser_state.get_widget_id("label_progress")?;

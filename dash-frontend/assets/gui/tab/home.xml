@@ -1,5 +1,5 @@
-<layout>
-  <include src="../t_menu_button.xml" />
+<layout version="2">
+  <include src="@/gui/t_menu_button.xml" />
 
   <elements>
     <div
@@ -9,7 +9,7 @@
       flex_grow="1"
       gap="8"
       >
-      <image src_builtin="dashboard/splash.png" width="300" height="89" />
+      <image src_builtin="@/dashboard/splash.png" width="300" height="89" />
 
       <!-- supporters -->
       <Button
@@ -26,23 +26,23 @@
 
       <!-- main button list -->
       <div flex_direction="row" gap="8" margin_top="32">
-        <MenuButton id="btn_apps" icon="dashboard/apps.svg" translation="APPLICATIONS" />
-        <MenuButton id="btn_games" icon="dashboard/games.svg" translation="GAMES" />
-        <MenuButton id="btn_monado" icon="dashboard/monado.svg" text="Monado" />
-        <MenuButton id="btn_settings" icon="dashboard/settings.svg" translation="SETTINGS" />
+        <MenuButton id="btn_apps" icon="@/dashboard/apps.svg" translation="APPLICATIONS" />
+        <MenuButton id="btn_games" icon="@/dashboard/games.svg" translation="GAMES" />
+        <MenuButton id="btn_monado" icon="@/dashboard/monado.svg" text="Monado" />
+        <MenuButton id="btn_settings" icon="@/dashboard/settings.svg" translation="SETTINGS" />
       </div>
 
       <div gap="8">
         <Button id="btn_welcome_screen" macro="home_button" tooltip="APP_SETTINGS.SHOW_WELCOME_SCREEN">
-          <sprite src_builtin="dashboard/welcome.svg" width="32" height="32" margin="16" />
+          <sprite src_builtin="@/dashboard/welcome.svg" width="32" height="32" margin="16" />
         </Button>
 
         <Button id="btn_website" macro="home_button" tooltip_str="wayvr.org">
-          <sprite src_builtin="dashboard/globe.svg" width="32" height="32" margin="16" />
+          <sprite src_builtin="@/dashboard/globe.svg" width="32" height="32" margin="16" />
         </Button>
 
         <Button id="btn_donate" macro="home_button" tooltip="DONATE.SUPPORT_US">
-          <sprite src_builtin="dashboard/opencollective.svg" width="32" height="32" margin="16" />
+          <sprite src_builtin="@/dashboard/opencollective.svg" width="32" height="32" margin="16" />
         </Button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-<layout>
+<layout version="2">
   <elements>
     <div id="list" gap="8" flex_wrap="wrap" align_self="baseline">
       <!-- filled-in at runtime -->

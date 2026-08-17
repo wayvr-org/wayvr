@@ -1,7 +1,7 @@
 use glam::{Mat4, Vec2};
 use wgui::{
 	animation::{Animation, AnimationEasing},
-	assets::AssetPath,
+	assets::AssetPathRef,
 	color::WguiColorName,
 	components::{self, button::ButtonClickCallback},
 	i18n::Translation,
@@ -23,7 +23,7 @@ pub struct CreateButtonParams<'a> {
 	pub id_parent: WidgetID,
 	pub layout: &'a mut Layout,
 	pub content: Translation,
-	pub icon_builtin: AssetPath<'a>,
+	pub icon_builtin: AssetPathRef<'a>,
 	pub on_click: ButtonClickCallback,
 }
 
@@ -84,7 +84,12 @@ pub fn create_label_error(layout: &mut Layout, parent: WidgetID, content: String
 	Ok(())
 }
 
-pub fn create_icon(layout: &mut Layout, id_parent: WidgetID, size: Vec2, path: AssetPath) -> anyhow::Result<WidgetID> {
+pub fn create_icon(
+	layout: &mut Layout,
+	id_parent: WidgetID,
+	size: Vec2,
+	path: AssetPathRef,
+) -> anyhow::Result<WidgetID> {
 	let widget_sprite = WidgetSprite::create(WidgetSpriteParams {
 		color: Some(WguiColorName::OnBackground.into()),
 		glyph_data: Some(CustomGlyphData::from_assets(&layout.state.globals, path)?),
@@ -119,7 +124,7 @@ pub struct CreateLoadingParams<'a> {
 pub fn create_loading(par: CreateLoadingParams) -> anyhow::Result<WidgetID> {
 	let doc_params = ParseDocumentParams {
 		globals: par.layout.state.globals.clone(),
-		path: AssetPath::BuiltIn("gui/t_loading.xml"),
+		path: AssetPathRef::BuiltIn("gui/t_loading.xml"),
 		extra: Default::default(),
 	};
 

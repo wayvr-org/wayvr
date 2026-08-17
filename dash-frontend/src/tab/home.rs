@@ -2,7 +2,7 @@ use std::{marker::PhantomData, rc::Rc};
 
 use wgui::{
 	animation::{Animation, AnimationEasing},
-	assets::AssetPath,
+	assets::AssetPathRef,
 	color::{WguiColor, WguiColorName, WguiNamedColor},
 	components::{ComponentTrait, button::ComponentButton},
 	event::CallbackDataCommon,
@@ -142,7 +142,7 @@ impl<T> TabHome<T> {
 		let state = wgui::parser::parse_from_assets(
 			&ParseDocumentParams {
 				globals: frontend.layout.state.globals.clone(),
-				path: AssetPath::BuiltIn("gui/tab/home.xml"),
+				path: AssetPathRef::BuiltIn("gui/tab/home.xml"),
 				extra: Default::default(),
 			},
 			&mut frontend.layout,
