@@ -15,13 +15,13 @@
   </template>
 
   <elements>
-    <rectangle macro="group_box">
+    <GroupBox>
       <GroupBoxTitle src_builtin="@/dashboard/apps.svg" text="Sessions" />
       <div id="session_list_parent" flex_wrap="wrap" flex_direction="row" gap="8" />
       <GroupBoxTitle src_builtin="@/dashboard/not_a_bug.svg" text="Debug timings" />
       <div id="timings_parent" flex_wrap="wrap" flex_direction="row" gap="8">
         <label text="Please select which session you want to monitor" />
       </div>
-    </rectangle>
+    </GroupBox>
   </elements>
 </layout>

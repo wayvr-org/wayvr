@@ -2,18 +2,16 @@
   <include src_builtin="welcome_common.xml"/>
     
   <elements>
-    <Video macro="video_overlay_component" src_builtin="@/video/onboarding_laser_colors.ivf">
-      <div macro="video_overlay_content">
-        <PageTitle icon="@/dashboard/click.svg" translation="WELCOME.LASER_COLORS"/>
-        <div position="relative" flex_direction="row" gap="16" margin="16" align_self="end" justify_self="end" align_items="center">
-          <rectangle flex_direction="column" gap="8" padding="8" round="4" border_color="outline" border="2" >
-            <label size="12" weight="bold" color="#00FFFF" translation="WELCOME.REGULAR_MODE_BLUE_LASER"/>
-            <label size="12" weight="bold" color="#FFAA00" translation="WELCOME.RIGHT_CLICK_MODE_ORANGE_LASER"/>
-            <label size="12" weight="bold" color="#FF88FF" translation="WELCOME.MIDDLE_CLICK_MODE_PURPLE_LASER"/>
-          </rectangle>
-          <label wrap="1" size="18" width="450" weight="bold" color="#ffffff" shadow="#000000" translation="WELCOME.LASER_FUNCTIONALITY"/>
-        </div>
+    <WelcomeVideo src_builtin="@/video/onboarding_laser_colors.ivf">
+      <PageTitle icon="@/dashboard/click.svg" translation="WELCOME.LASER_COLORS"/>
+      <div position="relative" flex_direction="row" gap="16" margin="16" align_self="end" justify_self="end" align_items="center">
+        <rectangle flex_direction="column" gap="8" padding="8" round="4" border_color="outline" border="2" >
+          <label size="12" weight="bold" color="#00FFFF" translation="WELCOME.REGULAR_MODE_BLUE_LASER"/>
+          <label size="12" weight="bold" color="#FFAA00" translation="WELCOME.RIGHT_CLICK_MODE_ORANGE_LASER"/>
+          <label size="12" weight="bold" color="#FF88FF" translation="WELCOME.MIDDLE_CLICK_MODE_PURPLE_LASER"/>
+        </rectangle>
+        <label wrap="1" size="18" width="450" weight="bold" color="#ffffff" shadow="#000000" translation="WELCOME.LASER_FUNCTIONALITY"/>
       </div>
-    </Video>
+    </WelcomeVideo>
   </elements>
 </layout>

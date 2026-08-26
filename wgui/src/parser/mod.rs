@@ -900,7 +900,12 @@ pub fn replace_vars(input: &str, vars: &TemplateParams) -> Rc<str> {
 
 #[allow(clippy::manual_strip)]
 #[allow(clippy::single_match_else)]
-fn process_attrib(template_parameters: &TemplateParams, ctx: &ParserContext, key: &str, value: &str) -> AttribPair {
+fn process_attrib_internal(
+	template_parameters: &TemplateParams,
+	ctx: &ParserContext,
+	key: &str,
+	value: &str,
+) -> AttribPair {
 	if value.starts_with('~') {
 		let name = &value[1..];
 
@@ -914,6 +919,19 @@ fn process_attrib(template_parameters: &TemplateParams, ctx: &ParserContext, key
 	} else {
 		AttribPair::new(key, replace_vars(value, template_parameters))
 	}
+}
+
+fn process_attrib(
+	template_parameters: &TemplateParams,
+	ctx: &ParserContext,
+	key: &str,
+	value: &str,
+) -> Option<AttribPair> {
+	let pair = process_attrib_internal(template_parameters, ctx, key, value);
+	if pair.value.is_empty() {
+		return None;
+	}
+	Some(pair)
 }
 
 fn raw_attribs<'a>(node: &'a roxmltree::Node<'a, 'a>) -> Vec<AttribPair> {
@@ -943,7 +961,9 @@ fn process_attribs<'a>(
 		if key == "macro" {
 			if let Some(macro_attrib) = ctx.get_macro_attrib(value) {
 				for (macro_key, macro_value) in &macro_attrib.attribs {
-					res.push(process_attrib(&file.template_parameters, ctx, macro_key, macro_value));
+					if let Some(pair) = process_attrib(&file.template_parameters, ctx, macro_key, macro_value) {
+						res.push(pair);
+					}
 				}
 			} else {
 				log::warn!(
@@ -952,7 +972,9 @@ fn process_attribs<'a>(
 				);
 			}
 		} else {
-			res.push(process_attrib(&file.template_parameters, ctx, key, value));
+			if let Some(pair) = process_attrib(&file.template_parameters, ctx, key, value) {
+				res.push(pair);
+			}
 		}
 	}
 
@@ -1099,8 +1121,10 @@ fn parse_child<'a>(
 	parent_id: WidgetID,
 ) -> anyhow::Result<ParseChildResult> {
 	let tag_name = child_node.tag_name().name();
-	if let Some(skip) = child_node.attribute("skip") {
-		let resolved = process_attrib(&file.template_parameters, ctx, "skip", skip).value;
+	if let Some(skip) = child_node.attribute("skip")
+		&& let Some(pair) = process_attrib(&file.template_parameters, ctx, "skip", skip)
+	{
+		let resolved = pair.value;
 		if &*resolved == "1" {
 			return Ok(ParseChildResult::default()); // do not parse this element
 		}

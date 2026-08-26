@@ -1,23 +1,19 @@
 <layout version="2">
-  <macro name="slider" min_value="0" max_value="255" width="200" height="24" />
-  <macro name="color_pip" width="16" height="16" round="100%" />
-  <macro name="slider_flow" align_items="center" gap="8" />
+  <!-- slider_id, color -->
+  <template name="Cell">
+    <div align_items="center" gap="8">
+      <!-- color pip -->
+      <rectangle width="16" height="16" round="100%" color="${color}"/>
+      <Slider id="${slider_id}" min_value="0" max_value="255" width="200" height="24" />
+    </div>
+  </template>
 
   <elements>
     <div gap="8" align_items="center">
       <div gap="8" flex_direction="column">
-        <div macro="slider_flow">
-          <rectangle macro="color_pip" color="#FF0000"/>
-          <Slider id="slider_r" macro="slider" />
-        </div>
-        <div macro="slider_flow">
-          <rectangle macro="color_pip" color="#00FF00"/>
-          <Slider id="slider_g" macro="slider" />
-        </div>
-        <div macro="slider_flow">
-          <rectangle macro="color_pip" color="#0000FF"/>
-          <Slider id="slider_b" macro="slider" />
-        </div>
+        <Cell slider_id="slider_r" color="#FF0000"/>
+        <Cell slider_id="slider_g" color="#00FF00"/>
+        <Cell slider_id="slider_b" color="#0000FF"/>
       </div>
       <rectangle id="rect_color" width="96" height="96" border="4" color="#ffffff" border_color="#000000" round="4" />
     </div>

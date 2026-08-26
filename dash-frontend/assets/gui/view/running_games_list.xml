@@ -2,11 +2,11 @@
   <include src="@/gui/t_group_box.xml" />
 
   <template name="RunningGameCell">
-    <rectangle macro="group_box" flex_direction="row">
+    <GroupBox>
       <Button id="btn_stop" sprite_src_builtin="@/dashboard/remove_circle.svg" tooltip="PROCESS.STOP" />
       <Button id="btn_kill" sprite_src_builtin="@/dashboard/knife.svg" tooltip="PROCESS.FORCE_KILL" />
       <label id="label_name" weight="bold" />
-    </rectangle>
+    </GroupBox>
   </template>
 
   <elements>

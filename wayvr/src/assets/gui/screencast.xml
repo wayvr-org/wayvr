@@ -2,7 +2,7 @@
   <elements>
     <rectangle width="1280" height="720" padding="10" align_items="center" justify_content="space_evenly" flex_direction="column" color="background" color2="background_variant" border="2" border_color="primary" gradient="radial">
       <div width="100%" align_items="center">
-        <label width="100%" id="status" color="secondary" text="" size="36" align="center" />
+        <label width="100%" id="status" color="secondary" text=" " size="36" align="center" />
       </div>
       <div width="100%" align_items="center" flex_direction="column" gap="16">
         <div width="100%" align_items="center">

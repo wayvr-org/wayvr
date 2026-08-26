@@ -7,7 +7,13 @@
     border_color="outline"
     padding="12"
     gap="8"
-    round="8" />
+    round="8"/>
+  
+  <template name="GroupBox">
+    <rectangle macro="group_box">
+      <CHILDREN/>
+    </rectangle>
+  </template>
 
   <!-- src_builtin, text, translation -->
   <template name="GroupBoxTitle">
