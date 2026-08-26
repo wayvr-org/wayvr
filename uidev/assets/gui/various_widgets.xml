@@ -18,6 +18,8 @@
     </context_menu>
   </blueprint>
 
+  <include src="various_widgets_inc.xml"/>
+
   <elements>
     <rectangle position="absolute" width="100%" height="100%" color="#1e3a3eee" />
     <div
@@ -25,6 +27,15 @@
       gap="4"
       flex_direction="column"
       overflow_y="scroll">
+
+      <ElementWithChildren>
+        <label text="Foo bar"/>
+        <BoxRight>
+          <BoldText text="1"/>
+          <BoldText text="2"/>
+          <BoldText text="3"/>
+        </BoxRight>
+      </ElementWithChildren>
 
       <rectangle macro="rect">
         <label text="Raw text" color="#FFFFFF" />

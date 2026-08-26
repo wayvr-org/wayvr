@@ -2,7 +2,7 @@ use crate::{
 	drawing::GradientMode,
 	layout::WidgetID,
 	parser::{
-		AttribPair, ParserContext, ParserFile, parse_children, parse_widget_universal,
+		AttribPair, ParseChildResult, ParserContext, ParserFile, parse_children, parse_widget_universal,
 		style::{parse_color, parse_round, parse_style},
 	},
 	widget::rectangle::{WidgetRectangle, WidgetRectangleParams},
@@ -15,7 +15,7 @@ pub fn parse_widget_rectangle<'a>(
 	parent_id: WidgetID,
 	attribs: &[AttribPair],
 	tag_name: &str,
-) -> anyhow::Result<WidgetID> {
+) -> anyhow::Result<(ParseChildResult, WidgetID)> {
 	let mut params = WidgetRectangleParams::default();
 	let style = parse_style(ctx, attribs, tag_name);
 
@@ -68,7 +68,5 @@ pub fn parse_widget_rectangle<'a>(
 		.add_child(parent_id, WidgetRectangle::create(params), style)?;
 
 	parse_widget_universal(ctx, &widget, attribs, tag_name);
-	parse_children(file, ctx, node, widget.id)?;
-
-	Ok(widget.id)
+	Ok((parse_children(file, ctx, node, widget.id)?, widget.id))
 }

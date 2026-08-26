@@ -327,7 +327,7 @@ impl ParserState {
 			version: self.version,
 		};
 
-		parse_widget_other_internal(&template.clone(), template_parameters, &file, &mut ctx, widget_id)?;
+		let _ = parse_widget_other_internal(&template.clone(), template_parameters, &file, &mut ctx, widget_id)?;
 		Ok(ctx.data_local)
 	}
 
@@ -668,7 +668,7 @@ fn parse_widget_other_internal(
 	file: &ParserFile,
 	ctx: &mut ParserContext,
 	parent_id: WidgetID,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<ParseChildResult> {
 	let template_file = ParserFile {
 		document: template.node_document.clone(),
 		version: file.version,
@@ -686,15 +686,14 @@ fn parse_widget_other_internal(
 		.get_node(template.node)
 		.context("template node invalid")?;
 
-	parse_children(&template_file, ctx, template_node, parent_id)?;
-
-	Ok(())
+	parse_children(&template_file, ctx, template_node, parent_id)
 }
 
-fn parse_widget_other(
+fn parse_widget_other<'a>(
 	xml_tag_name: &str,
 	file: &ParserFile,
 	ctx: &mut ParserContext,
+	node: roxmltree::Node<'a, 'a>,
 	parent_id: WidgetID,
 	attribs: &[AttribPair],
 ) -> anyhow::Result<()> {
@@ -709,13 +708,20 @@ fn parse_widget_other(
 	let template_params: HashMap<Rc<str>, Rc<str>> =
 		attribs.iter().map(|a| (a.attrib.clone(), a.value.clone())).collect();
 
-	parse_widget_other_internal(
+	// parse template body
+	let res = parse_widget_other_internal(
 		&template,
 		TemplateParams::from_hashmap(template_params),
 		file,
 		ctx,
 		parent_id,
-	)
+	)?;
+
+	if let Some(children_parent_id) = res.template_children_parent_id {
+		let _ = parse_children(file, ctx, node, children_parent_id)?;
+	}
+
+	Ok(())
 }
 
 fn strip_starting_slash(input: &str) -> &str {
@@ -1091,98 +1097,114 @@ fn parse_child<'a>(
 	ctx: &mut ParserContext,
 	child_node: roxmltree::Node<'a, 'a>,
 	parent_id: WidgetID,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<ParseChildResult> {
 	let tag_name = child_node.tag_name().name();
 	if let Some(skip) = child_node.attribute("skip") {
 		let resolved = process_attrib(&file.template_parameters, ctx, "skip", skip).value;
-		//FIXME: this is always empty
 		if &*resolved == "1" {
-			return Ok(()); // do not parse this element
+			return Ok(ParseChildResult::default()); // do not parse this element
 		}
 	}
 
 	let attribs = process_attribs(file, ctx, &child_node, false);
-	let mut new_widget_id: Option<WidgetID> = None;
 
-	match tag_name {
+	let (res, new_widget_id) = match tag_name {
 		"include" => {
 			parse_tag_include(file, ctx, parent_id, &attribs)?;
+			(ParseChildResult::default(), None)
 		}
 		"div" => {
-			new_widget_id = Some(parse_widget_div(file, ctx, child_node, parent_id, &attribs, tag_name)?);
+			let (res, id) = parse_widget_div(file, ctx, child_node, parent_id, &attribs, tag_name)?;
+			(res, Some(id))
 		}
 		"rectangle" => {
-			new_widget_id = Some(parse_widget_rectangle(
-				file, ctx, child_node, parent_id, &attribs, tag_name,
-			)?);
+			let (res, id) = parse_widget_rectangle(file, ctx, child_node, parent_id, &attribs, tag_name)?;
+			(res, Some(id))
 		}
 		"label" => {
-			new_widget_id = Some(parse_widget_label(
-				file, ctx, child_node, parent_id, &attribs, tag_name,
-			)?);
+			let (res, id) = parse_widget_label(file, ctx, child_node, parent_id, &attribs, tag_name)?;
+			(res, Some(id))
 		}
 		"sprite" => {
-			new_widget_id = Some(parse_widget_sprite(
-				file, ctx, child_node, parent_id, &attribs, tag_name,
-			)?);
+			let (res, id) = parse_widget_sprite(file, ctx, child_node, parent_id, &attribs, tag_name)?;
+			(res, Some(id))
 		}
 		"image" => {
-			new_widget_id = Some(parse_widget_image(
-				file, ctx, child_node, parent_id, &attribs, tag_name,
-			)?);
+			let (res, id) = parse_widget_image(file, ctx, child_node, parent_id, &attribs, tag_name)?;
+			(res, Some(id))
 		}
 		"Button" => {
-			new_widget_id = Some(parse_component_button(
-				file, ctx, child_node, parent_id, &attribs, tag_name,
-			)?);
+			let (res, id) = parse_component_button(file, ctx, child_node, parent_id, &attribs, tag_name)?;
+			(res, Some(id))
 		}
 		#[cfg(feature = "video")]
 		"Video" => {
 			use crate::parser::component_video::parse_component_video;
-
-			new_widget_id = Some(parse_component_video(
-				file, ctx, child_node, parent_id, &attribs, tag_name,
-			)?);
+			let (res, id) = parse_component_video(file, ctx, child_node, parent_id, &attribs, tag_name)?;
+			(res, Some(id))
 		}
-		"Slider" => {
-			new_widget_id = Some(parse_component_slider(ctx, parent_id, &attribs, tag_name)?);
-		}
-		"ColorSelector" => new_widget_id = Some(parse_component_color_selector(ctx, parent_id, &attribs, tag_name)?),
-		"CheckBox" => {
-			new_widget_id = Some(parse_component_checkbox(
+		"Slider" => (
+			Default::default(),
+			Some(parse_component_slider(ctx, parent_id, &attribs, tag_name)?),
+		),
+		"ColorSelector" => (
+			Default::default(),
+			Some(parse_component_color_selector(ctx, parent_id, &attribs, tag_name)?),
+		),
+		"CheckBox" => (
+			Default::default(),
+			Some(parse_component_checkbox(
 				ctx,
 				parent_id,
 				&attribs,
 				tag_name,
 				CheckboxKind::CheckBox,
-			)?);
-		}
-		"RadioBox" => {
-			new_widget_id = Some(parse_component_checkbox(
+			)?),
+		),
+		"RadioBox" => (
+			Default::default(),
+			Some(parse_component_checkbox(
 				ctx,
 				parent_id,
 				&attribs,
 				tag_name,
 				CheckboxKind::RadioBox,
-			)?);
-		}
-		"RadioGroup" => {
-			new_widget_id = Some(parse_component_radio_group(
+			)?),
+		),
+		"RadioGroup" => (
+			Default::default(),
+			Some(parse_component_radio_group(
 				file, ctx, child_node, parent_id, &attribs, tag_name,
-			)?);
-		}
-		"EditBox" => new_widget_id = Some(parse_component_editbox(ctx, parent_id, &attribs, tag_name)?),
-		"BarGraph" => new_widget_id = Some(parse_component_bar_graph(ctx, parent_id, &attribs, tag_name)?),
-		"Tabs" => {
-			new_widget_id = Some(parse_component_tabs(
+			)?),
+		),
+		"EditBox" => (
+			Default::default(),
+			Some(parse_component_editbox(ctx, parent_id, &attribs, tag_name)?),
+		),
+		"BarGraph" => (
+			Default::default(),
+			Some(parse_component_bar_graph(ctx, parent_id, &attribs, tag_name)?),
+		),
+		"Tabs" => (
+			Default::default(),
+			Some(parse_component_tabs(
 				file, ctx, child_node, parent_id, &attribs, tag_name,
-			)?);
+			)?),
+		),
+		"CHILDREN" => (
+			ParseChildResult {
+				template_children_parent_id: Some(parent_id),
+			},
+			None,
+		),
+		"" => {
+			(Default::default(), None) /* ignore */
 		}
-		"" => { /* ignore */ }
 		other_tag_name => {
-			parse_widget_other(other_tag_name, file, ctx, parent_id, &attribs)?;
+			parse_widget_other(other_tag_name, file, ctx, child_node, parent_id, &attribs)?;
+			(Default::default(), None)
 		}
-	}
+	};
 
 	// check for custom attributes (if the callback is set)
 	if let Some(widget_id) = new_widget_id
@@ -1207,7 +1229,28 @@ fn parse_child<'a>(
 		}
 	}
 
-	Ok(())
+	Ok(res)
+}
+
+#[must_use]
+#[derive(Default)]
+struct ParseChildResult {
+	// parent widget id of <CHILDREN/> tag
+	// available only if we're parsing a template
+	template_children_parent_id: Option<WidgetID>,
+}
+
+impl ParseChildResult {
+	#[allow(clippy::needless_pass_by_value)]
+	fn consume(&mut self, res: ParseChildResult) {
+		if let Some(id) = res.template_children_parent_id {
+			if self.template_children_parent_id.is_some() {
+				log::warn!("Found more than a single <CHILDREN/> instance in a template");
+			}
+
+			self.template_children_parent_id = Some(id);
+		}
+	}
 }
 
 fn parse_children<'a>(
@@ -1215,12 +1258,14 @@ fn parse_children<'a>(
 	ctx: &mut ParserContext,
 	parent_node: roxmltree::Node<'a, 'a>,
 	parent_id: WidgetID,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<ParseChildResult> {
+	let mut res = ParseChildResult::default();
+
 	for child_node in parent_node.children() {
-		parse_child(file, ctx, child_node, parent_id)?;
+		res.consume(parse_child(file, ctx, child_node, parent_id)?);
 	}
 
-	Ok(())
+	Ok(res)
 }
 
 fn create_default_context<'a>(
@@ -1457,7 +1502,7 @@ fn parse_document_root(
 	}
 
 	if let Some(tag_elements) = get_tag_by_name(&node_layout, "elements") {
-		parse_children(file, ctx, tag_elements, parent_id)?;
+		let _ = parse_children(file, ctx, tag_elements, parent_id)?;
 	}
 
 	Ok(())
