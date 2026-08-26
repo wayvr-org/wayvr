@@ -5,7 +5,7 @@ use crate::{
 	i18n::Translation,
 	layout::WidgetID,
 	parser::{
-		AttribPair, ParserContext, ParserFile, get_asset_path_from_kv,
+		AttribPair, ParseChildResult, ParserContext, ParserFile, get_asset_path_from_kv,
 		helpers::{TooltipAttribs, parse_attrib_tooltip},
 		parse_children, parse_f32, process_component,
 		style::{parse_color_opt, parse_round, parse_style, parse_text_style},
@@ -20,7 +20,7 @@ pub fn parse_component_button<'a>(
 	parent_id: WidgetID,
 	attribs: &[AttribPair],
 	tag_name: &str,
-) -> anyhow::Result<WidgetID> {
+) -> anyhow::Result<(ParseChildResult, WidgetID)> {
 	let mut color: Option<WguiColor> = None;
 	let mut sprite_color: Option<WguiColor> = None;
 	let mut border = 2.0;
@@ -130,7 +130,5 @@ pub fn parse_component_button<'a>(
 	)?;
 
 	process_component(ctx, Component(button), widget.id, attribs);
-	parse_children(file, ctx, node, widget.id)?;
-
-	Ok(widget.id)
+	Ok((parse_children(file, ctx, node, widget.id)?, widget.id))
 }

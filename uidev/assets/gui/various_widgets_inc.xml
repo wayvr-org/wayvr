@@ -1,0 +1,19 @@
+<layout version="2">
+  <!-- text -->
+  <template name="BoldText">
+    <label text="${text}" weight="bold"/>
+  </template>
+
+  <template name="BoxRight">
+    <div gap="16">
+      <CHILDREN/>
+    </div>
+  </template>
+
+  <!-- children support! -->
+  <template name="ElementWithChildren">
+    <rectangle color="#2299FF" padding="8" align_self="start" round="4" border="2" border_color="#ffffff" flex_direction="column">
+      <CHILDREN/>
+    </rectangle>
+  </template>
+</layout>

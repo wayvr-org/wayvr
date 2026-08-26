@@ -2,7 +2,8 @@ use crate::{
 	color::ParentColor,
 	layout::WidgetID,
 	parser::{
-		AttribPair, ParserContext, ParserFile, get_asset_path_from_kv, parse_children, parse_widget_universal,
+		AttribPair, ParseChildResult, ParserContext, ParserFile, get_asset_path_from_kv, parse_children,
+		parse_widget_universal,
 		style::{parse_color_opt, parse_style},
 	},
 	renderer_vk::text::custom_glyph::CustomGlyphData,
@@ -16,7 +17,7 @@ pub fn parse_widget_sprite<'a>(
 	parent_id: WidgetID,
 	attribs: &[AttribPair],
 	tag_name: &str,
-) -> anyhow::Result<WidgetID> {
+) -> anyhow::Result<(ParseChildResult, WidgetID)> {
 	let mut params = WidgetSpriteParams::default();
 	let style = parse_style(ctx, attribs, tag_name);
 
@@ -53,7 +54,5 @@ pub fn parse_widget_sprite<'a>(
 	let (widget, _) = ctx.layout.add_child(parent_id, WidgetSprite::create(params), style)?;
 
 	parse_widget_universal(ctx, &widget, attribs, tag_name);
-	parse_children(file, ctx, node, widget.id)?;
-
-	Ok(widget.id)
+	Ok((parse_children(file, ctx, node, widget.id)?, widget.id))
 }

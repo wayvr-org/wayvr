@@ -17,7 +17,7 @@ pub fn parse_component_radio_group<'a>(
 	let (widget, component) = radio_group::construct(&mut ctx.get_construct_essentials(parent_id), style)?;
 
 	process_component(ctx, Component(component), widget.id, attribs);
-	parse_children(file, ctx, node, widget.id)?;
+	let _ = parse_children(file, ctx, node, widget.id)?;
 
 	Ok(widget.id)
 }
