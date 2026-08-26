@@ -19,4 +19,13 @@
   <macro name="video_overlay_component" looping="1" width="100%" height="auto" max_height="100%" aspect_ratio="1.777777" position="relative"/>
 
   <macro name="video_overlay_content" new_pass="1" position="absolute" width="100%" height="100%" padding_bottom="32"/>
+
+  <!-- src_builtin, aspect_ratio -->
+  <template name="WelcomeVideo">
+    <Video macro="video_overlay_component" src_builtin="${src_builtin}" aspect_ratio="${aspect_ratio}">
+      <div macro="video_overlay_content">
+        <CHILDREN/>
+      </div>
+    </Video>
+  </template>
 </layout>

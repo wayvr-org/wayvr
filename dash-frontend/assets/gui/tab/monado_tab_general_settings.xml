@@ -1,7 +1,27 @@
 <layout version="2">
   <include src="@/gui/t_group_box.xml" />
 
-  <macro name="slider" width="100%" height="24"/>
+  <template name="CKRow">
+    <div gap="8" width="~s_width">
+      <CHILDREN/>
+    </div>
+  </template>
+
+  <!-- title, id -->
+  <template name="CKSlider">
+    <div gap="8" flex_direction="column" width="100%">
+      <label text="${title}"/>
+      <Slider id="${id}" min_value="0" max_value="100" width="100%" height="24"/>
+    </div>
+  </template>
+
+  <!-- title, id -->
+  <template name="CKColSel">
+    <div gap="8" flex_direction="column" width="100%">
+      <label text="${title}"/>
+      <ColorSelector id="cs_keying" height="24" width="100%"/>
+    </div>
+  </template>
 
   <vars>
     <var key="s_width" value="500"/>
@@ -9,48 +29,29 @@
 
   <elements>
     <div flex_direction="column" gap="8">
-      <rectangle macro="group_box">
+      <!-- headset brightness -->
+      <GroupBox>
         <GroupBoxTitle src_builtin="@/dashboard/settings.svg" translation="GENERAL_SETTINGS" />
 
         <label translation="DISPLAY_BRIGHTNESS" />
         <Slider id="slider_brightness" width="300" height="24" min_value="0" max_value="140" />
-      </rectangle>
-      <rectangle macro="group_box">
+      </GroupBox>
+
+      <!-- color keying -->
+      <GroupBox>
         <GroupBoxTitle src_builtin="@/dashboard/settings.svg" translation="APP_SETTINGS.COLOR_KEYING" />
-        <div gap="8" width="~s_width">
-          <div gap="8" flex_direction="column" width="100%">
-            <label text="Color"/>
-            <ColorSelector id="cs_keying" height="24" width="100%"/>
-          </div>
+        <CKRow>
+          <CKColSel title="Color" id="cs_keying"/>
+          <CKSlider title="Despill" id="slider_keying_despill"/>
+          <CKSlider title="Curve (0 = disabled)" id="slider_keying_curve"/>
+        </CKRow>
 
-          <div gap="8" flex_direction="column" width="100%">
-            <label text="Despill"/>
-            <Slider id="slider_keying_despill" min_value="0" max_value="100" macro="slider"/>
-          </div>
-    
-          <div gap="8" flex_direction="column" width="100%">
-            <label text="Curve (0 = disabled)"/>
-            <Slider id="slider_keying_curve" min_value="0" max_value="100" macro="slider"/>
-          </div>
-        </div>
-
-        <div gap="8" width="~s_width">
-          <div gap="8" flex_direction="column" width="100%">
-            <label text="Hue range"/>
-            <Slider id="slider_keying_hue_range" min_value="0" max_value="100" macro="slider"/>
-          </div>
-    
-          <div gap="8" flex_direction="column" width="100%">
-            <label text="Saturation range"/>
-            <Slider id="slider_keying_saturation_range" min_value="0" max_value="100" macro="slider"/>
-          </div>
-
-          <div gap="8" flex_direction="column" width="100%">
-            <label text="Value range"/>
-            <Slider id="slider_keying_value_range" min_value="0" max_value="100" macro="slider"/>
-          </div>
-        </div>
-      </rectangle>
+        <CKRow>
+          <CKSlider title="Hue range" id="slider_keying_hue_range"/>
+          <CKSlider title="Saturation range" id="slider_keying_saturation_range"/>
+          <CKSlider title="Value range" id="slider_keying_value_range"/>
+        </CKRow>
+      </GroupBox>
     </div>
   </elements>
 </layout>

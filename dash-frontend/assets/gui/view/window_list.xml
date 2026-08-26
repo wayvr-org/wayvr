@@ -1,9 +1,0 @@
-<layout version="2">
-  <include src="@/gui/t_group_box.xml" />
-
-  <elements>
-    <rectangle macro="group_box" flex_direction="row" align_items="center">
-      <div id="list_parent" gap="8" flex_direction="row" flex_wrap="wrap" flex_grow="1" />
-    </rectangle>
-  </elements>
-</layout>

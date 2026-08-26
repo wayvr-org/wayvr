@@ -2,13 +2,11 @@
   <include src_builtin="welcome_common.xml"/>
   
   <elements>
-    <Video macro="video_overlay_component" src_builtin="@/video/onboarding_double_press.ivf">
-      <div macro="video_overlay_content">
-        <PageTitle icon="@/dashboard/panorama.svg" translation="WELCOME.WORKING_SET"/>
-        <div position="relative" align_self="end" padding="16">
-          <TextDesc translation="WELCOME.DOUBLE_PRESS_TO_TOGGLE"/>
-        </div>
+    <WelcomeVideo src_builtin="@/video/onboarding_double_press.ivf">
+      <PageTitle icon="@/dashboard/panorama.svg" translation="WELCOME.WORKING_SET"/>
+      <div position="relative" align_self="end" padding="16">
+        <TextDesc translation="WELCOME.DOUBLE_PRESS_TO_TOGGLE"/>
       </div>
-    </Video>
+    </WelcomeVideo>
   </elements>
 </layout>
