@@ -68,7 +68,8 @@ pub fn new_passthru(name: Arc<str>, app: &AppState) -> OverlayWindowConfig {
 
 struct PassthruBackend {
     frame_meta: FrameMeta,
-    rendered: bool,
+    dirty: bool,
+    pipeline: Option<Arc<WGfxPipeline<Vert2Uv>>>,
     interaction_transform: Affine2,
     scale: f32,
     overlay_id: OverlayID,
@@ -86,7 +87,8 @@ impl PassthruBackend {
                 ..Default::default()
             },
             interaction_transform: ui_transform(DEFAULT_EXTENT),
-            rendered: false,
+            dirty: true,
+            pipeline: None,
             scale,
             overlay_id: OverlayID::null(),
         }
@@ -118,12 +120,18 @@ impl PassthruBackend {
                 )));
             }
         }
-        self.rendered = false;
+        self.dirty = true;
     }
 }
 
 impl OverlayBackend for PassthruBackend {
-    fn init(&mut self, _app: &mut AppState) -> anyhow::Result<()> {
+    fn init(&mut self, app: &mut AppState) -> anyhow::Result<()> {
+        let pipeline = app.gfx.create_pipeline(
+            app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
+            app.gfx_extras.shaders.get("frag_color").unwrap(), // want panic
+            WPipelineCreateInfo::new(app.gfx.surface_format),
+        )?;
+        self.pipeline = Some(pipeline);
         Ok(())
     }
     fn pause(&mut self, _app: &mut AppState) -> anyhow::Result<()> {
@@ -133,10 +141,10 @@ impl OverlayBackend for PassthruBackend {
         Ok(())
     }
     fn should_render(&mut self, _app: &mut AppState) -> anyhow::Result<ShouldRender> {
-        Ok(if self.rendered {
-            ShouldRender::Can
-        } else {
+        Ok(if self.dirty {
             ShouldRender::Should
+        } else {
+            ShouldRender::Can
         })
     }
     fn render(
@@ -144,12 +152,7 @@ impl OverlayBackend for PassthruBackend {
         app: &mut AppState,
         rdr: &mut crate::windowing::backend::RenderResources,
     ) -> anyhow::Result<()> {
-        // this is heavy, but only done once
-        let pipeline: Arc<WGfxPipeline<Vert2Uv>> = app.gfx.create_pipeline(
-            app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
-            app.gfx_extras.shaders.get("frag_color").unwrap(), // want panic
-            WPipelineCreateInfo::new(app.gfx.surface_format),
-        )?;
+        let pipeline = self.pipeline.as_ref().unwrap();
 
         let color = WguiColorName::Primary
             .to_wgui_color()
@@ -197,7 +200,7 @@ impl OverlayBackend for PassthruBackend {
 
         rdr.cmd_buf_single().run_ref(&pass)?;
 
-        //self.rendered = true;
+        self.dirty = false;
         Ok(())
     }
     fn frame_meta(&mut self) -> Option<FrameMeta> {
@@ -207,6 +210,8 @@ impl OverlayBackend for PassthruBackend {
         match event_data {
             OverlayEventData::IdAssigned(id) => self.overlay_id = id,
             OverlayEventData::ResizeRequest(new_size) => self.resize(app, new_size),
+            // border color comes from the palette
+            OverlayEventData::ColorPaletteRefresh => self.dirty = true,
             _ => {}
         }
         Ok(())
