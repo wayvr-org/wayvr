@@ -325,7 +325,7 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
         log::trace!("Rendering frame");
 
         for o in overlays.values_mut() {
-            if o.config.active_state.is_some() {
+            if o.data.visible {
                 let ShouldRender::Should = o.should_render(&mut app)? else {
                     continue;
                 };
