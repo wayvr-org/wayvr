@@ -138,6 +138,7 @@ impl OverlayBackend for PassthruBackend {
         Ok(())
     }
     fn resume(&mut self, _app: &mut AppState) -> anyhow::Result<()> {
+        self.dirty = true;
         Ok(())
     }
     fn should_render(&mut self, _app: &mut AppState) -> anyhow::Result<ShouldRender> {
