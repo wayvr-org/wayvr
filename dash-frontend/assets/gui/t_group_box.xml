@@ -9,8 +9,9 @@
     gap="8"
     round="8"/>
   
+  <!-- id -->
   <template name="GroupBox">
-    <rectangle macro="group_box">
+    <rectangle macro="group_box" id="rect">
       <CHILDREN/>
     </rectangle>
   </template>

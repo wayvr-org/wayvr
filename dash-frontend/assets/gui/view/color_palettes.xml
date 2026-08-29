@@ -20,7 +20,7 @@
   </template>
 
   <elements>
-    <div flex_direction="column" gap="8" width="100%" align_items="center">
+    <div flex_direction="column" gap="8" width="100%" align_items="center" overflow_y="scroll">
       <div id="list_parent" flex_grow="1" flex_wrap="wrap" flex_direction="row" gap="4" width="100%" justify_content="center"></div>
     </div>
   </elements>

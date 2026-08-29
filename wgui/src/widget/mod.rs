@@ -608,8 +608,16 @@ impl WidgetState {
 
 						let mult = scrollbar_info.get_potential_scroll_axis_multiplier(params.taffy_layout);
 
-						let scroll_diff_x = if mult.x == 0.0 { 0.0 } else { -mouse_diff.x / mult.x };
-						let scroll_diff_y = if mult.y == 0.0 { 0.0 } else { -mouse_diff.y / mult.y };
+						let scroll_diff_x = if mult.x == 0.0 || !active_x {
+							0.0
+						} else {
+							-mouse_diff.x / mult.x
+						};
+						let scroll_diff_y = if mult.y == 0.0 || !active_y {
+							0.0
+						} else {
+							-mouse_diff.y / mult.y
+						};
 
 						self.data.scrolling_target = self.data.swipe_scroll_start + Vec2::new(scroll_diff_x, scroll_diff_y);
 						params.alterables.mark_tick(self.obj.get_id());

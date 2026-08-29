@@ -3,7 +3,7 @@
 
   <!-- device_name, device_icon -->
   <template name="DeviceSlider">
-    <GroupBox>
+    <GroupBox id="rect">
       <div width="100%" align_items="center" justify_content="center" gap="8">
         <sprite src_builtin="${device_icon}" width="16" height="16" color="on_background" />
         <label text="${device_name}" margin_right="8" size="12" weight="bold" color="on_background" />
