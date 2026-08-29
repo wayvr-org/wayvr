@@ -47,8 +47,17 @@
 
   <elements>
     <div flex_direction="column" gap="4">
-      <div id="devices" flex_direction="column" gap="4" max_height="400" overflow_y="scroll">
+      <!--
+        this div shouldn't be  technically needed,  but there's a bug in
+        the  newest  taffy  version  (or we're doing  something  wrong),
+        causing the scrollbar  to show up, even if it's not overflowing.
+        OVERFLOW_START_THRESHOLD_UNITS is already set to 3, but it's not
+        sufficient enough in this case?? (margin_bottom="4" fixes that).
+      -->
+      <div width="100%" flex_direction="column" max_height="400" overflow_y="scroll">
+        <div id="devices" width="100%" flex_direction="column" gap="4" margin_bottom="4">
 
+        </div>
       </div>
 
       <!-- bottom buttons -->
