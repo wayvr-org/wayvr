@@ -1,10 +1,10 @@
-use glam::FloatExt;
+use glam::{FloatExt, Mat4, Vec2, Vec3};
 
 use crate::{
 	drawing::Boundary,
 	event::{CallbackDataCommon, EventAlterables},
 	layout::{LayoutState, WidgetID},
-	widget::{WidgetData, WidgetObj},
+	widget::{WidgetData, WidgetObj, label::WidgetLabel},
 };
 
 pub enum AnimationEasing {
@@ -53,12 +53,37 @@ pub struct CallbackData<'a> {
 }
 
 pub type AnimationCallback = Box<dyn Fn(&mut CallbackDataCommon, &mut CallbackData)>;
+
+#[derive(Clone, Copy)]
+pub enum AnimationDuration {
+	Seconds(f32), // multiplied by animation_mult
+	SecondsFixed(f32),
+	Infinity,
+}
+
+impl AnimationDuration {
+	pub fn to_ticks(&self, ticks_per_seconds: u32, animation_mult: f32) -> u32 {
+		match self {
+			AnimationDuration::Seconds(secs) => (secs * ticks_per_seconds as f32 * animation_mult) as u32,
+			AnimationDuration::SecondsFixed(secs) => (secs * ticks_per_seconds as f32) as u32,
+			AnimationDuration::Infinity => u32::MAX,
+		}
+	}
+}
+
+struct Ticks {
+	remaining: u32,
+	duration: u32,
+}
+
 pub struct Animation {
 	target_widget: WidgetID,
 
 	id: u32,
-	ticks_remaining: u32,
-	ticks_duration: u32,
+	duration: AnimationDuration,
+
+	// filled-in at first iteration
+	ticks: Option<Ticks>,
 
 	easing: AnimationEasing,
 
@@ -70,14 +95,52 @@ pub struct Animation {
 }
 
 impl Animation {
-	pub fn new(target_widget: WidgetID, ticks: u32, easing: AnimationEasing, callback: AnimationCallback) -> Self {
-		Self::new_ex(target_widget, 0, ticks, easing, callback)
+	pub fn new(
+		target_widget: WidgetID,
+		duration: AnimationDuration,
+		easing: AnimationEasing,
+		callback: AnimationCallback,
+	) -> Self {
+		Self::new_ex(target_widget, 0, duration, easing, callback)
+	}
+
+	pub fn effect_slide(
+		target_widget: WidgetID,
+		duration: AnimationDuration,
+		easing: AnimationEasing,
+		dir: Vec2,
+	) -> Self {
+		Animation::new(
+			target_widget,
+			duration,
+			easing,
+			Box::new(move |common, data| {
+				data.data.transform =
+					Mat4::from_translation(Vec3::new((1.0 - data.pos) * dir.x, (1.0 - data.pos) * dir.y, 0.0));
+				common.alterables.mark_redraw();
+			}),
+		)
+	}
+
+	pub fn effect_label_fade_in(target_widget: WidgetID, duration: AnimationDuration, easing: AnimationEasing) -> Self {
+		Animation::new(
+			target_widget,
+			duration,
+			easing,
+			Box::new(move |common, data| {
+				let Ok(label) = data.obj.cast_mut::<WidgetLabel>() else {
+					debug_assert!(false); // cast failed
+					return;
+				};
+				label.set_color(common, label.get_color().with_alpha(data.pos), true);
+			}),
+		)
 	}
 
 	pub fn new_ex(
 		target_widget: WidgetID,
 		animation_id: u32,
-		ticks: u32,
+		duration: AnimationDuration,
 		easing: AnimationEasing,
 		callback: AnimationCallback,
 	) -> Self {
@@ -86,8 +149,8 @@ impl Animation {
 			id: animation_id,
 			callback,
 			easing,
-			ticks_duration: ticks,
-			ticks_remaining: ticks,
+			duration,
+			ticks: None,
 			last_tick: false,
 			pos: 0.0,
 			pos_prev: 0.0,
@@ -130,8 +193,18 @@ pub struct Animations {
 impl Animations {
 	pub fn tick(&mut self, state: &LayoutState, alterables: &mut EventAlterables) {
 		for anim in &mut self.running_animations {
-			let x = 1.0 - (anim.ticks_remaining as f32 / anim.ticks_duration as f32);
-			let pos = if anim.ticks_remaining > 0 {
+			let mut ticks = anim.ticks.take().unwrap_or_else(|| {
+				let ticks = anim
+					.duration
+					.to_ticks(state.ticks_per_seconds, state.theme.animation_mult);
+				Ticks {
+					remaining: ticks,
+					duration: ticks,
+				}
+			});
+
+			let x = 1.0 - (ticks.remaining as f32 / ticks.duration as f32);
+			let pos = if ticks.remaining > 0 {
 				anim.easing.interpolate(x)
 			} else {
 				anim.last_tick = true;
@@ -145,8 +218,10 @@ impl Animations {
 				let _ = anim.call(state, alterables, 1.0);
 				alterables.needs_redraw = true;
 			} else {
-				anim.ticks_remaining -= 1;
+				ticks.remaining -= 1;
 			}
+
+			anim.ticks = Some(ticks);
 		}
 
 		self.running_animations.retain(|anim| !anim.last_tick);
@@ -155,15 +230,23 @@ impl Animations {
 	pub fn process(&mut self, state: &LayoutState, alterables: &mut EventAlterables, alpha: f32) {
 		for anim in &mut self.running_animations {
 			let pos = anim.pos_prev.lerp(anim.pos, alpha);
-			if !anim.call(state, alterables, pos) {
-				anim.ticks_remaining = 0;
+			if !anim.call(state, alterables, pos)
+				&& let Some(ticks) = &mut anim.ticks
+			{
+				ticks.remaining = 0;
 			}
 		}
 	}
 
-	pub fn add(&mut self, anim: Animation) {
+	pub fn add(&mut self, anim: Animation, state: &LayoutState, alterables: &mut EventAlterables) {
 		// prevent running two animations at once
 		self.stop_by_widget(anim.target_widget, Some(anim.id));
+
+		// call the animation for the first time with pos 0.0
+		if !anim.call(state, alterables, 0.0) {
+			return;
+		}
+
 		self.running_animations.push(anim);
 	}
 

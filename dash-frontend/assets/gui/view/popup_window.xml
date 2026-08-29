@@ -20,7 +20,7 @@
         <rectangle position="absolute" width="100%" height="3" round="4" color="highlight(opacity-0.1)" />
 
         <!-- Top bar contents -->
-        <div gap="16" align_items="center">
+        <div gap="16" align_items="center" id="top_bar_contents">
           <!-- Back button -->
           <Button id="but_back" width="48" height="48" color="on_background_contrast(transparent)" border_color="on_background_contrast(transparent)">
             <sprite src_builtin="@/dashboard/back.svg" width="24" height="24" color="on_background_contrast" />

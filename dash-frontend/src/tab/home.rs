@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, rc::Rc};
 
 use wgui::{
-	animation::{Animation, AnimationEasing},
+	animation::{Animation, AnimationDuration, AnimationEasing},
 	assets::AssetPathRef,
 	color::{WguiColor, WguiColorName, WguiNamedColor},
 	components::{ComponentTrait, button::ComponentButton},
@@ -61,7 +61,7 @@ fn get_supporter_anim(
 	Animation::new_ex(
 		btn.base().get_id(),
 		1234,
-		480,
+		AnimationDuration::SecondsFixed(8.0),
 		AnimationEasing::Linear,
 		Box::new(move |common, data| {
 			let opacity_in = f32::clamp(data.pos * FADE_SPEED, 0.0, 1.0);

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use anyhow::Context;
 use wgui::{
-    animation::{Animation, AnimationEasing},
+    animation::{Animation, AnimationDuration, AnimationEasing},
     color::{WguiColor, WguiColorName},
     components::button::ComponentButton,
     event::CallbackDataCommon,
@@ -76,11 +76,7 @@ impl InteractLockHandler {
         }
     }
 
-    pub fn toggle(
-        &mut self,
-        common: &mut CallbackDataCommon,
-        anim_mult: f32,
-    ) -> Box<ModifyOverlayTask> {
+    pub fn toggle(&mut self, common: &mut CallbackDataCommon) -> Box<ModifyOverlayTask> {
         let rect_color = self.color;
 
         self.interactable = !self.interactable;
@@ -91,7 +87,7 @@ impl InteractLockHandler {
         let anim = if self.interactable {
             Animation::new(
                 self.id,
-                (10. * anim_mult) as _,
+                AnimationDuration::Seconds(0.1666),
                 AnimationEasing::OutQuad,
                 Box::new(move |common, data| {
                     let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();
@@ -108,7 +104,7 @@ impl InteractLockHandler {
         } else {
             Animation::new(
                 self.id,
-                (10. * anim_mult) as _,
+                AnimationDuration::Seconds(0.1666),
                 AnimationEasing::OutBack,
                 Box::new(move |common, data| {
                     let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();

@@ -15,7 +15,7 @@ use anyhow::Context;
 use glam::{FloatExt, Mat4, Vec2, vec2, vec3};
 use smallvec::{SmallVec, smallvec};
 use wgui::{
-    animation::{Animation, AnimationEasing},
+    animation::{Animation, AnimationDuration, AnimationEasing},
     assets::AssetPathRef,
     color::{WguiColor, WguiColorName},
     event::{self, CallbackMetadata, EventListenerKind},
@@ -73,8 +73,6 @@ pub(super) fn create_keyboard_panel(
     let mut panel = GuiPanel::new_from_template(app, "gui/keyboard.xml", state, params)?;
 
     let doc_params = new_doc_params(&mut panel);
-
-    let anim_mult = app.wgui_theme.animation_mult;
 
     let root = panel
         .parser_state
@@ -206,7 +204,7 @@ pub(super) fn create_keyboard_panel(
                         let k = key_state.clone();
                         move |common, data, _app, _state| {
                             common.alterables.trigger_haptics();
-                            on_enter_anim(k.clone(), common, data, anim_mult, width_mul);
+                            on_enter_anim(k.clone(), common, data, width_mul);
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -218,7 +216,7 @@ pub(super) fn create_keyboard_panel(
                         let k = key_state.clone();
                         move |common, data, _app, _state| {
                             common.alterables.trigger_haptics();
-                            on_leave_anim(k.clone(), common, data, anim_mult, width_mul);
+                            on_leave_anim(k.clone(), common, data, width_mul);
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -415,12 +413,11 @@ fn on_enter_anim(
     key_state: Rc<KeyState>,
     common: &mut event::CallbackDataCommon,
     data: &event::CallbackData,
-    anim_mult: f32,
     width_mult: f32,
 ) {
     common.alterables.animate(Animation::new(
         data.widget_id,
-        (10. * anim_mult) as _,
+        AnimationDuration::Seconds(0.1666),
         AnimationEasing::OutBack,
         Box::new(move |common, data| {
             let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();
@@ -463,12 +460,11 @@ fn on_leave_anim(
     key_state: Rc<KeyState>,
     common: &mut event::CallbackDataCommon,
     data: &event::CallbackData,
-    anim_mult: f32,
     width_mult: f32,
 ) {
     common.alterables.animate(Animation::new(
         data.widget_id,
-        (15. * anim_mult) as _,
+        AnimationDuration::Seconds(0.25),
         AnimationEasing::OutQuad,
         Box::new(move |common, data| {
             let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();

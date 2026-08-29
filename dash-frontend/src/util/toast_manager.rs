@@ -1,7 +1,7 @@
 use glam::{Mat4, Vec3};
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 use wgui::{
-	animation::{Animation, AnimationEasing},
+	animation::{Animation, AnimationDuration, AnimationEasing},
 	color::{WguiColor, WguiColorName},
 	components::tooltip::{TOOLTIP_BORDER_COLOR, TOOLTIP_COLOR},
 	i18n::Translation,
@@ -45,7 +45,9 @@ impl Drop for MountedToast {
 	}
 }
 
-const TOAST_DURATION_TICKS: u32 = 150;
+fn def_toast_duration() -> AnimationDuration {
+	AnimationDuration::Seconds(2.5)
+}
 
 impl ToastManager {
 	pub fn new() -> Self {
@@ -116,9 +118,9 @@ impl ToastManager {
 		let (label, _) = layout.add_child(rect.id, label, taffy::Style { ..Default::default() })?;
 
 		// show-up animation
-		layout.animations.add(Animation::new(
+		layout.alterables.animate(Animation::new(
 			rect.id,
-			(TOAST_DURATION_TICKS as f32 * layout.state.theme.animation_mult) as u32,
+			def_toast_duration(),
 			AnimationEasing::Linear,
 			Box::new(move |common, data| {
 				let pos_showup = AnimationEasing::OutQuint.interpolate((data.pos * 4.0).min(1.0));
@@ -165,7 +167,7 @@ impl ToastManager {
 
 		if state.timeout == 0 {
 			state.toast = None;
-			state.timeout = TOAST_DURATION_TICKS;
+			state.timeout = def_toast_duration().to_ticks(layout.state.ticks_per_seconds, layout.state.theme.animation_mult);
 			// mount next
 			if let Some(content) = state.queue.pop_front() {
 				self.mount_toast(layout, &mut state, content)?;

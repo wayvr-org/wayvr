@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use taffy::prelude::length;
 
 use crate::{
-	animation::{Animation, AnimationEasing},
+	animation::{Animation, AnimationDuration, AnimationEasing},
 	color::{WguiColor, WguiColorName},
 	components::{self, Component, ComponentBase, ComponentTrait, RefreshData},
 	event::CallbackDataCommon,
@@ -292,10 +292,9 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		TooltipSide::Bottom => Vec2::new(0.0, 1.0),
 	};
 
-	let anim_mult = ess.layout.state.theme.animation_mult;
-	ess.layout.animations.add(Animation::new(
+	ess.layout.alterables.animate(Animation::new(
 		rect.id,
-		(10.0 * anim_mult) as u32,
+		AnimationDuration::Seconds(0.1666),
 		AnimationEasing::OutQuad,
 		{
 			Box::new(move |common, data| {
