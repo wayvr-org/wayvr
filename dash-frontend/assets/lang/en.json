@@ -150,6 +150,8 @@
 		"KEYBOARD_MIDDLE_CLICK": "Keyboard middle click",
 		"KEYBOARD_MIDDLE_CLICK_HELP": "Modifier to use when typing\nwith purple laser",
 		"KEYBOARD_SOUND_ENABLED": "Keyboard sounds",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED": "Keyboard swipe to type",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP": "Only works for English! Results will be drastically worse on non qwerty keyboards.",
 		"LANGUAGE": "Language",
 		"LEFT_HANDED_MOUSE": "Left-handed mouse",
 		"LEFT_HANDED_MOUSE_HELP": "Use this if mouse buttons are swapped",
@@ -243,6 +245,14 @@
 		},
 		"WHISPER_MODEL": "Speech-to-text model",
 		"WHISPER_MODEL_HELP": "Whisper model to use.\nLarger models produce more accurate\nresults, but consume more VRAM.",
+		"SWIPE_TYPE": {
+			"NEED_TO_DOWNLOAD_MODEL": "The swipe-to-type model needs to be downloaded.\nDownload it now?",
+			"MODEL_REQUIRED_TO_ENABLE": "Download the swipe-to-type model to enable this option.",
+			"REMOVE_MODEL": "Remove swipe to type model",
+			"REMOVE_MODEL_HELP": "Deletes the swipe to type model",
+			"DOWNLOAD_MODEL": "Download swipe to type model",
+			"DOWNLOAD_MODEL_HELP": "Swipe to type only works on qwerty layout keyboards"
+		},
 		"GRID_OPACITY": "Floor grid opacity",
 		"GRID_OPACITY_HELP": "Opacity of the floor grid when the skymap is enabled",
 		"XWAYLAND_BY_DEFAULT": "Run apps in Compatibility mode by default",

@@ -149,6 +149,8 @@
 		"KEYBOARD_MIDDLE_CLICK": "Clic central del teclado",
 		"KEYBOARD_MIDDLE_CLICK_HELP": "Modificador al escribir\ncon el láser púrpura",
 		"KEYBOARD_SOUND_ENABLED": "Sonidos del teclado",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED": "Deslizar para escribir",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP": "¡Solo funciona en inglés! Los resultados serán mucho peores en teclados que no sean QWERTY.",
 		"LANGUAGE": "Idioma",
 		"LEFT_HANDED_MOUSE": "Mouse para zurdos",
 		"LEFT_HANDED_MOUSE_HELP": "Úsalo si los botones del ratón están invertidos",
@@ -239,6 +241,14 @@
 		},
 		"WHISPER_MODEL": "Modelo de dictado",
 		"WHISPER_MODEL_HELP": "Modelo de Whisper a utilizar.\nLos modelos más grandes dan resultados\nmás precisos, pero consumen más VRAM.",
+		"SWIPE_TYPE": {
+			"NEED_TO_DOWNLOAD_MODEL": "El modelo de deslizar para escribir debe descargarse.\n¿Descargarlo ahora?",
+			"MODEL_REQUIRED_TO_ENABLE": "Descarga el modelo de deslizar para escribir para habilitar esta opción.",
+			"REMOVE_MODEL": "Eliminar el modelo de deslizar para escribir",
+			"REMOVE_MODEL_HELP": "Borra el modelo de deslizar para escribir",
+			"DOWNLOAD_MODEL": "Descargar el modelo de deslizar para escribir",
+			"DOWNLOAD_MODEL_HELP": "Deslizar para escribir solo funciona en teclados con distribución QWERTY"
+		},
 		"GRID_OPACITY": "Opacidad de la rejilla del suelo",
 		"GRID_OPACITY_HELP": "Opacidad de la rejilla del suelo cuando el skymap está activado",
 		"XWAYLAND_BY_DEFAULT": "Ejecutar apps en modo de compatibilidad por defecto",

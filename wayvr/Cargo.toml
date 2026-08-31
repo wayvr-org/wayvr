@@ -127,12 +127,13 @@ xkbcommon = {
 calloop = { version = "0.14.4", optional = true }
 calloop-wayland-source = { version = "0.4.1", optional = true }
 evdev = "0.13.2"
+super-swipe-type = { version = "0.4.2", optional = true }
 
 [build-dependencies]
 regex.workspace = true
 
 [features]
-default = ["openvr", "openxr", "osc", "wayland", "whisper", "x11"]
+default = ["openvr", "openxr", "osc", "wayland", "whisper", "x11", "swipe-to-type"]
 as-raw-xcb-connection = []
 feat-monado-metrics = []
 openvr = ["dep:json", "dep:ovr_overlay"]
@@ -147,5 +148,6 @@ whisper = [
   "dep:pipewire",
   "dep:whisper-rs"
 ]
+swipe-to-type = ["dep:super-swipe-type"]
 x11 = ["dep:xcb", "wlx-capture/xshm", "xkbcommon/x11"]
 xcb = ["dep:xcb"]

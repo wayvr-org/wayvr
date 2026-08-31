@@ -1,5 +1,11 @@
 use std::{rc::Rc, time::Duration};
 
+#[cfg(feature = "swipe-to-type")]
+use super::init_swipe_type_manager;
+use super::{
+    KeyButtonData, KeyState, KeyboardState, handle_mouse_motion, handle_press, handle_release,
+    layout::{self, KeyCapType},
+};
 use crate::{
     app_misc,
     gui::{
@@ -30,22 +36,18 @@ use wgui::{
         sprite::WidgetSprite,
     },
 };
-
-use super::{
-    KeyButtonData, KeyState, KeyboardState, handle_press, handle_release,
-    layout::{self, KeyCapType},
-};
+#[cfg(feature = "swipe-to-type")]
+use wlx_common::data_dir;
 
 const PIXELS_PER_UNIT: f32 = 60.;
 
-fn new_doc_params(panel: &mut GuiPanel<KeyboardState>) -> ParseDocumentParams<'static> {
+pub(super) fn new_doc_params(panel: &mut GuiPanel<KeyboardState>) -> ParseDocumentParams<'static> {
     ParseDocumentParams {
         globals: panel.layout.state.globals.clone(),
         path: AssetPath::FileOrBuiltIn("gui/keyboard.xml"),
         extra: panel.doc_extra.take().unwrap_or_default(),
     }
 }
-
 fn bool_to_rc_str(val: bool) -> Rc<str> {
     if val { "1" } else { "0" }.into()
 }
@@ -137,7 +139,7 @@ pub(super) fn create_keyboard_panel(
             params.insert_rc("width", key_width.to_string().into());
             params.insert_rc("height", key_height.to_string().into());
 
-            let mut label = key.label.into_iter();
+            let mut label = key.label.clone().into_iter();
             label
                 .next()
                 .and_then(|s| params.insert_rc("text", s.into()));
@@ -197,6 +199,9 @@ pub(super) fn create_keyboard_panel(
                     })
                 };
 
+                let key_cap_type: Rc<KeyCapType> = Rc::from(key.cap_type);
+                let key_label: Rc<Vec<String>> = Rc::from(key.label);
+
                 let width_mul = 1. / my_size_f32;
 
                 panel.add_event_listener(
@@ -228,13 +233,54 @@ pub(super) fn create_keyboard_panel(
                     EventListenerKind::MousePress,
                     Box::new({
                         let k = key_state.clone();
+                        let k_label = key_label.clone();
+                        let k_cap_type = key_cap_type.clone();
                         move |common, data, app, state| {
                             let CallbackMetadata::MouseButton(button) = data.metadata else {
                                 panic!("CallbackMetadata should contain MouseButton!");
                             };
+                            let within_key_pos = data
+                                .metadata
+                                .get_mouse_pos_normalized(&common.alterables.transform_stack);
 
-                            handle_press(app, &k, state, button);
+                            handle_press(
+                                app,
+                                &k,
+                                &k_label,
+                                &k_cap_type,
+                                &within_key_pos,
+                                state,
+                                button,
+                                button.device,
+                            );
                             on_press_anim(k.clone(), common, data);
+                            Ok(EventResult::Pass)
+                        }
+                    }),
+                );
+                panel.add_event_listener(
+                    widget_id,
+                    EventListenerKind::MouseMotion,
+                    Box::new({
+                        let k = key_state.clone();
+                        let k_label = key_label.clone();
+                        let k_cap_type = key_cap_type.clone();
+                        move |common, data, _app, state| {
+                            let within_key_pos = data
+                                .metadata
+                                .get_mouse_pos_normalized(&common.alterables.transform_stack);
+                            let CallbackMetadata::MousePosition(position) = data.metadata else {
+                                panic!("CallbackMetadata should contain MousePosition!");
+                            };
+
+                            handle_mouse_motion(
+                                &k,
+                                &k_label,
+                                &k_cap_type,
+                                state,
+                                &within_key_pos,
+                                position.device,
+                            );
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -244,10 +290,12 @@ pub(super) fn create_keyboard_panel(
                     EventListenerKind::MouseRelease,
                     Box::new({
                         let k = key_state.clone();
+                        let k_cap_type = key_cap_type.clone();
                         move |common, data, app, state| {
-                            if handle_release(app, &k, state) {
+                            if handle_release(app, &k, &k_cap_type, state) {
                                 on_release_anim(k.clone(), common, data);
                             }
+
                             Ok(EventResult::Pass)
                         }
                     }),
@@ -316,6 +364,23 @@ pub(super) fn create_keyboard_panel(
                             )?;
                             elems_changed = true;
                         }
+                    }
+                    if !app.session.config.keyboard_swipe_to_type_enabled {
+                        panel.state.swipe_typing_manager = None;
+                        panel.state.swipe_candidate_slot = None;
+
+                        super::prediction_bar::set_visible(panel, false);
+                    }
+                    if app.session.config.keyboard_swipe_to_type_enabled
+                        && panel.state.swipe_typing_manager.is_none()
+                    {
+                        #[cfg(feature = "swipe-to-type")]
+                        init_swipe_type_manager(
+                            &mut panel.state,
+                            data_dir::get_path("swipe_type").join("en.tar"),
+                        );
+
+                        super::prediction_bar::set_visible(panel, true);
                     }
                 }
 
@@ -411,7 +476,7 @@ fn set_anim_color(
     rect.params.border = key_state.border.lerp(key_state.border * 1.5, pos);
 }
 
-fn on_enter_anim(
+pub(super) fn on_enter_anim(
     key_state: Rc<KeyState>,
     common: &mut event::CallbackDataCommon,
     data: &event::CallbackData,
@@ -459,7 +524,7 @@ fn on_enter_anim(
     ));
 }
 
-fn on_leave_anim(
+pub(super) fn on_leave_anim(
     key_state: Rc<KeyState>,
     common: &mut event::CallbackDataCommon,
     data: &event::CallbackData,
@@ -509,7 +574,7 @@ fn on_leave_anim(
     ));
 }
 
-fn on_press_anim(
+pub(super) fn on_press_anim(
     key_state: Rc<KeyState>,
     common: &mut event::CallbackDataCommon,
     data: &mut event::CallbackData,
@@ -524,7 +589,7 @@ fn on_press_anim(
     key_state.drawn_state.set(true);
 }
 
-fn on_release_anim(
+pub(super) fn on_release_anim(
     key_state: Rc<KeyState>,
     common: &mut event::CallbackDataCommon,
     data: &mut event::CallbackData,

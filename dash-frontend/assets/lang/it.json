@@ -149,6 +149,8 @@
 		"KEYBOARD_MIDDLE_CLICK": "Tasto centrale tastiera",
 		"KEYBOARD_MIDDLE_CLICK_HELP": "Tasto modificatore da usare quando si scrive\ncon il laser viola",
 		"KEYBOARD_SOUND_ENABLED": "Suoni tastiera",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED": "Scorri per digitare",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP": "Funziona solo con l'inglese! I risultati saranno drasticamente peggiori su tastiere non QWERTY.",
 		"LANGUAGE": "Lingua",
 		"LEFT_HANDED_MOUSE": "Mouse per mancini",
 		"LEFT_HANDED_MOUSE_HELP": "Usalo se i tasti del mouse sono invertiti",
@@ -239,6 +241,14 @@
 		},
 		"WHISPER_MODEL": "Modello speech-to-text",
 		"WHISPER_MODEL_HELP": "Modello Whisper da utilizzare.\nModelli più grandi offrono risultati\npiù precisi, ma consumano più VRAM.",
+		"SWIPE_TYPE": {
+			"NEED_TO_DOWNLOAD_MODEL": "Il modello per scorri per digitare deve essere scaricato.\nScaricarlo ora?",
+			"MODEL_REQUIRED_TO_ENABLE": "Scarica il modello per scorri per digitare per abilitare questa opzione.",
+			"REMOVE_MODEL": "Rimuovi il modello per scorri per digitare",
+			"REMOVE_MODEL_HELP": "Elimina il modello per scorri per digitare",
+			"DOWNLOAD_MODEL": "Scarica il modello per scorri per digitare",
+			"DOWNLOAD_MODEL_HELP": "Scorri per digitare funziona solo su tastiere con layout QWERTY"
+		},
 		"GRID_OPACITY": "Opacità griglia pavimento",
 		"GRID_OPACITY_HELP": "Opacità della griglia del pavimento quando lo skymap è attivo",
 		"XWAYLAND_BY_DEFAULT": "Avvia le app in modalità compatibilità per impostazione predefinita",

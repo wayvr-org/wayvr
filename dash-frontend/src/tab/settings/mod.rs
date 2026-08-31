@@ -86,6 +86,7 @@ pub(crate) enum Task {
 	SavePlayspaceCenter,
 	SetTab(TabNameEnum),
 	SettingUpdated(SettingType),
+	SwipeTypeAction(Rc<str>),
 	UpdateBool(SettingType, bool),
 	UpdateFloat(SettingType, f32),
 	UpdateInt(SettingType, i32),
@@ -114,6 +115,17 @@ trait SettingsTab {
 	}
 
 	fn setting_updated(&mut self, _sup: &mut SettingUpdatedParams) -> anyhow::Result<()> {
+		Ok(())
+	}
+
+	fn push_task_string(
+		&mut self,
+		_action: &str,
+		_config: &mut GeneralConfig,
+		_change_kind: &mut Option<ConfigChangeKind>,
+		_layout: &mut Layout,
+		_state: &mut ParserState,
+	) -> anyhow::Result<()> {
 		Ok(())
 	}
 
@@ -266,6 +278,16 @@ impl<T> Tab<T> for TabSettings<T> {
 						_ => { /* do nothing */ }
 					}
 				}
+				Task::SwipeTypeAction(action) => {
+					if let Some(tab) = self.current_tab.as_mut() {
+						let config = frontend.interface.general_config(data);
+						let mut change_kind: Option<ConfigChangeKind> = None;
+						tab.push_task_string(&action, config, &mut change_kind, &mut frontend.layout, &mut self.state)?;
+						if let Some(change_kind) = change_kind {
+							frontend.interface.config_changed(data, change_kind);
+						}
+					}
+				}
 			}
 		}
 
@@ -341,6 +363,7 @@ pub(crate) enum SettingType {
 	InvertScrollDirectionY,
 	KeyboardMiddleClick,
 	KeyboardSoundEnabled,
+	KeyboardSwipeToTypeEnabled,
 	Language,
 	LeftHandedMouse,
 	LongPressDuration,
@@ -399,6 +422,7 @@ impl SettingType {
 			Self::InvertScrollDirectionX => &mut config.invert_scroll_direction_x,
 			Self::InvertScrollDirectionY => &mut config.invert_scroll_direction_y,
 			Self::KeyboardSoundEnabled => &mut config.keyboard_sound_enabled,
+			Self::KeyboardSwipeToTypeEnabled => &mut config.keyboard_swipe_to_type_enabled,
 			Self::LeftHandedMouse => &mut config.left_handed_mouse,
 			Self::NotificationsEnabled => &mut config.notifications_enabled,
 			Self::NotificationsSoundEnabled => &mut config.notifications_sound_enabled,
@@ -547,6 +571,7 @@ impl SettingType {
 			Self::InvertScrollDirectionY => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_Y"),
 			Self::KeyboardMiddleClick => Ok("APP_SETTINGS.KEYBOARD_MIDDLE_CLICK"),
 			Self::KeyboardSoundEnabled => Ok("APP_SETTINGS.KEYBOARD_SOUND_ENABLED"),
+			Self::KeyboardSwipeToTypeEnabled => Ok("APP_SETTINGS.KEYBOARD_SWIPE_TO_TYPE_ENABLED"),
 			Self::Language => Ok("APP_SETTINGS.LANGUAGE"),
 			Self::LeftHandedMouse => Ok("APP_SETTINGS.LEFT_HANDED_MOUSE"),
 			Self::LongPressDuration => Ok("APP_SETTINGS.LONG_PRESS_DURATION"),
@@ -601,6 +626,7 @@ impl SettingType {
 			Self::InputCaptureMethod => Some("APP_SETTINGS.INPUT_CAPTURE_METHOD_HELP"),
 			Self::InputEmulationMethod => Some("APP_SETTINGS.INPUT_EMULATION_METHOD_HELP"),
 			Self::KeyboardMiddleClick => Some("APP_SETTINGS.KEYBOARD_MIDDLE_CLICK_HELP"),
+			Self::KeyboardSwipeToTypeEnabled => Some("APP_SETTINGS.KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP"),
 			Self::LeftHandedMouse => Some("APP_SETTINGS.LEFT_HANDED_MOUSE_HELP"),
 			Self::MouseAcceleration => Some("APP_SETTINGS.POINTER_ACCELERATION_HELP"),
 			Self::ScreenRenderDown => Some("APP_SETTINGS.SCREEN_RENDER_DOWN_HELP"),

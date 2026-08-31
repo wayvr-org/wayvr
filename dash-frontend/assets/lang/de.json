@@ -149,6 +149,8 @@
 		"KEYBOARD_MIDDLE_CLICK": "Tastatur-Mittelklick",
 		"KEYBOARD_MIDDLE_CLICK_HELP": "Modifier-Taste bei der Eingabe\nmit dem lila Laser",
 		"KEYBOARD_SOUND_ENABLED": "Tastatursounds",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED": "Wischen zum Tippen",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP": "Funktioniert nur für Englisch! Die Ergebnisse sind auf anderen Tastaturen als QWERTY deutlich schlechter.",
 		"LANGUAGE": "Sprache",
 		"LEFT_HANDED_MOUSE": "Linkshänder-Maus",
 		"LEFT_HANDED_MOUSE_HELP": "Nutze dies, wenn die Maustasten vertauscht sind",
@@ -239,6 +241,14 @@
 		},
 		"WHISPER_MODEL": "Sprache-zu-Text-Modell",
 		"WHISPER_MODEL_HELP": "Zu verwendendes Whisper-Modell.\nGrößere Modelle liefern präzisere\nErgebnisse, verbrauchen aber mehr VRAM.",
+		"SWIPE_TYPE": {
+			"NEED_TO_DOWNLOAD_MODEL": "Das Wisch-Tipp-Modell muss heruntergeladen werden.\nJetzt herunterladen?",
+			"MODEL_REQUIRED_TO_ENABLE": "Lade das Wisch-Tipp-Modell herunter, um diese Option zu aktivieren.",
+			"REMOVE_MODEL": "Wisch-Tipp-Modell entfernen",
+			"REMOVE_MODEL_HELP": "Löscht das Wisch-Tipp-Modell",
+			"DOWNLOAD_MODEL": "Wisch-Tipp-Modell herunterladen",
+			"DOWNLOAD_MODEL_HELP": "Wischen zum Tippen funktioniert nur auf Tastaturen mit QWERTY-Layout"
+		},
 		"GRID_OPACITY": "Bodenraster-Deckkraft",
 		"GRID_OPACITY_HELP": "Deckkraft des Bodengitters, wenn die Skymap aktiviert ist",
 		"XWAYLAND_BY_DEFAULT": "Apps standardmäßig im Kompatibilitätsmodus starten",

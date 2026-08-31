@@ -149,6 +149,8 @@
 		"KEYBOARD_MIDDLE_CLICK": "Środkowy przycisk myszy (klawiatura)",
 		"KEYBOARD_MIDDLE_CLICK_HELP": "Modyfikator używany podczas\npisania fioletowym laserem",
 		"KEYBOARD_SOUND_ENABLED": "Dźwięki klawiatury",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED": "Przesuwaj, aby pisać",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP": "Działa tylko dla języka angielskiego! Wyniki będą znacznie gorsze na klawiaturach innych niż QWERTY.",
 		"LANGUAGE": "Język",
 		"LEFT_HANDED_MOUSE": "Mysz dla leworęcznych",
 		"LEFT_HANDED_MOUSE_HELP": "Użyj, jeśli przyciski myszy są zamienione",
@@ -239,6 +241,14 @@
 		},
 		"WHISPER_MODEL": "Model mowy na tekst",
 		"WHISPER_MODEL_HELP": "Model Whisper do użycia.\nWiększe modele dają dokładniejsze\nwyniki, ale zużywają więcej pamięci VRAM.",
+		"SWIPE_TYPE": {
+			"NEED_TO_DOWNLOAD_MODEL": "Model do pisania przesuwaniem musi zostać pobrany.\nPobrać go teraz?",
+			"MODEL_REQUIRED_TO_ENABLE": "Pobierz model do pisania przesuwaniem, aby włączyć tę opcję.",
+			"REMOVE_MODEL": "Usuń model do pisania przesuwaniem",
+			"REMOVE_MODEL_HELP": "Usuwa model do pisania przesuwaniem",
+			"DOWNLOAD_MODEL": "Pobierz model do pisania przesuwaniem",
+			"DOWNLOAD_MODEL_HELP": "Pisanie przesuwaniem działa tylko na klawiaturach QWERTY"
+		},
 		"GRID_OPACITY": "Przezroczystość siatki podłogi",
 		"GRID_OPACITY_HELP": "Przezroczystość siatki podłogi przy włączonym Skymapie",
 		"XWAYLAND_BY_DEFAULT": "Uruchamiaj aplikacje domyślnie w trybie kompatybilności",

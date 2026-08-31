@@ -149,6 +149,8 @@
 		"KEYBOARD_MIDDLE_CLICK": "キーボード中クリック",
 		"KEYBOARD_MIDDLE_CLICK_HELP": "紫色のレーザーで\n入力する際の修飾キー",
 		"KEYBOARD_SOUND_ENABLED": "キーボード入力音",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED": "スワイプ入力",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP": "英語のみで動作します！QWERTY以外のキーボードでは結果が大幅に悪くなります。",
 		"LANGUAGE": "言語",
 		"LEFT_HANDED_MOUSE": "左利きマウス",
 		"LEFT_HANDED_MOUSE_HELP": "マウスボタンを入れ替えて使用する場合にチェック",
@@ -239,6 +241,14 @@
 		},
 		"WHISPER_MODEL": "音声認識モデル",
 		"WHISPER_MODEL_HELP": "使用するWhisperモデルを選択。\nモデルが大きいほど精度は向上するが、\nVRAMの消費量が増える。",
+		"SWIPE_TYPE": {
+			"NEED_TO_DOWNLOAD_MODEL": "スワイプ入力モデルをダウンロードする必要があります。\n今すぐダウンロードしますか？",
+			"MODEL_REQUIRED_TO_ENABLE": "このオプションを有効にするには、スワイプ入力モデルをダウンロードしてください。",
+			"REMOVE_MODEL": "スワイプ入力モデルを削除",
+			"REMOVE_MODEL_HELP": "スワイプ入力モデルを削除します",
+			"DOWNLOAD_MODEL": "スワイプ入力モデルをダウンロード",
+			"DOWNLOAD_MODEL_HELP": "スワイプ入力はQWERTYレイアウトのキーボードでのみ動作します"
+		},
 		"GRID_OPACITY": "フロアグリッドの不透明度",
 		"GRID_OPACITY_HELP": "スカイマップ有効時のフロアグリッドの不透明度",
 		"XWAYLAND_BY_DEFAULT": "デフォルトで互換モードでアプリを起動",

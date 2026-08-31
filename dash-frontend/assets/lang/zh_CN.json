@@ -149,6 +149,8 @@
 		"KEYBOARD_MIDDLE_CLICK": "键盘鼠标中键",
 		"KEYBOARD_MIDDLE_CLICK_HELP": "使用紫色激光输入时的\n修饰键",
 		"KEYBOARD_SOUND_ENABLED": "键盘声音",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED": "滑动输入",
+		"KEYBOARD_SWIPE_TO_TYPE_ENABLED_HELP": "仅支持英语！在非 QWERTY 键盘上效果会明显变差。",
 		"LANGUAGE": "语言",
 		"LEFT_HANDED_MOUSE": "左手鼠标模式",
 		"LEFT_HANDED_MOUSE_HELP": "若鼠标按键已互换，请启用此项",
@@ -239,6 +241,14 @@
 		},
 		"WHISPER_MODEL": "语音转文本模型",
 		"WHISPER_MODEL_HELP": "所使用的 Whisper 模型。\n模型越大，结果越准确，\n但占用的显存 (VRAM) 越多。",
+		"SWIPE_TYPE": {
+			"NEED_TO_DOWNLOAD_MODEL": "需要下载滑动输入模型。\n现在下载吗？",
+			"MODEL_REQUIRED_TO_ENABLE": "请下载滑动输入模型以启用此选项。",
+			"REMOVE_MODEL": "移除滑动输入模型",
+			"REMOVE_MODEL_HELP": "删除滑动输入模型",
+			"DOWNLOAD_MODEL": "下载滑动输入模型",
+			"DOWNLOAD_MODEL_HELP": "滑动输入仅适用于 QWERTY 布局的键盘"
+		},
 		"GRID_OPACITY": "地面网格不透明度",
 		"GRID_OPACITY_HELP": "启用天空盒时地面网格的不透明度",
 		"XWAYLAND_BY_DEFAULT": "默认以兼容模式运行应用程序",

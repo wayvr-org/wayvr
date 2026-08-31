@@ -66,6 +66,7 @@ struct State {
 	checked: bool,
 	hovered: bool,
 	down: bool,
+	disabled: bool,
 	on_toggle: Option<CheckboxToggleCallback>,
 	self_ref: Weak<ComponentCheckbox>,
 	active_tooltip: Option<Rc<ComponentTooltip>>,
@@ -99,6 +100,32 @@ pub struct ComponentCheckbox {
 const COLOR_UNCHECKED: WguiColor = WguiColor::Raw(drawing::Color::new(0., 0., 0., 0.));
 const COLOR_HOVERED: WguiColor = WguiColorName::Tertiary.to_wgui_color();
 
+fn disabled_color() -> WguiColor {
+	WguiColor::from(WguiColorName::OnBackground).with_alpha(0.35)
+}
+
+/// Color for the inner checkbox box, for any checked/hover/disabled combination.
+fn box_fill_color(checked: bool, hovered: bool, disabled: bool, checked_color: WguiColor) -> WguiColor {
+	if disabled {
+		if checked { disabled_color() } else { COLOR_UNCHECKED }
+	} else if checked {
+		if hovered { COLOR_HOVERED } else { checked_color }
+	} else {
+		COLOR_UNCHECKED
+	}
+}
+
+/// Color for the checkbox border, for any hover/press/disabled combination.
+fn box_border_color(hovered: bool, down: bool, disabled: bool) -> WguiColor {
+	if disabled {
+		disabled_color()
+	} else if hovered || down {
+		COLOR_HOVERED
+	} else {
+		WguiColorName::OnBackground.into()
+	}
+}
+
 impl ComponentTrait for ComponentCheckbox {
 	fn base(&self) -> &ComponentBase {
 		&self.base
@@ -120,13 +147,9 @@ impl ComponentTrait for ComponentCheckbox {
 	}
 }
 
-fn set_box_checked(widgets: &layout::WidgetMap, data: &Data, checked: bool, hovered: bool) {
+fn set_box_checked(widgets: &layout::WidgetMap, data: &Data, checked: bool, hovered: bool, disabled: bool) {
 	widgets.call(data.id_inner_box, |rect: &mut WidgetRectangle| {
-		rect.params.color = if checked {
-			if hovered { COLOR_HOVERED } else { data.color_checked }
-		} else {
-			COLOR_UNCHECKED
-		}
+		rect.params.color = box_fill_color(checked, hovered, disabled, data.color_checked);
 	});
 }
 
@@ -141,6 +164,7 @@ impl ComponentCheckbox {
 
 	pub fn set_checked(&self, common: &mut CallbackDataCommon, checked: bool) {
 		let hovered;
+		let disabled;
 		{
 			let mut state = self.state.borrow_mut();
 			if state.checked == checked {
@@ -148,8 +172,9 @@ impl ComponentCheckbox {
 			}
 			state.checked = checked;
 			hovered = state.hovered;
+			disabled = state.disabled;
 		}
-		set_box_checked(&common.state.widgets, &self.data, checked, hovered);
+		set_box_checked(&common.state.widgets, &self.data, checked, hovered, disabled);
 		common.alterables.mark_redraw();
 	}
 
@@ -170,39 +195,88 @@ impl ComponentCheckbox {
 	pub fn on_toggle(&self, func: CheckboxToggleCallback) {
 		self.state.borrow_mut().on_toggle = Some(func);
 	}
+
+	/// Enable or disable user interaction with the checkbox and dim its appearance.
+	pub fn set_disabled(&self, common: &mut CallbackDataCommon, disabled: bool) {
+		let checked;
+		let hovered;
+		let down;
+		{
+			let mut state = self.state.borrow_mut();
+			if state.disabled == disabled {
+				return;
+			}
+			state.disabled = disabled;
+			checked = state.checked;
+			hovered = state.hovered;
+			down = state.down;
+		}
+
+		set_box_checked(&common.state.widgets, &self.data, checked, hovered, disabled);
+
+		common
+			.state
+			.widgets
+			.call(self.data.id_outer_box, |rect: &mut WidgetRectangle| {
+				rect.params.border_color = box_border_color(hovered, down, disabled);
+			});
+
+		if let Some(mut label) = common.state.widgets.get_as::<WidgetLabel>(self.data.id_label) {
+			let color = if disabled {
+				disabled_color()
+			} else {
+				WguiColorName::OnBackground.into()
+			};
+			label.set_color(common, color, true);
+		}
+
+		common.alterables.mark_redraw();
+	}
+
+	pub fn get_disabled(&self) -> bool {
+		self.state.borrow().disabled
+	}
 }
 
-fn anim_hover(anim_data: &mut crate::animation::CallbackData<'_>, pos: f32, _pressed: bool) {
+fn anim_hover(anim_data: &mut crate::animation::CallbackData<'_>, pos: f32, pressed: bool, disabled: bool) {
 	let rect = anim_data.obj.as_any_mut().downcast_mut::<WidgetRectangle>().unwrap();
 	rect.params.border = 2.0;
-	rect.params.border_color = if pos > 0.0 {
-		COLOR_HOVERED
-	} else {
-		WguiColorName::OnBackground.into()
-	};
+	rect.params.border_color = box_border_color(pos > 0.0, pressed, disabled);
 }
 
 fn anim_hover_in(state: &Rc<RefCell<State>>, data: &Rc<Data>, anim_mult: f32) -> Animation {
-	let down = state.borrow().down;
+	let down;
+	let disabled;
+	{
+		let state = state.borrow();
+		down = state.down;
+		disabled = state.disabled;
+	}
 	Animation::new(
 		data.id_outer_box,
 		(5. * anim_mult) as _,
 		AnimationEasing::OutQuad,
 		Box::new(move |common, anim_data| {
-			anim_hover(anim_data, anim_data.pos, down);
+			anim_hover(anim_data, anim_data.pos, down, disabled);
 			common.alterables.mark_redraw();
 		}),
 	)
 }
 
 fn anim_hover_out(state: &Rc<RefCell<State>>, data: &Rc<Data>, anim_mult: f32) -> Animation {
-	let down = state.borrow().down;
+	let down;
+	let disabled;
+	{
+		let state = state.borrow();
+		down = state.down;
+		disabled = state.disabled;
+	}
 	Animation::new(
 		data.id_outer_box,
 		(8. * anim_mult) as _,
 		AnimationEasing::OutQuad,
 		Box::new(move |common, anim_data| {
-			anim_hover(anim_data, 1.0 - anim_data.pos, down);
+			anim_hover(anim_data, 1.0 - anim_data.pos, down, disabled);
 			common.alterables.mark_redraw();
 		}),
 	)
@@ -218,25 +292,30 @@ fn register_event_mouse_enter(
 	listeners.register(
 		EventListenerKind::MouseEnter,
 		Box::new(move |common, _event_data, (), ()| {
-			common.alterables.trigger_haptics();
-			common.alterables.animate(anim_hover_in(&state, &data, anim_mult));
+			let checked;
+			let disabled;
+			{
+				let mut state = state.borrow_mut();
+				checked = state.checked;
+				disabled = state.disabled;
+				state.hovered = true;
+			}
+
+			if !disabled {
+				common.alterables.trigger_haptics();
+				common.alterables.animate(anim_hover_in(&state, &data, anim_mult));
+
+				if checked {
+					common
+						.state
+						.widgets
+						.call(data.id_inner_box, |rect: &mut WidgetRectangle| {
+							rect.params.color = box_fill_color(checked, true, false, data.color_checked);
+						});
+				}
+			}
 
 			ComponentTooltip::register_hover_in(common, &tooltip_info, data.id_container, state.clone());
-
-			let checked = {
-				let mut state = state.borrow_mut();
-				state.hovered = true;
-				state.checked
-			};
-
-			if checked {
-				common
-					.state
-					.widgets
-					.call(data.id_inner_box, |rect: &mut WidgetRectangle| {
-						rect.params.color = COLOR_HOVERED;
-					});
-			}
 
 			Ok(EventResult::Pass)
 		}),
@@ -252,23 +331,28 @@ fn register_event_mouse_leave(
 	listeners.register(
 		EventListenerKind::MouseLeave,
 		Box::new(move |common, _event_data, (), ()| {
-			common.alterables.trigger_haptics();
-			common.alterables.animate(anim_hover_out(&state, &data, anim_mult));
-
-			let checked = {
+			let checked;
+			let disabled;
+			{
 				let mut state = state.borrow_mut();
+				checked = state.checked;
+				disabled = state.disabled;
 				state.hovered = false;
 				state.active_tooltip = None;
-				state.checked
-			};
+			}
 
-			if checked {
-				common
-					.state
-					.widgets
-					.call(data.id_inner_box, |rect: &mut WidgetRectangle| {
-						rect.params.color = data.color_checked;
-					});
+			if !disabled {
+				common.alterables.trigger_haptics();
+				common.alterables.animate(anim_hover_out(&state, &data, anim_mult));
+
+				if checked {
+					common
+						.state
+						.widgets
+						.call(data.id_inner_box, |rect: &mut WidgetRectangle| {
+							rect.params.color = box_fill_color(checked, false, false, data.color_checked);
+						});
+				}
 			}
 
 			Ok(EventResult::Pass)
@@ -303,18 +387,14 @@ fn register_event_mouse_press(
 				.widgets
 				.call(data.id_outer_box, |rect: &mut WidgetRectangle| {
 					rect.params.border = 2.0;
-					rect.params.border_color = if pressed_hovered {
-						COLOR_HOVERED
-					} else {
-						WguiColorName::OnBackground.into()
-					};
+					rect.params.border_color = box_border_color(pressed_hovered, false, state.disabled);
 				});
 
 			common.alterables.trigger_haptics();
 			common.alterables.mark_redraw();
 			common.alterables.unfocus();
 
-			if state.hovered {
+			if state.hovered && !state.disabled {
 				state.down = true;
 				Ok(EventResult::Consumed)
 			} else {
@@ -341,17 +421,13 @@ fn register_event_mouse_release(
 				.widgets
 				.call(data.id_outer_box, |rect: &mut WidgetRectangle| {
 					rect.params.border = 2.0;
-					rect.params.border_color = if released_hovered {
-						COLOR_HOVERED
-					} else {
-						WguiColorName::OnBackground.into()
-					};
+					rect.params.border_color = box_border_color(released_hovered, was_down, state.disabled);
 				});
 
 			common.alterables.trigger_haptics();
 			common.alterables.mark_redraw();
 
-			if was_down {
+			if !state.disabled && was_down {
 				state.down = false;
 
 				if let Some(self_ref) = state.self_ref.upgrade()
@@ -369,7 +445,13 @@ fn register_event_mouse_release(
 					});
 				}
 
-				set_box_checked(&common.state.widgets, &data, state.checked, state.hovered);
+				set_box_checked(
+					&common.state.widgets,
+					&data,
+					state.checked,
+					state.hovered,
+					state.disabled,
+				);
 				if state.hovered
 					&& let Some(on_toggle) = &state.on_toggle
 				{
@@ -500,6 +582,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		checked: params.checked,
 		down: false,
 		hovered: false,
+		disabled: false,
 		on_toggle: None,
 		self_ref: Weak::new(),
 		active_tooltip: None,

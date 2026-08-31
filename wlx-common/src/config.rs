@@ -525,6 +525,9 @@ pub struct GeneralConfig {
 	pub grid_opacity: f32,
 
 	#[serde(default)]
+	pub keyboard_swipe_to_type_enabled: bool,
+
+	#[serde(default)]
 	pub chroma_key_params: ChromaKeyParams,
 
 	#[serde(default)]
