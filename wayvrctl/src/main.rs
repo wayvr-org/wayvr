@@ -16,8 +16,9 @@ use wayvr_ipc::{
 
 use crate::helper::{
     WayVRClientState, wlr_input_capture, wlx_device_haptics, wlx_handsfree, wlx_input_state,
-    wlx_panel_modify, wlx_show_hide, wlx_switch_set, wvr_process_get, wvr_process_launch,
-    wvr_process_list, wvr_process_terminate, wvr_window_list, wvr_window_set_visible,
+    wlx_panel_modify, wlx_show_hide, wlx_switch_set, wlx_window_state_get, wlx_window_state_set,
+    wvr_process_get, wvr_process_launch, wvr_process_list, wvr_process_terminate, wvr_window_list,
+    wvr_window_set_visible,
 };
 
 mod helper;
@@ -206,6 +207,20 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
         Subcommands::InputCapture { command } => {
             wlr_input_capture(state, matches!(command, GrabRelease::Grab)).await;
         }
+        Subcommands::WindowState { overlay, command } => match command {
+            WindowStateCommand::Get { what } => {
+                wlx_window_state_get(state, overlay, what.into()).await;
+            }
+            WindowStateCommand::Set { what, value, lerp } => {
+                let value = parse_window_state_value(what, &value, lerp).with_context(|| {
+                    format!(
+                        "Invalid value '{value}' for '{}'",
+                        window_state_field_name(what)
+                    )
+                })?;
+                wlx_window_state_set(state, overlay, what.into(), value).await;
+            }
+        },
     }
     Ok(())
 }
@@ -310,6 +325,14 @@ enum Subcommands {
     InputCapture {
         command: GrabRelease,
     },
+    /// Get or set a window state property of an overlay
+    WindowState {
+        /// The name of the overlay
+        overlay: String,
+        /// Command to execute
+        #[command(subcommand)]
+        command: WindowStateCommand,
+    },
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]
@@ -364,6 +387,120 @@ pub enum SubcommandHandsfree {
     Toggle { action: HandsfreeAction },
     /// Emulate a joystick scroll
     Scroll { amount: f32 },
+}
+
+#[derive(clap::Parser, Debug)]
+#[allow(clippy::enum_variant_names)]
+enum WindowStateCommand {
+    /// Get a window state property of an overlay
+    Get {
+        /// The property to read
+        what: WindowStateField,
+    },
+    /// Set a window state property of an overlay
+    Set {
+        /// The property to change
+        what: WindowStateField,
+        /// The value to set
+        value: String,
+        /// Lerp factor (0.0 to 1.0), used with follow_head / follow_hand positioning
+        #[arg(long)]
+        lerp: Option<f32>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+#[value(rename_all = "snake_case")]
+enum WindowStateField {
+    /// Overlay opacity (0.1 to 1.0)
+    Alpha,
+    /// Use additive blending when alpha < 1.0
+    Additive,
+    /// Whether this overlay reacts to grab action
+    Grabbable,
+    /// Whether laser pointers hit or pass through this overlay
+    Interactable,
+    /// Overlay positioning: floating, anchored, static, follow_head, follow_hand_left, follow_hand_right
+    Positioning,
+    /// Screen curvature, 0 is disabled
+    Curvature,
+    /// Whether hovering this overlay will block inputs to other VR apps
+    #[value(alias = "block-input")]
+    BlockInput,
+    /// Whether the overlay billboards towards the HMD
+    #[value(alias = "align-to-hmd")]
+    AlignToHmd,
+}
+
+fn window_state_field_name(field: WindowStateField) -> &'static str {
+    match field {
+        WindowStateField::Alpha => "alpha",
+        WindowStateField::Grabbable => "grabbable",
+        WindowStateField::Interactable => "interactable",
+        WindowStateField::Positioning => "positioning",
+        WindowStateField::Curvature => "curvature",
+        WindowStateField::Additive => "additive",
+        WindowStateField::BlockInput => "block_input",
+        WindowStateField::AlignToHmd => "align_to_hmd",
+    }
+}
+
+fn parse_window_state_value(
+    field: WindowStateField,
+    raw: &str,
+    lerp: Option<f32>,
+) -> anyhow::Result<packet_client::WlxWindowStateValue> {
+    use packet_client::WlxWindowStateValue as Value;
+
+    let parse_bool = |raw: &str| -> anyhow::Result<bool> {
+        match raw {
+            "0" | "false" | "off" => Ok(false),
+            "1" | "true" | "on" => Ok(true),
+            _ => anyhow::bail!("expected 0 or 1"),
+        }
+    };
+
+    Ok(match field {
+        WindowStateField::Alpha => {
+            let alpha = raw.parse::<f32>()?;
+            if !(0.1..=1.0).contains(&alpha) {
+                anyhow::bail!("expected a value between 0.1 and 1.0");
+            }
+            Value::Float(alpha)
+        }
+        WindowStateField::Grabbable => Value::Bool(parse_bool(raw)?),
+        WindowStateField::Interactable => Value::Bool(parse_bool(raw)?),
+        WindowStateField::Positioning => Value::Positioning(parse_positioning(raw, lerp)?),
+        WindowStateField::Curvature => Value::Float(raw.parse::<f32>()?),
+        WindowStateField::Additive => Value::Bool(parse_bool(raw)?),
+        WindowStateField::BlockInput => Value::Bool(parse_bool(raw)?),
+        WindowStateField::AlignToHmd => Value::Bool(parse_bool(raw)?),
+    })
+}
+
+fn parse_positioning(
+    raw: &str,
+    lerp: Option<f32>,
+) -> anyhow::Result<packet_client::WlxPositioning> {
+    let lerp = lerp.unwrap_or(0.0);
+
+    Ok(match raw {
+        "floating" => packet_client::WlxPositioning::Floating,
+        "anchored" => packet_client::WlxPositioning::Anchored,
+        "static" => packet_client::WlxPositioning::Static,
+        "follow_head" | "follow-head" => packet_client::WlxPositioning::FollowHead { lerp },
+        "follow_hand_left" | "follow-hand-left" => packet_client::WlxPositioning::FollowHand {
+            hand: packet_client::WlxHand::Left,
+            lerp,
+        },
+        "follow_hand_right" | "follow-hand-right" => packet_client::WlxPositioning::FollowHand {
+            hand: packet_client::WlxHand::Right,
+            lerp,
+        },
+        _ => anyhow::bail!(
+            "expected floating, anchored, static, follow_head or follow_hand_<left|right>"
+        ),
+    })
 }
 
 #[derive(clap::Parser, Debug)]

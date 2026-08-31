@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::ipc::Serial;
+use super::{ipc::Serial, packet_client};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerInfo {}
@@ -102,6 +102,7 @@ pub enum PacketServer {
 	WvrProcessGetResponse(Serial, Option<WvrProcess>),
 	WvrProcessLaunchResponse(Serial, Result<WvrProcessHandle, String>),
 	WvrProcessListResponse(Serial, WvrProcessList),
+	WlxWindowStateGetResponse(Serial, Result<packet_client::WlxWindowStateValue, String>),
 	WvrStateChanged(WvrStateChanged),
 }
 
@@ -115,6 +116,7 @@ impl PacketServer {
 			PacketServer::WvrProcessGetResponse(serial, _) => Some(serial),
 			PacketServer::WvrProcessLaunchResponse(serial, _) => Some(serial),
 			PacketServer::WvrProcessListResponse(serial, _) => Some(serial),
+			PacketServer::WlxWindowStateGetResponse(serial, _) => Some(serial),
 			PacketServer::WvrStateChanged(_) => None,
 		}
 	}

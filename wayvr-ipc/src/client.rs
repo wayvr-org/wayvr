@@ -449,6 +449,27 @@ impl WayVRClient {
 		send_only!(client, &PacketClient::WlxModifyPanel(params));
 		Ok(())
 	}
+
+	pub async fn fn_wlx_window_state_get(
+		client: WayVRClientMutex,
+		serial: Serial,
+		params: packet_client::WlxWindowStateGetParams,
+	) -> anyhow::Result<Result<packet_client::WlxWindowStateValue, String>> {
+		Ok(send_and_wait!(
+			client,
+			serial,
+			&PacketClient::WlxWindowStateGet(serial, params),
+			WlxWindowStateGetResponse
+		))
+	}
+
+	pub async fn fn_wlx_window_state_set(
+		client: WayVRClientMutex,
+		params: packet_client::WlxWindowStateSetParams,
+	) -> anyhow::Result<()> {
+		send_only!(client, &PacketClient::WlxWindowStateSet(params));
+		Ok(())
+	}
 }
 
 impl Drop for WayVRClient {

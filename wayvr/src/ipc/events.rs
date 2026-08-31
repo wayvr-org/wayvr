@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use crate::backend::wayvr::{self, WayVRTask, WvrServerState};
 use wayvr_ipc::packet_client::{HandsfreeMode, HandsfreeParams};
+use wayvr_ipc::packet_server::PacketServer;
 use wlx_common::config::HandsfreePointer;
 
 use crate::{
@@ -7,9 +10,9 @@ use crate::{
         self,
         task::{InputTask, OverlayTask, TaskType},
     },
-    ipc::signal::WayVRSignal,
+    ipc::{signal::WayVRSignal, window_state},
     state::AppState,
-    windowing::manager::OverlayWindowManager,
+    windowing::{OverlaySelector, manager::OverlayWindowManager},
 };
 
 fn process_tick_tasks(
@@ -32,7 +35,7 @@ fn process_tick_tasks(
 
 pub fn tick_events<O>(
     app: &mut AppState,
-    _overlays: &mut OverlayWindowManager<O>,
+    overlays: &mut OverlayWindowManager<O>,
 ) -> anyhow::Result<()>
 where
     O: Default,
@@ -60,6 +63,23 @@ where
             WayVRSignal::CustomTask(custom_task) => {
                 app.tasks
                     .enqueue(TaskType::Overlay(OverlayTask::ModifyPanel(custom_task)));
+            }
+            WayVRSignal::GetWindowState(connection_id, serial, get_params) => {
+                let result = window_state::get_state(overlays, &get_params);
+                app.ipc_server.send_response(
+                    connection_id,
+                    &PacketServer::WlxWindowStateGetResponse(serial, result),
+                );
+            }
+            WayVRSignal::SetWindowState(set_params) => {
+                let name: Arc<str> = set_params.overlay.clone().into();
+                let field = set_params.field;
+                let value = set_params.value;
+
+                app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                    OverlaySelector::Name(name),
+                    Box::new(move |_app, config| window_state::set_field(config, field, value)),
+                )));
             }
             WayVRSignal::Handsfree(params) => match params {
                 HandsfreeParams::SetMode(mode) => {

@@ -1,5 +1,6 @@
 use glam::Affine3A;
 use serde::{Deserialize, Serialize};
+use wayvr_ipc::packet_client::WlxPositioning;
 
 use crate::{common::LeftRight, config::DefaultPositioning};
 
@@ -31,6 +32,36 @@ impl From<DefaultPositioning> for Positioning {
 			DefaultPositioning::Anchored => Self::Anchored,
 			DefaultPositioning::Floating => Self::Floating,
 			DefaultPositioning::Static => Self::Static,
+		}
+	}
+}
+
+impl From<Positioning> for WlxPositioning {
+	fn from(value: Positioning) -> Self {
+		match value {
+			Positioning::Floating => Self::Floating,
+			Positioning::Anchored => Self::Anchored,
+			Positioning::Static => Self::Static,
+			Positioning::FollowHead { lerp } => Self::FollowHead { lerp },
+			Positioning::FollowHand { hand, lerp } => Self::FollowHand {
+				hand: hand.into(),
+				lerp,
+			},
+		}
+	}
+}
+
+impl From<WlxPositioning> for Positioning {
+	fn from(value: WlxPositioning) -> Self {
+		match value {
+			WlxPositioning::Floating => Self::Floating,
+			WlxPositioning::Anchored => Self::Anchored,
+			WlxPositioning::Static => Self::Static,
+			WlxPositioning::FollowHead { lerp } => Self::FollowHead { lerp },
+			WlxPositioning::FollowHand { hand, lerp } => Self::FollowHand {
+				hand: hand.into(),
+				lerp,
+			},
 		}
 	}
 }

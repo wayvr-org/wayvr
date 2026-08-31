@@ -81,6 +81,62 @@ pub struct WlxModifyPanelParams {
 	pub command: WlxModifyPanelCommand,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WlxHand {
+	Left,
+	Right,
+}
+
+// see wlx_common::windowing::Positioning
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum WlxPositioning {
+	Floating,
+	Anchored,
+	Static,
+	FollowHead {
+		#[serde(default)]
+		lerp: f32,
+	},
+	FollowHand {
+		hand: WlxHand,
+		#[serde(default)]
+		lerp: f32,
+	},
+}
+
+// see wlx_common::windowing::OverlayWindowState
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WlxWindowStateField {
+	Alpha,
+	Grabbable,
+	Interactable,
+	Positioning,
+	Curvature,
+	Additive,
+	BlockInput,
+	AlignToHmd,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum WlxWindowStateValue {
+	Bool(bool),
+	Float(f32),
+	Positioning(WlxPositioning),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WlxWindowStateGetParams {
+	pub overlay: String,
+	pub field: WlxWindowStateField,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WlxWindowStateSetParams {
+	pub overlay: String,
+	pub field: WlxWindowStateField,
+	pub value: WlxWindowStateValue,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PacketClient {
 	Handshake(Handshake),
@@ -97,4 +153,6 @@ pub enum PacketClient {
 	WlxShowHide,
 	WlxSwitchSet(Option<usize>),
 	WlxHandsfree(HandsfreeParams),
+	WlxWindowStateGet(Serial, WlxWindowStateGetParams),
+	WlxWindowStateSet(WlxWindowStateSetParams),
 }

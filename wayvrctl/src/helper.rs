@@ -220,3 +220,65 @@ pub async fn wlx_input_state(state: &mut WayVRClientState) {
         .context("failed to get input state"),
     )
 }
+
+pub async fn wlx_window_state_get(
+    state: &mut WayVRClientState,
+    overlay: String,
+    field: packet_client::WlxWindowStateField,
+) {
+    let result = WayVRClient::fn_wlx_window_state_get(
+        state.wayvr_client.clone(),
+        state.serial_generator.increment_get(),
+        packet_client::WlxWindowStateGetParams { overlay, field },
+    )
+    .await;
+
+    match result {
+        Ok(Ok(value)) => handle_result(state.pretty_print, Ok(window_state_value_to_json(value))),
+        Ok(Err(reason)) => log::error!("failed to get window state: {reason}"),
+        Err(e) => log::error!("failed to get window state: {e:?}"),
+    }
+}
+
+fn window_state_value_to_json(value: packet_client::WlxWindowStateValue) -> serde_json::Value {
+    match value {
+        packet_client::WlxWindowStateValue::Bool(value) => serde_json::Value::Bool(value),
+        packet_client::WlxWindowStateValue::Float(value) => serde_json::to_value(value).unwrap(),
+        packet_client::WlxWindowStateValue::Positioning(value) => {
+            serde_json::json!(window_state_positioning_name(&value))
+        }
+    }
+}
+
+fn window_state_positioning_name(value: &packet_client::WlxPositioning) -> &'static str {
+    match value {
+        packet_client::WlxPositioning::Floating => "floating",
+        packet_client::WlxPositioning::Anchored => "anchored",
+        packet_client::WlxPositioning::Static => "static",
+        packet_client::WlxPositioning::FollowHead { .. } => "follow_head",
+        packet_client::WlxPositioning::FollowHand { hand, .. } => match hand {
+            packet_client::WlxHand::Left => "follow_hand_left",
+            packet_client::WlxHand::Right => "follow_hand_right",
+        },
+    }
+}
+
+pub async fn wlx_window_state_set(
+    state: &mut WayVRClientState,
+    overlay: String,
+    field: packet_client::WlxWindowStateField,
+    value: packet_client::WlxWindowStateValue,
+) {
+    handle_empty_result(
+        WayVRClient::fn_wlx_window_state_set(
+            state.wayvr_client.clone(),
+            packet_client::WlxWindowStateSetParams {
+                overlay,
+                field,
+                value,
+            },
+        )
+        .await
+        .context("failed to set window state"),
+    )
+}
