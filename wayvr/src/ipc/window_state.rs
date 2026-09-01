@@ -17,6 +17,7 @@ pub fn get_field(state: &OverlayWindowState, field: WlxWindowStateField) -> WlxW
         WlxWindowStateField::Additive => WlxWindowStateValue::Bool(state.additive),
         WlxWindowStateField::BlockInput => WlxWindowStateValue::Bool(state.block_input),
         WlxWindowStateField::AlignToHmd => WlxWindowStateValue::Bool(state.align_to_hmd),
+        WlxWindowStateField::Global => unreachable!("handled in get_state"),
     }
 }
 
@@ -25,6 +26,18 @@ pub fn set_field(
     field: WlxWindowStateField,
     value: WlxWindowStateValue,
 ) {
+    if field == WlxWindowStateField::Global {
+        match value {
+            WlxWindowStateValue::Bool(value) => {
+                config.global = value;
+            }
+            value => {
+                log::warn!("Invalid value {value:?} for window state field {field:?}");
+            }
+        }
+        return;
+    }
+
     let Some(state) = config.active_state.as_mut() else {
         log::warn!(
             "Overlay '{}' is not visible, window state field {field:?} was not modified",
@@ -86,6 +99,10 @@ where
     let overlay = overlays
         .mut_by_id(id)
         .ok_or_else(|| format!("overlay '{}' not found", params.overlay))?;
+
+    if params.field == WlxWindowStateField::Global {
+        return Ok(WlxWindowStateValue::Bool(overlay.config.global));
+    }
 
     let state = overlay
         .config

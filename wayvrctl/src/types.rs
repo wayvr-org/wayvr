@@ -34,6 +34,7 @@ impl From<crate::WindowStateField> for ipc::WlxWindowStateField {
             crate::WindowStateField::Additive => Self::Additive,
             crate::WindowStateField::BlockInput => Self::BlockInput,
             crate::WindowStateField::AlignToHmd => Self::AlignToHmd,
+            crate::WindowStateField::Global => Self::Global,
         }
     }
 }

@@ -115,6 +115,8 @@ pub enum WlxWindowStateField {
 	Additive,
 	BlockInput,
 	AlignToHmd,
+	/// see wlx_common::windowing::OverlayWindowConfig::global
+	Global,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -430,6 +430,8 @@ enum WindowStateField {
     /// Whether the overlay billboards towards the HMD
     #[value(alias = "align-to-hmd")]
     AlignToHmd,
+    /// Whether the overlay is shown on all sets (unaffected by set switching)
+    Global,
 }
 
 fn window_state_field_name(field: WindowStateField) -> &'static str {
@@ -442,6 +444,7 @@ fn window_state_field_name(field: WindowStateField) -> &'static str {
         WindowStateField::Additive => "additive",
         WindowStateField::BlockInput => "block_input",
         WindowStateField::AlignToHmd => "align_to_hmd",
+        WindowStateField::Global => "global",
     }
 }
 
@@ -475,6 +478,7 @@ fn parse_window_state_value(
         WindowStateField::Additive => Value::Bool(parse_bool(raw)?),
         WindowStateField::BlockInput => Value::Bool(parse_bool(raw)?),
         WindowStateField::AlignToHmd => Value::Bool(parse_bool(raw)?),
+        WindowStateField::Global => Value::Bool(parse_bool(raw)?),
     })
 }
 
