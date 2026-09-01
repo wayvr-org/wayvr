@@ -62,24 +62,26 @@
             },
             {
                "path": "/user/hand/right/input/trackpad",
-               "mode": "scroll",
+               "mode": "trackpad",
                "parameters": {
-                  "scroll_mode": "discrete"
+                  "exponent" : "0.25",
+                  "maxzone_pct" : "5"
                },
                "inputs": {
-                  "scroll": {
+                  "position": {
                      "output": "/actions/default/in/scroll"
                   }
                }
             },
             {
                "path": "/user/hand/left/input/trackpad",
-               "mode": "scroll",
+               "mode": "trackpad",
                "parameters": {
-                  "scroll_mode": "discrete"
+                  "exponent" : "0.25",
+                  "maxzone_pct" : "5"
                },
                "inputs": {
-                  "scroll": {
+                  "position": {
                      "output": "/actions/default/in/scroll"
                   }
                }
