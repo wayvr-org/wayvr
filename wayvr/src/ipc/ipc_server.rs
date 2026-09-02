@@ -195,33 +195,15 @@ impl Connection {
         Ok(())
     }
 
-    fn handle_wvr_window_list(
-        &mut self,
+    fn handle_wlx_overlay_list(
+        &self,
         params: &mut TickParams,
         serial: ipc::Serial,
-    ) -> anyhow::Result<()> {
-        let mut send = |list: Option<packet_server::WvrWindowList>| -> anyhow::Result<()> {
-            send_packet(
-                &mut self.conn,
-                &ipc::data_encode(&PacketServer::WvrWindowListResponse(serial, list)),
-            )
-        };
-
-        send(Some(packet_server::WvrWindowList {
-            list: params
-                .wvr_server
-                .wm
-                .windows
-                .iter()
-                .map(|(handle, win)| packet_server::WvrWindow {
-                    handle: wayvr::window::WindowHandle::as_packet(handle),
-                    process_handle: wayvr::process::ProcessHandle::as_packet(win.process),
-                    size_x: win.size_x,
-                    size_y: win.size_y,
-                    visible: win.visible,
-                })
-                .collect::<Vec<_>>(),
-        }))
+        list_params: packet_client::WlxOverlayListParams,
+    ) {
+        params
+            .signals
+            .send(WayVRSignal::ListOverlays(self.id, serial, list_params));
     }
 
     fn handle_wvr_window_set_visible(
@@ -433,8 +415,8 @@ impl Connection {
             PacketClient::WlxInputState(serial) => {
                 self.handle_wlx_input_state(params, serial)?;
             }
-            PacketClient::WvrWindowList(serial) => {
-                self.handle_wvr_window_list(params, serial)?;
+            PacketClient::WlxOverlayList(serial, list_params) => {
+                self.handle_wlx_overlay_list(params, serial, list_params);
             }
             PacketClient::WvrWindowSetVisible(window_handle, visible) => {
                 Self::handle_wvr_window_set_visible(params, window_handle, visible);

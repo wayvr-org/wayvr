@@ -745,6 +745,35 @@ impl<T> OverlayWindowManager<T> {
         self.sets.len()
     }
 
+    pub fn list_overlays(&self, visible: bool, hidden: bool) -> Vec<String> {
+        let current = self
+            .current_set
+            .unwrap_or(self.restore_set)
+            .min(self.sets.len() - 1);
+        let mut names = Vec::new();
+
+        for (id, o) in &self.overlays {
+            let active = o.config.is_active();
+
+            // non-global overlays saved in another set belong to that set
+            if !o.config.global
+                && self
+                    .sets
+                    .iter()
+                    .enumerate()
+                    .any(|(i, set)| i != current && set.overlays.contains_key(id))
+            {
+                continue;
+            }
+
+            if (active && visible) || (!active && hidden) {
+                names.push(o.config.name.to_string());
+            }
+        }
+
+        names
+    }
+
     pub fn set_edit_mode(&mut self, enabled: bool, app: &mut AppState) -> anyhow::Result<()> {
         let changed = enabled != self.edit_mode;
         self.edit_mode = enabled;

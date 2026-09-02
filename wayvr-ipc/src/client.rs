@@ -321,18 +321,19 @@ impl WayVRClient {
 		}
 	}
 
-	pub async fn fn_wvr_window_list(
+	pub async fn fn_wlx_overlay_list(
 		client: WayVRClientMutex,
 		serial: Serial,
-	) -> anyhow::Result<Option<Vec<packet_server::WvrWindow>>> {
+		params: packet_client::WlxOverlayListParams,
+	) -> anyhow::Result<Vec<String>> {
 		Ok(
 			send_and_wait!(
 				client,
 				serial,
-				&PacketClient::WvrWindowList(serial),
-				WvrWindowListResponse
+				&PacketClient::WlxOverlayList(serial, params),
+				WlxOverlayListResponse
 			)
-			.map(|res| res.list),
+			.list,
 		)
 	}
 

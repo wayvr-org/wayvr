@@ -71,6 +71,16 @@ where
                     &PacketServer::WlxWindowStateGetResponse(serial, result),
                 );
             }
+            WayVRSignal::ListOverlays(connection_id, serial, list_params) => {
+                let list = overlays.list_overlays(list_params.visible, list_params.hidden);
+                app.ipc_server.send_response(
+                    connection_id,
+                    &PacketServer::WlxOverlayListResponse(
+                        serial,
+                        wayvr_ipc::packet_server::WlxOverlayList { list },
+                    ),
+                );
+            }
             WayVRSignal::SetWindowState(set_params) => {
                 let name: Arc<str> = set_params.overlay.clone().into();
                 let field = set_params.field;

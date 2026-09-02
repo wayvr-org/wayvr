@@ -39,16 +39,22 @@ fn handle_result<T: Serialize>(pretty_print: bool, result: anyhow::Result<T>) {
     }
 }
 
-pub async fn wvr_window_list(state: &mut WayVRClientState) {
-    handle_result(
-        state.pretty_print,
-        WayVRClient::fn_wvr_window_list(
-            state.wayvr_client.clone(),
-            state.serial_generator.increment_get(),
-        )
-        .await
-        .context("failed to list window displays"),
-    );
+pub async fn wlx_overlay_list(state: &mut WayVRClientState, visible: bool, hidden: bool) {
+    let result = WayVRClient::fn_wlx_overlay_list(
+        state.wayvr_client.clone(),
+        state.serial_generator.increment_get(),
+        packet_client::WlxOverlayListParams { visible, hidden },
+    )
+    .await;
+
+    match result {
+        Ok(names) => {
+            for name in names {
+                println!("{name}");
+            }
+        }
+        Err(e) => log::error!("failed to list overlays: {e:?}"),
+    }
 }
 
 pub async fn wvr_window_set_visible(

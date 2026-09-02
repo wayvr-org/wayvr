@@ -139,10 +139,16 @@ pub struct WlxWindowStateSetParams {
 	pub value: WlxWindowStateValue,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WlxOverlayListParams {
+	pub visible: bool,
+	pub hidden: bool,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PacketClient {
 	Handshake(Handshake),
-	WvrWindowList(Serial),
+	WlxOverlayList(Serial, WlxOverlayListParams),
 	WvrWindowSetVisible(packet_server::WvrWindowHandle, bool),
 	WvrProcessGet(Serial, packet_server::WvrProcessHandle),
 	WvrProcessLaunch(Serial, WvrProcessLaunchParams),

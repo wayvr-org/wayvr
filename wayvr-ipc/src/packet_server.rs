@@ -39,8 +39,8 @@ pub struct WvrWindow {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WvrWindowList {
-	pub list: Vec<WvrWindow>,
+pub struct WlxOverlayList {
+	pub list: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,7 +98,7 @@ pub enum PacketServer {
 	Disconnect(Disconnect),
 	HandshakeSuccess(HandshakeSuccess),
 	WlxInputStateResponse(Serial, WlxInputState),
-	WvrWindowListResponse(Serial, Option<WvrWindowList>),
+	WlxOverlayListResponse(Serial, WlxOverlayList),
 	WvrProcessGetResponse(Serial, Option<WvrProcess>),
 	WvrProcessLaunchResponse(Serial, Result<WvrProcessHandle, String>),
 	WvrProcessListResponse(Serial, WvrProcessList),
@@ -112,7 +112,7 @@ impl PacketServer {
 			PacketServer::Disconnect(_) => None,
 			PacketServer::HandshakeSuccess(_) => None,
 			PacketServer::WlxInputStateResponse(serial, _) => Some(serial),
-			PacketServer::WvrWindowListResponse(serial, _) => Some(serial),
+			PacketServer::WlxOverlayListResponse(serial, _) => Some(serial),
 			PacketServer::WvrProcessGetResponse(serial, _) => Some(serial),
 			PacketServer::WvrProcessLaunchResponse(serial, _) => Some(serial),
 			PacketServer::WvrProcessListResponse(serial, _) => Some(serial),

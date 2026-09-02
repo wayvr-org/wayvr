@@ -16,9 +16,9 @@ use wayvr_ipc::{
 
 use crate::helper::{
     WayVRClientState, wlr_input_capture, wlx_device_haptics, wlx_handsfree, wlx_input_state,
-    wlx_panel_modify, wlx_show_hide, wlx_switch_set, wlx_window_state_get, wlx_window_state_set,
-    wvr_process_get, wvr_process_launch, wvr_process_list, wvr_process_terminate, wvr_window_list,
-    wvr_window_set_visible,
+    wlx_overlay_list, wlx_panel_modify, wlx_show_hide, wlx_switch_set, wlx_window_state_get,
+    wlx_window_state_set, wvr_process_get, wvr_process_launch, wvr_process_list,
+    wvr_process_terminate, wvr_window_set_visible,
 };
 
 mod helper;
@@ -102,8 +102,13 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
         Subcommands::InputState => {
             wlx_input_state(state).await;
         }
-        Subcommands::WindowList => {
-            wvr_window_list(state).await;
+        Subcommands::WindowList { visible, hidden } => {
+            // no filter: list both visible and hidden overlays
+            let (visible, hidden) = match (visible, hidden) {
+                (false, false) => (true, true),
+                _ => (visible, hidden),
+            };
+            wlx_overlay_list(state, visible, hidden).await;
         }
         Subcommands::WindowSetVisible {
             handle,
@@ -113,6 +118,20 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
                 serde_json::from_str::<WvrWindowHandle>(&handle).context("Invalid handle")?;
             wvr_window_set_visible(state, handle, visible_0_or_1 != 0).await;
         }
+        Subcommands::WindowState { overlay, command } => match command {
+            WindowStateCommand::Get { what } => {
+                wlx_window_state_get(state, overlay, what.into()).await;
+            }
+            WindowStateCommand::Set { what, value, lerp } => {
+                let value = parse_window_state_value(what, &value, lerp).with_context(|| {
+                    format!(
+                        "Invalid value '{value}' for '{}'",
+                        window_state_field_name(what)
+                    )
+                })?;
+                wlx_window_state_set(state, overlay, what.into(), value).await;
+            }
+        },
         Subcommands::ProcessGet { handle } => {
             let handle =
                 serde_json::from_str::<WvrProcessHandle>(&handle).context("Invalid handle")?;
@@ -207,20 +226,6 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
         Subcommands::InputCapture { command } => {
             wlr_input_capture(state, matches!(command, GrabRelease::Grab)).await;
         }
-        Subcommands::WindowState { overlay, command } => match command {
-            WindowStateCommand::Get { what } => {
-                wlx_window_state_get(state, overlay, what.into()).await;
-            }
-            WindowStateCommand::Set { what, value, lerp } => {
-                let value = parse_window_state_value(what, &value, lerp).with_context(|| {
-                    format!(
-                        "Invalid value '{value}' for '{}'",
-                        window_state_field_name(what)
-                    )
-                })?;
-                wlx_window_state_set(state, overlay, what.into(), value).await;
-            }
-        },
     }
     Ok(())
 }
@@ -248,8 +253,15 @@ enum Subcommands {
     },
     /// Get the positions of HMD & controllers
     InputState,
-    /// List WayVR windows
-    WindowList,
+    /// List WayVR overlays
+    WindowList {
+        /// Only list visible overlays
+        #[arg(long)]
+        visible: bool,
+        /// Only list hidden overlays
+        #[arg(long)]
+        hidden: bool,
+    },
     /// Delete a WayVR display
     // DisplaySetLayout skipped
     /// Change the visibility of a window on a WayVR display
