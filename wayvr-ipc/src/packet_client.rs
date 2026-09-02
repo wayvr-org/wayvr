@@ -163,4 +163,5 @@ pub enum PacketClient {
 	WlxHandsfree(HandsfreeParams),
 	WlxWindowStateGet(Serial, WlxWindowStateGetParams),
 	WlxWindowStateSet(WlxWindowStateSetParams),
+	WlxOverlaySetVisible(String, bool),
 }

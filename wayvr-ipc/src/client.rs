@@ -337,6 +337,18 @@ impl WayVRClient {
 		)
 	}
 
+	pub async fn fn_wlx_overlay_set_visible(
+		client: WayVRClientMutex,
+		overlay: String,
+		visible: bool,
+	) -> anyhow::Result<()> {
+		send_only!(
+			client,
+			&PacketClient::WlxOverlaySetVisible(overlay, visible)
+		);
+		Ok(())
+	}
+
 	pub async fn fn_wvr_window_set_visible(
 		client: WayVRClientMutex,
 		handle: packet_server::WvrWindowHandle,

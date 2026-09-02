@@ -368,6 +368,12 @@ impl Connection {
         params.signals.send(WayVRSignal::SetWindowState(set_params));
     }
 
+    fn handle_wlx_overlay_set_visible(params: &mut TickParams, overlay: String, visible: bool) {
+        params
+            .signals
+            .send(WayVRSignal::SetOverlayVisible(overlay, visible));
+    }
+
     fn handle_wlx_panel(
         params: &mut TickParams,
         custom_params: packet_client::WlxModifyPanelParams,
@@ -456,6 +462,9 @@ impl Connection {
             }
             PacketClient::WlxWindowStateSet(set_params) => {
                 Self::handle_wlx_window_state_set(params, set_params);
+            }
+            PacketClient::WlxOverlaySetVisible(overlay, visible) => {
+                Self::handle_wlx_overlay_set_visible(params, overlay, visible);
             }
         }
 

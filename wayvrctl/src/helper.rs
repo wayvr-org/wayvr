@@ -57,15 +57,11 @@ pub async fn wlx_overlay_list(state: &mut WayVRClientState, visible: bool, hidde
     }
 }
 
-pub async fn wvr_window_set_visible(
-    state: &mut WayVRClientState,
-    handle: packet_server::WvrWindowHandle,
-    visible: bool,
-) {
+pub async fn wlx_overlay_set_visible(state: &mut WayVRClientState, overlay: String, visible: bool) {
     handle_empty_result(
-        WayVRClient::fn_wvr_window_set_visible(state.wayvr_client.clone(), handle, visible)
+        WayVRClient::fn_wlx_overlay_set_visible(state.wayvr_client.clone(), overlay, visible)
             .await
-            .context("failed to set window visibility"),
+            .context("failed to set overlay visibility"),
     )
 }
 

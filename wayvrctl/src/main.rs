@@ -11,14 +11,14 @@ use wayvr_ipc::{
     client::WayVRClient,
     ipc,
     packet_client::{self, PositionMode},
-    packet_server::{WvrProcessHandle, WvrWindowHandle},
+    packet_server::WvrProcessHandle,
 };
 
 use crate::helper::{
     WayVRClientState, wlr_input_capture, wlx_device_haptics, wlx_handsfree, wlx_input_state,
-    wlx_overlay_list, wlx_panel_modify, wlx_show_hide, wlx_switch_set, wlx_window_state_get,
-    wlx_window_state_set, wvr_process_get, wvr_process_launch, wvr_process_list,
-    wvr_process_terminate, wvr_window_set_visible,
+    wlx_overlay_list, wlx_overlay_set_visible, wlx_panel_modify, wlx_show_hide, wlx_switch_set,
+    wlx_window_state_get, wlx_window_state_set, wvr_process_get, wvr_process_launch,
+    wvr_process_list, wvr_process_terminate,
 };
 
 mod helper;
@@ -111,12 +111,10 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
             wlx_overlay_list(state, visible, hidden).await;
         }
         Subcommands::WindowSetVisible {
-            handle,
+            overlay,
             visible_0_or_1,
         } => {
-            let handle =
-                serde_json::from_str::<WvrWindowHandle>(&handle).context("Invalid handle")?;
-            wvr_window_set_visible(state, handle, visible_0_or_1 != 0).await;
+            wlx_overlay_set_visible(state, overlay, visible_0_or_1 != 0).await;
         }
         Subcommands::WindowState { overlay, command } => match command {
             WindowStateCommand::Get { what } => {
@@ -262,13 +260,19 @@ enum Subcommands {
         #[arg(long)]
         hidden: bool,
     },
-    /// Delete a WayVR display
-    // DisplaySetLayout skipped
-    /// Change the visibility of a window on a WayVR display
+    /// Set the visibility of a WayVR overlay
     WindowSetVisible {
-        /// A JSON window handle returned by DisplayWindowList
-        handle: String,
+        /// The name of the overlay
+        overlay: String,
         visible_0_or_1: u8,
+    },
+    /// Get or set a window state property of an overlay
+    WindowState {
+        /// The name of the overlay
+        overlay: String,
+        /// Command to execute
+        #[command(subcommand)]
+        command: WindowStateCommand,
     },
     /// Retrieve information about a WayVR-managed process
     ProcessGet {
@@ -336,14 +340,6 @@ enum Subcommands {
     },
     InputCapture {
         command: GrabRelease,
-    },
-    /// Get or set a window state property of an overlay
-    WindowState {
-        /// The name of the overlay
-        overlay: String,
-        /// Command to execute
-        #[command(subcommand)]
-        command: WindowStateCommand,
     },
 }
 

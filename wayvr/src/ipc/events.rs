@@ -8,7 +8,7 @@ use wlx_common::config::HandsfreePointer;
 use crate::{
     backend::{
         self,
-        task::{InputTask, OverlayTask, TaskType},
+        task::{InputTask, OverlayTask, TaskType, ToggleMode},
     },
     ipc::{signal::WayVRSignal, window_state},
     state::AppState,
@@ -90,6 +90,20 @@ where
                     OverlaySelector::Name(name),
                     Box::new(move |_app, config| window_state::set_field(config, field, value)),
                 )));
+            }
+            WayVRSignal::SetOverlayVisible(overlay, visible) => {
+                let name: Arc<str> = overlay.into();
+                let mode = if visible {
+                    ToggleMode::EnsureOn
+                } else {
+                    ToggleMode::EnsureOff
+                };
+
+                app.tasks
+                    .enqueue(TaskType::Overlay(OverlayTask::ToggleOverlay(
+                        OverlaySelector::Name(name),
+                        mode,
+                    )));
             }
             WayVRSignal::Handsfree(params) => match params {
                 HandsfreeParams::SetMode(mode) => {
