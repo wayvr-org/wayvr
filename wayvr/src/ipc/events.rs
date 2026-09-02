@@ -10,7 +10,7 @@ use crate::{
         self,
         task::{InputTask, OverlayTask, TaskType, ToggleMode},
     },
-    ipc::{signal::WayVRSignal, window_state},
+    ipc::{signal::WayVRSignal, window_attrib, window_state},
     state::AppState,
     windowing::{OverlaySelector, manager::OverlayWindowManager},
 };
@@ -69,6 +69,20 @@ where
                 app.ipc_server.send_response(
                     connection_id,
                     &PacketServer::WlxWindowStateGetResponse(serial, result),
+                );
+            }
+            WayVRSignal::GetWindowAttrib(connection_id, serial, get_params) => {
+                let result = window_attrib::get_attrib(overlays, &get_params);
+                app.ipc_server.send_response(
+                    connection_id,
+                    &PacketServer::WlxWindowAttribGetResponse(serial, result),
+                );
+            }
+            WayVRSignal::SetWindowAttrib(connection_id, serial, set_params) => {
+                let result = window_attrib::set_attrib(app, overlays, set_params);
+                app.ipc_server.send_response(
+                    connection_id,
+                    &PacketServer::WlxWindowAttribSetResponse(serial, result),
                 );
             }
             WayVRSignal::ListOverlays(connection_id, serial, list_params) => {

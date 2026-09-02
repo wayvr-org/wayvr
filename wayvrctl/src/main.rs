@@ -17,8 +17,8 @@ use wayvr_ipc::{
 use crate::helper::{
     WayVRClientState, wlr_input_capture, wlx_device_haptics, wlx_handsfree, wlx_input_state,
     wlx_overlay_list, wlx_overlay_set_visible, wlx_panel_modify, wlx_show_hide, wlx_switch_set,
-    wlx_window_state_get, wlx_window_state_set, wvr_process_get, wvr_process_launch,
-    wvr_process_list, wvr_process_terminate,
+    wlx_window_attrib_get, wlx_window_attrib_set, wlx_window_state_get, wlx_window_state_set,
+    wvr_process_get, wvr_process_launch, wvr_process_list, wvr_process_terminate,
 };
 
 mod helper;
@@ -128,6 +128,20 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
                     )
                 })?;
                 wlx_window_state_set(state, overlay, what.into(), value).await;
+            }
+        },
+        Subcommands::WindowAttrib { overlay, command } => match command {
+            WindowAttribCommand::Get { attrib } => {
+                wlx_window_attrib_get(state, overlay, attrib.into()).await;
+            }
+            WindowAttribCommand::Set { attrib, value } => {
+                let value = parse_window_attrib_value(attrib, &value).with_context(|| {
+                    format!(
+                        "Invalid value '{value}' for '{}'",
+                        window_attrib_name(attrib)
+                    )
+                })?;
+                wlx_window_attrib_set(state, overlay, attrib.into(), value).await?;
             }
         },
         Subcommands::ProcessGet { handle } => {
@@ -274,6 +288,14 @@ enum Subcommands {
         #[command(subcommand)]
         command: WindowStateCommand,
     },
+    /// Get or set a window attribute of an overlay
+    WindowAttrib {
+        /// The name of the overlay
+        overlay: String,
+        /// Command to execute
+        #[command(subcommand)]
+        command: WindowAttribCommand,
+    },
     /// Retrieve information about a WayVR-managed process
     ProcessGet {
         /// A JSON process handle returned by ProcessList or ProcessLaunch
@@ -417,6 +439,38 @@ enum WindowStateCommand {
     },
 }
 
+#[derive(clap::Parser, Debug)]
+#[allow(clippy::enum_variant_names)]
+enum WindowAttribCommand {
+    /// Get a window attribute of an overlay
+    Get {
+        /// The attribute to read
+        attrib: WindowAttrib,
+    },
+    /// Set a window attribute of an overlay
+    Set {
+        /// The attribute to change
+        attrib: WindowAttrib,
+        /// The value to set
+        value: String,
+    },
+}
+
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+#[value(rename_all = "snake_case")]
+enum WindowAttrib {
+    /// Stereo mode: none, left_right, right_left, top_bottom, bottom_top
+    Stereo,
+    /// Whether stereo content is rendered in full frame
+    StereoFullFrame,
+    /// Whether the mouse position is adjusted for stereo
+    StereoAdjustMouse,
+    /// Mouse transform: default, normal, rotated90, rotated180, rotated270, flipped, flipped90, flipped180, flipped270
+    MouseTransform,
+    /// Window size in pixels, for example: 1920x1080
+    WindowSize,
+}
+
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]
 #[value(rename_all = "snake_case")]
 enum WindowStateField {
@@ -512,6 +566,70 @@ fn parse_positioning(
         _ => anyhow::bail!(
             "expected floating, anchored, static, follow_head or follow_hand_<left|right>"
         ),
+    })
+}
+
+fn window_attrib_name(attrib: WindowAttrib) -> &'static str {
+    match attrib {
+        WindowAttrib::Stereo => "stereo",
+        WindowAttrib::StereoFullFrame => "stereo_full_frame",
+        WindowAttrib::StereoAdjustMouse => "stereo_adjust_mouse",
+        WindowAttrib::MouseTransform => "mouse_transform",
+        WindowAttrib::WindowSize => "window_size",
+    }
+}
+
+fn parse_window_attrib_value(
+    attrib: WindowAttrib,
+    raw: &str,
+) -> anyhow::Result<packet_client::WlxWindowAttribValue> {
+    use packet_client::WlxWindowAttribValue as Value;
+
+    let parse_bool = |raw: &str| -> anyhow::Result<bool> {
+        match raw {
+            "0" | "false" | "off" => Ok(false),
+            "1" | "true" | "on" => Ok(true),
+            _ => anyhow::bail!("expected 0 or 1"),
+        }
+    };
+
+    Ok(match attrib {
+        WindowAttrib::Stereo => Value::Stereo(match raw {
+            "none" => packet_client::WlxStereoMode::None,
+            "left_right" | "left-right" => packet_client::WlxStereoMode::LeftRight,
+            "right_left" | "right-left" => packet_client::WlxStereoMode::RightLeft,
+            "top_bottom" | "top-bottom" => packet_client::WlxStereoMode::TopBottom,
+            "bottom_top" | "bottom-top" => packet_client::WlxStereoMode::BottomTop,
+            _ => {
+                anyhow::bail!("expected none, left_right, right_left, top_bottom or bottom_top")
+            }
+        }),
+        WindowAttrib::StereoFullFrame => Value::StereoFullFrame(parse_bool(raw)?),
+        WindowAttrib::StereoAdjustMouse => Value::StereoAdjustMouse(parse_bool(raw)?),
+        WindowAttrib::MouseTransform => Value::MouseTransform(match raw {
+            "default" => packet_client::WlxMouseTransform::Default,
+            "normal" => packet_client::WlxMouseTransform::Normal,
+            "rotated90" => packet_client::WlxMouseTransform::Rotated90,
+            "rotated180" => packet_client::WlxMouseTransform::Rotated180,
+            "rotated270" => packet_client::WlxMouseTransform::Rotated270,
+            "flipped" => packet_client::WlxMouseTransform::Flipped,
+            "flipped90" => packet_client::WlxMouseTransform::Flipped90,
+            "flipped180" => packet_client::WlxMouseTransform::Flipped180,
+            "flipped270" => packet_client::WlxMouseTransform::Flipped270,
+            _ => anyhow::bail!(
+                "expected default, normal, rotated90, rotated180, rotated270, flipped, \
+                 flipped90, flipped180 or flipped270"
+            ),
+        }),
+        WindowAttrib::WindowSize => {
+            let size = raw
+                .split_once('x')
+                .and_then(|(w, h)| Some([w.parse::<u32>().ok()?, h.parse::<u32>().ok()?]))
+                .context(
+                    "Invalid size format. Expecting <width>x<height>, for example: 1920x1080",
+                )?;
+            Value::WindowSize(size)
+        }
     })
 }
 

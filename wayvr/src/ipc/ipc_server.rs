@@ -368,6 +368,28 @@ impl Connection {
         params.signals.send(WayVRSignal::SetWindowState(set_params));
     }
 
+    fn handle_wlx_window_attrib_get(
+        &self,
+        params: &mut TickParams,
+        serial: ipc::Serial,
+        get_params: packet_client::WlxWindowAttribGetParams,
+    ) {
+        params
+            .signals
+            .send(WayVRSignal::GetWindowAttrib(self.id, serial, get_params));
+    }
+
+    fn handle_wlx_window_attrib_set(
+        &self,
+        params: &mut TickParams,
+        serial: ipc::Serial,
+        set_params: packet_client::WlxWindowAttribSetParams,
+    ) {
+        params
+            .signals
+            .send(WayVRSignal::SetWindowAttrib(self.id, serial, set_params));
+    }
+
     fn handle_wlx_overlay_set_visible(params: &mut TickParams, overlay: String, visible: bool) {
         params
             .signals
@@ -462,6 +484,12 @@ impl Connection {
             }
             PacketClient::WlxWindowStateSet(set_params) => {
                 Self::handle_wlx_window_state_set(params, set_params);
+            }
+            PacketClient::WlxWindowAttribGet(serial, get_params) => {
+                self.handle_wlx_window_attrib_get(params, serial, get_params);
+            }
+            PacketClient::WlxWindowAttribSet(serial, set_params) => {
+                self.handle_wlx_window_attrib_set(params, serial, set_params);
             }
             PacketClient::WlxOverlaySetVisible(overlay, visible) => {
                 Self::handle_wlx_overlay_set_visible(params, overlay, visible);

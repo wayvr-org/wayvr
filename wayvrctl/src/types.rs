@@ -39,6 +39,18 @@ impl From<crate::WindowStateField> for ipc::WlxWindowStateField {
     }
 }
 
+impl From<crate::WindowAttrib> for ipc::WlxWindowAttrib {
+    fn from(attrib: crate::WindowAttrib) -> Self {
+        match attrib {
+            crate::WindowAttrib::Stereo => Self::Stereo,
+            crate::WindowAttrib::StereoFullFrame => Self::StereoFullFrame,
+            crate::WindowAttrib::StereoAdjustMouse => Self::StereoAdjustMouse,
+            crate::WindowAttrib::MouseTransform => Self::MouseTransform,
+            crate::WindowAttrib::WindowSize => Self::WindowSize,
+        }
+    }
+}
+
 impl From<crate::SubcommandHandsfree> for ipc::HandsfreeParams {
     fn from(cmd: crate::SubcommandHandsfree) -> Self {
         match cmd {

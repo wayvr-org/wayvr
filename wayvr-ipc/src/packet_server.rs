@@ -103,6 +103,8 @@ pub enum PacketServer {
 	WvrProcessLaunchResponse(Serial, Result<WvrProcessHandle, String>),
 	WvrProcessListResponse(Serial, WvrProcessList),
 	WlxWindowStateGetResponse(Serial, Result<packet_client::WlxWindowStateValue, String>),
+	WlxWindowAttribGetResponse(Serial, Result<packet_client::WlxWindowAttribValue, String>),
+	WlxWindowAttribSetResponse(Serial, Result<(), String>),
 	WvrStateChanged(WvrStateChanged),
 }
 
@@ -117,6 +119,8 @@ impl PacketServer {
 			PacketServer::WvrProcessLaunchResponse(serial, _) => Some(serial),
 			PacketServer::WvrProcessListResponse(serial, _) => Some(serial),
 			PacketServer::WlxWindowStateGetResponse(serial, _) => Some(serial),
+			PacketServer::WlxWindowAttribGetResponse(serial, _) => Some(serial),
+			PacketServer::WlxWindowAttribSetResponse(serial, _) => Some(serial),
 			PacketServer::WvrStateChanged(_) => None,
 		}
 	}

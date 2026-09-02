@@ -139,6 +139,62 @@ pub struct WlxWindowStateSetParams {
 	pub value: WlxWindowStateValue,
 }
 
+// see wlx_common::overlays::BackendAttrib
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WlxWindowAttrib {
+	Stereo,
+	StereoFullFrame,
+	StereoAdjustMouse,
+	MouseTransform,
+	WindowSize,
+}
+
+// see wlx_common::overlays::StereoMode
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WlxStereoMode {
+	None,
+	LeftRight,
+	RightLeft,
+	TopBottom,
+	BottomTop,
+}
+
+// see wlx_common::overlays::MouseTransform
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WlxMouseTransform {
+	Default,
+	Normal,
+	Rotated90,
+	Rotated180,
+	Rotated270,
+	Flipped,
+	Flipped90,
+	Flipped180,
+	Flipped270,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum WlxWindowAttribValue {
+	Stereo(WlxStereoMode),
+	StereoFullFrame(bool),
+	StereoAdjustMouse(bool),
+	MouseTransform(WlxMouseTransform),
+	WindowSize([u32; 2]),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WlxWindowAttribGetParams {
+	pub overlay: String,
+	pub attrib: WlxWindowAttrib,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WlxWindowAttribSetParams {
+	pub overlay: String,
+	pub attrib: WlxWindowAttrib,
+	pub value: WlxWindowAttribValue,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WlxOverlayListParams {
 	pub visible: bool,
@@ -163,5 +219,7 @@ pub enum PacketClient {
 	WlxHandsfree(HandsfreeParams),
 	WlxWindowStateGet(Serial, WlxWindowStateGetParams),
 	WlxWindowStateSet(WlxWindowStateSetParams),
+	WlxWindowAttribGet(Serial, WlxWindowAttribGetParams),
+	WlxWindowAttribSet(Serial, WlxWindowAttribSetParams),
 	WlxOverlaySetVisible(String, bool),
 }
