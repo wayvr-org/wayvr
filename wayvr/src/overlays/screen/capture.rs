@@ -12,7 +12,6 @@ use vulkano::{
     format::Format,
     image::{Image, sampler::Filter, view::ImageView},
     memory::{ExternalMemoryHandleTypes, allocator::MemoryAllocator},
-    pipeline::graphics::color_blend::AttachmentBlend,
 };
 use wgui::{
     gfx::{
@@ -73,7 +72,6 @@ impl ScreenPipeline {
             app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
             app.gfx_extras.shaders.get("frag_screen").unwrap(), // want panic
             WPipelineCreateInfo::new(app.gfx.surface_format)
-                .use_blend(AttachmentBlend::default())
                 .use_updatable_descriptors(smallvec![0]),
         )?;
 
