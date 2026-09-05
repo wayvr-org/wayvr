@@ -501,7 +501,7 @@ fn subpath_dropdown(
 		mp.layout,
 		parent,
 		Vec2::new(32.0, 32.0),
-		AssetPathRef::BuiltIn(&format!("@/dashboard/hand_{}.svg", side.as_ref())),
+		AssetPathRef::BuiltIn(&format!("dashboard/hand_{}.svg", side.as_ref())),
 	)?;
 
 	let current_text = current
