@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use glam::Affine3A;
 use wgui::{
-    animation::{Animation, AnimationEasing},
+    animation::{Animation, AnimationDuration, AnimationEasing},
     color::WguiColor,
     components::button::ComponentButton,
     drawing::Color,
@@ -97,10 +97,10 @@ fn start_progress_state(
     let id_rect_vu_meter = state.id_rect_vu_meter;
     let id_label_progress = state.id_label_progress;
 
-    common.alterables.animate(Animation::new_ex(
+    Animation::new_ex(
         id_rect_vu_meter, /* any tbh */
         0,
-        60 * 120, // max 120 seconds (whisper_stt MAX_DURATION is currently set to 30, account for processing time)
+        AnimationDuration::SecondsFixed(120.0), // max 120 seconds (whisper_stt MAX_DURATION is currently set to 30, account for processing time)
         AnimationEasing::Linear,
         Box::new(move |common, data| {
             let rect_vu_meter = data.obj.cast_mut::<WidgetRectangle>().unwrap();
@@ -156,7 +156,8 @@ fn start_progress_state(
                 );
             }
         }),
-    ));
+    )
+    .submit(common.alterables);
 }
 
 fn reset_progress_state(common: &mut CallbackDataCommon, state: &WhisperState) {

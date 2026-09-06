@@ -15,9 +15,12 @@
       flex_direction="column"
       gap="4"
       width="256"
+      max_width="450"
+      height="200"
       align_items="center"
+      flex_grow="1"
       align_self="start">
-      <image id="image_preview" width="100%" height="128" round="6">
+      <image id="image_preview" width="100%" aspect_ratio="2.0" round="6">
         <!-- new_pass is required, because we need to render rectangles at the top of the image. Sorry. -->
         <div new_pass="1" id="resolution_pips" gap="4" margin="6"/>
       </image>

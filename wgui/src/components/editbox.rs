@@ -7,7 +7,7 @@ use glam::FloatExt;
 use taffy::prelude::{auto, length, percent};
 
 use crate::{
-	animation::{Animation, AnimationEasing},
+	animation::{Animation, AnimationDuration, AnimationEasing},
 	color::{WguiColor, WguiColorName},
 	components::{Component, ComponentBase, ComponentTrait, FocusChangeData, RefreshData},
 	event::{self, CallbackDataCommon, CallbackMetadata, EventListenerCollection, EventListenerKind, StyleSetRequest},
@@ -53,58 +53,46 @@ pub struct ComponentEditBox {
 	state: Rc<RefCell<State>>,
 }
 
-fn anim_bottom_rect(
-	common: &mut CallbackDataCommon,
-	accent_color: WguiColor,
-	id_rect: WidgetID,
-	anim_mult: f32,
-	focused: bool,
-) {
-	common.alterables.animate(Animation::new(
-		id_rect,
-		(10.0 * anim_mult) as _,
-		AnimationEasing::OutQuad,
-		{
-			Box::new(move |common, data| {
-				let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();
-				let pos_bidir = if focused { data.pos } else { 1.0 - data.pos };
+fn anim_bottom_rect(common: &mut CallbackDataCommon, accent_color: WguiColor, id_rect: WidgetID, focused: bool) {
+	Animation::new(id_rect, AnimationDuration::Seconds(0.1666), AnimationEasing::OutQuad, {
+		Box::new(move |common, data| {
+			let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap();
+			let pos_bidir = if focused { data.pos } else { 1.0 - data.pos };
 
-				let color_lerped = accent_color.lerp(
-					&common.globals().palette,
-					&WguiColorName::OnBackgroundVariant.into(),
-					pos_bidir,
-				);
-				rect.set_color(common, color_lerped);
+			let color_lerped = accent_color.lerp(
+				&common.globals().palette,
+				&WguiColorName::OnBackgroundVariant.into(),
+				pos_bidir,
+			);
+			rect.set_color(common, color_lerped);
 
-				common.alterables.set_style(
-					data.widget_id,
-					StyleSetRequest::Size(taffy::Size {
-						width: percent(0.95.lerp(1.0, pos_bidir)),
-						height: length(1.0 + pos_bidir),
-					}),
-				);
+			common.alterables.set_style(
+				data.widget_id,
+				StyleSetRequest::Size(taffy::Size {
+					width: percent(0.95.lerp(1.0, pos_bidir)),
+					height: length(1.0 + pos_bidir),
+				}),
+			);
 
-				common.alterables.set_style(
-					data.widget_id,
-					StyleSetRequest::Margin(taffy::Rect {
-						bottom: length(pos_bidir),
-						left: auto(),
-						right: auto(),
-						top: auto(),
-					}),
-				);
+			common.alterables.set_style(
+				data.widget_id,
+				StyleSetRequest::Margin(taffy::Rect {
+					bottom: length(pos_bidir),
+					left: auto(),
+					right: auto(),
+					top: auto(),
+				}),
+			);
 
-				common.alterables.mark_redraw();
-			})
-		},
-	));
+			common.alterables.mark_redraw();
+		})
+	})
+	.submit(common.alterables);
 }
 
 fn refresh_all(common: &mut CallbackDataCommon, data: &Data, state: &mut State) -> Option<()> {
-	let theme = &common.state.theme;
 	let editbox_color = WguiColor::from(WguiColorName::BackgroundVariant);
 	let accent_color = WguiColor::from(WguiColorName::Primary);
-	let anim_mult = theme.animation_mult;
 
 	let (rect_color, border_color) = if state.focused {
 		(editbox_color.add_rgb(0.15), editbox_color.add_rgb(0.15 + 0.25))
@@ -120,7 +108,7 @@ fn refresh_all(common: &mut CallbackDataCommon, data: &Data, state: &mut State) 
 	rect.set_color(common, rect_color);
 
 	if state.focused_prev != state.focused || state.first_refresh {
-		anim_bottom_rect(common, accent_color, data.id_rect_bottom, anim_mult, state.focused);
+		anim_bottom_rect(common, accent_color, data.id_rect_bottom, state.focused);
 		state.focused_prev = state.focused;
 	}
 

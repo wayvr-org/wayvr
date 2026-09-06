@@ -2,7 +2,7 @@ use image::ImageBuffer;
 use taffy::prelude::percent;
 
 use crate::{
-	animation::Animation,
+	animation::{Animation, AnimationDuration},
 	assets::AssetPathRef,
 	color::WguiColorName,
 	components::{Component, ComponentBase, ComponentTrait, RefreshData},
@@ -112,10 +112,10 @@ impl ComponentVideo {
 		let start_time = get_millis();
 		// log::info!("num frames: {}", source.demuxer.num_frames);
 
-		layout.animations.add(Animation::new_ex(
+		Animation::new_ex(
 			self.data.id_image,
 			PLAYBACK_ANIMATION_ID,
-			u32::MAX, // infinity
+			AnimationDuration::Infinity,
 			crate::animation::AnimationEasing::Linear,
 			Box::new({
 				let state_ref = self.state.clone();
@@ -163,7 +163,8 @@ impl ComponentVideo {
 					}
 				}
 			}),
-		));
+		)
+		.submit_l(layout);
 		Ok(())
 	}
 

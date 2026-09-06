@@ -129,6 +129,7 @@ pub struct LayoutState {
 	pub nodes: WidgetNodeMap,
 	pub tree: taffy::tree::TaffyTree<WidgetID>,
 	pub components_by_widget_id: SecondaryMap<WidgetID, ComponentWeak>,
+	pub ticks_per_second: u32,
 }
 
 pub struct ModifyLayoutStateData<'a> {
@@ -572,6 +573,7 @@ impl Layout {
 			globals,
 			theme: params.theme,
 			components_by_widget_id: SecondaryMap::default(),
+			ticks_per_second: 60, // hard-coded
 		};
 
 		let size = if params.resize_to_parent {
@@ -755,7 +757,7 @@ impl Layout {
 		while let Some(task) = tasks.pop_front() {
 			match task {
 				LayoutTask::PlayAnimation(animation) => {
-					self.animations.add(animation);
+					self.alterables.animate(animation);
 				}
 				LayoutTask::RefreshPalette => {
 					let root = self.tree_root_widget;
@@ -894,7 +896,7 @@ impl Layout {
 		if !alterables.animations.is_empty() {
 			self.mark_redraw();
 			for anim in alterables.animations {
-				self.animations.add(anim);
+				self.animations.add(anim, &self.state, &mut self.alterables);
 			}
 		}
 

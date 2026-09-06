@@ -1,6 +1,6 @@
 use glam::{Mat4, Vec2};
 use wgui::{
-	animation::{Animation, AnimationEasing},
+	animation::{Animation, AnimationDuration, AnimationEasing},
 	assets::AssetPathRef,
 	color::WguiColorName,
 	components::{self, button::ButtonClickCallback},
@@ -145,9 +145,9 @@ pub fn create_loading(par: CreateLoadingParams) -> anyhow::Result<WidgetID> {
 	let id_root = data.get_widget_id("root")?;
 	let id_sprite_loading = data.get_widget_id("sprite_loading")?;
 
-	par.layout.animations.add(Animation::new(
+	Animation::new(
 		id_sprite_loading,
-		60 * 30, /* spin it for 30 seconds at most */
+		AnimationDuration::SecondsFixed(120.0), /* spin it for 120 seconds at most */
 		AnimationEasing::Linear,
 		Box::new(move |common, data| {
 			// spin it
@@ -161,7 +161,8 @@ pub fn create_loading(par: CreateLoadingParams) -> anyhow::Result<WidgetID> {
 			}
 			common.alterables.mark_redraw();
 		}),
-	));
+	)
+	.submit_l(par.layout);
 
 	Ok(id_root)
 }

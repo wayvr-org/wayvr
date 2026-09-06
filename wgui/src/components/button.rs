@@ -1,5 +1,5 @@
 use crate::{
-	animation::{Animation, AnimationEasing},
+	animation::{Animation, AnimationDuration, AnimationEasing},
 	assets::AssetPathRef,
 	color::{ParentColor, WguiColor, WguiColorName},
 	components::{
@@ -266,17 +266,15 @@ impl ComponentButton {
 			return;
 		}
 
-		let (anim_mult, gradient_intensity) = {
+		let gradient_intensity = {
 			let theme = &common.state.theme;
-			(theme.animation_mult, theme.gradient_intensity)
+			theme.gradient_intensity
 		};
-
-		let anim_ticks = if sticky_down { 5. } else { 10. };
 
 		let state = self.state.clone();
 		let anim = Animation::new(
 			self.data.id_rect,
-			(anim_ticks * anim_mult) as _,
+			AnimationDuration::Seconds(if sticky_down { 0.083 } else { 0.1666 }),
 			AnimationEasing::OutCubic,
 			Box::new(move |common, anim_data| {
 				let rect = anim_data.obj.get_as_mut::<WidgetRectangle>().unwrap();
@@ -383,10 +381,10 @@ fn anim_hover(
 	rect.params.border_color = init_border_color.lerp(&globals.palette, &colors.hover_border_color, mult);
 }
 
-fn anim_hover_create(state: Rc<RefCell<State>>, widget_id: WidgetID, fade_in: bool, anim_mult: f32) -> Animation {
+fn anim_hover_create(state: Rc<RefCell<State>>, widget_id: WidgetID, fade_in: bool) -> Animation {
 	Animation::new(
 		widget_id,
-		((if fade_in { 5. } else { 10. }) * anim_mult) as _,
+		AnimationDuration::Seconds(if fade_in { 0.0833 } else { 0.1666 }),
 		AnimationEasing::OutCubic,
 		Box::new(move |common, anim_data| {
 			let rect = anim_data.obj.get_as_mut::<WidgetRectangle>().unwrap();
@@ -413,7 +411,6 @@ fn register_event_mouse_enter(
 	state: Rc<RefCell<State>>,
 	listeners: &mut EventListenerCollection,
 	tooltip_info: Option<components::tooltip::TooltipInfo>,
-	anim_mult: f32,
 ) -> EventListenerID {
 	listeners.register(
 		EventListenerKind::MouseEnter,
@@ -423,7 +420,7 @@ fn register_event_mouse_enter(
 			common.alterables.mark_redraw();
 			common
 				.alterables
-				.animate(anim_hover_create(state.clone(), event_data.widget_id, true, anim_mult));
+				.animate(anim_hover_create(state.clone(), event_data.widget_id, true));
 
 			ComponentTooltip::register_hover_in(common, &tooltip_info, data.id_rect, state.clone());
 
@@ -433,18 +430,14 @@ fn register_event_mouse_enter(
 	)
 }
 
-fn register_event_mouse_leave(
-	state: Rc<RefCell<State>>,
-	listeners: &mut EventListenerCollection,
-	anim_mult: f32,
-) -> EventListenerID {
+fn register_event_mouse_leave(state: Rc<RefCell<State>>, listeners: &mut EventListenerCollection) -> EventListenerID {
 	listeners.register(
 		EventListenerKind::MouseLeave,
 		Box::new(move |common, event_data, (), ()| {
 			common.alterables.trigger_haptics();
 			common
 				.alterables
-				.animate(anim_hover_create(state.clone(), event_data.widget_id, false, anim_mult));
+				.animate(anim_hover_create(state.clone(), event_data.widget_id, false));
 			let mut state = state.borrow_mut();
 			state.active_tooltip = None;
 			state.hovered = false;
@@ -702,11 +695,10 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id: root.id,
 		lhandles: {
 			let listeners = &mut root.widget.state().event_listeners;
-			let anim_mult = ess.layout.state.theme.animation_mult;
 			vec![
 				register_event_mouse_cancel(state.clone(), listeners),
-				register_event_mouse_enter(data.clone(), state.clone(), listeners, params.tooltip, anim_mult),
-				register_event_mouse_leave(state.clone(), listeners, anim_mult),
+				register_event_mouse_enter(data.clone(), state.clone(), listeners, params.tooltip),
+				register_event_mouse_leave(state.clone(), listeners),
 				register_event_mouse_press(state.clone(), listeners),
 				register_event_mouse_release(data.clone(), state.clone(), listeners),
 			]

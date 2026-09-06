@@ -4,7 +4,7 @@ use glam::Vec2;
 use taffy::prelude::{length, percent};
 
 use crate::{
-	animation::{Animation, AnimationEasing},
+	animation::{Animation, AnimationDuration, AnimationEasing},
 	assets::AssetPathRef,
 	components::button::ComponentButton,
 	drawing,
@@ -183,16 +183,17 @@ impl WguiWindow {
 			)?;
 
 			// Fade animation
-			params.layout.animations.add(Animation::new(
+			Animation::new(
 				widget.id,
-				20,
+				AnimationDuration::Seconds(0.333),
 				AnimationEasing::OutQuad,
 				Box::new(|common, data| {
 					let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap() /* should always succeed */;
 					rect.params.color = drawing::Color::new(0.0, 0.0, 0.0, data.pos * 0.3).into();
 					common.alterables.mark_redraw();
 				}),
-			));
+			)
+			.submit_l(params.layout);
 
 			Some(widget)
 		} else {
@@ -215,6 +216,15 @@ impl WguiWindow {
 		)?;
 
 		let globals = params.layout.state.globals.clone();
+
+		// window slide animation
+		Animation::effect_slide(
+			widget.id,
+			AnimationDuration::Seconds(0.5),
+			AnimationEasing::OutQuint,
+			Vec2::new(0.0, 16.0),
+		)
+		.submit_l(params.layout);
 
 		let content_id = if params.extra.with_decorations {
 			let xml_path: AssetPathRef = AssetPathRef::WguiInternal("wgui/window_frame.xml");

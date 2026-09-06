@@ -14,7 +14,7 @@ use wgui::{
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
 	task::Tasks,
-	widget::ConstructEssentials,
+	widget::{ConstructEssentials, rectangle::WidgetRectangle},
 };
 
 use crate::{
@@ -801,6 +801,13 @@ impl View {
 			self.id_devices,
 			par,
 		)?;
+
+		if params.checked {
+			let rect = data.fetch_widget(&params.layout.state, "rect")?;
+			let mut rect = rect.widget.cast::<WidgetRectangle>()?;
+			rect.set_color(&mut params.layout.common(), WguiColorName::BackgroundVariant.into());
+			rect.set_border_color(&mut params.layout.common(), WguiColorName::Primary.into());
+		}
 
 		let mut common = params.layout.common();
 		let checkbox = data.fetch_component_as::<ComponentCheckbox>("checkbox")?;

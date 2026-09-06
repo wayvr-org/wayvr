@@ -971,10 +971,8 @@ fn process_attribs<'a>(
 					ctx.doc_params.path.get_str()
 				);
 			}
-		} else {
-			if let Some(pair) = process_attrib(&file.template_parameters, ctx, key, value) {
-				res.push(pair);
-			}
+		} else if let Some(pair) = process_attrib(&file.template_parameters, ctx, key, value) {
+			res.push(pair);
 		}
 	}
 

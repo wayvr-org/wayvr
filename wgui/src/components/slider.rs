@@ -4,7 +4,7 @@ use glam::{Mat4, Vec2, Vec3};
 use taffy::prelude::{length, percent};
 
 use crate::{
-	animation::{Animation, AnimationCallback, AnimationEasing},
+	animation::{Animation, AnimationCallback, AnimationDuration, AnimationEasing},
 	color::{WguiColor, WguiColorName},
 	components::{
 		Component, ComponentBase, ComponentTrait, DestroyData, RefreshData,
@@ -404,53 +404,23 @@ fn get_callback_label(inverse: bool) -> AnimationCallback {
 	})
 }
 
-fn on_enter_anim(
-	common: &mut event::CallbackDataCommon,
-	id_handle: WidgetID,
-	id_label: Option<WidgetID>,
-	anim_mult: f32,
-) {
-	let duration = 20. * anim_mult;
+fn on_enter_anim(common: &mut event::CallbackDataCommon, id_handle: WidgetID, id_label: Option<WidgetID>) {
+	let duration = AnimationDuration::Seconds(0.333);
 
-	common.alterables.animate(Animation::new(
-		id_handle,
-		duration as _,
-		AnimationEasing::OutBack,
-		get_callback_rect(false),
-	));
+	Animation::new(id_handle, duration, AnimationEasing::OutBack, get_callback_rect(false)).submit(common.alterables);
 
 	if let Some(id_label) = id_label {
-		common.alterables.animate(Animation::new(
-			id_label,
-			duration as _,
-			AnimationEasing::OutBack,
-			get_callback_label(false),
-		));
+		Animation::new(id_label, duration, AnimationEasing::OutBack, get_callback_label(false)).submit(common.alterables);
 	}
 }
 
-fn on_leave_anim(
-	common: &mut event::CallbackDataCommon,
-	id_handle: WidgetID,
-	id_label: Option<WidgetID>,
-	anim_mult: f32,
-) {
-	let duration = 10. * anim_mult;
+fn on_leave_anim(common: &mut event::CallbackDataCommon, id_handle: WidgetID, id_label: Option<WidgetID>) {
+	let duration = AnimationDuration::Seconds(0.0833);
 
-	common.alterables.animate(Animation::new(
-		id_handle,
-		duration as _,
-		AnimationEasing::OutQuad,
-		get_callback_rect(true),
-	));
+	Animation::new(id_handle, duration, AnimationEasing::OutQuad, get_callback_rect(true)).submit(common.alterables);
 
 	if let Some(id_label) = id_label {
-		common.alterables.animate(Animation::new(
-			id_label,
-			duration as _,
-			AnimationEasing::OutQuad,
-			get_callback_label(true),
-		));
+		Animation::new(id_label, duration, AnimationEasing::OutQuad, get_callback_label(true)).submit(common.alterables);
 	}
 }
 
@@ -499,13 +469,7 @@ fn get_handle_dist(common: &mut CallbackDataCommon, handle: &SliderHandleData, m
 
 const MAX_HOVER_DIST: f32 = 64.0;
 
-fn update_handle_hovers(
-	common: &mut CallbackDataCommon,
-	data: &Data,
-	state: &mut State,
-	anim_mult: f32,
-	mouse_pos: Vec2,
-) {
+fn update_handle_hovers(common: &mut CallbackDataCommon, data: &Data, state: &mut State, mouse_pos: Vec2) {
 	let hovered1_prev = state.hovered1;
 	let hovered2_prev = state.hovered2;
 
@@ -536,9 +500,9 @@ fn update_handle_hovers(
 	// hover state changed, run animations
 	if state.hovered1 != hovered1_prev {
 		if state.hovered1 && !hovered1_prev {
-			on_enter_anim(common, data.handle1.id_handle_rect, data.handle1.id_label, anim_mult);
+			on_enter_anim(common, data.handle1.id_handle_rect, data.handle1.id_label);
 		} else {
-			on_leave_anim(common, data.handle1.id_handle_rect, data.handle1.id_label, anim_mult);
+			on_leave_anim(common, data.handle1.id_handle_rect, data.handle1.id_label);
 		}
 	}
 
@@ -546,9 +510,9 @@ fn update_handle_hovers(
 		&& let Some(handle2) = data.handle2.as_ref()
 	{
 		if state.hovered2 && !hovered2_prev {
-			on_enter_anim(common, handle2.id_handle_rect, handle2.id_label, anim_mult);
+			on_enter_anim(common, handle2.id_handle_rect, handle2.id_label);
 		} else {
-			on_leave_anim(common, handle2.id_handle_rect, handle2.id_label, anim_mult);
+			on_leave_anim(common, handle2.id_handle_rect, handle2.id_label);
 		}
 	}
 }
@@ -557,7 +521,6 @@ fn register_event_mouse_motion(
 	data: Rc<Data>,
 	state: Rc<RefCell<State>>,
 	listeners: &mut EventListenerCollection,
-	anim_mult: f32,
 ) -> event::EventListenerID {
 	listeners.register(
 		EventListenerKind::MouseMotion,
@@ -575,7 +538,7 @@ fn register_event_mouse_motion(
 				unreachable!();
 			};
 
-			update_handle_hovers(common, &data, &mut state, anim_mult, pos_relative);
+			update_handle_hovers(common, &data, &mut state, pos_relative);
 
 			if let Some(dragged_by) = &state.dragged_by
 				&& dragged_by.device == pos.device
@@ -769,11 +732,10 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id: root.id,
 		lhandles: {
 			let listeners = &mut root.widget.state().event_listeners;
-			let anim_mult = ess.layout.state.theme.animation_mult;
 			vec![
 				register_event_mouse_enter(state.clone(), listeners, params.tooltip),
 				register_event_mouse_leave(state.clone(), listeners),
-				register_event_mouse_motion(data.clone(), state.clone(), listeners, anim_mult),
+				register_event_mouse_motion(data.clone(), state.clone(), listeners),
 				register_event_mouse_press(data.clone(), state.clone(), listeners),
 				register_event_mouse_release(state.clone(), listeners),
 			]

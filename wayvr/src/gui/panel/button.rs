@@ -625,6 +625,7 @@ pub(super) fn setup_custom_button<S: 'static>(
                         )
                         .with_timeout(1.0)
                         .with_lerp_amount(1.0)
+                        .with_animate(false)
                         .with_sound(i == 0)
                         .submit_at(app, now + Duration::from_secs(i as _));
                     }

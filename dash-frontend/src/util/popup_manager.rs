@@ -3,7 +3,9 @@ use std::{
 	rc::{Rc, Weak},
 };
 
+use glam::Vec2;
 use wgui::{
+	animation::{Animation, AnimationDuration, AnimationEasing},
 	assets::AssetPathRef,
 	components::button::ComponentButton,
 	event::{EventAlterables, StyleSetRequest},
@@ -12,7 +14,7 @@ use wgui::{
 	layout::{Layout, LayoutTask, LayoutTasks, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState},
 	taffy::Rect,
-	widget::label::WidgetLabel,
+	widget::{WidgetObj, label::WidgetLabel},
 };
 use wlx_common::config::GeneralConfig;
 
@@ -251,6 +253,13 @@ impl State {
 	}
 }
 
+struct MountPopupPrepareResult {
+	popup_handle: PopupHandle,
+	id_content: WidgetID,
+	id_top_bar_contents: WidgetID,
+	id_popup_title: WidgetID,
+}
+
 impl PopupManager {
 	pub fn new(params: PopupManagerParams) -> Self {
 		Self {
@@ -273,7 +282,7 @@ impl PopupManager {
 		frontend_tasks: &FrontendTasks,
 		popup_title: &Translation,
 		popup_padding: PopupPadding,
-	) -> anyhow::Result<(PopupHandle, WidgetID /* content widget ID */)> {
+	) -> anyhow::Result<MountPopupPrepareResult> {
 		let doc_params = &ParseDocumentParams {
 			globals: globals.clone(),
 			path: AssetPathRef::BuiltIn("gui/view/popup_window.xml"),
@@ -283,6 +292,7 @@ impl PopupManager {
 
 		let id_root = state.get_widget_id("root")?;
 		let id_content = state.get_widget_id("content")?;
+		let id_top_bar_contents = state.get_widget_id("top_bar_contents")?;
 
 		let padding = match popup_padding {
 			PopupPadding::Normal => 16.0_f32,
@@ -294,10 +304,11 @@ impl PopupManager {
 			StyleSetRequest::Padding(Rect::length(padding)),
 		));
 
-		{
+		let id_popup_title = {
 			let mut label_title = state.fetch_widget_as::<WidgetLabel>(&layout.state, "popup_title")?;
 			label_title.set_text_simple(&mut globals.get(), popup_title.clone());
-		}
+			label_title.get_id()
+		};
 
 		let but_back = state.fetch_component_as::<ComponentButton>("but_back")?;
 
@@ -338,7 +349,13 @@ impl PopupManager {
 		});
 
 		frontend_tasks.push(FrontendTask::RefreshPopupManager);
-		Ok((popup_handle, id_content))
+
+		Ok(MountPopupPrepareResult {
+			popup_handle,
+			id_content,
+			id_top_bar_contents,
+			id_popup_title,
+		})
 	}
 
 	/// Mount a new popup on top of the existing popup stack.
@@ -356,18 +373,43 @@ impl PopupManager {
 			anyhow::bail!("mount_popup_once called more than once");
 		};
 
-		let (popup_handle, id_content) =
-			self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title, params.extra.padding)?;
+		let res = self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title, params.extra.padding)?;
+
+		// text fade-in
+		Animation::effect_label_fade_in(
+			res.id_popup_title,
+			AnimationDuration::Seconds(0.25),
+			AnimationEasing::OutQuad,
+		)
+		.submit_l(layout);
+
+		// top bar slide
+		Animation::effect_slide(
+			res.id_top_bar_contents,
+			AnimationDuration::Seconds(0.5),
+			AnimationEasing::OutQuint,
+			Vec2::new(10.0, 0.0),
+		)
+		.submit_l(layout);
+
+		// content slide
+		Animation::effect_slide(
+			res.id_content,
+			AnimationDuration::Seconds(0.5),
+			AnimationEasing::OutQuint,
+			Vec2::new(5.0, 0.0),
+		)
+		.submit_l(layout);
 
 		// mount user-set popup content
 		let closed_callback = on_content_func(PopupContentFuncData {
 			layout,
-			handle: popup_handle.clone(),
-			id_content,
+			handle: res.popup_handle.clone(),
+			id_content: res.id_content,
 			config,
 		})?;
 
-		popup_handle.state.borrow_mut().closed_callback = Some(closed_callback);
+		res.popup_handle.state.borrow_mut().closed_callback = Some(closed_callback);
 
 		Ok(())
 	}
