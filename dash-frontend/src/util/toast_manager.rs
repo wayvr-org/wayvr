@@ -118,7 +118,7 @@ impl ToastManager {
 		let (label, _) = layout.add_child(rect.id, label, taffy::Style { ..Default::default() })?;
 
 		// show-up animation
-		layout.alterables.animate(Animation::new(
+		Animation::new(
 			rect.id,
 			def_toast_duration(),
 			AnimationEasing::Linear,
@@ -145,7 +145,8 @@ impl ToastManager {
 				);
 				common.alterables.mark_redraw();
 			}),
-		));
+		)
+		.submit_l(layout);
 
 		state.toast = Some(MountedToast {
 			id_root: root.id,
@@ -167,7 +168,7 @@ impl ToastManager {
 
 		if state.timeout == 0 {
 			state.toast = None;
-			state.timeout = def_toast_duration().to_ticks(layout.state.ticks_per_seconds, layout.state.theme.animation_mult);
+			state.timeout = def_toast_duration().to_ticks(layout.state.ticks_per_second, layout.state.theme.animation_mult);
 			// mount next
 			if let Some(content) = state.queue.pop_front() {
 				self.mount_toast(layout, &mut state, content)?;

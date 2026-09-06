@@ -44,9 +44,17 @@ impl WidgetRectangle {
 		common.mark_widget_dirty(self.id);
 	}
 
+	pub const fn get_color(&self) -> WguiColor {
+		self.params.color
+	}
+
 	pub fn set_border_color(&mut self, common: &mut CallbackDataCommon, color: WguiColor) {
 		self.params.border_color = color;
 		common.mark_widget_dirty(self.id);
+	}
+
+	pub const fn get_border_color(&self) -> WguiColor {
+		self.params.border_color
 	}
 }
 

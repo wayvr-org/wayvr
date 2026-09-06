@@ -5,9 +5,11 @@ use std::{
 };
 
 use anyhow::Context;
-use glam::{Affine3A, Quat, Vec3, vec3};
+use glam::{Affine3A, Quat, Vec2, Vec3, vec3};
 use wgui::{
+    animation::{Animation, AnimationDuration, AnimationEasing, AnimationStartDelay},
     i18n::{I18n, Translation},
+    parser::Fetchable,
     widget::label::WidgetLabel,
 };
 use wlx_common::{
@@ -30,6 +32,7 @@ pub struct ToastParams {
     pub opacity: f32,
     pub timeout: f32,
     pub lerp_amount: f32,
+    pub animate: bool,
     pub sound: bool,
     pub topic: ToastTopic,
 }
@@ -56,6 +59,7 @@ impl Toast {
                 opacity: 1.0,
                 lerp_amount: 0.1,
                 timeout: 3.0,
+                animate: true,
                 sound: false,
                 topic,
             },
@@ -79,6 +83,11 @@ impl Toast {
 
     pub const fn with_sound(mut self, sound: bool) -> Self {
         self.params.sound = sound;
+        self
+    }
+
+    pub const fn with_animate(mut self, animate: bool) -> Self {
+        self.params.animate = animate;
         self
     }
 
@@ -200,21 +209,21 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
 
     let on_custom_id: OnCustomIdFunc<()> =
         Box::new(move |id, widget, _doc_params, layout, _parser_state, ()| {
-            if &*id == "toast_title" {
+            if &*id == "label_title" {
                 let mut label = layout
                     .state
                     .widgets
                     .get_as::<WidgetLabel>(widget)
-                    .context("toast.xml: missing element with id: toast_title")?;
+                    .context("toast.xml: missing element with id: label_title")?;
                 let mut globals = layout.state.globals.get();
                 label.set_text_simple(&mut globals, title.clone());
             }
-            if &*id == "toast_body" {
+            if &*id == "label_body" {
                 let mut label = layout
                     .state
                     .widgets
                     .get_as::<WidgetLabel>(widget)
-                    .context("toast.xml: missing element with id: toast_body")?;
+                    .context("toast.xml: missing element with id: label_body")?;
                 let mut globals = layout.state.globals.get();
                 label.set_text_simple(&mut globals, body.clone());
             }
@@ -232,6 +241,107 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
     )
     .inspect_err(|e| log::error!("Could not create toast: {e:?}"))
     .ok()?;
+
+    // animations
+    if toast.params.animate {
+        let id_div_title = panel.parser_state.get_widget_id("div_title").ok()?;
+        let id_label_body = panel.parser_state.get_widget_id("label_body").ok()?;
+        let id_label_title = panel.parser_state.get_widget_id("label_title").ok()?;
+        let id_rect = panel.parser_state.get_widget_id("rect").ok()?;
+        let id_rect_separator = panel.parser_state.get_widget_id("rect_separator").ok()?;
+        let id_sprite_bell = panel.parser_state.get_widget_id("sprite_bell").ok()?;
+
+        // schedule timeouts
+        let time_window = 0.5;
+        if toast.params.timeout > time_window && toast.params.timeout < 150.0 {
+            let dur = AnimationDuration::SecondsFixed(time_window);
+            let easing = AnimationEasing::OutQuad;
+
+            let mut add = |a: Animation| {
+                a.reversed()
+                    .delayed(AnimationStartDelay::SecondsFixed(
+                        toast.params.timeout - time_window,
+                    ))
+                    .with_id(1)
+                    .submit_l(&mut panel.layout);
+            };
+
+            add(Animation::effect_rectangle_fade_in(id_rect, dur, easing));
+            add(Animation::effect_scale(
+                id_rect_separator,
+                dur,
+                easing,
+                Vec2::new(0.0, 1.0),
+                Vec2::new(1.0, 1.0),
+            ));
+            add(Animation::effect_label_fade_in(id_label_title, dur, easing));
+            add(Animation::effect_label_fade_in(id_label_body, dur, easing));
+            add(Animation::effect_sprite_fade_in(
+                id_sprite_bell,
+                dur,
+                easing,
+            ));
+        }
+
+        // separator scale
+        Animation::effect_scale(
+            id_rect_separator,
+            AnimationDuration::Seconds(1.0),
+            AnimationEasing::OutBack,
+            Vec2::new(0.0, 1.0),
+            Vec2::new(1.0, 1.0),
+        )
+        .submit_l(&mut panel.layout);
+
+        // rectangle opacity
+        Animation::effect_rectangle_fade_in(
+            id_rect,
+            AnimationDuration::Seconds(0.5),
+            AnimationEasing::OutQuad,
+        )
+        .submit_l(&mut panel.layout);
+
+        // title animation
+        Animation::effect_slide(
+            id_div_title,
+            AnimationDuration::Seconds(1.0),
+            AnimationEasing::OutQuint,
+            Vec2::new(15.0, 0.0),
+        )
+        .submit_l(&mut panel.layout);
+
+        Animation::effect_label_fade_in(
+            id_label_title,
+            AnimationDuration::Seconds(0.5),
+            AnimationEasing::OutQuad,
+        )
+        .submit_l(&mut panel.layout);
+
+        Animation::effect_sprite_fade_in(
+            id_sprite_bell,
+            AnimationDuration::Seconds(0.5),
+            AnimationEasing::OutQuad,
+        )
+        .submit_l(&mut panel.layout);
+
+        // body animation
+        Animation::effect_slide(
+            id_label_body,
+            AnimationDuration::Seconds(1.0),
+            AnimationEasing::OutQuint,
+            Vec2::new(15.0, 0.0),
+        )
+        .delayed(AnimationStartDelay::Seconds(0.3))
+        .submit_l(&mut panel.layout);
+
+        Animation::effect_label_fade_in(
+            id_label_body,
+            AnimationDuration::Seconds(0.5),
+            AnimationEasing::OutQuint,
+        )
+        .delayed(AnimationStartDelay::Seconds(0.3))
+        .submit_l(&mut panel.layout);
+    }
 
     panel
         .update_layout(app)

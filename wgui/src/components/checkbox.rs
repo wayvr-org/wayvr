@@ -218,7 +218,7 @@ fn register_event_mouse_enter(
 		EventListenerKind::MouseEnter,
 		Box::new(move |common, _event_data, (), ()| {
 			common.alterables.trigger_haptics();
-			common.alterables.animate(anim_hover_in(&state, &data));
+			anim_hover_in(&state, &data).submit(common.alterables);
 
 			ComponentTooltip::register_hover_in(common, &tooltip_info, data.id_container, state.clone());
 
@@ -251,7 +251,7 @@ fn register_event_mouse_leave(
 		EventListenerKind::MouseLeave,
 		Box::new(move |common, _event_data, (), ()| {
 			common.alterables.trigger_haptics();
-			common.alterables.animate(anim_hover_out(&state, &data));
+			anim_hover_out(&state, &data).submit(common.alterables);
 
 			let checked = {
 				let mut state = state.borrow_mut();

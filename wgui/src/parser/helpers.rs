@@ -14,7 +14,7 @@ impl TooltipAttribs {
 	pub fn get_info(self) -> Option<tooltip::TooltipInfo> {
 		self.tooltip.map(|text| tooltip::TooltipInfo {
 			text,
-			side: self.tooltip_side.map_or(tooltip::TooltipSide::Top, |f| f),
+			side: self.tooltip_side.unwrap_or(tooltip::TooltipSide::Top),
 		})
 	}
 }

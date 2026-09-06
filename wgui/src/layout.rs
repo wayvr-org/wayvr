@@ -129,7 +129,7 @@ pub struct LayoutState {
 	pub nodes: WidgetNodeMap,
 	pub tree: taffy::tree::TaffyTree<WidgetID>,
 	pub components_by_widget_id: SecondaryMap<WidgetID, ComponentWeak>,
-	pub ticks_per_seconds: u32,
+	pub ticks_per_second: u32,
 }
 
 pub struct ModifyLayoutStateData<'a> {
@@ -573,7 +573,7 @@ impl Layout {
 			globals,
 			theme: params.theme,
 			components_by_widget_id: SecondaryMap::default(),
-			ticks_per_seconds: 60, // hard-coded
+			ticks_per_second: 60, // hard-coded
 		};
 
 		let size = if params.resize_to_parent {

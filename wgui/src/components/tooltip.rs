@@ -292,38 +292,34 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		TooltipSide::Bottom => Vec2::new(0.0, 1.0),
 	};
 
-	ess.layout.alterables.animate(Animation::new(
-		rect.id,
-		AnimationDuration::Seconds(0.1666),
-		AnimationEasing::OutQuad,
-		{
-			Box::new(move |common, data| {
-				let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap(); /* safe */
-				let alpha = data.pos;
-				rect.params.color = rect.params.color.with_alpha(alpha);
-				rect.params.border_color = rect.params.border_color.with_alpha(alpha);
+	Animation::new(rect.id, AnimationDuration::Seconds(0.1666), AnimationEasing::OutQuad, {
+		Box::new(move |common, data| {
+			let rect = data.obj.get_as_mut::<WidgetRectangle>().unwrap(); /* safe */
+			let alpha = data.pos;
+			rect.params.color = rect.params.color.with_alpha(alpha);
+			rect.params.border_color = rect.params.border_color.with_alpha(alpha);
 
-				let position_shift = state.borrow().position_shift;
+			let position_shift = state.borrow().position_shift;
 
-				let dir_mult = (1.0 - data.pos) * 5.0;
-				data.data.transform = Mat4::from_translation(Vec3::new(
-					direction.x * dir_mult + position_shift.x,
-					direction.y * dir_mult + position_shift.y,
-					0.0,
-				));
+			let dir_mult = (1.0 - data.pos) * 5.0;
+			data.data.transform = Mat4::from_translation(Vec3::new(
+				direction.x * dir_mult + position_shift.x,
+				direction.y * dir_mult + position_shift.y,
+				0.0,
+			));
 
-				if let Some(mut label) = common.state.widgets.get_as::<WidgetLabel>(label.id) {
-					label.set_color(
-						common,
-						WguiColor::from(WguiColorName::OnBackground).with_alpha(alpha),
-						true,
-					);
-				}
+			if let Some(mut label) = common.state.widgets.get_as::<WidgetLabel>(label.id) {
+				label.set_color(
+					common,
+					WguiColor::from(WguiColorName::OnBackground).with_alpha(alpha),
+					true,
+				);
+			}
 
-				common.alterables.mark_redraw();
-			})
-		},
-	));
+			common.alterables.mark_redraw();
+		})
+	})
+	.submit_l(ess.layout);
 
 	ess.layout.defer_component_refresh(Component(tooltip.clone()));
 	Ok((div, tooltip))

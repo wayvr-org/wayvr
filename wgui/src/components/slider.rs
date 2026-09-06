@@ -407,40 +407,20 @@ fn get_callback_label(inverse: bool) -> AnimationCallback {
 fn on_enter_anim(common: &mut event::CallbackDataCommon, id_handle: WidgetID, id_label: Option<WidgetID>) {
 	let duration = AnimationDuration::Seconds(0.333);
 
-	common.alterables.animate(Animation::new(
-		id_handle,
-		duration,
-		AnimationEasing::OutBack,
-		get_callback_rect(false),
-	));
+	Animation::new(id_handle, duration, AnimationEasing::OutBack, get_callback_rect(false)).submit(common.alterables);
 
 	if let Some(id_label) = id_label {
-		common.alterables.animate(Animation::new(
-			id_label,
-			duration,
-			AnimationEasing::OutBack,
-			get_callback_label(false),
-		));
+		Animation::new(id_label, duration, AnimationEasing::OutBack, get_callback_label(false)).submit(common.alterables);
 	}
 }
 
 fn on_leave_anim(common: &mut event::CallbackDataCommon, id_handle: WidgetID, id_label: Option<WidgetID>) {
 	let duration = AnimationDuration::Seconds(0.0833);
 
-	common.alterables.animate(Animation::new(
-		id_handle,
-		duration,
-		AnimationEasing::OutQuad,
-		get_callback_rect(true),
-	));
+	Animation::new(id_handle, duration, AnimationEasing::OutQuad, get_callback_rect(true)).submit(common.alterables);
 
 	if let Some(id_label) = id_label {
-		common.alterables.animate(Animation::new(
-			id_label,
-			duration,
-			AnimationEasing::OutQuad,
-			get_callback_label(true),
-		));
+		Animation::new(id_label, duration, AnimationEasing::OutQuad, get_callback_label(true)).submit(common.alterables);
 	}
 }
 

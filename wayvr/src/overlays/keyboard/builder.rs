@@ -415,7 +415,7 @@ fn on_enter_anim(
     data: &event::CallbackData,
     width_mult: f32,
 ) {
-    common.alterables.animate(Animation::new(
+    Animation::new(
         data.widget_id,
         AnimationDuration::Seconds(0.1666),
         AnimationEasing::OutBack,
@@ -453,7 +453,8 @@ fn on_enter_anim(
                 get_anim_transform(data.pos, data.widget_boundary.size, width_mult);
             common.alterables.mark_redraw();
         }),
-    ));
+    )
+    .submit(common.alterables);
 }
 
 fn on_leave_anim(
@@ -462,7 +463,7 @@ fn on_leave_anim(
     data: &event::CallbackData,
     width_mult: f32,
 ) {
-    common.alterables.animate(Animation::new(
+    Animation::new(
         data.widget_id,
         AnimationDuration::Seconds(0.25),
         AnimationEasing::OutQuad,
@@ -502,7 +503,8 @@ fn on_leave_anim(
                 get_anim_transform(1.0 - data.pos, data.widget_boundary.size, width_mult);
             common.alterables.mark_redraw();
         }),
-    ));
+    )
+    .submit(common.alterables);
 }
 
 fn on_press_anim(

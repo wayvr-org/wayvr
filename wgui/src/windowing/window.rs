@@ -183,7 +183,7 @@ impl WguiWindow {
 			)?;
 
 			// Fade animation
-			params.layout.alterables.animate(Animation::new(
+			Animation::new(
 				widget.id,
 				AnimationDuration::Seconds(0.333),
 				AnimationEasing::OutQuad,
@@ -192,7 +192,8 @@ impl WguiWindow {
 					rect.params.color = drawing::Color::new(0.0, 0.0, 0.0, data.pos * 0.3).into();
 					common.alterables.mark_redraw();
 				}),
-			));
+			)
+			.submit_l(params.layout);
 
 			Some(widget)
 		} else {
@@ -217,12 +218,13 @@ impl WguiWindow {
 		let globals = params.layout.state.globals.clone();
 
 		// window slide animation
-		params.layout.alterables.animate(Animation::effect_slide(
+		Animation::effect_slide(
 			widget.id,
 			AnimationDuration::Seconds(0.5),
 			AnimationEasing::OutQuint,
 			Vec2::new(0.0, 16.0),
-		));
+		)
+		.submit_l(params.layout);
 
 		let content_id = if params.extra.with_decorations {
 			let xml_path: AssetPathRef = AssetPathRef::WguiInternal("wgui/window_frame.xml");

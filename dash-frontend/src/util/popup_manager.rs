@@ -376,27 +376,30 @@ impl PopupManager {
 		let res = self.mount_popup_prepare(globals, layout, frontend_tasks, &params.title, params.extra.padding)?;
 
 		// text fade-in
-		layout.alterables.animate(Animation::effect_label_fade_in(
+		Animation::effect_label_fade_in(
 			res.id_popup_title,
 			AnimationDuration::Seconds(0.25),
 			AnimationEasing::OutQuad,
-		));
+		)
+		.submit_l(layout);
 
 		// top bar slide
-		layout.alterables.animate(Animation::effect_slide(
+		Animation::effect_slide(
 			res.id_top_bar_contents,
 			AnimationDuration::Seconds(0.5),
 			AnimationEasing::OutQuint,
 			Vec2::new(10.0, 0.0),
-		));
+		)
+		.submit_l(layout);
 
 		// content slide
-		layout.alterables.animate(Animation::effect_slide(
+		Animation::effect_slide(
 			res.id_content,
 			AnimationDuration::Seconds(0.5),
 			AnimationEasing::OutQuint,
 			Vec2::new(5.0, 0.0),
-		));
+		)
+		.submit_l(layout);
 
 		// mount user-set popup content
 		let closed_callback = on_content_func(PopupContentFuncData {

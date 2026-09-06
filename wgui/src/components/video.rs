@@ -112,7 +112,7 @@ impl ComponentVideo {
 		let start_time = get_millis();
 		// log::info!("num frames: {}", source.demuxer.num_frames);
 
-		layout.alterables.animate(Animation::new_ex(
+		Animation::new_ex(
 			self.data.id_image,
 			PLAYBACK_ANIMATION_ID,
 			AnimationDuration::Infinity,
@@ -163,7 +163,8 @@ impl ComponentVideo {
 					}
 				}
 			}),
-		));
+		)
+		.submit_l(layout);
 		Ok(())
 	}
 
