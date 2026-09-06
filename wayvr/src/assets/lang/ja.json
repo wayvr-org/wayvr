@@ -102,6 +102,7 @@
 		"GRAB": "個別のオーバーレイを移動",
 		"DASH": "ダッシュボードの切り替え",
 		"EDIT": "編集モードの切り替え",
+		"KEYBOARD": "Toggle keyboard",
 		"SET": "セットを切り替え",
 		"RECENTER": "表示/非表示/中心に配置",
 		"GENERAL_BINDS": "基本操作",

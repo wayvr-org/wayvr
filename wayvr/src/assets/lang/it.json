@@ -102,6 +102,7 @@
 		"GRAB": "Sposta singolo overlay",
 		"DASH": "Attiva/disattiva dashboard",
 		"EDIT": "Attiva/disattiva modalità modifica",
+		"KEYBOARD": "Toggle keyboard",
 		"SET": "Cambia set",
 		"RECENTER": "Mostra/nascondi/ricentra",
 		"GENERAL_BINDS": "Tasti generali",
