@@ -38,7 +38,7 @@ pub struct WidgetData {
 	scrolling_cur: Vec2,      // normalized, used for smooth scrolling animation
 	scrolling_cur_prev: Vec2, // for motion interpolation while rendering between ticks
 	scrolling_velocity: Vec2,
-	press_down_start_mouse_pos: Option<Vec2>,
+	press_down_start_mouse_pos: Option<(Vec2, DeviceBitmask)>,
 	swipe_running: bool,
 	swipe_scroll_start: Vec2, // normalized, 0.0-1.0
 	pub transform: glam::Mat4,
@@ -588,7 +588,9 @@ impl WidgetState {
 				self.data.press_down_start_mouse_pos = None;
 			}
 			Event::MouseMotion(e) => {
-				if let Some(start_mouse_pos) = &self.data.press_down_start_mouse_pos {
+				if let Some((start_mouse_pos, start_device)) = &self.data.press_down_start_mouse_pos
+					&& *start_device == e.device
+				{
 					let (active_x, active_y) = get_scroll_active_axis(params.style, params.taffy_layout);
 
 					if !self.data.swipe_running
@@ -640,7 +642,7 @@ impl WidgetState {
 			return;
 		}
 
-		self.data.press_down_start_mouse_pos = Some(evt.pos);
+		self.data.press_down_start_mouse_pos = Some((evt.pos, evt.device));
 		self.data.swipe_scroll_start = self.data.scrolling_target;
 	}
 
