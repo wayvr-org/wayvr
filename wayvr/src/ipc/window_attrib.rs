@@ -4,10 +4,7 @@ use wayvr_ipc::packet_client::{
 };
 use wlx_common::overlays::{BackendAttrib, BackendAttribValue, MouseTransform, StereoMode};
 
-use crate::{
-    state::AppState,
-    windowing::manager::OverlayWindowManager,
-};
+use crate::{state::AppState, windowing::manager::OverlayWindowManager};
 
 pub fn get_attrib<T>(
     overlays: &mut OverlayWindowManager<T>,
