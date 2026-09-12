@@ -108,7 +108,8 @@
 		"TOGGLE_CAPTURE": "Devolver el control al escritorio",
 		"FOCUS_MODE": "Modo enfoque (mantén Super)",
 		"CLOSE": "Cerrar app enfocada",
-		"MOUSE": "Los clics y el scroll del ratón real también actúan como el puntero de VR"
+		"MOUSE": "Los clics y el scroll del ratón real también actúan como el puntero de VR",
+		"KEYBOARD": "Alternar teclado"
 	},
 	"GRAB": {
 		"ADJUST_DISTANCE": "Ajustar distancia",

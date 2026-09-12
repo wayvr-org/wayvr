@@ -108,7 +108,8 @@
 		"TOGGLE_CAPTURE": "将控制权还给桌面",
 		"FOCUS_MODE": "焦点模式 (按住 Super 键)",
 		"CLOSE": "关闭当前应用",
-		"MOUSE": "实体鼠标点击与滚动同样可转换为 VR 指针"
+		"MOUSE": "实体鼠标点击与滚动同样可转换为 VR 指针",
+		"KEYBOARD": "切换键盘"
 	},
 	"GRAB": {
 		"ADJUST_DISTANCE": "调整距离",

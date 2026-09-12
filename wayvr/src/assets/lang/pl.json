@@ -108,7 +108,8 @@
 		"TOGGLE_CAPTURE": "Oddaj kontrolę do pulpitu",
 		"FOCUS_MODE": "Tryb skupienia (przytrzymaj Super)",
 		"CLOSE": "Zamknij aktywną aplikację",
-		"MOUSE": "Kliknięcia i przewijanie myszką przenoszą się na wskaźnik VR"
+		"MOUSE": "Kliknięcia i przewijanie myszką przenoszą się na wskaźnik VR",
+		"KEYBOARD": "Przełącz klawiaturę"
 	},
 	"GRAB": {
 		"ADJUST_DISTANCE": "Dostosuj odległość",

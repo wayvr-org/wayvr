@@ -102,6 +102,7 @@
 		"GRAB": "Move individual overlay",
 		"DASH": "Toggle dashboard",
 		"EDIT": "Toggle edit mode",
+		"KEYBOARD": "Toggle keyboard",
 		"SET": "Switch set",
 		"RECENTER": "Show/hide/recenter",
 		"GENERAL_BINDS": "General bindings",

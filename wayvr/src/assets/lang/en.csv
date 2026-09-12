@@ -88,6 +88,7 @@ ALTTAB.GRABALL,Move entire set,Key binding action to grab and move the entire se
 ALTTAB.GRAB,Move individual overlay,Key binding action to grab and move a single overlay. “Overlay” was previously translated as “{$DEFINITIONS.OVERLAY}”
 ALTTAB.DASH,Toggle dashboard,Key binding action that toggles the dashboard. “Dashboard” was previously translated as “${DEFINITIONS.DASHBOARD}”
 ALTTAB.EDIT,Toggle edit mode,Key binding action that toggles edit mode. “Edit mode” was previously translated as “${DEFINITIONS.EDIT_MODE}”
+ALTTAB.KEYBOARD,Toggle keyboard,Key binding action that toggles the keyboard. “Keyboard” was previously translated as “${DEFINITIONS.KEYBOARD}”
 ALTTAB.SET,Switch set,Key binding action to switch between sets. “Set” was previously translated as “${DEFINITIONS.SET}”
 ALTTAB.RECENTER,Show/hide/recenter,"Key binding action to show, hide, or recenter the current set. “Set” was previously translated as “${DEFINITIONS.SET}”"
 ALTTAB.GENERAL_BINDS,General bindings,Title for key bindings that don’t need any specific criteria

@@ -108,7 +108,8 @@
 		"TOGGLE_CAPTURE": "Kontrolle an Desktop zurückgeben",
 		"FOCUS_MODE": "Fokus-Modus (Super halten)",
 		"CLOSE": "Fokussierte App schließen",
-		"MOUSE": "Echte Mausklicks & Scrollen wirken ebenfalls als VR-Pointer"
+		"MOUSE": "Echte Mausklicks & Scrollen wirken ebenfalls als VR-Pointer",
+		"KEYBOARD": "Tastatur umschalten"
 	},
 	"GRAB": {
 		"ADJUST_DISTANCE": "Entfernung anpassen",

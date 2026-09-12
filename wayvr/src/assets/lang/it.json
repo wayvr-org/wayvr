@@ -108,7 +108,8 @@
 		"TOGGLE_CAPTURE": "Rendi il controllo al desktop",
 		"FOCUS_MODE": "Modalità focus (tieni premuto Super)",
 		"CLOSE": "Chiudi app selezionata",
-		"MOUSE": "I clic e lo scorrimento del mouse reale influenzano anche il puntatore VR"
+		"MOUSE": "I clic e lo scorrimento del mouse reale influenzano anche il puntatore VR",
+		"KEYBOARD": "Attiva/disattiva tastiera"
 	},
 	"GRAB": {
 		"ADJUST_DISTANCE": "Regola distanza",
