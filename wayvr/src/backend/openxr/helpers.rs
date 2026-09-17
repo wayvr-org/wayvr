@@ -19,8 +19,14 @@ pub(crate) use next_chain_insert;
 
 use crate::state::AppState;
 
-pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
+#[derive(Default)]
+pub(super) struct ExtraExts {
+    pub mndx_composition_layer_alpha_blend_system_ui: bool,
+}
+
+pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId, ExtraExts), anyhow::Error> {
     let entry = xr::Entry::linked();
+    let mut extra_exts = ExtraExts::default();
 
     let Ok(available_extensions) = entry.enumerate_extensions() else {
         bail!("Failed to enumerate OpenXR extensions.");
@@ -42,11 +48,6 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
         enabled_extensions.ext_dpad_binding = true;
     } else {
         log::warn!("Missing EXT_dpad_binding extension.");
-    }
-    if available_extensions.fb_composition_layer_alpha_blend {
-        enabled_extensions.fb_composition_layer_alpha_blend = true;
-    } else {
-        log::warn!("Missing XR_FB_composition_layer_alpha_blend extension.");
     }
 
     if available_extensions.ext_samsung_odyssey_controller {
@@ -83,6 +84,14 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
         enabled_extensions.khr_composition_layer_color_scale_bias = true;
     } else {
         log::warn!("Missing XR_KHR_composition_layer_color_scale_bias extension.");
+    }
+
+    let xr_extension = b"XR_MNDX_composition_layer_alpha_blend_system_ui\0".to_vec();
+    if available_extensions.other.contains(&xr_extension) {
+        enabled_extensions.other.push(xr_extension);
+        extra_exts.mndx_composition_layer_alpha_blend_system_ui = true;
+    } else {
+        log::warn!("Missing XR_MNDX_composition_layer_alpha_blend_system_ui extension.");
     }
 
     let xr_extension = b"XR_MNDX_system_buttons\0".to_vec();
@@ -167,7 +176,7 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId), anyhow::Error> {
         );
     }
 
-    Ok((xr_instance, system))
+    Ok((xr_instance, system, extra_exts))
 }
 
 pub(super) unsafe fn create_overlay_session(

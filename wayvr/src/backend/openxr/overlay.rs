@@ -111,11 +111,7 @@ impl OverlayWindowData<OpenXrOverlayData> {
             flags |= CompositionLayerFlags::UNPREMULTIPLIED_ALPHA;
         }
 
-        if xr
-            .instance
-            .exts()
-            .fb_composition_layer_alpha_blend
-            .is_some()
+        if xr.extra_exts.mndx_composition_layer_alpha_blend_system_ui
             && self.config.category == OverlayCategory::Passthru
             && self.data.layer_alpha_blend_fb.is_none()
             && !self.config.editing

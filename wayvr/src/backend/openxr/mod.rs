@@ -21,7 +21,11 @@ use crate::{
     backend::{
         BackendError, RunParams,
         input::interact,
-        openxr::{helpers::try_apply_chroma_key, lines::LinePool, overlay::OpenXrOverlayData},
+        openxr::{
+            helpers::{ExtraExts, try_apply_chroma_key},
+            lines::LinePool,
+            overlay::OpenXrOverlayData,
+        },
         task::{OpenXrTask, OverlayTask, TaskType},
     },
     config::{save_settings, save_state},
@@ -53,12 +57,13 @@ struct XrState {
     fps: f32,
     stage: Arc<xr::Space>,
     view: Arc<xr::Space>,
+    extra_exts: ExtraExts,
 }
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
-    let (xr_instance, system) = match helpers::init_xr() {
-        Ok((xr_instance, system)) => (xr_instance, system),
+    let (xr_instance, system, extra_exts) = match helpers::init_xr() {
+        Ok((xr_instance, system, extra_exts)) => (xr_instance, system, extra_exts),
         Err(e) => {
             if !args.wait {
                 log::warn!("Will not use OpenXR: {e}");
@@ -68,10 +73,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     };
 
     let feats = InterfaceFeats {
-        passthru: xr_instance
-            .exts()
-            .fb_composition_layer_alpha_blend
-            .is_some(),
+        passthru: extra_exts.mndx_composition_layer_alpha_blend_system_ui,
         ..InterfaceFeats::default_for_backend(XrBackend::OpenXR)
     };
 
@@ -83,6 +85,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     app.session.no_autostart = args.no_autostart;
 
     let modes = xr_instance.enumerate_environment_blend_modes(system, VIEW_TYPE)?;
+    log::debug!("Env blend modes: {modes:?}");
 
     if args.show {
         app.session.config.tutorial_graduated = true;
@@ -134,6 +137,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
         fps: 30.0,
         stage: Arc::new(stage),
         view: Arc::new(view),
+        extra_exts,
     };
 
     let mut skybox: Option<Skybox> = None;
