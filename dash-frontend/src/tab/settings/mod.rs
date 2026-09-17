@@ -2,7 +2,7 @@ use glam::Vec2;
 use std::{marker::PhantomData, rc::Rc, str::FromStr};
 use strum::{AsRefStr, EnumProperty, EnumString};
 use wgui::{
-	assets::{AssetPathRef},
+	assets::AssetPathRef,
 	color::WguiColorName,
 	components::tabs::ComponentTabs,
 	event::StyleSetRequest,

@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, rc::Rc};
 
 use wgui::{
-	assets::{AssetPathRef},
+	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	layout::{Layout, WidgetID},

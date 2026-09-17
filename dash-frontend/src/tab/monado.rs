@@ -1,7 +1,7 @@
 use std::{collections::HashMap, marker::PhantomData, rc::Rc};
 
 use wgui::{
-	assets::{AssetPathRef},
+	assets::AssetPathRef,
 	components::{
 		bar_graph::{ComponentBarGraph, ValueCell},
 		button::ComponentButton,
