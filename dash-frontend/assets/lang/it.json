@@ -248,6 +248,7 @@
 		"ROTATIONS": "Rotazioni HMD",
 		"SESSION_TIME": "Tempo sessione",
 		"LENS_SEPARATION_MM": "Distanza lenti (mm)",
+		"DIAGNOSTICS": "Diagnostica",
 		"MIDDLE_GRABS_SINGLE": "Il modificatore click centrale afferra singoli oggetti",
 		"MIDDLE_GRABS_SINGLE_HELP": "Afferrando con il modificatore click centrale (laser viola),\nsi afferrano i singoli overlay e non l'intero set"
 	},
@@ -351,5 +352,7 @@
 	"ADD_TO_FAVOURITES": "Aggiungi alle applicazioni fissate",
 	"ADD_TO_FAVOURITES_HINT": "Salva il preset e fissalo al cassetto delle app",
 	"REMOVE_FROM_FAVOURITES": "Rimuovi dalle app fissate",
-	"EMPTY": "Vuoto"
+	"EMPTY": "Vuoto",
+	"INSTALLED": "Installato",
+	"NOT_INSTALLED": "Non installato"
 }

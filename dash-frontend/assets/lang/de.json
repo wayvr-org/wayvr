@@ -248,6 +248,7 @@
 		"ROTATIONS": "HMD-Rotationen",
 		"SESSION_TIME": "Sitzungszeit",
 		"LENS_SEPARATION_MM": "Linsenabstand (mm)",
+		"DIAGNOSTICS": "Diagnose",
 		"MIDDLE_GRABS_SINGLE": "Mittelklick-Modifier greift einzeln",
 		"MIDDLE_GRABS_SINGLE_HELP": "Greifen mit dem Mittelklick-Modifier (lila Laser) \ngreift einzelne Overlays statt des gesamten Sets"
 	},
@@ -351,5 +352,7 @@
 	"ADD_TO_FAVOURITES": "Zu angehefteten Anwendungen hinzufügen",
 	"ADD_TO_FAVOURITES_HINT": "Voreinstellung speichern und an die App-Schublade anheften",
 	"REMOVE_FROM_FAVOURITES": "Aus angehefteten Anwendungen entfernen",
-	"EMPTY": "Leer"
+	"EMPTY": "Leer",
+	"INSTALLED": "Installiert",
+	"NOT_INSTALLED": "Nicht installiert"
 }

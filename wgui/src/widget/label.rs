@@ -129,6 +129,10 @@ impl WidgetLabel {
 		}
 	}
 
+	pub fn get_color_opt(&self) -> Option<WguiColor> {
+		self.params.style.color
+	}
+
 	pub fn set_color(&mut self, common: &mut CallbackDataCommon, color: WguiColor, apply_to_existing_text: bool) {
 		if let Some(current_color) = &self.params.style.color
 			&& *current_color == color

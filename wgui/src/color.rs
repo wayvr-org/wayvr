@@ -13,6 +13,8 @@ pub enum WguiColorName {
 	OnSecondary,
 	Tertiary,
 	OnTertiary,
+	Success,
+	OnSuccess,
 	Danger,
 	OnDanger,
 	Background,

@@ -35,6 +35,7 @@ use crate::{
 mod macros;
 mod tab_autostart_apps;
 mod tab_controls;
+mod tab_diagnostics;
 mod tab_features;
 mod tab_look_and_feel;
 mod tab_misc;
@@ -53,6 +54,7 @@ pub(crate) enum TabNameEnum {
 	Skybox,
 	SpaceDrag,
 	Statistics,
+	Diagnostics,
 	Troubleshooting,
 }
 
@@ -67,6 +69,7 @@ impl TabNameEnum {
 			"skybox" => Some(TabNameEnum::Skybox),
 			"space_drag" => Some(TabNameEnum::SpaceDrag),
 			"statistics" => Some(TabNameEnum::Statistics),
+			"diagnostics" => Some(TabNameEnum::Diagnostics),
 			"troubleshooting" => Some(TabNameEnum::Troubleshooting),
 			_ => None,
 		}
@@ -752,6 +755,9 @@ impl<T> TabSettings<T> {
 			}
 			TabNameEnum::Statistics => {
 				self.current_tab = Some(Box::new(tab_statistics::State::mount(settings_mount_params)?));
+			}
+			TabNameEnum::Diagnostics => {
+				self.current_tab = Some(Box::new(tab_diagnostics::State::mount(settings_mount_params)?));
 			}
 		}
 

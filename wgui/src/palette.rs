@@ -124,6 +124,8 @@ static DEFAULT: &WguiColorPalette = &WguiColorPalette {
 		hex("#2a2105"), // OnSecondary
 		hex("#10d0b3"), // Tertiary
 		hex("#000000"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#f7469a"), // Danger
 		hex("#ffebf5"), // OnDanger
 		hex("#002e43"), // Background
@@ -146,6 +148,8 @@ static AYU: &WguiColorPalette = &WguiColorPalette {
 		hex("#0B0E14"), // OnSecondary
 		hex("#39BAE6"), // Tertiary
 		hex("#0B0E14"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#D95757"), // Danger
 		hex("#0B0E14"), // OnDanger
 		hex("#1E222A"), // Background
@@ -168,6 +172,8 @@ static AYU_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#F8F9FA"), // OnSecondary
 		hex("#55B4D4"), // Tertiary
 		hex("#F8F9FA"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#E65050"), // Danger
 		hex("#F8F9FA"), // OnDanger
 		hex("#E4E6E9"), // Background
@@ -190,6 +196,8 @@ static CATPPUCCIN: &WguiColorPalette = &WguiColorPalette {
 		hex("#11111b"), // OnSecondary
 		hex("#94e2d5"), // Tertiary
 		hex("#11111b"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#f38ba8"), // Danger
 		hex("#11111b"), // OnDanger
 		hex("#1e1e2e"), // Background
@@ -212,6 +220,8 @@ static CATPPUCCIN_LATTE: &WguiColorPalette = &WguiColorPalette {
 		hex("#EFF1F5"), // OnSecondary
 		hex("#179299"), // Tertiary
 		hex("#EFF1F5"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#D20F39"), // Danger
 		hex("#DCE0E8"), // OnDanger
 		hex("#EFF1F5"), // Background
@@ -234,6 +244,8 @@ static CYBERPUNK: &WguiColorPalette = &WguiColorPalette {
 		hex("#0E1015"), // OnSecondary
 		hex("#00A66C"), // Tertiary
 		hex("#0E1015"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#B32D2D"), // Danger
 		hex("#0E1015"), // OnDanger
 		hex("#0C1017"), // Background
@@ -256,6 +268,8 @@ static CYBERPUNK_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#1A1914"), // OnSecondary
 		hex("#45D395"), // Tertiary
 		hex("#1A1914"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#E63E5D"), // Danger
 		hex("#1A1914"), // OnDanger
 		hex("#DAE6E8"), // Background
@@ -278,6 +292,8 @@ static DRACULA: &WguiColorPalette = &WguiColorPalette {
 		hex("#4E1D32"), // OnSecondary
 		hex("#8BE9FD"), // Tertiary
 		hex("#003543"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#FF5555"), // Danger
 		hex("#282A36"), // OnDanger
 		hex("#282A36"), // Background
@@ -300,6 +316,8 @@ static DRACULA_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#FFFFFF"), // OnSecondary
 		hex("#0398B9"), // Tertiary
 		hex("#FFFFFF"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#FF5555"), // Danger
 		hex("#282A36"), // OnDanger
 		hex("#F8F8F2"), // Background
@@ -322,6 +340,8 @@ static ELDRITCH: &WguiColorPalette = &WguiColorPalette {
 		hex("#171928"), // OnSecondary
 		hex("#A48CF2"), // Tertiary
 		hex("#171928"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#F16C75"), // Danger
 		hex("#171928"), // OnDanger
 		hex("#212337"), // Background
@@ -344,6 +364,8 @@ static ELDRITCH_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#171928"), // OnSecondary
 		hex("#A48CF2"), // Tertiary
 		hex("#171928"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#F16C75"), // Danger
 		hex("#171928"), // OnDanger
 		hex("#FFFFFF"), // Background
@@ -366,6 +388,8 @@ static EVERFOREST: &WguiColorPalette = &WguiColorPalette {
 		hex("#232A2E"), // OnSecondary
 		hex("#9DA9A0"), // Tertiary
 		hex("#232A2E"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#E67E80"), // Danger
 		hex("#232A2E"), // OnDanger
 		hex("#232A2E"), // Background
@@ -388,6 +412,8 @@ static EVERFOREST_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#D3C6AA"), // OnSecondary
 		hex("#333C43"), // Tertiary
 		hex("#9DA9A0"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#E66868"), // Danger
 		hex("#9DA9A0"), // OnDanger
 		hex("#9DA9A0"), // Background
@@ -410,6 +436,8 @@ static GRUVBOX: &WguiColorPalette = &WguiColorPalette {
 		hex("#282828"), // OnSecondary
 		hex("#83A598"), // Tertiary
 		hex("#282828"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#FB4934"), // Danger
 		hex("#282828"), // OnDanger
 		hex("#282828"), // Background
@@ -432,6 +460,8 @@ static GRUVBOX_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#FBF1C7"), // OnSecondary
 		hex("#458588"), // Tertiary
 		hex("#FBF1C7"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#CC241D"), // Danger
 		hex("#FBF1C7"), // OnDanger
 		hex("#FBF1C7"), // Background
@@ -454,6 +484,8 @@ static KANAGAWA: &WguiColorPalette = &WguiColorPalette {
 		hex("#1F1F28"), // OnSecondary
 		hex("#7E9CD8"), // Tertiary
 		hex("#1F1F28"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#C34043"), // Danger
 		hex("#1F1F28"), // OnDanger
 		hex("#1F1F28"), // Background
@@ -476,6 +508,8 @@ static KANAGAWA_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#F2ECBC"), // OnSecondary
 		hex("#4D699B"), // Tertiary
 		hex("#F2ECBC"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#C84053"), // Danger
 		hex("#F2ECBC"), // OnDanger
 		hex("#F2ECBC"), // Background
@@ -498,6 +532,8 @@ static MONOCHROME: &WguiColorPalette = &WguiColorPalette {
 		hex("#111111"), // OnSecondary
 		hex("#CCCCCC"), // Tertiary
 		hex("#111111"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#DDDDDD"), // Danger
 		hex("#111111"), // OnDanger
 		hex("#111111"), // Background
@@ -520,6 +556,8 @@ static MONOCHROME_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#EEEEEE"), // OnSecondary
 		hex("#333333"), // Tertiary
 		hex("#EEEEEE"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#222222"), // Danger
 		hex("#EFEFEF"), // OnDanger
 		hex("#D4D4D4"), // Background
@@ -542,6 +580,8 @@ static NORD: &WguiColorPalette = &WguiColorPalette {
 		hex("#2E3440"), // OnSecondary
 		hex("#5E81AC"), // Tertiary
 		hex("#2E3440"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#BF616A"), // Danger
 		hex("#2E3440"), // OnDanger
 		hex("#2E3440"), // Background
@@ -564,6 +604,8 @@ static NORD_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#ECEFF4"), // OnSecondary
 		hex("#6FA9A8"), // Tertiary
 		hex("#ECEFF4"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#BF616A"), // Danger
 		hex("#ECEFF4"), // OnDanger
 		hex("#ECEFF4"), // Background
@@ -586,6 +628,8 @@ static OSAKA_JADE: &WguiColorPalette = &WguiColorPalette {
 		hex("#B8C8C4"), // OnSecondary
 		hex("#26A589"), // Tertiary
 		hex("#B8C8C4"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#933636"), // Danger
 		hex("#B8C8C4"), // OnDanger
 		hex("#081512"), // Background
@@ -608,6 +652,8 @@ static OSAKA_JADE_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#D8E5DB"), // OnSecondary
 		hex("#4A8069"), // Tertiary
 		hex("#D8E5DB"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#854145"), // Danger
 		hex("#D8E5DB"), // OnDanger
 		hex("#AEC2B4"), // Background
@@ -630,6 +676,8 @@ static ROSEPINE: &WguiColorPalette = &WguiColorPalette {
 		hex("#191724"), // OnSecondary
 		hex("#31748F"), // Tertiary
 		hex("#E0DEF4"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#EB6F92"), // Danger
 		hex("#191724"), // OnDanger
 		hex("#1F1D2E"), // Background
@@ -652,6 +700,8 @@ static ROSEPINE_LIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#FAF4ED"), // OnSecondary
 		hex("#286983"), // Tertiary
 		hex("#FAF4ED"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#B4637A"), // Danger
 		hex("#FAF4ED"), // OnDanger
 		hex("#FFFAF3"), // Background
@@ -674,6 +724,8 @@ static SOLARIZED_NIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#002B36"), // OnSecondary
 		hex("#CB4B16"), // Tertiary
 		hex("#002B36"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#DC322F"), // Danger
 		hex("#002B36"), // OnDanger
 		hex("#002B36"), // Background
@@ -696,6 +748,8 @@ static SOLARIZED_DAY: &WguiColorPalette = &WguiColorPalette {
 		hex("#FDF6E3"), // OnSecondary
 		hex("#CB4B16"), // Tertiary
 		hex("#FDF6E3"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#DC322F"), // Danger
 		hex("#FDF6E3"), // OnDanger
 		hex("#FDF6E3"), // Background
@@ -718,6 +772,8 @@ static TOKYO_NIGHT: &WguiColorPalette = &WguiColorPalette {
 		hex("#16161E"), // OnSecondary
 		hex("#9ECE6A"), // Tertiary
 		hex("#16161E"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#F7768E"), // Danger
 		hex("#16161E"), // OnDanger
 		hex("#1A1B26"), // Background
@@ -740,6 +796,8 @@ static TOKYO_DAY: &WguiColorPalette = &WguiColorPalette {
 		hex("#E1E2E7"), // OnSecondary
 		hex("#587539"), // Tertiary
 		hex("#E1E2E7"), // OnTertiary
+		hex("#00d443"), // Success
+		hex("#ffffff"), // OnSuccess
 		hex("#F52A65"), // Danger
 		hex("#E1E2E7"), // OnDanger
 		hex("#E1E2E7"), // Background

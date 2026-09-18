@@ -119,6 +119,7 @@ controllers are unavailable.
 Left pinch is grab, right is click.",Tooltip for the handsfree mode dropdown.
 APP_SETTINGS.HANDSFREE_ALT_TAB,App switcher aim,Dropdown/setting in Settings > Features tab. Controls how the alt-tab app switcher is aimed.
 APP_SETTINGS.HANDSFREE_ALT_TAB_HELP,"Hold Super+X, aim at the desired window, then release to switch focus.",Tooltip explaining the handsfree alt-tab behavior.
+APP_SETTINGS.DIAGNOSTICS,"Diagnostics","Tab name for the hardware/software check panel"
 APP_SETTINGS.HIDE_GRAB_HELP,Hide grab help,Checkbox label in Settings > Look & Feel tab. Hides the grab help overlay/text.
 APP_SETTINGS.HIDE_USERNAME,Hide username,Checkbox label in Settings > Look & Feel tab. Hides the user's username from the UI.
 APP_SETTINGS.INPUT_EMULATION_METHOD,Input emulation method,"Dropdown label in Settings > Miscellaneous tab. Selects how WayVR emulates mouse/keyboard input (uinput, Wayland virtual, none)."
@@ -344,3 +345,5 @@ ADD_TO_FAVOURITES,Add to pinned apps,"Label on the pin button in the app launche
 ADD_TO_FAVOURITES_HINT,Save preset and pin it to the app drawer,"Tooltip on the add to favourites button in the app launcher popup. ""Pinned apps"" was previously translated as ""${PINNED_APPS}""."
 REMOVE_FROM_FAVOURITES,Remove from pinned apps,"Label on the unpin section in the app launcher popup. ""Pinned apps"" was previously translated as ""${PINNED_APPS}""."
 EMPTY,Empty,Label shown in the pinned apps section when there are no pinned apps.
+INSTALLED,"Installed","Installation flag (installed/not installed)"
+NOT_INSTALLED,"Not installed","Installation flag (installed/not installed)"

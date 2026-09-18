@@ -248,6 +248,7 @@
 		"ROTATIONS": "Obroty HMD",
 		"SESSION_TIME": "Czas sesji",
 		"LENS_SEPARATION_MM": "Rozstaw soczewek (mm)",
+		"DIAGNOSTICS": "Diagnostyka",
 		"MIDDLE_GRABS_SINGLE": "Modyfikator środkowego przycisku chwyta pojedyncze obiekty",
 		"MIDDLE_GRABS_SINGLE_HELP": "Chwytanie z modyfikatorem środkowego przycisku myszy (fioletowy laser)\npochwyci pojedyncze nakładki, a nie cały zestaw"
 	},
@@ -351,5 +352,7 @@
 	"ADD_TO_FAVOURITES": "Przypnij aplikację",
 	"ADD_TO_FAVOURITES_HINT": "Zapisz preset i przypnij go do szuflady aplikacji",
 	"REMOVE_FROM_FAVOURITES": "Usuń z przypiętych aplikacji",
-	"EMPTY": "Puste"
+	"EMPTY": "Puste",
+	"INSTALLED": "Zainstalowano",
+	"NOT_INSTALLED": "Nie zainstalowano"
 }

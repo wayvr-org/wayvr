@@ -53,6 +53,10 @@ impl WidgetSprite {
 		self.params.color.unwrap_or(DEFAULT_COLOR)
 	}
 
+	pub fn get_color_opt(&self) -> Option<WguiColor> {
+		self.params.color
+	}
+
 	pub fn set_content(&mut self, alterables: &mut EventAlterables, content: Option<CustomGlyphData>) {
 		if self.params.glyph_data == content {
 			return;
