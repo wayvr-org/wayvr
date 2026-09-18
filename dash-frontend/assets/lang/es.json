@@ -248,6 +248,7 @@
 		"ROTATIONS": "Rotaciones del HMD",
 		"SESSION_TIME": "Tiempo de sesión",
 		"LENS_SEPARATION_MM": "Separación de lentes (mm)",
+		"DIAGNOSTICS": "Diagnósticos",
 		"MIDDLE_GRABS_SINGLE": "El modificador de clic central agarra objetos individuales",
 		"MIDDLE_GRABS_SINGLE_HELP": "Al agarrar con el modificador de clic central (láser púrpura),\nse agarrarán overlays individuales y no el set completo"
 	},
@@ -351,5 +352,7 @@
 	"ADD_TO_FAVOURITES": "Añadir a aplicaciones fijadas",
 	"ADD_TO_FAVOURITES_HINT": "Guardar ajuste y fijarlo al cajón de aplicaciones",
 	"REMOVE_FROM_FAVOURITES": "Quitar de aplicaciones fijadas",
-	"EMPTY": "Vacío"
+	"EMPTY": "Vacío",
+	"INSTALLED": "Instalado",
+	"NOT_INSTALLED": "No instalado"
 }

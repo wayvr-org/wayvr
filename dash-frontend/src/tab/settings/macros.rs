@@ -49,6 +49,33 @@ pub fn options_stat_row(mp: &mut MacroParams, parent: WidgetID, translation: &st
 	mp.parser_state.get_widget_id(&id)
 }
 
+pub fn options_diagnostics_row(
+	mp: &mut MacroParams,
+	parent: WidgetID,
+	title: &str,
+	tooltip_str: &str,
+	checked: bool,
+) -> anyhow::Result<()> {
+	let mut params = TemplateParams::new();
+	params.insert("title", title);
+	params.insert("tooltip_str", tooltip_str);
+	params.insert("color", if checked { "success" } else { "danger" });
+
+	params.insert(
+		"sprite",
+		if checked {
+			"@/dashboard/check.svg"
+		} else {
+			"@/dashboard/cross.svg"
+		},
+	);
+
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "DiagnosticsRow", mp.layout, parent, params)?;
+
+	Ok(())
+}
+
 pub fn options_checkbox(mp: &mut MacroParams, parent: WidgetID, setting: SettingType) -> anyhow::Result<()> {
 	let id = mp.idx.to_string();
 	mp.idx += 1;

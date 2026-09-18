@@ -144,17 +144,20 @@ impl ComponentTrait for ComponentButton {
 				.collect_children_ids_recursive(self.data.id_rect, &mut children);
 
 			for child in children {
-				if let Some(mut widget) = data.layout.state.widgets.get_as::<WidgetSprite>(child) {
+				if let Some(mut sprite) = data.layout.state.widgets.get_as::<WidgetSprite>(child) {
 					if !state.id_sprite.is_null() && state.id_sprite != child {
 						log::error!("Button with more than one sprite!");
 					}
 					// apply initial color from button
-					if let Some(apply_color) = color_to_apply(widget.parent_color(), state.colors.color) {
+					if let Some(apply_color) = color_to_apply(sprite.parent_color(), state.colors.color) {
 						let common = &mut CallbackDataCommon {
 							state: &data.layout.state,
 							alterables: &mut data.layout.alterables,
 						};
-						widget.set_color(common, apply_color);
+
+						if sprite.get_color_opt().is_none() {
+							sprite.set_color(common, apply_color);
+						}
 					}
 					state.id_sprite = child;
 				} else if let Some(mut widget) = data.layout.state.widgets.get_as::<WidgetLabel>(child) {
@@ -166,7 +169,10 @@ impl ComponentTrait for ComponentButton {
 							state: &data.layout.state,
 							alterables: &mut data.layout.alterables,
 						};
-						widget.set_color(common, apply_color, true);
+
+						if widget.get_color_opt().is_none() {
+							widget.set_color(common, apply_color, true);
+						}
 					}
 					state.id_label = child;
 				}

@@ -94,6 +94,12 @@ struct SerializedWguiColorPalette {
 	on_tertiary: drawing::Color,
 
 	#[serde(deserialize_with = "deserialize_color")]
+	success: drawing::Color,
+
+	#[serde(deserialize_with = "deserialize_color")]
+	on_success: drawing::Color,
+
+	#[serde(deserialize_with = "deserialize_color")]
 	danger: drawing::Color,
 
 	#[serde(deserialize_with = "deserialize_color")]
@@ -137,6 +143,8 @@ impl SerializedWguiColorPalette {
 			self.on_secondary,
 			self.tertiary,
 			self.on_tertiary,
+			self.success,
+			self.on_success,
 			self.danger,
 			self.on_danger,
 			self.background,

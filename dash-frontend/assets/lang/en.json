@@ -136,6 +136,7 @@
 		"HANDSFREE_POINTER_HELP": "Input to use when motion\ncontrollers are unavailable.\nLeft pinch is grab, right is click.",
 		"HANDSFREE_ALT_TAB": "App switcher aim",
 		"HANDSFREE_ALT_TAB_HELP": "Hold Super+X, aim at the desired window, then release to switch focus.",
+		"DIAGNOSTICS": "Diagnostics",
 		"HIDE_GRAB_HELP": "Hide grab help",
 		"HIDE_USERNAME": "Hide username",
 		"INPUT_EMULATION_METHOD": "Input emulation method",
@@ -351,5 +352,7 @@
 	"ADD_TO_FAVOURITES": "Add to pinned apps",
 	"ADD_TO_FAVOURITES_HINT": "Save preset and pin it to the app drawer",
 	"REMOVE_FROM_FAVOURITES": "Remove from pinned apps",
-	"EMPTY": "Empty"
+	"EMPTY": "Empty",
+	"INSTALLED": "Installed",
+	"NOT_INSTALLED": "Not installed"
 }
