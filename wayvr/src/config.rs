@@ -198,6 +198,7 @@ pub struct AutoSettings {
     pub default_curvature: f32,
     pub default_opacity: f32,
     pub default_positioning: DefaultPositioning,
+    pub middle_grabs_single: bool,
 }
 
 fn get_settings_path() -> PathBuf {
@@ -273,6 +274,7 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         default_curvature: config.default_curvature,
         default_opacity: config.default_opacity,
         default_positioning: config.default_positioning,
+        middle_grabs_single: config.middle_grabs_single,
     };
 
     let json = serde_json::to_string_pretty(&conf).unwrap(); // want panic

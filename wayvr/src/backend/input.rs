@@ -426,7 +426,7 @@ pub struct GrabData {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum PointerMode {
     #[default]
     Left,
@@ -857,7 +857,9 @@ fn start_grab(par: StartGrabParams) {
     let grab_anchor = !par.edit_mode
         && !par.grab_float
         && !app.anchor_grabbed
-        && matches!(state.positioning, Positioning::Anchored);
+        && matches!(state.positioning, Positioning::Anchored)
+        && !(app.session.config.middle_grabs_single
+            && pointer.interaction.mode == PointerMode::Middle);
 
     let relative_grab_transform = if grab_anchor {
         app.anchor

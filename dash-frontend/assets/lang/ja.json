@@ -247,7 +247,9 @@
 		"STATISTICS": "統計",
 		"ROTATIONS": "HMD回転数",
 		"SESSION_TIME": "セッション時間",
-		"LENS_SEPARATION_MM": "レンズ間隔 (mm)"
+		"LENS_SEPARATION_MM": "レンズ間隔 (mm)",
+		"MIDDLE_GRABS_SINGLE": "中クリック修飾キーで個別に掴む",
+		"MIDDLE_GRABS_SINGLE_HELP": "中クリック修飾キー（紫色のレーザー）で掴むと、\nセット全体ではなく個別のオーバーレイを掴むことができる"
 	},
 	"APPLICATION_LAUNCHER": "アプリランチャー",
 	"APPLICATION_STARTED": "アプリが起動しました",

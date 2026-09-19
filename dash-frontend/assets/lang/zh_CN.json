@@ -247,7 +247,9 @@
 		"STATISTICS": "统计数据",
 		"ROTATIONS": "HMD 旋转次数",
 		"SESSION_TIME": "会话时间",
-		"LENS_SEPARATION_MM": "瞳距 (mm)"
+		"LENS_SEPARATION_MM": "瞳距 (mm)",
+		"MIDDLE_GRABS_SINGLE": "中键点击修饰键抓取单个对象",
+		"MIDDLE_GRABS_SINGLE_HELP": "使用中键点击修饰键（紫色激光）抓取时\n将抓取单个叠加层，而非整个集合"
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",
 	"APPLICATION_STARTED": "应用程序已启动",

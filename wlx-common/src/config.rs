@@ -556,4 +556,7 @@ pub struct GeneralConfig {
 
 	#[serde(default = "def_point15")]
 	pub default_curvature: f32,
+
+	#[serde(default)]
+	pub middle_grabs_single: bool,
 }

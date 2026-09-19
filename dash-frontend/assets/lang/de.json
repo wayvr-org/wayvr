@@ -247,7 +247,9 @@
 		"STATISTICS": "Statistiken",
 		"ROTATIONS": "HMD-Rotationen",
 		"SESSION_TIME": "Sitzungszeit",
-		"LENS_SEPARATION_MM": "Linsenabstand (mm)"
+		"LENS_SEPARATION_MM": "Linsenabstand (mm)",
+		"MIDDLE_GRABS_SINGLE": "Mittelklick-Modifier greift einzeln",
+		"MIDDLE_GRABS_SINGLE_HELP": "Greifen mit dem Mittelklick-Modifier (lila Laser) \ngreift einzelne Overlays statt des gesamten Sets"
 	},
 	"APPLICATION_LAUNCHER": "Programmstarter",
 	"APPLICATION_STARTED": "Anwendung gestartet",

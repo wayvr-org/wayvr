@@ -247,7 +247,9 @@
 		"STATISTICS": "Statystyki",
 		"ROTATIONS": "Obroty HMD",
 		"SESSION_TIME": "Czas sesji",
-		"LENS_SEPARATION_MM": "Rozstaw soczewek (mm)"
+		"LENS_SEPARATION_MM": "Rozstaw soczewek (mm)",
+		"MIDDLE_GRABS_SINGLE": "Modyfikator środkowego przycisku chwyta pojedyncze obiekty",
+		"MIDDLE_GRABS_SINGLE_HELP": "Chwytanie z modyfikatorem środkowego przycisku myszy (fioletowy laser)\npochwyci pojedyncze nakładki, a nie cały zestaw"
 	},
 	"APPLICATION_LAUNCHER": "Launcher aplikacji",
 	"APPLICATION_STARTED": "Uruchomiono aplikację",

@@ -247,7 +247,9 @@
 		"STATISTICS": "Statistiche",
 		"ROTATIONS": "Rotazioni HMD",
 		"SESSION_TIME": "Tempo sessione",
-		"LENS_SEPARATION_MM": "Distanza lenti (mm)"
+		"LENS_SEPARATION_MM": "Distanza lenti (mm)",
+		"MIDDLE_GRABS_SINGLE": "Il modificatore click centrale afferra singoli oggetti",
+		"MIDDLE_GRABS_SINGLE_HELP": "Afferrando con il modificatore click centrale (laser viola),\nsi afferrano i singoli overlay e non l'intero set"
 	},
 	"APPLICATION_LAUNCHER": "Avvio applicazioni",
 	"APPLICATION_STARTED": "Applicazione avviata",

@@ -4,16 +4,16 @@ use wgui::{
 	components::button::ComponentButton, globals::WguiGlobals, layout::WidgetID, parser::Fetchable, task::Tasks,
 };
 
-use crate::tab::settings::{UpdateExtra, horiz_cell, mount_requires_restart};
+use crate::tab::settings::{horiz_cell, mount_requires_restart, UpdateExtra};
 use crate::util::popup_manager::PopupHolder;
 
 use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
-		SettingType, SettingsMountParams, SettingsTab,
 		macros::{options_category, options_checkbox, options_dropdown, options_slider_f32, options_slider_i32},
+		SettingType, SettingsMountParams, SettingsTab,
 	},
-	views::{ViewUpdateParams, input_profiles},
+	views::{input_profiles, ViewUpdateParams},
 };
 
 #[derive(Clone)]
@@ -100,6 +100,7 @@ impl State {
 		options_dropdown::<wlx_common::config::HandsfreeAltTab>(par.mp, c, &SettingType::HandsfreeAltTab)?;
 		options_checkbox(par.mp, c, SettingType::FocusFollowsMouseMode)?;
 		options_checkbox(par.mp, c, SettingType::LeftHandedMouse)?;
+		options_checkbox(par.mp, c, SettingType::MiddleGrabsSingle)?;
 		options_checkbox(par.mp, c, SettingType::AllowSliding)?;
 		options_checkbox(par.mp, c, SettingType::InvertScrollDirectionX)?;
 		options_checkbox(par.mp, c, SettingType::InvertScrollDirectionY)?;

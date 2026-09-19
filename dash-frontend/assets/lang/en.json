@@ -156,6 +156,8 @@
 		"LONG_PRESS_DURATION": "Long press duration",
 		"LOOK_AND_FEEL": "Look & Feel",
 		"MISC": "Miscellaneous",
+		"MIDDLE_GRABS_SINGLE": "Middle-click modifier grabs individual",
+		"MIDDLE_GRABS_SINGLE_HELP": "Grabbing with the middle-click modifier (purple laser)\nwill grab individual overlays, not the entire set",
 		"NOTIFICATIONS_ENABLED": "Enable notifications",
 		"NOTIFICATIONS_SOUND_ENABLED": "Notification sounds",
 		"NOT_SUPPORTED": "Not supported",

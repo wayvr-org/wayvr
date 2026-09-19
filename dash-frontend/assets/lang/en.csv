@@ -143,6 +143,9 @@ APP_SETTINGS.LEFT_HANDED_MOUSE_HELP,Use this if mouse buttons are swapped,Toolti
 APP_SETTINGS.LONG_PRESS_DURATION,Long press duration,Setting in Settings > Features tab. Controls how long a press must be held to register as a long press.
 APP_SETTINGS.LOOK_AND_FEEL,Look & Feel,"Category header in Settings. Groups visual/customization settings like language, opacity, animation speed, color palettes."
 APP_SETTINGS.MISC,Miscellaneous,"Category header in Settings. Groups troubleshooting and system-level settings like capture method, input emulation, xwayland."
+APP_SETTINGS.MIDDLE_GRABS_SINGLE,"Middle-click modifier grabs individual","Checkbox label in Settings > Controls tab. When enabled, grabbing with the middle modifier will always grab individual objects, never the entire set of objects. ""Middle-click modifier"" was previously translated as ""${APP_SETTINGS.BINDINGS.ACTION.CLICK_MODIFIER_MIDDLE}"""
+APP_SETTINGS.MIDDLE_GRABS_SINGLE_HELP,"Grabbing with the middle-click modifier (purple laser)
+will grab individual overlays, not the entire set","Tooltip for the middle modifier grabs single overlays checkbox. ""Middle-click modifier"" was previously translated as ""${APP_SETTINGS.BINDINGS.ACTION.CLICK_MODIFIER_MIDDLE}"""
 APP_SETTINGS.NOTIFICATIONS_ENABLED,Enable notifications,Checkbox label in Settings > Features tab. Enables or disables system notifications within WayVR.
 APP_SETTINGS.NOTIFICATIONS_SOUND_ENABLED,Notification sounds,Checkbox label in Settings > Features tab. Enables or disables sound effects for notifications.
 APP_SETTINGS.NOT_SUPPORTED,Not supported,Label shown in the space drag/physics settings when a feature (like gravity) is not supported by the current backend.
