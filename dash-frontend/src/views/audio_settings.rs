@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use wgui::{
-	assets::AssetPathRef,
+	assets::{AssetPathRef, AssetPathSource},
 	color::{WguiColor, WguiColorName},
 	components::{
 		self,
@@ -12,7 +12,7 @@ use wgui::{
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
-	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
+	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams, strip_path_as},
 	task::Tasks,
 	widget::{ConstructEssentials, rectangle::WidgetRectangle},
 };
@@ -100,7 +100,7 @@ struct ProfileDisplayName {
 struct SelectorCell {
 	key: String,
 	display_text: String,
-	icon_path: &'static str,
+	icon_path_builtin: &'static str,
 }
 
 struct MultiSelectorParams<'a> {
@@ -124,7 +124,7 @@ fn mount_multi_selector(params: MultiSelectorParams) -> anyhow::Result<()> {
 			params.ess,
 			components::button::Params {
 				text: Some(Translation::from_raw_text(&cell.display_text)),
-				sprite_src: Some(AssetPathRef::BuiltIn(cell.icon_path)),
+				sprite_src: Some(strip_path_as(AssetPathSource::BuiltIn, cell.icon_path_builtin).unwrap()),
 				color,
 				..Default::default()
 			},
@@ -975,7 +975,7 @@ impl View {
 			cells.push(SelectorCell {
 				key: profile_name.clone(),
 				display_text: disp_name.name,
-				icon_path: disp_name.icon_path,
+				icon_path_builtin: disp_name.icon_path,
 			});
 		}
 

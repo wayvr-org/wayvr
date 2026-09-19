@@ -426,7 +426,7 @@ pub struct GrabData {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
 pub enum PointerMode {
     #[default]
     Left,

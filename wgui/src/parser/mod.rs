@@ -749,6 +749,23 @@ impl<'a> ExpandPathParams<'a> {
 	}
 }
 
+// rename "@/foo/bar" to "foo/bar"
+pub fn strip_path_as(source: AssetPathSource, path: &str) -> Option<AssetPathRef<'_>> {
+	let first_ch = path.chars().next()?;
+
+	if path.len() < 3 {
+		return None;
+	}
+
+	let ret_path = if first_ch == '@' { &path[2..] } else { path };
+
+	Some(match source {
+		AssetPathSource::Internal => AssetPathRef::WguiInternal(ret_path),
+		AssetPathSource::BuiltIn => AssetPathRef::BuiltIn(ret_path),
+		AssetPathSource::Filesystem => AssetPathRef::File(ret_path),
+	})
+}
+
 pub fn expand_path(par: &ExpandPathParams, path_source: AssetPathSource, path_string: &str) -> PathBuf {
 	if par.version.0 <= 1 {
 		return normalize_path(Path::new(path_string), false);
