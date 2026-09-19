@@ -4,16 +4,16 @@ use wgui::{
 	components::button::ComponentButton, globals::WguiGlobals, layout::WidgetID, parser::Fetchable, task::Tasks,
 };
 
-use crate::tab::settings::{horiz_cell, mount_requires_restart, UpdateExtra};
+use crate::tab::settings::{UpdateExtra, horiz_cell, mount_requires_restart};
 use crate::util::popup_manager::PopupHolder;
 
 use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
-		macros::{options_category, options_checkbox, options_dropdown, options_slider_f32, options_slider_i32},
 		SettingType, SettingsMountParams, SettingsTab,
+		macros::{options_category, options_checkbox, options_dropdown, options_slider_f32, options_slider_i32},
 	},
-	views::{input_profiles, ViewUpdateParams},
+	views::{ViewUpdateParams, input_profiles},
 };
 
 #[derive(Clone)]
