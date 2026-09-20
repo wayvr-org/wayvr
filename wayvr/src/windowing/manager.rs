@@ -585,12 +585,14 @@ impl<T> OverlayWindowManager<T> {
 
         // BackendAttrib
         for o in self.overlays.values() {
+            // save all values, so that users can revert to the default value and changing a default value in the future won't impact users' existing setups
             let attrs: Vec<_> = SAVED_ATTRIBS
                 .iter()
                 .filter_map(|a| o.config.backend.get_attrib(*a))
-                .filter(|val| !val.is_default())
                 .collect();
-            if !attrs.is_empty() {
+            if attrs.is_empty() {
+                app.session.config.attribs.arc_rm(&o.config.name);
+            } else {
                 app.session
                     .config
                     .attribs
