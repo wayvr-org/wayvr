@@ -52,7 +52,6 @@ pub struct Params<'a> {
 	/// set the initial state using `set_sticky_state`
 	pub sticky: bool,
 	pub long_press_time: f32,
-	pub adjust_children: bool,
 }
 
 impl Default for Params<'_> {
@@ -74,7 +73,6 @@ impl Default for Params<'_> {
 			tooltip: None,
 			sticky: false,
 			long_press_time: 0.0,
-			adjust_children: true,
 		}
 	}
 }
@@ -105,14 +103,7 @@ struct State {
 	last_pressed: Instant,
 	id_label: WidgetID,  // Label
 	id_sprite: WidgetID, // Sprite
-
-	// Currently, we're recursively altering all sprites and labels to alter
-	// their color according to the current button hover state.
-	// The most perfect solution would be making special color palette tags like
-	// "button_text" which could be modified dynamically down the render tree (?).
-	// `adjust_children` disables this behaviour.
 	children_discovered: bool,
-	adjust_children: bool,
 }
 
 impl TooltipTrait for State {
@@ -144,7 +135,7 @@ impl ComponentTrait for ComponentButton {
 	fn refresh(&self, data: &mut RefreshData) {
 		let mut state = self.state.borrow_mut();
 
-		if state.adjust_children && !state.children_discovered {
+		if !state.children_discovered {
 			state.children_discovered = true;
 
 			let mut children = vec![];
@@ -700,7 +691,6 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id_label,
 		id_sprite,
 		children_discovered: false,
-		adjust_children: params.adjust_children,
 	}));
 
 	let base = ComponentBase {

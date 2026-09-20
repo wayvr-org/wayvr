@@ -250,7 +250,13 @@
 		"LENS_SEPARATION_MM": "Distanza lenti (mm)",
 		"DIAGNOSTICS": "Diagnostica",
 		"MIDDLE_GRABS_SINGLE": "Il modificatore click centrale afferra singoli oggetti",
-		"MIDDLE_GRABS_SINGLE_HELP": "Afferrando con il modificatore click centrale (laser viola),\nsi afferrano i singoli overlay e non l'intero set"
+		"MIDDLE_GRABS_SINGLE_HELP": "Afferrando con il modificatore click centrale (laser viola),\nsi afferrano i singoli overlay e non l'intero set",
+		"DIAGNOSTICS_REASON": {
+			"PACTL": "Necessario per il controllo di altoparlanti/microfono e il cambio della scheda audio",
+			"CAGE": "Consigliato in caso di incompatibilità con alcune applicazioni X11 (Modalità compatibilità)",
+			"XWAYLAND_SATELLITE": "Consigliato per eseguire applicazioni X11 (Xwayland) in modalità nativa",
+			"XDG_OPEN": "Necessario per aprire URL o giochi Steam"
+		}
 	},
 	"APPLICATION_LAUNCHER": "Avvio applicazioni",
 	"APPLICATION_STARTED": "Applicazione avviata",

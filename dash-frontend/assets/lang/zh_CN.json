@@ -250,7 +250,13 @@
 		"LENS_SEPARATION_MM": "瞳距 (mm)",
 		"DIAGNOSTICS": "诊断",
 		"MIDDLE_GRABS_SINGLE": "中键点击修饰键抓取单个对象",
-		"MIDDLE_GRABS_SINGLE_HELP": "使用中键点击修饰键（紫色激光）抓取时\n将抓取单个叠加层，而非整个集合"
+		"MIDDLE_GRABS_SINGLE_HELP": "使用中键点击修饰键（紫色激光）抓取时\n将抓取单个叠加层，而非整个集合",
+		"DIAGNOSTICS_REASON": {
+			"PACTL": "用于扬声器/麦克风控制及声卡切换",
+			"CAGE": "若部分 X11 应用程序不兼容，建议开启（兼容模式）",
+			"XWAYLAND_SATELLITE": "如果你想以原生模式运行 X11 (Xwayland) 应用程序，建议开启此项",
+			"XDG_OPEN": "打开 URL 或 Steam 游戏所需"
+		}
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",
 	"APPLICATION_STARTED": "应用程序已启动",

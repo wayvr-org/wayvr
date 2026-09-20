@@ -250,7 +250,13 @@
 		"LENS_SEPARATION_MM": "Separación de lentes (mm)",
 		"DIAGNOSTICS": "Diagnósticos",
 		"MIDDLE_GRABS_SINGLE": "El modificador de clic central agarra objetos individuales",
-		"MIDDLE_GRABS_SINGLE_HELP": "Al agarrar con el modificador de clic central (láser púrpura),\nse agarrarán overlays individuales y no el set completo"
+		"MIDDLE_GRABS_SINGLE_HELP": "Al agarrar con el modificador de clic central (láser púrpura),\nse agarrarán overlays individuales y no el set completo",
+		"DIAGNOSTICS_REASON": {
+			"PACTL": "Necesario para el control de altavoces/micrófono y el cambio de tarjeta de audio",
+			"CAGE": "Recomendado en caso de incompatibilidad con algunas aplicaciones X11 (Modo de compatibilidad)",
+			"XWAYLAND_SATELLITE": "Recomendado si quieres ejecutar aplicaciones X11 (Xwayland) en modo nativo",
+			"XDG_OPEN": "Necesario para abrir URLs o juegos de Steam"
+		}
 	},
 	"APPLICATION_LAUNCHER": "Lanzador de aplicaciones",
 	"APPLICATION_STARTED": "Aplicación iniciada",

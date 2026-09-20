@@ -35,8 +35,8 @@
   <template name="DiagnosticsRow">
     <div align_items="center">
       <label text="${title}" weight="bold" min_width="140"/>
-      <Button tooltip_str="${tooltip_str}" adjust_children="false" color="background(transparent)">
-        <sprite width="24" height="24" color="${color}" src_builtin="${sprite}"/>
+      <Button tooltip_str="${tooltip_str}" color="background(transparent)">
+        <sprite width="24" height="24" color="${color}" src_builtin="${sprite}" parent_color="ignore"/>
       </Button>
     </div>
   </template>

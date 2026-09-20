@@ -137,6 +137,12 @@
 		"HANDSFREE_ALT_TAB": "App switcher aim",
 		"HANDSFREE_ALT_TAB_HELP": "Hold Super+X, aim at the desired window, then release to switch focus.",
 		"DIAGNOSTICS": "Diagnostics",
+		"DIAGNOSTICS_REASON": {
+			"PACTL": "Required for speaker/microphone control and audio card switching",
+			"CAGE": "Recommended in case if there's an incompatibility with some X11 applications (Compatibility mode)",
+			"XWAYLAND_SATELLITE": "Recommended in case if you want to run X11 (Xwayland) applications in native mode",
+			"XDG_OPEN": "Required for opening URLs or Steam games"
+		},
 		"HIDE_GRAB_HELP": "Hide grab help",
 		"HIDE_USERNAME": "Hide username",
 		"INPUT_EMULATION_METHOD": "Input emulation method",
