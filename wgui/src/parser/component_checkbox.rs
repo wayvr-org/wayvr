@@ -25,7 +25,7 @@ pub fn parse_component_checkbox(
 ) -> anyhow::Result<WidgetID> {
 	let mut box_size = 24.0;
 	let mut translation = Translation::default();
-	let mut checked = 0;
+	let mut checked: bool = false;
 	let mut component_value = None;
 	let mut tooltip = TooltipAttribs::default();
 
@@ -51,7 +51,7 @@ pub fn parse_component_checkbox(
 				ctx.parse_check_f32(tag_name, key, value, &mut box_size);
 			}
 			"checked" => {
-				ctx.parse_check_i32(tag_name, key, value, &mut checked);
+				ctx.parse_check_bool(tag_name, key, value, &mut checked);
 			}
 			_ => {
 				parse_attrib_tooltip(ctx, tag_name, pair, &mut tooltip);
@@ -87,7 +87,7 @@ pub fn parse_component_checkbox(
 		checkbox::Params {
 			box_size,
 			text: translation,
-			checked: checked != 0,
+			checked,
 			style,
 			radio_group,
 			value: component_value,

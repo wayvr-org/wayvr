@@ -129,7 +129,7 @@ impl WidgetLabel {
 		}
 	}
 
-	pub fn get_color_opt(&self) -> Option<WguiColor> {
+	pub const fn get_color_opt(&self) -> Option<WguiColor> {
 		self.params.style.color
 	}
 

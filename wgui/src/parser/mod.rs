@@ -621,6 +621,16 @@ impl ParserContext<'_> {
 		}
 	}
 
+	fn parse_check_bool(&self, tag_name: &str, key: &str, value: &str, num: &mut bool) -> bool {
+		if let Some(value) = parse_bool(value) {
+			*num = value;
+			true
+		} else {
+			self.print_invalid_attrib(tag_name, key, value);
+			false
+		}
+	}
+
 	fn parse_check_i32(&self, tag_name: &str, key: &str, value: &str, num: &mut i32) -> bool {
 		if let Some(value) = parse_i32(value) {
 			*num = value;
@@ -639,6 +649,16 @@ impl ParserContext<'_> {
 			self.print_invalid_attrib(tag_name, key, value);
 			false
 		}
+	}
+}
+
+fn parse_bool(value: &str) -> Option<bool> {
+	match value {
+		"true" => Some(true),
+		"false" => Some(false),
+		"1" => Some(true),
+		"0" => Some(false),
+		_ => None,
 	}
 }
 
@@ -835,8 +855,7 @@ fn parse_tag_include(
 				path = Some(expand_path_from_kv(file, &pair.attrib, &pair.value));
 			}
 			"optional" => {
-				let mut optional_i32 = 0;
-				optional = ctx.parse_check_i32(TAG_NAME, &pair.attrib, &pair.value, &mut optional_i32) && optional_i32 == 1;
+				ctx.parse_check_bool(TAG_NAME, &pair.attrib, &pair.value, &mut optional);
 			}
 			_ => {
 				ctx.print_invalid_attrib(TAG_NAME, pair.attrib.as_ref(), pair.value.as_ref());

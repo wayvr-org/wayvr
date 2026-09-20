@@ -21,7 +21,7 @@ pub fn parse_component_slider(
 	let mut initial_value1 = 0.5;
 	let mut initial_value2: Option<f32> = None;
 	let mut step = 1.0;
-	let mut show_value = 1;
+	let mut show_value: bool = true;
 	let mut tooltip = TooltipAttribs::default();
 
 	let style = parse_style(ctx, attribs, tag_name);
@@ -48,7 +48,7 @@ pub fn parse_component_slider(
 				ctx.parse_check_f32(tag_name, key, value, &mut step);
 			}
 			"show_value" => {
-				ctx.parse_check_i32(tag_name, key, value, &mut show_value);
+				ctx.parse_check_bool(tag_name, key, value, &mut show_value);
 			}
 			_ => {
 				parse_attrib_tooltip(ctx, tag_name, pair, &mut tooltip);
@@ -70,7 +70,7 @@ pub fn parse_component_slider(
 			},
 			value1: slider::Value(initial_value1),
 			value2: initial_value2.map(slider::Value),
-			show_value: show_value != 0,
+			show_value,
 			tooltip: tooltip.get_info(),
 		},
 	)?;

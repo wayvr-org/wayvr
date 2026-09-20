@@ -53,7 +53,7 @@ impl WidgetSprite {
 		self.params.color.unwrap_or(DEFAULT_COLOR)
 	}
 
-	pub fn get_color_opt(&self) -> Option<WguiColor> {
+	pub const fn get_color_opt(&self) -> Option<WguiColor> {
 		self.params.color
 	}
 
