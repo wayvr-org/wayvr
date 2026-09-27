@@ -1,10 +1,9 @@
 use glam::{Affine2, Affine3A, Vec2};
 use smallvec::SmallVec;
 use std::{any::Any, rc::Rc, sync::Arc};
-use vulkano::{command_buffer::CommandBufferUsage, format::Format, image::view::ImageView};
 use wgui::gfx::{
-    WGfx,
-    cmd::{GfxCommandBuffer, WGfxClearMode},
+    BuiltCommandBuffer, CommandBufferUsage, Format, ImageView, WGfx,
+    cmd::{GfxCommandBufferBuilder, WGfxClearMode},
 };
 use wlx_common::{
     overlays::{BackendAttrib, BackendAttribValue, StereoMode},
@@ -16,14 +15,13 @@ use crate::{
         input::{HoverResult, PointerHit},
         task::ModifyPanelCommand,
     },
-    graphics::RenderResult,
     overlays::wayvr::WvrCommand,
     state::AppState,
     subsystem::hid::WheelDelta,
     windowing::{OverlayID, window::OverlayCategory},
 };
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct FrameMeta {
     pub extent: [u32; 2],
     pub transform: Affine3A,
@@ -31,6 +29,18 @@ pub struct FrameMeta {
     pub format: Format,
     pub clear: WGfxClearMode,
     pub stereo: StereoMode,
+}
+
+impl Default for FrameMeta {
+    fn default() -> Self {
+        Self {
+            extent: [0, 0],
+            transform: Affine3A::IDENTITY,
+            format: Format::R8G8B8A8_SRGB,
+            clear: WGfxClearMode::default(),
+            stereo: StereoMode::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -48,7 +58,7 @@ pub struct RenderTarget {
 }
 
 pub struct RenderResources {
-    pub cmd_bufs: SmallVec<[GfxCommandBuffer; 2]>,
+    pub cmd_bufs: SmallVec<[GfxCommandBufferBuilder; 2]>,
     pub extent: [u32; 2],
 }
 
@@ -69,19 +79,16 @@ impl RenderResources {
         })
     }
 
-    pub fn cmd_buf_single(&mut self) -> &mut GfxCommandBuffer {
+    pub fn cmd_buf_single(&mut self) -> &mut GfxCommandBufferBuilder {
         self.cmd_bufs.first_mut().unwrap() // first must always be populated
     }
 
-    pub fn end(self) -> anyhow::Result<SmallVec<[RenderResult; 2]>> {
+    pub fn end(self) -> anyhow::Result<SmallVec<[Arc<BuiltCommandBuffer>; 2]>> {
         let mut ret_val = SmallVec::new_const();
 
         for mut buf in self.cmd_bufs {
             buf.end_rendering()?;
-            ret_val.push(RenderResult {
-                queue: buf.queue.clone(),
-                cmd_buf: buf.build()?,
-            });
+            ret_val.push(buf.build()?);
         }
 
         Ok(ret_val)

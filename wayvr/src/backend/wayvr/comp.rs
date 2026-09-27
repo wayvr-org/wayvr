@@ -60,7 +60,6 @@ use wayland_server::protocol::wl_surface::WlSurface;
 
 use crate::backend::wayvr::image_importer::ImageImporter;
 use crate::backend::wayvr::{SurfaceBufWithImage, WAYVR_SCREEN_RES, time};
-use crate::graphics::ExtentExt;
 use crate::ipc::event_queue::SyncEventQueue;
 
 use super::WayVRTask;
@@ -182,7 +181,7 @@ impl Application {
     fn surface_logical_size(surface: &WlSurface) -> Option<Size<i32, Logical>> {
         smithay::wayland::compositor::with_states(surface, |states| {
             SurfaceBufWithImage::get_from_surface(states).map(|buf| {
-                let extent = buf.image.extent_u32arr();
+                let extent = buf.image.extent_2d();
                 let scale = buf.scale.max(1) as u32;
 
                 Size::new((extent[0] / scale) as i32, (extent[1] / scale) as i32)
@@ -239,8 +238,12 @@ impl compositor::CompositorHandler for Application {
                         Some(BufferType::Dma) => {
                             let dmabuf = get_dmabuf(&buffer).unwrap(); // always Ok due to buffer_type
 
-                            if let Ok(image) =
-                                self.image_importer.get_or_import_dmabuf(dmabuf.clone())
+                            if let Ok(image) = self
+                                .image_importer
+                                .get_or_import_dmabuf(dmabuf.clone())
+                                .inspect_err(|e| {
+                                    log::warn!("wayland_server failed to import DMA-buf: {e:?}");
+                                })
                             {
                                 let sbwi = SurfaceBufWithImage {
                                     image,
@@ -610,10 +613,16 @@ impl DmabufHandler for Application {
         dmabuf: Dmabuf,
         notifier: ImportNotifier,
     ) {
-        if self.image_importer.get_or_import_dmabuf(dmabuf).is_ok() {
-            let _ = notifier.successful::<Self>();
-        } else {
-            notifier.failed();
+        match self.image_importer.get_or_import_dmabuf(dmabuf) {
+            Ok(_) => {
+                log::info!("wayland_server DMA-buf import complete; notifying client");
+                let _ = notifier.successful::<Self>();
+                log::info!("wayland_server DMA-buf success notification returned");
+            }
+            Err(e) => {
+                log::warn!("wayland_server rejected DMA-buf import: {e:?}");
+                notifier.failed();
+            }
         }
     }
 }

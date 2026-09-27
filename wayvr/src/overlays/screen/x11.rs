@@ -4,7 +4,6 @@ use wgui::log::LogErr;
 
 use glam::{DVec2, vec2};
 use wlx_capture::{
-    WlxCapture,
     frame::Transform,
     xshm::{XshmCapture, XshmScreen},
 };
@@ -15,21 +14,14 @@ use crate::{
     state::{AppState, ScreenMeta},
 };
 
-use super::{
-    ScreenCreateData,
-    backend::ScreenBackend,
-    capture::{MainThreadWlxCapture, new_wlx_capture},
-};
+use super::{ScreenCreateData, backend::ScreenBackend, capture::new_wlx_capture};
 
 #[cfg(feature = "pipewire")]
 use crate::{overlays::screen::pw::ScreenCastBackend, windowing::backend::OverlayBackend};
 
 impl ScreenBackend {
     pub fn new_xshm(screen: Arc<XshmScreen>, app: &AppState) -> Self {
-        let capture = new_wlx_capture!(
-            app.gfx_extras.queue_capture,
-            XshmCapture::new(screen.clone())
-        );
+        let capture = new_wlx_capture!(app, XshmCapture::new(screen.clone()));
         Self::new_raw(
             screen.name.clone(),
             app.feats.xr_backend,

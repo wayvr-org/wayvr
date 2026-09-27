@@ -31,7 +31,7 @@ use wgui::{
     i18n::Translation,
     layout::{Layout, LayoutParams, LayoutTask, LayoutUpdateParams, WidgetID},
     parser::{self, CustomAttribsInfoOwned, Fetchable, ParseDocumentExtra, ParserState},
-    renderer_vk::{context::Context as WguiContext, text::custom_glyph::CustomGlyphData},
+    renderer::{context::Context as WguiContext, text::custom_glyph::CustomGlyphData},
     widget::{
         EventResult, image::WidgetImage, label::WidgetLabel, rectangle::WidgetRectangle,
         sprite::WidgetSprite,

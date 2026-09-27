@@ -38,25 +38,12 @@ smol = "2.0.2"
 strum = { version = "0.27.2", features = ["derive"] }
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 uuid = { version = "1.19.0", features = ["fast-rng", "serde", "v4"] }
-vulkano = {
-  version = "0.35.2",
-  default-features = false,
-  features = [
-    "macros",
-  ]
-}
-vulkano-shaders = "0.35.0"
 wayland-client = { version = "0.31" }
 wayland-protocols = { version = "0.32" }
 wayland-protocols-misc = { version = "0.3.12" }
 winit = "0.30.12"
 xdg = "3.0.0"
 
-[patch.crates-io]
-vulkano = {
-  git = "https://github.com/galister/vulkano.git",
-  rev = "cf7f92867928a56ce16b376037c1120f2b167678"
-}
 
 [profile.dev]
 opt-level = 1

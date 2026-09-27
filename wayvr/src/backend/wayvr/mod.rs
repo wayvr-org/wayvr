@@ -51,10 +51,13 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use vulkano::image::view::ImageView;
 use wayland_protocols::xdg::shell::server::xdg_toplevel;
 use wayvr_ipc::packet_client::PositionMode;
-use wgui::{gfx::WGfx, globals::WguiGlobals, log::LogErr};
+use wgui::{
+    gfx::{ImageView, WGfx},
+    globals::WguiGlobals,
+    log::LogErr,
+};
 use wlx_capture::frame::Transform;
 use wlx_common::{
     audio,
@@ -74,7 +77,7 @@ use crate::{
             window::CreateWindowParams,
         },
     },
-    graphics::{ExtentExt, WGfxExtras},
+    graphics::WGfxExtras,
     ipc::{event_queue::SyncEventQueue, ipc_server},
     overlays::{
         anchor::ALTTAB_HELP_NAME,
@@ -990,7 +993,7 @@ impl WvrServerState {
                     let toplevel = window.toplevel.wl_surface().clone();
                     let inner_extent = with_states(&toplevel, |states| {
                         SurfaceBufWithImage::get_from_surface(states)
-                            .map_or([1, 1], |s| s.image.extent_u32arr())
+                            .map_or([1, 1], |s| s.image.extent_2d())
                     });
 
                     let hit_ctx = build_hit_context(

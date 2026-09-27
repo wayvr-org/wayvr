@@ -18,8 +18,8 @@ serde_json.workspace = true
 slotmap.workspace = true
 smallvec.workspace = true
 strum.workspace = true
-vulkano.workspace = true
-vulkano-shaders.workspace = true
+ash = { version = "0.38", features = ["loaded"] }
+raw-window-handle = "0.6"
 
 cosmic-text = "0.19.0"
 etagere = "0.3.0"
@@ -49,3 +49,6 @@ dav1d-sys = { version = "0.8.3", optional = true }
 [features]
 default = ["video"]
 video = ["dep:bytes", "dep:dav1d-sys"]
+
+[build-dependencies]
+shaderc = "0.8"

@@ -1,112 +1,76 @@
 use std::{marker::PhantomData, ops::Range, sync::Arc};
 
-use smallvec::smallvec;
-use vulkano::{
-	buffer::{BufferContents, Subbuffer},
-	command_buffer::{
-		AutoCommandBufferBuilder, CommandBufferInheritanceInfo, CommandBufferInheritanceRenderPassType,
-		CommandBufferInheritanceRenderingInfo, CommandBufferUsage, SecondaryAutoCommandBuffer,
-	},
-	descriptor_set::{DescriptorSet, WriteDescriptorSet},
-	image::{
-		sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo},
-		view::ImageView,
-	},
-	pipeline::{
-		Pipeline, PipelineBindPoint,
-		graphics::{self, vertex_input::Vertex, viewport::Viewport},
-	},
+use anyhow::Context as _;
+
+use super::{
+	Buffer, Filter, ImageView, SamplerCreateInfo, Vertex, WGfx,
+	pipeline::{DescriptorSet, WGfxPipeline},
+	types::{SamplerAddressMode, Scissor},
 };
 
-use super::{WGfx, pipeline::WGfxPipeline};
-
+/// Reusable draw description.
+///
+/// Unlike the old Vulkano implementation this does not expose or own a raw
+/// secondary command buffer. `GfxCommandBuffer::run_ref` records the draw into
+/// `WGfx`'s private primary command buffer.
 pub struct WGfxPass<V> {
-	pub command_buffer: Arc<SecondaryAutoCommandBuffer>,
-	graphics: Arc<WGfx>,
-	descriptor_sets: Vec<Arc<DescriptorSet>>,
+	pub(super) pipeline: Arc<WGfxPipeline<V>>,
+	pub(super) graphics: Arc<WGfx>,
+	pub(super) vertex_buffer: Arc<Buffer<V>>,
+	pub(super) vertices: Range<u32>,
+	pub(super) instances: Range<u32>,
+	pub(super) descriptor_sets: Vec<Arc<DescriptorSet>>,
+	pub(super) dimensions: [f32; 2],
+	pub(super) offset: [f32; 2],
+	pub(super) scissor: Scissor,
 	_dummy: PhantomData<V>,
 }
 
 impl<V> WGfxPass<V>
 where
-	V: BufferContents + Vertex,
+	V: Vertex,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub(super) fn new(
-		pipeline: &Arc<WGfxPipeline<V>>,
+		pipeline: Arc<WGfxPipeline<V>>,
 		dimensions: [f32; 2],
 		offset: [f32; 2],
-		vertex_buffer: Subbuffer<[V]>,
+		vertex_buffer: Arc<Buffer<V>>,
 		vertices: Range<u32>,
 		instances: Range<u32>,
 		descriptor_sets: Vec<Arc<DescriptorSet>>,
-		vk_scissor: &graphics::viewport::Scissor,
+		scissor: Scissor,
 	) -> anyhow::Result<Self> {
-		let viewport = Viewport {
-			offset,
-			extent: dimensions,
-			depth_range: 0.0..=1.0,
-		};
-		let pipeline_inner = pipeline.inner();
-		let mut command_buffer = AutoCommandBufferBuilder::secondary(
-			pipeline.graphics.command_buffer_allocator.clone(),
-			pipeline.graphics.queue_gfx.queue_family_index(),
-			CommandBufferUsage::SimultaneousUse,
-			CommandBufferInheritanceInfo {
-				render_pass: Some(CommandBufferInheritanceRenderPassType::BeginRendering(
-					CommandBufferInheritanceRenderingInfo {
-						color_attachment_formats: vec![Some(pipeline.format)],
-
-						..Default::default()
-					},
-				)),
-				..Default::default()
-			},
-		)?;
-
-		unsafe {
-			command_buffer
-				.set_viewport(0, smallvec![viewport])?
-				.set_scissor(0, smallvec![*vk_scissor])?
-				.bind_pipeline_graphics(pipeline_inner)?
-				.bind_descriptor_sets(
-					PipelineBindPoint::Graphics,
-					pipeline.inner().layout().clone(),
-					0,
-					descriptor_sets.clone(),
-				)?
-				.bind_vertex_buffers(0, vertex_buffer)?
-				.draw(
-					vertices.end - vertices.start,
-					instances.end - instances.start,
-					vertices.start,
-					instances.start,
-				)?
-		};
+		for (index, set) in descriptor_sets.iter().enumerate() {
+			if !Arc::ptr_eq(&set.graphics, &pipeline.graphics) {
+				anyhow::bail!("descriptor set {index} belongs to a different WGfx instance");
+			}
+		}
 
 		Ok(Self {
-			command_buffer: command_buffer.build()?,
 			graphics: pipeline.graphics.clone(),
+			pipeline,
+			vertex_buffer,
+			vertices,
+			instances,
 			descriptor_sets,
+			dimensions,
+			offset,
+			scissor,
 			_dummy: PhantomData,
 		})
 	}
 
 	pub fn update_sampler(&self, set: usize, texture: Arc<ImageView>, filter: Filter) -> anyhow::Result<()> {
-		let sampler = Sampler::new(
-			self.graphics.device.clone(),
-			SamplerCreateInfo {
-				mag_filter: filter,
-				min_filter: filter,
-				address_mode: [SamplerAddressMode::Repeat; 3],
-				..Default::default()
-			},
-		)?;
-
-		unsafe {
-			self.descriptor_sets[set].update_by_ref([WriteDescriptorSet::image_view_sampler(0, texture, sampler)], [])?;
-		}
-
-		Ok(())
+		let descriptor_set = self
+			.descriptor_sets
+			.get(set)
+			.with_context(|| format!("pass has no descriptor set {set}"))?;
+		let sampler = self.graphics.create_sampler(SamplerCreateInfo {
+			mag_filter: filter,
+			min_filter: filter,
+			address_mode: [SamplerAddressMode::Repeat; 3],
+		})?;
+		descriptor_set.write_sampler(0, texture, sampler)
 	}
 }

@@ -11,8 +11,7 @@ use smithay::{
         single_pixel_buffer::SinglePixelBufferUserData,
     },
 };
-use vulkano::{format::Format, image::view::ImageView};
-use wgui::gfx::WGfx;
+use wgui::gfx::{CommandBufferUsage, Format, ImageView, WGfx};
 use wlx_capture::frame::{DmabufFrame, FrameFormat, Transform};
 
 use crate::graphics::dmabuf::{WGfxDmabuf, fourcc_to_vk};
@@ -34,17 +33,16 @@ impl ImageImporter {
         &mut self,
         spb: &SinglePixelBufferUserData,
     ) -> anyhow::Result<Arc<ImageView>> {
-        let mut cmd_buf = self.gfx.create_xfer_command_buffer(
-            vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit,
-        )?;
+        let mut cmd_buf = self
+            .gfx
+            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
         let rgba = spb.rgba8888();
         let image = cmd_buf.upload_image(1, 1, Format::R8G8B8A8_UNORM, &rgba)?;
 
         cmd_buf.build_and_execute_now()?; //TODO: async
 
-        let image_view = ImageView::new_default(image)?;
-        Ok(image_view)
+        self.gfx.create_image_view(image)
     }
 
     pub fn import_shm(
@@ -53,9 +51,9 @@ impl ImageImporter {
         size: usize,
         bd: BufferData,
     ) -> anyhow::Result<Arc<ImageView>> {
-        let mut cmd_buf = self.gfx.create_xfer_command_buffer(
-            vulkano::command_buffer::CommandBufferUsage::OneTimeSubmit,
-        )?;
+        let mut cmd_buf = self
+            .gfx
+            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
         let fourcc = shm_format_to_fourcc(bd.format)
             .with_context(|| format!("Could not convert {:?} to fourcc", bd.format))?;
@@ -96,7 +94,7 @@ impl ImageImporter {
         let image = cmd_buf.upload_image(bd.width as _, bd.height as _, format, &packed)?;
         cmd_buf.build_and_execute_now()?;
 
-        Ok(ImageView::new_default(image)?)
+        self.gfx.create_image_view(image)
     }
 
     pub fn get_or_import_dmabuf(&mut self, dmabuf: Dmabuf) -> anyhow::Result<Arc<ImageView>> {
@@ -132,8 +130,11 @@ impl ImageImporter {
         }
 
         let image = self.gfx.dmabuf_texture(frame)?;
-        let image_view = ImageView::new_default(image)?;
+        log::info!("DMA-buf import: creating image view");
+        let image_view = self.gfx.create_image_view(image)?;
+        log::info!("DMA-buf import: image view created");
         self.dmabufs.insert(key, image_view.clone());
+        log::info!("DMA-buf import: cached ImageView");
 
         Ok(image_view)
     }

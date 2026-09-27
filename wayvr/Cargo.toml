@@ -53,15 +53,12 @@ smol = { workspace = true }
 strum.workspace = true
 tracing-subscriber.workspace = true
 uuid = { workspace = true }
-vulkano.workspace = true
-vulkano-shaders.workspace = true
 wayland-client = { workspace = true }
 wayland-protocols = { workspace = true }
 wayland-protocols-misc = { workspace = true }
 winit = { workspace = true, optional = true }
 xdg.workspace = true
 
-ash = "^0.38.0"  # must match vulkano
 bytes = { workspace = true }
 chrono-tz = "0.10.4"
 config = "0.15.25"
@@ -130,6 +127,7 @@ evdev = "0.13.2"
 
 [build-dependencies]
 regex.workspace = true
+shaderc = "0.8"
 
 [features]
 default = ["openvr", "openxr", "osc", "wayland", "whisper", "x11"]

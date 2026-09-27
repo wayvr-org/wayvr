@@ -1,25 +1,19 @@
 use std::{
-    os::fd::AsRawFd,
-    sync::{Arc, OnceLock},
+    os::fd::{AsRawFd, BorrowedFd, OwnedFd, RawFd},
+    ptr::NonNull,
+    sync::{Arc, Mutex},
 };
 
 use glam::Affine3A;
 use smallvec::{SmallVec, smallvec};
-use vulkano::{
-    buffer::{BufferUsage, Subbuffer},
-    command_buffer::CommandBufferUsage,
-    device::Queue,
-    format::Format,
-    image::{Image, sampler::Filter, view::ImageView},
-    memory::{ExternalMemoryHandleTypes, allocator::MemoryAllocator},
-};
 use wgui::{
     gfx::{
-        WGfx,
+        Buffer, BufferUsage, CommandBufferUsage, Filter, Format, Image, ImageView, Scissor,
+        Vert2Uv, WGfx,
         cmd::WGfxClearMode,
-        memory_allocator,
         pass::WGfxPass,
         pipeline::{WGfxPipeline, WPipelineCreateInfo},
+        upload_quad_vertices,
     },
     log::LogErr,
 };
@@ -30,11 +24,7 @@ use wlx_capture::{
 use wlx_common::{config::GeneralConfig, overlays::StereoMode};
 
 use crate::{
-    graphics::{
-        ExtentExt, Vert2Uv,
-        dmabuf::{ExportedDmabufImage, WGfxDmabuf, export_dmabuf_image, fourcc_to_vk},
-        upload_quad_vertices,
-    },
+    graphics::dmabuf::{ExportedDmabufImage, WGfxDmabuf, export_dmabuf_image, fourcc_to_vk},
     state::AppState,
     windowing::backend::{FrameMeta, RenderResources},
 };
@@ -43,7 +33,7 @@ const CURSOR_SIZE: f32 = 16. / 1440.;
 
 struct BufPass {
     pass: WGfxPass<Vert2Uv>,
-    buf_vert: Subbuffer<[Vert2Uv]>,
+    buf_vert: Arc<Buffer<Vert2Uv>>,
 }
 
 /// A render pipeline that supports mouse + stereo
@@ -56,6 +46,7 @@ pub struct ScreenPipeline {
     transform: wlx_frame::Transform,
     stereo: StereoMode,
     stereo_adjust_mouse: bool,
+    fallback_image: Arc<ImageView>,
 }
 
 impl ScreenPipeline {
@@ -71,12 +62,25 @@ impl ScreenPipeline {
         let pipeline = app.gfx.create_pipeline(
             app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
             app.gfx_extras.shaders.get("frag_screen").unwrap(), // want panic
-            WPipelineCreateInfo::new(app.gfx.surface_format)
-                .use_updatable_descriptors(smallvec![0]),
+            WPipelineCreateInfo::new(app.gfx.surface_format()).use_updatable_descriptors([0]),
         )?;
 
+        let mut cmd_xfer = app
+            .gfx
+            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+        let fallback_image =
+            cmd_xfer.upload_image(1, 1, Format::R8G8B8A8_SRGB, &[255, 0, 255, 255])?;
+        cmd_xfer.build_and_execute_now()?;
+        let fallback_image = app.gfx.create_image_view(fallback_image)?;
+
         let mut me = Self {
-            pass: smallvec![Self::create_pass(app, pipeline.clone(), extentf, offsetf,)?],
+            pass: smallvec![Self::create_pass(
+                app,
+                pipeline.clone(),
+                fallback_image.clone(),
+                extentf,
+                offsetf,
+            )?],
             mouse: Self::create_mouse_pass(app, pipeline.clone(), extentf, offsetf)?,
             pipeline,
             extentf,
@@ -84,6 +88,7 @@ impl ScreenPipeline {
             transform,
             stereo,
             stereo_adjust_mouse: false,
+            fallback_image,
         };
         me.ensure_stereo(stereo);
         Ok(me)
@@ -111,6 +116,7 @@ impl ScreenPipeline {
             self.pass.push(Self::create_pass(
                 app,
                 self.pipeline.clone(),
+                self.fallback_image.clone(),
                 self.extentf,
                 self.offsetf,
             )?);
@@ -146,14 +152,11 @@ impl ScreenPipeline {
     fn create_pass(
         app: &mut AppState,
         pipeline: Arc<WGfxPipeline<Vert2Uv>>,
+        fallback_image: Arc<ImageView>,
         extentf: [f32; 2],
         offsetf: [f32; 2],
     ) -> anyhow::Result<BufPass> {
-        let set0 = pipeline.uniform_sampler(
-            0,
-            app.gfx_extras.fallback_image.clone(),
-            app.gfx.texture_filter,
-        )?;
+        let set0 = pipeline.uniform_sampler(0, fallback_image, app.gfx.texture_filter())?;
         let buf_vert = app
             .gfx
             .empty_buffer(BufferUsage::TRANSFER_DST | BufferUsage::VERTEX_BUFFER, 4)?;
@@ -165,7 +168,7 @@ impl ScreenPipeline {
             0..4,
             0..1,
             vec![set0],
-            &Default::default(),
+            Scissor::from_viewport(extentf, offsetf),
         )?;
 
         Ok(BufPass { pass, buf_vert })
@@ -189,13 +192,12 @@ impl ScreenPipeline {
             .gfx
             .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
-        let image =
-            cmd_xfer.upload_image(4, 4, vulkano::format::Format::R8G8B8A8_UNORM, &mouse_bytes)?;
+        let image = cmd_xfer.upload_image(4, 4, Format::R8G8B8A8_UNORM, &mouse_bytes)?;
 
-        let view = ImageView::new_default(image)?;
+        let view = app.gfx.create_image_view(image)?;
 
-        let buf_vert = cmd_xfer
-            .graphics
+        let buf_vert = app
+            .gfx
             .empty_buffer(BufferUsage::TRANSFER_DST | BufferUsage::VERTEX_BUFFER, 4)?;
 
         let set0 = pipeline.uniform_sampler(0, view, Filter::Nearest)?;
@@ -206,7 +208,7 @@ impl ScreenPipeline {
             0..4,
             0..1,
             vec![set0],
-            &Default::default(),
+            Scissor::from_viewport(extentf, offsetf),
         )?;
 
         cmd_xfer.build_and_execute_now()?;
@@ -240,7 +242,7 @@ impl ScreenPipeline {
 
             current
                 .pass
-                .update_sampler(0, image.clone(), app.gfx.texture_filter)?;
+                .update_sampler(0, image.clone(), app.gfx.texture_filter())?;
 
             cmd_buf.run_ref(&current.pass)?;
         }
@@ -268,7 +270,7 @@ impl ScreenPipeline {
             };
 
             upload_quad_vertices(
-                &mut self.mouse.buf_vert,
+                &self.mouse.buf_vert,
                 self.extentf[0],
                 self.extentf[1],
                 mouse.x.mul_add(self.extentf[0] * x_scale, -half_size),
@@ -372,8 +374,6 @@ fn stereo_mode_to_verts(
     verts
 }
 
-static DMA_ALLOCATOR: OnceLock<Arc<dyn MemoryAllocator>> = OnceLock::new();
-
 pub(super) struct MyFirstDmaExporter {
     gfx: Arc<WGfx>,
     drm_formats: Arc<[DrmFormat]>,
@@ -395,7 +395,7 @@ impl MyFirstDmaExporter {
 
     fn get_current(&self) -> Option<(Arc<ImageView>, FrameFormat)> {
         let image = self.images.get(self.current)?;
-        let extent = image.view.extent_u32arr();
+        let extent = image.view.extent_2d();
         Some((
             image.view.clone(),
             FrameFormat {
@@ -439,20 +439,12 @@ impl MyFirstDmaExporter {
             .log_err("Could not export new dmabuf due to invalid format")
             .ok()?;
 
-        let allocator = DMA_ALLOCATOR.get_or_init(|| {
-            memory_allocator(
-                self.gfx.device.clone(),
-                Some(ExternalMemoryHandleTypes::DMA_BUF),
-            )
-        });
-
         for _ in 0..2 {
-            let image =
-                export_dmabuf_image(allocator.clone(), [width, height, 1], format, modifier)
-                    .log_err(&format!(
-                        "Could not export DMA-buf image {width}x{height} {fourcc} {modifier:?}"
-                    ))
-                    .ok()?;
+            let image = export_dmabuf_image(&self.gfx, [width, height, 1], format, modifier)
+                .log_err(&format!(
+                    "Could not export DMA-buf image {width}x{height} {fourcc} {modifier:?}"
+                ))
+                .ok()?;
 
             self.images.push(image);
         }
@@ -478,8 +470,8 @@ impl MyFirstDmaExporter {
 pub struct WlxCaptureIn {
     name: Arc<str>,
     gfx: Arc<WGfx>,
-    queue: Arc<Queue>,
-    dma_exporter: Option<MyFirstDmaExporter>,
+    dma_exporter: Option<Arc<Mutex<MyFirstDmaExporter>>>,
+    use_capture_queue: bool,
 }
 
 impl WlxCaptureIn {
@@ -491,13 +483,8 @@ impl WlxCaptureIn {
         Self {
             name,
             gfx: app.gfx.clone(),
-            queue: app
-                .gfx_extras
-                .queue_capture
-                .as_ref()
-                .unwrap_or_else(|| &app.gfx.queue_xfer)
-                .clone(),
-            dma_exporter,
+            dma_exporter: dma_exporter.map(|exporter| Arc::new(Mutex::new(exporter))),
+            use_capture_queue: app.gfx.has_capture_queue(),
         }
     }
 }
@@ -509,7 +496,7 @@ impl DmaExporter for WlxCaptureIn {
         height: u32,
         fourcc: DrmFourcc,
     ) -> Option<(wlx_frame::FramePlane, DrmModifier)> {
-        let dma_exporter = self.dma_exporter.as_mut()?;
+        let mut dma_exporter = self.dma_exporter.as_ref()?.lock().ok()?;
         dma_exporter.set_format(width, height, fourcc)?;
         dma_exporter.next_frame()
     }
@@ -534,6 +521,95 @@ impl WlxCaptureOut {
     }
 }
 
+struct MappedMemFd {
+    base: NonNull<libc::c_void>,
+    map_len: usize,
+    data_offset: usize,
+    data_len: usize,
+}
+
+impl MappedMemFd {
+    fn new(fd: RawFd, offset: u32, len: usize) -> Option<Self> {
+        if len == 0 {
+            log::error!("Refusing to mmap an empty CPU capture frame");
+            return None;
+        }
+
+        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+        if page_size <= 0 {
+            log::error!("Could not query system page size for CPU capture mmap");
+            return None;
+        }
+        let page_size = usize::try_from(page_size).ok()?;
+        let offset = offset as usize;
+        let map_offset = offset / page_size * page_size;
+        let data_offset = offset - map_offset;
+        let map_len = data_offset.checked_add(len)?;
+        let map_offset = libc::off_t::try_from(map_offset).ok()?;
+
+        let ptr = unsafe {
+            libc::mmap(
+                std::ptr::null_mut(),
+                map_len,
+                libc::PROT_READ,
+                libc::MAP_SHARED,
+                fd,
+                map_offset,
+            )
+        };
+        if ptr == libc::MAP_FAILED {
+            log::error!(
+                "CPU capture mmap failed for fd {fd}: {}",
+                std::io::Error::last_os_error()
+            );
+            return None;
+        }
+
+        Some(Self {
+            base: NonNull::new(ptr)?,
+            map_len,
+            data_offset,
+            data_len: len,
+        })
+    }
+
+    const fn as_slice(&self) -> &[u8] {
+        unsafe {
+            std::slice::from_raw_parts(
+                self.base.as_ptr().cast::<u8>().add(self.data_offset),
+                self.data_len,
+            )
+        }
+    }
+}
+
+impl Drop for MappedMemFd {
+    fn drop(&mut self) {
+        if unsafe { libc::munmap(self.base.as_ptr(), self.map_len) } != 0 {
+            log::error!(
+                "CPU capture munmap failed: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+}
+
+fn memfd_frame_len(frame: &wlx_frame::MemFdFrame) -> Option<usize> {
+    let Ok(stride) = usize::try_from(frame.plane.stride) else {
+        log::error!(
+            "CPU capture frame has a negative stride: {}",
+            frame.plane.stride
+        );
+        return None;
+    };
+    if let Some(len) = stride.checked_mul(frame.format.height as usize) {
+        Some(len)
+    } else {
+        log::error!("CPU capture frame byte size overflow");
+        None
+    }
+}
+
 fn upload_image(
     me: &WlxCaptureIn,
     width: u32,
@@ -541,10 +617,14 @@ fn upload_image(
     format: Format,
     data: &[u8],
 ) -> Option<Arc<Image>> {
-    let mut cmd_xfer = match me
-        .gfx
-        .create_xfer_command_buffer_with_queue(me.queue.clone(), CommandBufferUsage::OneTimeSubmit)
-    {
+    let cmd_result = if me.use_capture_queue {
+        me.gfx
+            .create_capture_command_buffer(CommandBufferUsage::OneTimeSubmit)
+    } else {
+        me.gfx
+            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)
+    };
+    let mut cmd_xfer = match cmd_result {
         Ok(x) => x,
         Err(e) => {
             log::error!("{}: Could not create vkCommandBuffer: {:?}", me.name, e);
@@ -578,7 +658,7 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
             let format = frame.format;
             match me.gfx.dmabuf_texture(frame) {
                 Ok(image) => Some(WlxCaptureOut {
-                    image: ImageView::new_default(image).ok()?,
+                    image: me.gfx.create_image_view(image).ok()?,
                     format,
                     mouse: None,
                 }),
@@ -602,32 +682,18 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
                 }
             };
 
-            let len = frame.plane.stride as usize * frame.format.height as usize;
-            let offset = i64::from(frame.plane.offset);
-
-            let map = unsafe {
-                libc::mmap(
-                    std::ptr::null_mut(),
-                    len,
-                    libc::PROT_READ,
-                    libc::MAP_SHARED,
-                    fd,
-                    offset,
-                )
-            } as *const u8;
-
-            let data = unsafe { std::slice::from_raw_parts(map, len) };
-
-            let image = {
-                let maybe_image =
-                    upload_image(me, frame.format.width, frame.format.height, format, data);
-
-                unsafe { libc::munmap(map as *mut _, len) };
-                maybe_image
-            }?;
+            let len = memfd_frame_len(&frame)?;
+            let map = MappedMemFd::new(fd, frame.plane.offset, len)?;
+            let image = upload_image(
+                me,
+                frame.format.width,
+                frame.format.height,
+                format,
+                map.as_slice(),
+            )?;
 
             Some(WlxCaptureOut {
-                image: ImageView::new_default(image).ok()?,
+                image: me.gfx.create_image_view(image).ok()?,
                 format: frame.format,
                 mouse: None,
             })
@@ -647,7 +713,7 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
             let image = upload_image(me, frame.format.width, frame.format.height, format, data)?;
 
             Some(WlxCaptureOut {
-                image: ImageView::new_default(image).ok()?,
+                image: me.gfx.create_image_view(image).ok()?,
                 format: frame.format,
                 mouse: frame.mouse,
             })
@@ -655,7 +721,15 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
         WlxFrame::Implicit(transform) => {
             log::trace!("{}: New Implicit frame", me.name);
 
-            let Some((image, mut format)) = me.dma_exporter.as_ref().unwrap().get_current() else {
+            let Some(dma_exporter) = me.dma_exporter.as_ref() else {
+                log::error!("{}: Implicit frame is missing DMA exporter!", me.name);
+                return None;
+            };
+            let Ok(dma_exporter) = dma_exporter.lock() else {
+                log::error!("{}: DMA exporter lock is poisoned", me.name);
+                return None;
+            };
+            let Some((image, mut format)) = dma_exporter.get_current() else {
                 log::error!("{}: Implicit frame is missing!", me.name);
                 return None;
             };
@@ -670,24 +744,37 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
     }
 }
 
-/// DmaExporter is not used for SHM capture
-pub(super) struct DummyDrmExporter;
-impl DmaExporter for DummyDrmExporter {
+pub(super) struct DmaExporterProxy(Option<Arc<Mutex<MyFirstDmaExporter>>>);
+
+impl DmaExporter for DmaExporterProxy {
     fn next_frame(
         &mut self,
-        _: u32,
-        _: u32,
-        _: DrmFourcc,
+        width: u32,
+        height: u32,
+        fourcc: DrmFourcc,
     ) -> Option<(wlx_frame::FramePlane, DrmModifier)> {
-        None
+        let mut exporter = self.0.as_ref()?.lock().ok()?;
+        exporter.set_format(width, height, fourcc)?;
+        exporter.next_frame()
     }
 }
 
-// Used when a separate GPU queue is not available
-// In this case, receive_callback needs to run on the main thread
+pub(super) enum MainThreadFrame {
+    Cpu {
+        format: FrameFormat,
+        data: Vec<u8>,
+        mouse: Option<MouseMeta>,
+    },
+    Dmabuf {
+        frame: wlx_frame::DmabufFrame,
+        fds: Vec<OwnedFd>,
+    },
+    Implicit(wlx_frame::Transform),
+}
+
 pub(super) struct MainThreadWlxCapture<T>
 where
-    T: WlxCapture<DummyDrmExporter, WlxFrame>,
+    T: WlxCapture<DmaExporterProxy, MainThreadFrame>,
 {
     inner: T,
     data: Option<WlxCaptureIn>,
@@ -695,7 +782,7 @@ where
 
 impl<T> MainThreadWlxCapture<T>
 where
-    T: WlxCapture<DummyDrmExporter, WlxFrame>,
+    T: WlxCapture<DmaExporterProxy, MainThreadFrame>,
 {
     pub const fn new(inner: T) -> Self {
         Self { inner, data: None }
@@ -704,7 +791,7 @@ where
 
 impl<T> WlxCapture<WlxCaptureIn, WlxCaptureOut> for MainThreadWlxCapture<T>
 where
-    T: WlxCapture<DummyDrmExporter, WlxFrame>,
+    T: WlxCapture<DmaExporterProxy, MainThreadFrame>,
 {
     fn init(
         &mut self,
@@ -712,9 +799,10 @@ where
         user_data: WlxCaptureIn,
         _: fn(&WlxCaptureIn, WlxFrame) -> Option<WlxCaptureOut>,
     ) {
+        let dma_exporter = DmaExporterProxy(user_data.dma_exporter.clone());
         self.data = Some(user_data);
         self.inner
-            .init(dmabuf_formats, DummyDrmExporter, receive_callback_dummy);
+            .init(dmabuf_formats, dma_exporter, receive_callback_dummy);
     }
     fn is_ready(&self) -> bool {
         self.inner.is_ready()
@@ -729,18 +817,93 @@ where
         self.inner.resume();
     }
     fn receive(&mut self) -> Option<WlxCaptureOut> {
-        self.inner
-            .receive()
-            .and_then(|frame| receive_callback(self.data.as_ref().unwrap(), frame))
+        let frame = self.inner.receive()?;
+        match frame {
+            MainThreadFrame::Cpu {
+                format,
+                data,
+                mouse,
+            } => {
+                let frame = wlx_frame::MemPtrFrame {
+                    format,
+                    ptr: data.as_ptr() as usize,
+                    size: data.len(),
+                    mouse,
+                };
+                receive_callback(
+                    self.data.as_ref().expect("capture must be initialized"),
+                    WlxFrame::MemPtr(frame),
+                )
+            }
+            MainThreadFrame::Dmabuf { frame, fds: _fds } => receive_callback(
+                self.data.as_ref().expect("capture must be initialized"),
+                WlxFrame::Dmabuf(frame),
+            ),
+            MainThreadFrame::Implicit(transform) => receive_callback(
+                self.data.as_ref().expect("capture must be initialized"),
+                WlxFrame::Implicit(transform),
+            ),
+        }
     }
     fn supports_dmbuf(&self) -> bool {
         self.inner.supports_dmbuf()
     }
 }
 
-#[allow(clippy::trivially_copy_pass_by_ref, clippy::unnecessary_wraps)]
-const fn receive_callback_dummy(_: &DummyDrmExporter, frame: WlxFrame) -> Option<WlxFrame> {
-    Some(frame)
+fn receive_callback_dummy(_: &DmaExporterProxy, frame: WlxFrame) -> Option<MainThreadFrame> {
+    match frame {
+        WlxFrame::MemFd(frame) => {
+            let Some(fd) = frame.plane.fd else {
+                log::error!("Main-thread CPU capture received a MemFd frame without an fd");
+                return None;
+            };
+            let len = memfd_frame_len(&frame)?;
+            let map = MappedMemFd::new(fd, frame.plane.offset, len)?;
+            Some(MainThreadFrame::Cpu {
+                format: frame.format,
+                data: map.as_slice().to_vec(),
+                mouse: frame.mouse,
+            })
+        }
+        WlxFrame::MemPtr(frame) => {
+            let data = if frame.size == 0 {
+                Vec::new()
+            } else {
+                if frame.ptr == 0 {
+                    log::error!("Main-thread CPU capture received a null MemPtr frame");
+                    return None;
+                }
+                unsafe { std::slice::from_raw_parts(frame.ptr as *const u8, frame.size) }.to_vec()
+            };
+            Some(MainThreadFrame::Cpu {
+                format: frame.format,
+                data,
+                mouse: frame.mouse,
+            })
+        }
+        WlxFrame::Dmabuf(mut frame) => {
+            if frame.num_planes > frame.planes.len() || !frame.is_valid() {
+                log::error!("Main-thread capture received an invalid DMA-buf frame");
+                return None;
+            }
+
+            let mut fds = Vec::with_capacity(frame.num_planes);
+            for plane in &mut frame.planes[..frame.num_planes] {
+                let fd = plane.fd?;
+                let owned = match unsafe { BorrowedFd::borrow_raw(fd) }.try_clone_to_owned() {
+                    Ok(fd) => fd,
+                    Err(e) => {
+                        log::error!("Failed to duplicate DMA-buf fd for main-thread capture: {e}");
+                        return None;
+                    }
+                };
+                plane.fd = Some(owned.as_raw_fd());
+                fds.push(owned);
+            }
+            Some(MainThreadFrame::Dmabuf { frame, fds })
+        }
+        WlxFrame::Implicit(transform) => Some(MainThreadFrame::Implicit(transform)),
+    }
 }
 
 fn extent_from_format(fmt: FrameFormat, config: &GeneralConfig) -> [u32; 2] {
@@ -765,13 +928,14 @@ fn extent_from_format(fmt: FrameFormat, config: &GeneralConfig) -> [u32; 2] {
 }
 
 macro_rules! new_wlx_capture {
-    ($capture_queue:expr, $capture:expr) => {
-        if $capture_queue.is_none() {
-            Box::new(MainThreadWlxCapture::new($capture)) as Box<dyn WlxCapture<_, _>>
+    ($app:expr, $capture:expr) => {{
+        if $app.gfx.has_capture_queue() {
+            Box::new($capture) as Box<dyn wlx_capture::WlxCapture<_, _>>
         } else {
-            Box::new($capture) as Box<dyn WlxCapture<_, _>>
+            Box::new($crate::overlays::screen::capture::MainThreadWlxCapture::new($capture))
+                as Box<dyn wlx_capture::WlxCapture<_, _>>
         }
-    };
+    }};
 }
 
 pub(super) use new_wlx_capture;

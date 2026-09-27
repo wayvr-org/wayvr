@@ -12,17 +12,16 @@ use smithay::{
         shell::xdg::{XdgPopupSurfaceData, XdgToplevelSurfaceData},
     },
 };
-use vulkano::{
-    buffer::BufferUsage, image::view::ImageView, pipeline::graphics::color_blend::AttachmentBlend,
-};
 use wayvr_ipc::packet_client::PositionMode;
 use wgui::{
     color::{WguiColor, WguiColorName},
     components::button::ComponentButton,
     event::{CallbackDataCommon, EventCallback},
     gfx::{
+        BLEND_ALPHA, BufferUsage, ImageView, Scissor, Vert2Uv,
         cmd::WGfxClearMode,
         pipeline::{WGfxPipeline, WPipelineCreateInfo},
+        upload_quad_vertices,
     },
     i18n::Translation,
     parser::Fetchable,
@@ -50,7 +49,6 @@ use crate::{
         },
     },
     config::none_if_0,
-    graphics::{ExtentExt, Vert2Uv, upload_quad_vertices},
     gui::panel::{
         GuiPanel, NewGuiPanelParams, OnCustomAttribFunc,
         button::{BUTTON_EVENT_SUFFIX, BUTTON_EVENTS},
@@ -176,7 +174,7 @@ impl WvrWindowBackend {
         let subsurface_pipeline = app.gfx.create_pipeline(
             app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
             app.gfx_extras.shaders.get("frag_simple").unwrap(), // want panic
-            WPipelineCreateInfo::new(app.gfx.surface_format).use_blend(AttachmentBlend::alpha()),
+            WPipelineCreateInfo::new(app.gfx.surface_format()).use_blend(BLEND_ALPHA),
         )?;
 
         let on_custom_attrib: OnCustomAttribFunc =
@@ -427,23 +425,19 @@ impl WvrWindowBackend {
         let meta = self.meta.as_ref().unwrap();
         let extentf = [meta.extent[0] as f32, meta.extent[1] as f32];
 
-        let mut buf_vert = app
+        let buf_vert = app
             .gfx
             .empty_buffer(BufferUsage::TRANSFER_DST | BufferUsage::VERTEX_BUFFER, 4)?;
 
         upload_quad_vertices(
-            &mut buf_vert,
-            extentf[0],
-            extentf[1],
-            s.pos.x,
-            s.pos.y,
-            s.size.x,
-            s.size.y,
+            &buf_vert, extentf[0], extentf[1], s.pos.x, s.pos.y, s.size.x, s.size.y,
         )?;
 
-        let set0 =
-            self.subsurface_pipeline
-                .uniform_sampler(0, s.image.clone(), app.gfx.texture_filter)?;
+        let set0 = self.subsurface_pipeline.uniform_sampler(
+            0,
+            s.image.clone(),
+            app.gfx.texture_filter(),
+        )?;
 
         let pass = self.subsurface_pipeline.create_pass(
             extentf,
@@ -452,7 +446,7 @@ impl WvrWindowBackend {
             0..4,
             0..1,
             vec![set0],
-            &Default::default(),
+            Scissor::from_viewport(extentf, [BORDER_SIZE as _, (BAR_SIZE + BORDER_SIZE) as _]),
         )?;
 
         for buf in &mut rdr.cmd_bufs {
@@ -586,7 +580,7 @@ impl OverlayBackend for WvrWindowBackend {
         };
 
         let mut meta = FrameMeta {
-            extent: surf.image.extent_u32arr(),
+            extent: surf.image.extent_2d(),
             format: surf.image.format(),
             clear: WGfxClearMode::Clear([0.0, 0.0, 0.0, 0.0]),
             stereo: self.stereo.unwrap_or(StereoMode::None),
@@ -675,7 +669,7 @@ impl OverlayBackend for WvrWindowBackend {
         if self
             .cur_image
             .as_ref()
-            .is_none_or(|i| *i.image() != *surf.image.image())
+            .is_none_or(|i| !Arc::ptr_eq(i.image(), surf.image.image()))
         {
             log::trace!(
                 "{}: new {} image",

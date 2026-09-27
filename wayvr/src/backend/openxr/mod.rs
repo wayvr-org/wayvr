@@ -9,7 +9,6 @@ use glam::{Affine3A, Vec3};
 use input::OpenXrInputSource;
 use openxr as xr;
 use skybox::{Skybox, create_skybox};
-use vulkano::{Handle, VulkanObject};
 use wgui::i18n::Translation;
 use wlx_common::{
     dash_interface::InterfaceFeats,
@@ -58,6 +57,18 @@ struct XrState {
     stage: Arc<xr::Space>,
     view: Arc<xr::Space>,
     extra_exts: ExtraExts,
+}
+
+/// XR runtime using our vk device/queue can have submissions in flight after last xrEndFrame/xrReleaseSwapchainImage
+/// This guard is dropped first, draining shared device before swapchain/session teardown begins
+struct OpenXrGpuIdleGuard(Arc<wgui::gfx::WGfx>);
+
+impl Drop for OpenXrGpuIdleGuard {
+    fn drop(&mut self) {
+        if let Err(e) = self.0.wait_idle() {
+            log::error!("Failed waiting for Vulkan device idle during OpenXR shutdown: {e:#}");
+        }
+    }
 }
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
@@ -115,11 +126,11 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
             &xr_instance,
             system,
             &xr::vulkan::SessionCreateInfo {
-                instance: app.gfx.instance.handle().as_raw() as _,
-                physical_device: app.gfx.device.physical_device().handle().as_raw() as _,
-                device: app.gfx.device.handle().as_raw() as _,
-                queue_family_index: app.gfx.queue_gfx.queue_family_index(),
-                queue_index: 0,
+                instance: app.gfx.raw_instance_handle() as _,
+                physical_device: app.gfx.raw_physical_device_handle() as _,
+                device: app.gfx.raw_device_handle() as _,
+                queue_family_index: app.gfx.graphics_queue_family_index(),
+                queue_index: app.gfx.graphics_queue_index(),
             },
         )?;
         xr::Session::from_raw(xr_instance.clone(), raw_session, Box::new(()))
@@ -162,6 +173,9 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     let mut main_session_visible = false;
     let mut environment_blend_mode = modes[0];
     let mut last_frame_time = Instant::now();
+
+    // declared last so rust drops this before all long-lived XR objects
+    let _gpu_idle_before_xr_drop = OpenXrGpuIdleGuard(app.gfx.clone());
 
     'main_loop: loop {
         let now = Instant::now();
@@ -414,7 +428,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 let tgt = RenderTarget { views: wsi.views };
                 let mut rdr = RenderResources::new(app.gfx.clone(), tgt, &meta)?;
                 o.render(&mut app, &mut rdr)?;
-                futures.execute_results(rdr.end()?)?;
+                futures.execute_results(rdr.end()?);
             } else if o.data.swapchain.is_none() {
                 log::trace!("{}: not showing due to missing swapchain", o.config.name);
                 continue;

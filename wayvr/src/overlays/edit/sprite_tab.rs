@@ -2,8 +2,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use wgui::{
     components::button::ComponentButton, event::CallbackDataCommon, layout::WidgetID,
-    parser::Fetchable, renderer_vk::text::custom_glyph::CustomGlyphData,
-    widget::sprite::WidgetSprite,
+    parser::Fetchable, renderer::text::custom_glyph::CustomGlyphData, widget::sprite::WidgetSprite,
 };
 
 use crate::{backend::task::ModifyOverlayTask, overlays::edit::EditModeWrapPanel};

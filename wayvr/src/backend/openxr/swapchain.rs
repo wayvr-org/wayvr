@@ -1,18 +1,9 @@
 use std::sync::Arc;
 
-use ash::vk;
 use openxr as xr;
 
 use smallvec::SmallVec;
-use vulkano::{
-    Handle,
-    image::{
-        ImageCreateInfo, ImageUsage,
-        sys::RawImage,
-        view::{ImageView, ImageViewCreateInfo},
-    },
-};
-use wgui::gfx::WGfx;
+use wgui::gfx::{ImageCreateInfo, ImageLayout, ImageUsage, ImageView, ImageViewCreateInfo, WGfx};
 
 use super::XrState;
 
@@ -48,7 +39,7 @@ pub(super) fn create_swapchain(
     let swapchain = xr.session.create_swapchain(&xr::SwapchainCreateInfo {
         create_flags,
         usage_flags: xr::SwapchainUsageFlags::COLOR_ATTACHMENT | xr::SwapchainUsageFlags::SAMPLED,
-        format: gfx.surface_format as _,
+        format: gfx.raw_format(gfx.surface_format()) as _,
         sample_count: 1,
         width: extent[0],
         height: extent[1],
@@ -61,28 +52,35 @@ pub(super) fn create_swapchain(
         .enumerate_images()?
         .into_iter()
         .map(|handle| {
-            let vk_image = vk::Image::from_raw(handle);
-            // thanks @yshui
-            let raw_image = unsafe {
-                RawImage::from_handle_borrowed(
-                    gfx.device.clone(),
-                    vk_image,
+            // SAFETY: XR runtime owns the swapchain image & keeps it alive until explicitly destroyed
+            let image = unsafe {
+                gfx.wrap_external_image_with_layout(
+                    handle,
                     ImageCreateInfo {
-                        format: gfx.surface_format as _,
+                        format: gfx.surface_format(),
                         extent: [extent[0], extent[1], 1],
                         array_layers: array_size,
-                        usage: ImageUsage::COLOR_ATTACHMENT,
-                        ..Default::default()
+                        usage: ImageUsage::COLOR_ATTACHMENT | ImageUsage::SAMPLED,
+                        ..ImageCreateInfo::new_2d(
+                            extent[0],
+                            extent[1],
+                            gfx.surface_format(),
+                            ImageUsage::COLOR_ATTACHMENT | ImageUsage::SAMPLED,
+                        )
                     },
+                    ImageLayout::ColorAttachment,
                 )?
             };
-            // SAFETY: OpenXR guarantees that the image is a swapchain image, thus has memory backing it.
-            let image = Arc::new(unsafe { raw_image.assume_bound() });
             let mut wsi = WlxSwapchainImage::default();
             for d in 0..array_size {
-                let mut create_info = ImageViewCreateInfo::from_image(&image);
-                create_info.subresource_range.array_layers = d..d + 1;
-                wsi.views.push(ImageView::new(image.clone(), create_info)?);
+                wsi.views.push(gfx.create_image_view_with_info(
+                    image.clone(),
+                    ImageViewCreateInfo {
+                        base_array_layer: d,
+                        array_layer_count: 1,
+                        ..Default::default()
+                    },
+                )?);
             }
             Ok(wsi)
         })
@@ -91,8 +89,8 @@ pub(super) fn create_swapchain(
     Ok(WlxSwapchain {
         acquired: false,
         ever_acquired: false,
-        swapchain,
         images,
+        swapchain,
         extent,
         array_size,
     })
@@ -106,10 +104,11 @@ pub(super) struct WlxSwapchainImage {
 pub(super) struct WlxSwapchain {
     acquired: bool,
     pub(super) ever_acquired: bool,
+    // drop image views before destroying parent swapchain
+    pub(super) images: SmallVec<[WlxSwapchainImage; 4]>,
     pub(super) swapchain: xr::Swapchain<xr::Vulkan>,
     pub(super) extent: [u32; 2],
     pub(super) array_size: u32,
-    pub(super) images: SmallVec<[WlxSwapchainImage; 4]>,
 }
 
 impl WlxSwapchain {

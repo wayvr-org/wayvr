@@ -39,6 +39,7 @@ pub mod log;
 pub mod palette;
 pub mod parser;
 pub mod renderer_vk;
+pub use renderer_vk as renderer;
 pub mod sound;
 pub mod stack;
 pub mod task;

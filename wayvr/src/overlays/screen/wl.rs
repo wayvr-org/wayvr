@@ -1,7 +1,6 @@
 use glam::{DVec2, vec2};
 use wgui::log::LogErr;
 use wlx_capture::{
-    WlxCapture,
     frame::Transform,
     wayland::{WlxClient, WlxOutput},
     wlr_screencopy::WlrScreencopyCapture,
@@ -14,19 +13,12 @@ use crate::{
     windowing::backend::OverlayBackend,
 };
 
-use super::{
-    ScreenCreateData,
-    backend::ScreenBackend,
-    capture::{MainThreadWlxCapture, new_wlx_capture},
-};
+use super::{ScreenCreateData, backend::ScreenBackend, capture::new_wlx_capture};
 
 impl ScreenBackend {
     pub fn new_wlr_screencopy(output: &WlxOutput, app: &AppState) -> Option<Self> {
         let client = WlxClient::new()?;
-        let capture = new_wlx_capture!(
-            app.gfx_extras.queue_capture,
-            WlrScreencopyCapture::new(client, output.id)
-        );
+        let capture = new_wlx_capture!(app, WlrScreencopyCapture::new(client, output.id));
         Some(Self::new_raw(
             output.name.clone(),
             app.feats.xr_backend,

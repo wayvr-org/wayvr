@@ -1251,15 +1251,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crossbeam-queue"
-version = "0.3.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f58bbc28f91df819d0aa2a2c00cd19754769c2fad90579b3592b1c9ba7a3115"
-dependencies = [
- "crossbeam-utils",
-]
-
-[[package]]
 name = "crossbeam-utils"
 version = "0.8.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3268,7 +3259,7 @@ dependencies = [
  "objc2-core-data",
  "objc2-core-image",
  "objc2-foundation 0.2.2",
- "objc2-quartz-core 0.2.2",
+ "objc2-quartz-core",
 ]
 
 [[package]]
@@ -3377,7 +3368,7 @@ dependencies = [
  "block2 0.5.1",
  "objc2 0.5.2",
  "objc2-foundation 0.2.2",
- "objc2-metal 0.2.2",
+ "objc2-metal",
 ]
 
 [[package]]
@@ -3459,17 +3450,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc2-metal"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0125f776a10d00af4152d74616409f0d4a2053a6f57fa5b7d6aa2854ac04794"
-dependencies = [
- "bitflags 2.13.0",
- "objc2 0.6.4",
- "objc2-foundation 0.3.2",
-]
-
-[[package]]
 name = "objc2-open-directory"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3490,20 +3470,7 @@ dependencies = [
  "block2 0.5.1",
  "objc2 0.5.2",
  "objc2-foundation 0.2.2",
- "objc2-metal 0.2.2",
-]
-
-[[package]]
-name = "objc2-quartz-core"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96c1358452b371bf9f104e21ec536d37a650eb10f7ee379fff67d2e08d537f1f"
-dependencies = [
- "bitflags 2.13.0",
- "objc2 0.6.4",
- "objc2-core-foundation",
- "objc2-foundation 0.3.2",
- "objc2-metal 0.3.2",
+ "objc2-metal",
 ]
 
 [[package]]
@@ -3531,7 +3498,7 @@ dependencies = [
  "objc2-core-location",
  "objc2-foundation 0.2.2",
  "objc2-link-presentation",
- "objc2-quartz-core 0.2.2",
+ "objc2-quartz-core",
  "objc2-symbols",
  "objc2-uniform-type-identifiers",
  "objc2-user-notifications",
@@ -4358,18 +4325,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
-name = "raw-window-metal"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40d213455a5f1dc59214213c7330e074ddf8114c9a42411eb890c767357ce135"
-dependencies = [
- "objc2 0.6.4",
- "objc2-core-foundation",
- "objc2-foundation 0.3.2",
- "objc2-quartz-core 0.3.2",
-]
-
-[[package]]
 name = "rayon"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5025,12 +4980,6 @@ name = "slab"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
-
-[[package]]
-name = "slabbin"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9db491c0d4152a069911a0fbdaca959691bf0b9d7110d98a7ed1c8e59b79ab30"
 
 [[package]]
 name = "slice-of-array"
@@ -5739,8 +5688,6 @@ dependencies = [
  "rust-embed",
  "tracing-subscriber",
  "ureq",
- "vulkano",
- "vulkano-shaders",
  "wgui",
  "winit",
  "wlx-common",
@@ -5904,70 +5851,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "vk-parse"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3859da4d7b98bec73e68fb65815d47a263819c415c90eed42b80440a02cbce8c"
-dependencies = [
- "xml-rs",
-]
-
-[[package]]
-name = "vulkano"
-version = "0.35.2"
-source = "git+https://github.com/galister/vulkano.git?rev=cf7f92867928a56ce16b376037c1120f2b167678#cf7f92867928a56ce16b376037c1120f2b167678"
-dependencies = [
- "ash",
- "bytemuck",
- "crossbeam-queue",
- "foldhash 0.1.5",
- "half",
- "heck 0.4.1",
- "indexmap 2.14.0",
- "libloading 0.8.9",
- "nom 7.1.3",
- "once_cell",
- "parking_lot",
- "proc-macro2",
- "quote",
- "raw-window-handle",
- "raw-window-metal",
- "serde",
- "serde_json",
- "slabbin",
- "smallvec",
- "thread_local",
- "vk-parse",
- "vulkano-macros",
-]
-
-[[package]]
-name = "vulkano-macros"
-version = "0.35.0"
-source = "git+https://github.com/galister/vulkano.git?rev=cf7f92867928a56ce16b376037c1120f2b167678#cf7f92867928a56ce16b376037c1120f2b167678"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn 2.0.118",
-]
-
-[[package]]
-name = "vulkano-shaders"
-version = "0.35.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3bf501461be7cef2893c0e62c50945add9763cc482051d29053f6157089d5ea9"
-dependencies = [
- "foldhash 0.1.5",
- "heck 0.4.1",
- "proc-macro2",
- "quote",
- "shaderc",
- "syn 2.0.118",
- "vulkano",
-]
 
 [[package]]
 name = "walkdir"
@@ -6211,7 +6094,6 @@ name = "wayvr"
 version = "26.8.0"
 dependencies = [
  "anyhow",
- "ash",
  "bytes",
  "calloop 0.14.4",
  "calloop-wayland-source 0.4.1",
@@ -6249,6 +6131,7 @@ dependencies = [
  "serde_json",
  "serde_json5",
  "serde_yaml",
+ "shaderc",
  "signal-hook",
  "slotmap",
  "smallvec",
@@ -6261,8 +6144,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
- "vulkano",
- "vulkano-shaders",
  "wayland-client",
  "wayland-protocols",
  "wayland-protocols-misc",
@@ -6349,6 +6230,7 @@ name = "wgui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ash",
  "bytes",
  "cosmic-text",
  "dav1d-sys",
@@ -6360,18 +6242,18 @@ dependencies = [
  "lru",
  "ouroboros",
  "parking_lot",
+ "raw-window-handle",
  "regex",
  "resvg",
  "roxmltree 0.21.1",
  "rust-embed",
  "rustc-hash",
  "serde_json",
+ "shaderc",
  "slotmap",
  "smallvec",
  "strum",
  "taffy",
- "vulkano",
- "vulkano-shaders",
 ]
 
 [[package]]
@@ -6981,12 +6863,6 @@ checksum = "b9cc00251562a284751c9973bace760d86c0276c471b4be569fe6b068ee97a56"
 dependencies = [
  "bytemuck",
 ]
-
-[[package]]
-name = "xml-rs"
-version = "0.8.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae8337f8a065cfc972643663ea4279e04e7256de865aa66fe25cec5fb912d3f"
 
 [[package]]
 name = "xmlparser"

@@ -1,209 +1,174 @@
-use std::{marker::PhantomData, ops::Range, sync::Arc};
+use std::{any::Any, collections::BTreeMap, marker::PhantomData, ops::Range, sync::Arc};
 
-use smallvec::{SmallVec, smallvec};
-use vulkano::{
-	buffer::{
-		BufferContents, BufferUsage, Subbuffer,
-		allocator::{SubbufferAllocator, SubbufferAllocatorCreateInfo},
-	},
-	descriptor_set::{
-		DescriptorSet, WriteDescriptorSet,
-		layout::{DescriptorBindingFlags, DescriptorSetLayoutCreateFlags},
-	},
-	format::Format,
-	image::{
-		sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo},
-		view::ImageView,
-	},
-	memory::allocator::MemoryTypeFilter,
-	pipeline::{
-		DynamicState, GraphicsPipeline, Pipeline, PipelineLayout,
-		graphics::{
-			self, GraphicsPipelineCreateInfo,
-			color_blend::{AttachmentBlend, ColorBlendAttachmentState, ColorBlendState},
-			input_assembly::{InputAssemblyState, PrimitiveTopology},
-			multisample::MultisampleState,
-			rasterization::RasterizationState,
-			subpass::PipelineRenderingCreateInfo,
-			vertex_input::{Vertex, VertexDefinition, VertexInputState},
-			viewport::ViewportState,
-		},
-		layout::PipelineDescriptorSetLayoutCreateInfo,
-	},
-	shader::{EntryPoint, ShaderModule},
+use anyhow::bail;
+use parking_lot::Mutex;
+
+use super::{
+	Buffer, Filter, Format, ImageView, PrimitiveTopology, Sampler, SamplerCreateInfo, ShaderModule, Vertex, WGfx,
+	pass::WGfxPass,
+	raw::{PipelineSpec, RawDescriptorSet, RawPipeline},
+	types::{AttachmentBlend, DescriptorBinding, DescriptorType, SamplerAddressMode, Scissor},
 };
 
-use super::{WGfx, pass::WGfxPass};
+pub struct DescriptorSet {
+	pub(super) raw: Arc<RawDescriptorSet>,
+	pub(super) graphics: Arc<WGfx>,
+	keepalive: Mutex<BTreeMap<u32, Box<dyn Any + Send + Sync>>>,
+}
+
+impl DescriptorSet {
+	fn new(graphics: Arc<WGfx>, raw: Arc<RawDescriptorSet>) -> Arc<Self> {
+		Arc::new(Self {
+			raw,
+			graphics,
+			keepalive: Mutex::new(BTreeMap::new()),
+		})
+	}
+
+	fn write_buffer<T>(&self, binding: u32, buffer: Arc<Buffer<T>>) -> anyhow::Result<()>
+	where
+		T: Send + Sync + 'static,
+	{
+		self
+			.graphics
+			.raw
+			.update_descriptor_buffer(&self.raw, binding, &buffer.raw)?;
+		self.keepalive.lock().insert(binding, Box::new(buffer));
+		Ok(())
+	}
+
+	pub(super) fn write_sampler(
+		&self,
+		binding: u32,
+		texture: Arc<ImageView>,
+		sampler: Arc<Sampler>,
+	) -> anyhow::Result<()> {
+		self
+			.graphics
+			.raw
+			.update_descriptor_image_sampler(&self.raw, binding, &texture.raw, &sampler.raw)?;
+		self.keepalive.lock().insert(binding, Box::new((texture, sampler)));
+		Ok(())
+	}
+}
 
 pub struct WGfxPipeline<V> {
-	pub graphics: Arc<WGfx>,
-	pub pipeline: Arc<GraphicsPipeline>,
-	pub format: Format,
+	pub(super) graphics: Arc<WGfx>,
+	pub(super) raw: Arc<RawPipeline>,
+	format: Format,
 	_dummy: PhantomData<V>,
 }
 
 impl<V> WGfxPipeline<V>
 where
-	V: Sized,
+	V: Vertex,
 {
-	#[allow(clippy::too_many_arguments)]
-	fn new_from_stages(
+	pub(super) fn new(
 		graphics: Arc<WGfx>,
-		format: Format,
-		blend: Option<AttachmentBlend>,
-		topology: PrimitiveTopology,
-		vert_entry_point: EntryPoint,
-		frag_entry_point: EntryPoint,
-		vertex_input_state: Option<VertexInputState>,
-		updatable_sets: &[usize],
+		vert: &Arc<ShaderModule>,
+		frag: &Arc<ShaderModule>,
+		info: WPipelineCreateInfo,
 	) -> anyhow::Result<Self> {
-		let stages = smallvec![
-			vulkano::pipeline::PipelineShaderStageCreateInfo::new(vert_entry_point),
-			vulkano::pipeline::PipelineShaderStageCreateInfo::new(frag_entry_point),
-		];
-
-		let mut layout_info = PipelineDescriptorSetLayoutCreateInfo::from_stages(&stages);
-		for (idx_l, l) in layout_info.set_layouts.iter_mut().enumerate() {
-			if updatable_sets.contains(&idx_l) {
-				// mark all bindings in the set as UAB
-				l.flags |= DescriptorSetLayoutCreateFlags::UPDATE_AFTER_BIND_POOL;
-				for b in l.bindings.values_mut() {
-					b.binding_flags |= DescriptorBindingFlags::UPDATE_AFTER_BIND;
-				}
-			}
-		}
-
-		let layout = PipelineLayout::new(
-			graphics.device.clone(),
-			layout_info.into_pipeline_layout_create_info(graphics.device.clone())?,
-		)?;
-
-		let subpass = PipelineRenderingCreateInfo {
-			color_attachment_formats: vec![Some(format)],
-			..Default::default()
+		let descriptor_bindings = merge_descriptor_bindings(vert, frag)?;
+		let spec = PipelineSpec {
+			format: info.format,
+			blend: info.blend,
+			topology: info.topology,
+			instanced: info.instanced,
+			vertex_stride: std::mem::size_of::<V>() as u32,
+			vertex_attributes: V::attributes(),
+			descriptor_bindings,
+			updatable_sets: info.updatable_sets,
 		};
-
-		let pipeline = GraphicsPipeline::new(
-			graphics.device.clone(),
-			None,
-			GraphicsPipelineCreateInfo {
-				stages,
-				vertex_input_state,
-				input_assembly_state: Some(InputAssemblyState {
-					topology,
-					..InputAssemblyState::default()
-				}),
-				viewport_state: Some(ViewportState::default()),
-				rasterization_state: Some(RasterizationState {
-					cull_mode: vulkano::pipeline::graphics::rasterization::CullMode::None,
-					..RasterizationState::default()
-				}),
-				multisample_state: Some(MultisampleState::default()),
-				color_blend_state: Some(ColorBlendState {
-					attachments: vec![ColorBlendAttachmentState {
-						blend,
-						..Default::default()
-					}],
-					..Default::default()
-				}),
-				dynamic_state: [DynamicState::Viewport, DynamicState::Scissor].into_iter().collect(),
-				subpass: Some(subpass.into()),
-				..GraphicsPipelineCreateInfo::layout(layout)
-			},
-		)?;
-
+		let raw = graphics.raw.create_pipeline(&vert.raw, &frag.raw, &spec)?;
 		Ok(Self {
 			graphics,
-			pipeline,
-			format,
+			raw,
+			format: info.format,
 			_dummy: PhantomData,
 		})
 	}
 
-	pub fn inner(&self) -> Arc<GraphicsPipeline> {
-		self.pipeline.clone()
+	pub const fn format(&self) -> Format {
+		self.format
 	}
 
 	pub fn uniform_sampler(
-		&self,
+		self: &Arc<Self>,
 		set: usize,
 		texture: Arc<ImageView>,
 		filter: Filter,
 	) -> anyhow::Result<Arc<DescriptorSet>> {
-		let sampler = Sampler::new(
-			self.graphics.device.clone(),
-			SamplerCreateInfo {
-				mag_filter: filter,
-				min_filter: filter,
-				address_mode: [SamplerAddressMode::Repeat; 3],
-				..Default::default()
-			},
-		)?;
-
-		let layout = self.pipeline.layout().set_layouts().get(set).unwrap(); // want panic
-
-		Ok(DescriptorSet::new(
-			self.graphics.descriptor_set_allocator.clone(),
-			layout.clone(),
-			[WriteDescriptorSet::image_view_sampler(0, texture, sampler)],
-			[],
-		)?)
+		let layout = self.raw.set_layout(set)?;
+		let descriptor_set = DescriptorSet::new(self.graphics.clone(), self.graphics.raw.create_descriptor_set(layout)?);
+		let sampler = self.graphics.create_sampler(SamplerCreateInfo {
+			mag_filter: filter,
+			min_filter: filter,
+			address_mode: [SamplerAddressMode::Repeat; 3],
+		})?;
+		descriptor_set.write_sampler(0, texture, sampler)?;
+		Ok(descriptor_set)
 	}
 
-	// uniform or storage buffer
-	pub fn buffer<T>(&self, set: usize, buffer: Subbuffer<[T]>) -> anyhow::Result<Arc<DescriptorSet>>
+	pub fn buffer<T>(self: &Arc<Self>, set: usize, buffer: Arc<Buffer<T>>) -> anyhow::Result<Arc<DescriptorSet>>
 	where
-		T: BufferContents + Copy,
+		T: Send + Sync + 'static,
 	{
-		let layout = self.pipeline.layout().set_layouts().get(set).unwrap(); // want panic
-		Ok(DescriptorSet::new(
-			self.graphics.descriptor_set_allocator.clone(),
-			layout.clone(),
-			[WriteDescriptorSet::buffer(0, buffer)],
-			[],
-		)?)
+		let layout = self.raw.set_layout(set)?;
+		let descriptor_set = DescriptorSet::new(self.graphics.clone(), self.graphics.raw.create_descriptor_set(layout)?);
+		descriptor_set.write_buffer(0, buffer)?;
+		Ok(descriptor_set)
 	}
 
-	#[allow(clippy::needless_pass_by_value)]
-	pub fn uniform_buffer_upload<T>(&self, set: usize, data: Vec<T>) -> anyhow::Result<Arc<DescriptorSet>>
+	pub fn uniform_buffer_upload<T>(self: &Arc<Self>, set: usize, contents: &[T]) -> anyhow::Result<Arc<DescriptorSet>>
 	where
-		T: BufferContents + Copy,
+		T: Copy + Send + Sync + 'static,
 	{
-		let buf = SubbufferAllocator::new(
-			self.graphics.memory_allocator.clone(),
-			SubbufferAllocatorCreateInfo {
-				buffer_usage: BufferUsage::UNIFORM_BUFFER,
-				memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
-				..Default::default()
-			},
-		);
+		let buffer = self.graphics.new_buffer(super::BufferUsage::UNIFORM_BUFFER, contents)?;
+		self.buffer(set, buffer)
+	}
 
-		let uniform_buffer_subbuffer = {
-			let subbuffer = buf.allocate_slice(data.len() as _)?;
-			subbuffer.write()?.copy_from_slice(data.as_slice());
-			subbuffer
-		};
-
-		self.buffer(set, uniform_buffer_subbuffer)
+	#[allow(clippy::too_many_arguments)]
+	pub fn create_pass(
+		self: &Arc<Self>,
+		dimensions: [f32; 2],
+		offset: [f32; 2],
+		vertex_buffer: Arc<Buffer<V>>,
+		vertices: Range<u32>,
+		instances: Range<u32>,
+		descriptor_sets: Vec<Arc<DescriptorSet>>,
+		scissor: Scissor,
+	) -> anyhow::Result<WGfxPass<V>> {
+		WGfxPass::new(
+			self.clone(),
+			dimensions,
+			offset,
+			vertex_buffer,
+			vertices,
+			instances,
+			descriptor_sets,
+			scissor,
+		)
 	}
 }
 
+#[derive(Debug, Clone)]
 pub struct WPipelineCreateInfo {
-	format: Format,
-	blend: Option<AttachmentBlend>,
-	topology: PrimitiveTopology,
-	instanced: bool,
-	updatable_sets: SmallVec<[usize; 8]>,
+	pub(super) format: Format,
+	pub(super) blend: Option<AttachmentBlend>,
+	pub(super) topology: PrimitiveTopology,
+	pub(super) instanced: bool,
+	pub(super) updatable_sets: Vec<usize>,
 }
 
 impl WPipelineCreateInfo {
-	pub fn new(format: Format) -> Self {
+	pub const fn new(format: Format) -> Self {
 		Self {
 			format,
 			blend: None,
 			topology: PrimitiveTopology::TriangleStrip,
 			instanced: false,
-			updatable_sets: smallvec![],
+			updatable_sets: Vec::new(),
 		}
 	}
 
@@ -226,63 +191,54 @@ impl WPipelineCreateInfo {
 	}
 
 	#[must_use]
-	pub fn use_updatable_descriptors(mut self, updatable_sets: SmallVec<[usize; 8]>) -> Self {
-		self.updatable_sets = updatable_sets;
+	pub fn use_updatable_descriptors<I>(mut self, updatable_sets: I) -> Self
+	where
+		I: IntoIterator<Item = usize>,
+	{
+		self.updatable_sets = updatable_sets.into_iter().collect();
 		self
 	}
 }
 
-impl<V> WGfxPipeline<V>
-where
-	V: BufferContents + Vertex,
-{
-	pub(super) fn new_with_vert_input(
-		graphics: Arc<WGfx>,
-		vert: &Arc<ShaderModule>,
-		frag: &Arc<ShaderModule>,
-		info: WPipelineCreateInfo,
-	) -> anyhow::Result<Self> {
-		let vert_entry_point = vert.entry_point("main").unwrap(); // want panic
-		let frag_entry_point = frag.entry_point("main").unwrap(); // want panic
+fn merge_descriptor_bindings(vert: &ShaderModule, frag: &ShaderModule) -> anyhow::Result<Vec<DescriptorBinding>> {
+	let mut merged = BTreeMap::<(u32, u32), DescriptorBinding>::new();
 
-		let vertex_input_state = Some(if info.instanced {
-			V::per_instance().definition(&vert_entry_point)?
-		} else {
-			V::per_vertex().definition(&vert_entry_point)?
-		});
-
-		Self::new_from_stages(
-			graphics,
-			info.format,
-			info.blend,
-			info.topology,
-			vert_entry_point,
-			frag_entry_point,
-			vertex_input_state,
-			&info.updatable_sets,
-		)
+	for binding in vert
+		.descriptor_bindings()
+		.iter()
+		.chain(frag.descriptor_bindings())
+		.copied()
+	{
+		match merged.get_mut(&(binding.set, binding.binding)) {
+			Some(existing) => {
+				if existing.descriptor_type != binding.descriptor_type || existing.descriptor_count != binding.descriptor_count
+				{
+					bail!(
+						"descriptor set {} binding {} has incompatible declarations between shaders",
+						binding.set,
+						binding.binding
+					);
+				}
+				existing.stages |= binding.stages;
+			}
+			None => {
+				merged.insert((binding.set, binding.binding), binding);
+			}
+		}
 	}
 
-	#[allow(clippy::too_many_arguments)]
-	pub fn create_pass(
-		self: &Arc<Self>,
-		dimensions: [f32; 2],
-		offset: [f32; 2],
-		vertex_buffer: Subbuffer<[V]>,
-		vertices: Range<u32>,
-		instances: Range<u32>,
-		descriptor_sets: Vec<Arc<DescriptorSet>>,
-		vk_scissor: &graphics::viewport::Scissor,
-	) -> anyhow::Result<WGfxPass<V>> {
-		WGfxPass::new(
-			&self.clone(),
-			dimensions,
-			offset,
-			vertex_buffer,
-			vertices,
-			instances,
-			descriptor_sets,
-			vk_scissor,
-		)
+	let result = merged.into_values().collect::<Vec<_>>();
+	for binding in &result {
+		if binding.descriptor_count == 0 {
+			bail!(
+				"descriptor set {} binding {} has descriptor_count=0",
+				binding.set,
+				binding.binding
+			);
+		}
+		match binding.descriptor_type {
+			DescriptorType::CombinedImageSampler | DescriptorType::UniformBuffer | DescriptorType::StorageBuffer => {}
+		}
 	}
+	Ok(result)
 }

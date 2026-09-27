@@ -3,15 +3,6 @@ use etagere::{Allocation, BucketedAtlasAllocator, size2};
 use lru::LruCache;
 use rustc_hash::FxHasher;
 use std::{collections::HashSet, hash::BuildHasherDefault, sync::Arc};
-use vulkano::{
-	buffer::BufferContents,
-	command_buffer::CommandBufferUsage,
-	descriptor_set::DescriptorSet,
-	format::Format,
-	image::{Image, ImageCreateInfo, ImageType, ImageUsage, view::ImageView},
-	memory::allocator::AllocationCreateInfo,
-	pipeline::graphics::vertex_input::Vertex,
-};
 
 use super::{
 	GlyphDetails, GpuCacheStatus,
@@ -20,7 +11,8 @@ use super::{
 	text_renderer::GlyphonCacheKey,
 };
 use crate::gfx::{
-	BLEND_ALPHA, WGfx,
+	BLEND_ALPHA, CommandBufferUsage, DescriptorSet, Format, ImageUsage, ImageView, Vertex, VertexAttribute, VertexFormat,
+	WGfx,
 	pipeline::{WGfxPipeline, WPipelineCreateInfo},
 };
 
@@ -33,8 +25,8 @@ pub struct TextPipeline {
 
 impl TextPipeline {
 	pub fn new(gfx: Arc<WGfx>, format: Format) -> anyhow::Result<Self> {
-		let vert = vert_atlas::load(gfx.device.clone())?;
-		let frag = frag_atlas::load(gfx.device.clone())?;
+		let vert = vert_atlas::load(&gfx)?;
+		let frag = frag_atlas::load(&gfx)?;
 
 		let pipeline = gfx.create_pipeline::<GlyphVertex>(
 			&vert,
@@ -47,20 +39,35 @@ impl TextPipeline {
 }
 
 #[repr(C)]
-#[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct GlyphVertex {
-	#[format(R32_UINT)]
 	pub in_model_idx: u32,
-	#[format(R32_UINT)]
 	pub in_rect_dim: [u16; 2],
-	#[format(R32_UINT)]
 	pub in_uv: [u16; 2],
-	#[format(R32_UINT)]
 	pub in_color: u32,
-	#[format(R32_UINT)]
 	pub in_content_type: [u16; 2], // 2 bytes unused! TODO
-	#[format(R32_SFLOAT)]
 	pub scale: f32,
+}
+
+impl Vertex for GlyphVertex {
+	fn attributes() -> Vec<VertexAttribute> {
+		vec![
+			VertexAttribute::new(
+				0,
+				VertexFormat::R32Uint,
+				std::mem::offset_of!(Self, in_model_idx) as u32,
+			),
+			VertexAttribute::new(1, VertexFormat::R32Uint, std::mem::offset_of!(Self, in_rect_dim) as u32),
+			VertexAttribute::new(2, VertexFormat::R32Uint, std::mem::offset_of!(Self, in_uv) as u32),
+			VertexAttribute::new(3, VertexFormat::R32Uint, std::mem::offset_of!(Self, in_color) as u32),
+			VertexAttribute::new(
+				4,
+				VertexFormat::R32Uint,
+				std::mem::offset_of!(Self, in_content_type) as u32,
+			),
+			VertexAttribute::new(7, VertexFormat::R32Sfloat, std::mem::offset_of!(Self, scale) as u32),
+		]
+	}
 }
 
 type Hasher = BuildHasherDefault<FxHasher>;
@@ -83,30 +90,24 @@ impl InnerAtlas {
 	const INITIAL_SIZE: u32 = 256;
 
 	fn new(common: TextPipeline, kind: Kind) -> anyhow::Result<Self> {
-		let max_texture_dimension_2d = common.gfx.device.physical_device().properties().max_image_dimension2_d;
+		let max_texture_dimension_2d = common.gfx.capabilities().max_image_dimension_2d;
 		let size = Self::INITIAL_SIZE.min(max_texture_dimension_2d);
 
 		let packer = BucketedAtlasAllocator::new(size2(size as i32, size as i32));
 
-		// Create a texture to use for our atlas
-		let image = Image::new(
-			common.gfx.memory_allocator.clone(),
-			ImageCreateInfo {
-				image_type: ImageType::Dim2d,
-				format: kind.texture_format(),
-				extent: [size, size, 1],
-				usage: ImageUsage::SAMPLED | ImageUsage::TRANSFER_SRC | ImageUsage::TRANSFER_DST,
-				..Default::default()
-			},
-			AllocationCreateInfo::default(),
+		// Create a texture to use for our atlas.
+		let image = common.gfx.new_image(
+			size,
+			size,
+			kind.texture_format(),
+			ImageUsage::SAMPLED | ImageUsage::TRANSFER_SRC | ImageUsage::TRANSFER_DST,
 		)?;
-
-		let image_view = ImageView::new_default(image).unwrap();
+		let image_view = common.gfx.create_image_view(image)?;
 
 		let image_descriptor = common.inner.uniform_sampler(
 			Self::descriptor_set(kind),
 			image_view.clone(),
-			common.gfx.texture_filter,
+			common.gfx.texture_filter(),
 		)?;
 
 		let glyph_cache = LruCache::unbounded_with_hasher(Hasher::default());
@@ -200,7 +201,7 @@ impl InnerAtlas {
 			ImageUsage::SAMPLED | ImageUsage::TRANSFER_SRC | ImageUsage::TRANSFER_DST,
 		)?;
 
-		self.image_view = ImageView::new_default(image.clone()).unwrap();
+		self.image_view = self.common.gfx.create_image_view(image.clone())?;
 
 		let mut cmd_buf = self
 			.common
@@ -251,7 +252,7 @@ impl InnerAtlas {
 		self.image_descriptor = self.common.inner.uniform_sampler(
 			Self::descriptor_set(self.kind),
 			self.image_view.clone(),
-			self.common.gfx.texture_filter,
+			self.common.gfx.texture_filter(),
 		)?;
 		Ok(())
 	}

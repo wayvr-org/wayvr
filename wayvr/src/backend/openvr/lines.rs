@@ -2,29 +2,14 @@ use std::f32::consts::PI;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use ash::vk::SubmitInfo;
 use glam::{Affine3A, Quat, Vec3, Vec3A, Vec4};
 use idmap::IdMap;
 use ovr_overlay::overlay::OverlayManager;
 use ovr_overlay::sys::ETrackingUniverseOrigin;
-use vulkano::{
-    VulkanObject,
-    command_buffer::{
-        CommandBufferBeginInfo, CommandBufferLevel, CommandBufferUsage, RecordingCommandBuffer,
-    },
-    format::Format,
-    image::view::ImageView,
-    image::{Image, ImageLayout},
-    sync::{
-        AccessFlags, DependencyInfo, ImageMemoryBarrier, PipelineStages,
-        fence::{Fence, FenceCreateInfo},
-    },
-};
-use wgui::gfx::WGfx;
+use wgui::gfx::{CommandBufferUsage, Format, ImageView, WGfx};
 use wlx_common::overlays::{BackendAttrib, BackendAttribValue};
 
 use crate::backend::input::{HoverResult, PointerHit};
-use crate::graphics::ExtentExt;
 use crate::state::AppState;
 use crate::subsystem::hid::WheelDelta;
 use crate::windowing::Z_ORDER_LINES;
@@ -53,15 +38,7 @@ impl LinePool {
         let texture = command_buffer.upload_image(2, 2, Format::R8G8B8A8_UNORM, &buf)?;
         command_buffer.build_and_execute_now()?;
 
-        transition_layout(
-            &graphics,
-            texture.clone(),
-            ImageLayout::ShaderReadOnlyOptimal,
-            ImageLayout::TransferSrcOptimal,
-        )?
-        .wait(None)?;
-
-        let view = ImageView::new_default(texture)?;
+        let view = graphics.create_image_view(texture)?;
 
         Ok(Self {
             lines: IdMap::new(),
@@ -222,7 +199,7 @@ impl OverlayBackend for LineBackend {
     }
     fn frame_meta(&mut self) -> Option<FrameMeta> {
         Some(FrameMeta {
-            extent: self.view.extent_u32arr(),
+            extent: self.view.extent_2d(),
             ..Default::default()
         })
     }
@@ -246,56 +223,4 @@ impl OverlayBackend for LineBackend {
     fn set_attrib(&mut self, _: &mut AppState, _value: BackendAttribValue) -> bool {
         false
     }
-}
-
-pub fn transition_layout(
-    gfx: &WGfx,
-    image: Arc<Image>,
-    old_layout: ImageLayout,
-    new_layout: ImageLayout,
-) -> anyhow::Result<Fence> {
-    let barrier = ImageMemoryBarrier {
-        src_stages: PipelineStages::ALL_TRANSFER,
-        src_access: AccessFlags::TRANSFER_WRITE,
-        dst_stages: PipelineStages::ALL_TRANSFER,
-        dst_access: AccessFlags::TRANSFER_READ,
-        old_layout,
-        new_layout,
-        subresource_range: image.subresource_range(),
-        ..ImageMemoryBarrier::image(image)
-    };
-
-    let command_buffer = unsafe {
-        let mut builder = RecordingCommandBuffer::new(
-            gfx.command_buffer_allocator.clone(),
-            gfx.queue_gfx.queue_family_index(),
-            CommandBufferLevel::Primary,
-            CommandBufferBeginInfo {
-                usage: CommandBufferUsage::OneTimeSubmit,
-                inheritance_info: None,
-                ..Default::default()
-            },
-        )?;
-
-        builder.pipeline_barrier(&DependencyInfo {
-            image_memory_barriers: smallvec::smallvec![barrier],
-            ..Default::default()
-        })?;
-        builder.end()?
-    };
-
-    let fence = Fence::new(gfx.device.clone(), FenceCreateInfo::default())?;
-
-    let fns = gfx.device.fns();
-    unsafe {
-        (fns.v1_0.queue_submit)(
-            gfx.queue_gfx.handle(),
-            1,
-            [SubmitInfo::default().command_buffers(&[command_buffer.handle()])].as_ptr(),
-            fence.handle(),
-        )
-    }
-    .result()?;
-
-    Ok(fence)
 }

@@ -3,12 +3,11 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 use cosmic_text::Buffer;
 use glam::{Mat4, Vec2, Vec3};
 use slotmap::{SlotMap, new_key_type};
-use vulkano::pipeline::graphics::viewport;
 
 use crate::{
 	drawing::{self},
 	font_config,
-	gfx::{WGfx, cmd::GfxCommandBuffer},
+	gfx::{Scissor, WGfx, cmd::GfxCommandBufferBuilder},
 	renderer_vk::image::{ImagePipeline, ImageRenderer, ImageViewCache},
 };
 
@@ -60,7 +59,7 @@ impl RendererPass<'_> {
 		font_system: &font_config::WguiFontSystem,
 		gfx: &Arc<WGfx>,
 		viewport: &mut Viewport,
-		cmd_buf: &mut GfxCommandBuffer,
+		cmd_buf: &mut GfxCommandBufferBuilder,
 		text_atlas: &mut TextAtlas,
 		image_view_cache: &mut ImageViewCache,
 	) -> anyhow::Result<()> {
@@ -68,37 +67,35 @@ impl RendererPass<'_> {
 			return Ok(());
 		}
 
-		let vk_scissor = match self.scissor {
+		let gfx_scissor = match self.scissor {
 			Some(scissor) => {
-				let mut x = scissor.pos.x;
-				let mut y = scissor.pos.y;
-				let mut w = scissor.size.x;
-				let mut h = scissor.size.y;
+				let resolution = viewport.resolution();
+				let max_x = resolution[0] as f32;
+				let max_y = resolution[1] as f32;
 
-				// handle out-of-bounds scissors (x/y < 0)
-				if x < 0.0 {
-					w += x;
-					x = 0.0;
-				}
+				// ScissorStack uses a very large rectangle as its unclipped sentinel.
+				// Intersect in pixel space so restoring that sentinel becomes exactly
+				// the viewport instead of saturating to u32::MAX (which violates the
+				// signed-overflow requirements of vkCmdSetScissor).
+				let x0 = (scissor.pos.x * self.pixel_scale).clamp(0.0, max_x);
+				let y0 = (scissor.pos.y * self.pixel_scale).clamp(0.0, max_y);
+				let x1 = ((scissor.pos.x + scissor.size.x) * self.pixel_scale)
+					.clamp(0.0, max_x)
+					.max(x0);
+				let y1 = ((scissor.pos.y + scissor.size.y) * self.pixel_scale)
+					.clamp(0.0, max_y)
+					.max(y0);
 
-				if y < 0.0 {
-					h += y;
-					y = 0.0;
-				}
-
-				viewport::Scissor {
-					offset: [(x * self.pixel_scale) as u32, (y * self.pixel_scale) as u32],
-					extent: [(w * self.pixel_scale) as u32, (h * self.pixel_scale) as u32],
-				}
+				Scissor::new([x0 as i32, y0 as i32], [(x1 - x0) as u32, (y1 - y0) as u32])
 			}
-			None => viewport::Scissor::default(),
+			None => Scissor::new([0, 0], viewport.resolution()),
 		};
 
 		self.submitted = true;
-		self.rect_renderer.render(gfx, viewport, &vk_scissor, cmd_buf)?;
+		self.rect_renderer.render(gfx, viewport, &gfx_scissor, cmd_buf)?;
 		self
 			.image_renderer
-			.render(gfx, viewport, &vk_scissor, cmd_buf, image_view_cache)?;
+			.render(gfx, viewport, &gfx_scissor, cmd_buf, image_view_cache)?;
 
 		{
 			let mut font_system = font_system.system.lock();
@@ -113,7 +110,7 @@ impl RendererPass<'_> {
 			)?;
 		}
 
-		self.text_renderer.render(text_atlas, viewport, &vk_scissor, cmd_buf)?;
+		self.text_renderer.render(text_atlas, viewport, &gfx_scissor, cmd_buf)?;
 
 		Ok(())
 	}
@@ -133,9 +130,9 @@ pub struct SharedContext {
 
 impl SharedContext {
 	pub fn new(gfx: Arc<WGfx>) -> anyhow::Result<Self> {
-		let rect_pipeline = RectPipeline::new(gfx.clone(), gfx.surface_format)?;
-		let text_pipeline = TextPipeline::new(gfx.clone(), gfx.surface_format)?;
-		let image_pipeline = ImagePipeline::new(gfx.clone(), gfx.surface_format)?;
+		let rect_pipeline = RectPipeline::new(gfx.clone(), gfx.surface_format())?;
+		let text_pipeline = TextPipeline::new(gfx.clone(), gfx.surface_format())?;
+		let image_pipeline = ImagePipeline::new(gfx.clone(), gfx.surface_format())?;
 
 		Ok(Self {
 			gfx,
@@ -236,7 +233,7 @@ impl Context {
 		&mut self,
 		font_system: &font_config::WguiFontSystem,
 		shared: &mut SharedContext,
-		cmd_buf: &mut GfxCommandBuffer,
+		cmd_buf: &mut GfxCommandBufferBuilder,
 		primitives: &[drawing::RenderPrimitive],
 	) -> anyhow::Result<ContextDrawResult> {
 		self.dirty = false;

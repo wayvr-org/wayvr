@@ -11,7 +11,6 @@ use ovr_overlay::{
     sys::{ETrackedDeviceProperty, EVRApplicationType, EVREventType},
 };
 use smallvec::smallvec;
-use vulkano::{Handle, VulkanObject, device::physical::PhysicalDevice};
 use wgui::i18n::Translation;
 use wlx_common::{dash_interface::InterfaceFeats, overlays::ToastTopic};
 
@@ -77,16 +76,12 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     let mut chaperone_mgr = context.chaperone_setup_mngr();
     let mut compositor_mgr = context.compositor_mngr();
 
-    let device_extensions_fn = |device: &PhysicalDevice| {
-        let names = compositor_mgr.get_vulkan_device_extensions_required(device.handle().as_raw());
-        names.iter().map(std::string::String::as_str).collect()
+    let device_extensions_fn = |physical_device_handle: u64| {
+        compositor_mgr.get_vulkan_device_extensions_required(physical_device_handle)
     };
 
     let mut compositor_mgr = context.compositor_mngr();
-    let instance_extensions = {
-        let names = compositor_mgr.get_vulkan_instance_extensions_required();
-        names.iter().map(std::string::String::as_str).collect()
-    };
+    let instance_extensions = compositor_mgr.get_vulkan_instance_extensions_required();
 
     let feats = InterfaceFeats::default_for_backend(XrBackend::OpenVR);
 
@@ -336,7 +331,7 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 let mut rdr = RenderResources::new(app.gfx.clone(), tgt, &meta)?;
                 o.render(&mut app, &mut rdr)?;
                 o.data.image_dirty = true;
-                futures.execute_results(rdr.end()?)?;
+                futures.execute_results(rdr.end()?);
             }
         }
 

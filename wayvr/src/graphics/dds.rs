@@ -1,14 +1,6 @@
 use image_dds::{ImageFormat, Surface};
 use std::{io::Read, sync::Arc};
-use vulkano::{
-    DeviceSize,
-    buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer},
-    command_buffer::CopyBufferToImageInfo,
-    format::Format,
-    image::{Image, ImageCreateInfo, ImageType, ImageUsage},
-    memory::allocator::{AllocationCreateInfo, MemoryTypeFilter},
-};
-use wgui::gfx::cmd::XferCommandBuffer;
+use wgui::gfx::{Format, Image, cmd::XferCommandBufferBuilder};
 
 pub trait WlxCommandBufferDds {
     fn upload_image_dds<R>(&mut self, r: R) -> anyhow::Result<Arc<Image>>
@@ -16,7 +8,7 @@ pub trait WlxCommandBufferDds {
         R: Read;
 }
 
-impl WlxCommandBufferDds for XferCommandBuffer {
+impl WlxCommandBufferDds for XferCommandBufferBuilder {
     fn upload_image_dds<R>(&mut self, r: R) -> anyhow::Result<Arc<Image>>
     where
         R: Read,
@@ -33,42 +25,16 @@ impl WlxCommandBufferDds for XferCommandBuffer {
             anyhow::bail!("Not a 2D texture.")
         }
 
-        let image = Image::new(
-            self.graphics.memory_allocator.clone(),
-            ImageCreateInfo {
-                image_type: ImageType::Dim2d,
-                format: dds_to_vk(surface.image_format)?,
-                extent: [surface.width, surface.height, surface.depth],
-                usage: ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC | ImageUsage::SAMPLED,
-                ..Default::default()
-            },
-            AllocationCreateInfo::default(),
-        )?;
-
-        let buffer: Subbuffer<[u8]> = Buffer::new_slice(
-            self.graphics.memory_allocator.clone(),
-            BufferCreateInfo {
-                usage: BufferUsage::TRANSFER_SRC,
-                ..Default::default()
-            },
-            AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_HOST
-                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
-                ..Default::default()
-            },
-            surface.data.len() as DeviceSize,
-        )?;
-
-        buffer.write()?.copy_from_slice(surface.data);
-
-        self.command_buffer
-            .copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(buffer, image.clone()))?;
-
-        Ok(image)
+        self.upload_image(
+            surface.width,
+            surface.height,
+            dds_to_wgfx(surface.image_format)?,
+            surface.data,
+        )
     }
 }
 
-pub fn dds_to_vk(dds_fmt: ImageFormat) -> anyhow::Result<Format> {
+pub fn dds_to_wgfx(dds_fmt: ImageFormat) -> anyhow::Result<Format> {
     match dds_fmt {
         ImageFormat::R8Unorm => Ok(Format::R8_UNORM),
         ImageFormat::Rgba8Unorm => Ok(Format::R8G8B8A8_UNORM),

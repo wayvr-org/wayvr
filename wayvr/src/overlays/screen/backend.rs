@@ -151,12 +151,8 @@ impl OverlayBackend for ScreenBackend {
     }
     fn should_render(&mut self, app: &mut AppState) -> anyhow::Result<ShouldRender> {
         if !self.capture.is_ready() {
-            let supports_dmabuf = app
-                .gfx
-                .device
-                .enabled_extensions()
-                .ext_external_memory_dma_buf
-                && self.capture.supports_dmbuf();
+            let supports_dmabuf =
+                app.gfx.capabilities().external_memory_dma_buf && self.capture.supports_dmbuf();
 
             let capture_method = app.session.config.capture_method;
 
@@ -167,9 +163,9 @@ impl OverlayBackend for ScreenBackend {
 
             let (dmabuf_formats, dma_exporter) = if !supports_dmabuf {
                 log::info!("Capture method does not support DMA-buf");
-                if app.gfx_extras.queue_capture.is_none() {
+                if !app.gfx.has_capture_queue() {
                     log::warn!(
-                        "Current GPU does not support multiple queues. Software capture will take place on the main thread. Expect degraded performance."
+                        "Current GPU exposes only one graphics queue. Software capture will take place on the main thread. Expect degraded performance."
                     );
                 }
                 ([].as_slice(), None)
@@ -178,9 +174,9 @@ impl OverlayBackend for ScreenBackend {
                     "Not using DMA-buf capture due to {}",
                     capture_method.as_ref()
                 );
-                if app.gfx_extras.queue_capture.is_none() {
+                if !app.gfx.has_capture_queue() {
                     log::warn!(
-                        "Current GPU does not support multiple queues. Software capture will take place on the main thread. Expect degraded performance."
+                        "Current GPU exposes only one graphics queue. Software capture will take place on the main thread. Expect degraded performance."
                     );
                 }
                 ([].as_slice(), None)

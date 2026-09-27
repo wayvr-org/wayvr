@@ -1,50 +1,78 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::{any::Any, marker::PhantomData, sync::Arc};
 
-use vulkano::{
-	DeviceSize,
-	buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer},
-	command_buffer::{
-		AutoCommandBufferBuilder, ClearColorImageInfo, CommandBufferExecFuture, CopyBufferToImageInfo, CopyImageInfo,
-		PrimaryAutoCommandBuffer, PrimaryCommandBufferAbstract, RenderingAttachmentInfo, RenderingInfo, SubpassContents,
-	},
-	device::Queue,
-	format::{ClearColorValue, ClearValue, Format},
-	image::{Image, ImageCreateInfo, ImageType, ImageUsage, view::ImageView},
-	memory::allocator::{AllocationCreateInfo, MemoryTypeFilter},
-	render_pass::{AttachmentLoadOp, AttachmentStoreOp},
-	sync::{GpuFuture, future::NowFuture},
+use parking_lot::Mutex;
+
+use super::{
+	BufferUsage, Format, Image, ImageCreateInfo, ImageLayout, ImageUsage, ImageView, QueueType, Vertex, WGfx,
+	pass::WGfxPass,
+	raw::{RawClearMode, RawCommandBuffer},
 };
 
-use super::{WGfx, pass::WGfxPass};
-
-pub type GfxCommandBuffer = WCommandBuffer<CmdBufGfx>;
-pub type XferCommandBuffer = WCommandBuffer<CmdBufXfer>;
+pub type GfxCommandBufferBuilder = CommandBufferBuilder<CmdBufGfx>;
+pub type XferCommandBufferBuilder = CommandBufferBuilder<CmdBufXfer>;
 
 pub struct CmdBufGfx;
 pub struct CmdBufXfer;
 
-pub struct WCommandBuffer<T> {
-	pub graphics: Arc<WGfx>,
-	pub queue: Arc<Queue>,
-	pub command_buffer: AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
-	pub(super) _dummy: PhantomData<T>,
+// A built primary command buffer
+pub struct BuiltCommandBuffer {
+	pub(super) raw: Mutex<RawCommandBuffer>,
+	_keepalive: Vec<Box<dyn Any + Send + Sync>>,
 }
 
-impl<T> WCommandBuffer<T> {
-	pub fn build_and_execute(self) -> anyhow::Result<CommandBufferExecFuture<NowFuture>> {
-		let queue = self.queue.clone();
-		Ok(self.command_buffer.build()?.execute(queue)?)
+impl BuiltCommandBuffer {
+	pub fn submit_and_wait(&self) -> anyhow::Result<()> {
+		self.raw.lock().submit_and_wait()
+	}
+}
+
+pub struct CommandBufferBuilder<T> {
+	pub(super) graphics: Arc<WGfx>,
+	raw: RawCommandBuffer,
+	keepalive: Vec<Box<dyn Any + Send + Sync>>,
+	_dummy: PhantomData<T>,
+}
+
+impl<T> CommandBufferBuilder<T> {
+	pub(super) fn new(
+		graphics: Arc<WGfx>,
+		queue_type: QueueType,
+		usage: super::CommandBufferUsage,
+		dummy: PhantomData<T>,
+	) -> anyhow::Result<Self> {
+		let raw = graphics.raw.create_command_buffer(queue_type, usage)?;
+		Ok(Self {
+			graphics,
+			raw,
+			keepalive: Vec::new(),
+			_dummy: dummy,
+		})
+	}
+
+	pub fn build(mut self) -> anyhow::Result<Arc<BuiltCommandBuffer>> {
+		self.raw.finish()?;
+		Ok(Arc::new(BuiltCommandBuffer {
+			raw: Mutex::new(self.raw),
+			_keepalive: std::mem::take(&mut self.keepalive),
+		}))
+	}
+
+	pub fn build_and_execute(mut self) -> anyhow::Result<()> {
+		self.raw.submit_and_wait()
 	}
 
 	pub fn build_and_execute_now(self) -> anyhow::Result<()> {
-		let mut exec = self.build_and_execute()?;
-		exec.flush()?;
-		exec.cleanup_finished();
+		self.build_and_execute()
+	}
+
+	pub fn transition_image(&mut self, image: &Arc<Image>, new_layout: ImageLayout) -> anyhow::Result<()> {
+		self.raw.transition_image(&image.raw, new_layout);
+		self.keepalive.push(Box::new(image.clone()));
 		Ok(())
 	}
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub enum WGfxClearMode {
 	#[default]
 	DontCare,
@@ -52,101 +80,86 @@ pub enum WGfxClearMode {
 	Clear([f32; 4]),
 }
 
-#[allow(dead_code)]
 impl WGfxClearMode {
 	#[must_use]
-	pub const fn or_default(self, def: WGfxClearMode) -> WGfxClearMode {
+	pub const fn or_default(self, default: Self) -> Self {
 		match self {
-			Self::DontCare => def,
-			s => s,
+			Self::DontCare => default,
+			other => other,
+		}
+	}
+
+	const fn raw(self) -> RawClearMode {
+		match self {
+			Self::DontCare => RawClearMode::DontCare,
+			Self::Keep => RawClearMode::Keep,
+			Self::Clear(color) => RawClearMode::Clear(color),
 		}
 	}
 }
 
-impl WCommandBuffer<CmdBufGfx> {
+impl CommandBufferBuilder<CmdBufGfx> {
 	pub fn begin_rendering(&mut self, render_target: Arc<ImageView>, clear_mode: WGfxClearMode) -> anyhow::Result<()> {
-		self.command_buffer.begin_rendering(RenderingInfo {
-			contents: SubpassContents::SecondaryCommandBuffers,
-			color_attachments: vec![Some(RenderingAttachmentInfo {
-				load_op: match &clear_mode {
-					WGfxClearMode::Keep => AttachmentLoadOp::Load,
-					WGfxClearMode::Clear(_) => AttachmentLoadOp::Clear,
-					WGfxClearMode::DontCare => AttachmentLoadOp::DontCare,
-				},
-				store_op: AttachmentStoreOp::Store,
-				clear_value: match &clear_mode {
-					WGfxClearMode::Keep => None,
-					WGfxClearMode::DontCare => None,
-					WGfxClearMode::Clear(color) => Some(ClearValue::Float(*color)),
-				},
-				..RenderingAttachmentInfo::image_view(render_target)
-			})],
-			..Default::default()
-		})?;
+		self
+			.raw
+			.begin_rendering(&render_target.raw, render_target.extent(), clear_mode.raw());
+		self.keepalive.push(Box::new(render_target));
 		Ok(())
 	}
 
-	pub fn build(self) -> anyhow::Result<Arc<PrimaryAutoCommandBuffer>> {
-		Ok(self.command_buffer.build()?)
-	}
+	pub fn run_ref<V: Vertex>(&mut self, pass: &WGfxPass<V>) -> anyhow::Result<()> {
+		self.raw.draw(
+			&pass.pipeline.raw,
+			&pass.vertex_buffer.raw,
+			&pass
+				.descriptor_sets
+				.iter()
+				.map(|set| set.raw.clone())
+				.collect::<Vec<_>>(),
+			pass.dimensions,
+			pass.offset,
+			pass.scissor,
+			pass.vertices.clone(),
+			pass.instances.clone(),
+		)?;
 
-	pub fn run_ref<T>(&mut self, pass: &WGfxPass<T>) -> anyhow::Result<()>
-	where
-		T: Sized,
-	{
-		self.command_buffer.execute_commands(pass.command_buffer.clone())?;
+		self.keepalive.push(Box::new(pass.pipeline.clone()));
+		self.keepalive.push(Box::new(pass.vertex_buffer.clone()));
+		for descriptor_set in &pass.descriptor_sets {
+			self.keepalive.push(Box::new(descriptor_set.clone()));
+		}
 		Ok(())
 	}
 
 	pub fn end_rendering(&mut self) -> anyhow::Result<()> {
-		self.command_buffer.end_rendering()?;
+		self.raw.end_rendering();
 		Ok(())
 	}
 }
 
-impl WCommandBuffer<CmdBufXfer> {
+impl CommandBufferBuilder<CmdBufXfer> {
 	pub fn upload_image(&mut self, width: u32, height: u32, format: Format, data: &[u8]) -> anyhow::Result<Arc<Image>> {
-		let image = Image::new(
-			self.graphics.memory_allocator.clone(),
-			ImageCreateInfo {
-				image_type: ImageType::Dim2d,
-				format,
-				extent: [width, height, 1],
-				usage: ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC | ImageUsage::SAMPLED,
-				..Default::default()
-			},
-			AllocationCreateInfo::default(),
-		)?;
-
-		let buffer: Subbuffer<[u8]> = Buffer::new_slice(
-			self.graphics.memory_allocator.clone(),
-			BufferCreateInfo {
-				usage: BufferUsage::TRANSFER_SRC,
-				..Default::default()
-			},
-			AllocationCreateInfo {
-				memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
-				..Default::default()
-			},
-			data.len() as DeviceSize,
-		)?;
-
-		buffer.write()?.copy_from_slice(data);
-
+		let image = self.graphics.create_image(ImageCreateInfo::new_2d(
+			width,
+			height,
+			format,
+			ImageUsage::TRANSFER_DST | ImageUsage::TRANSFER_SRC | ImageUsage::SAMPLED,
+		))?;
+		let staging = self
+			.graphics
+			.empty_buffer::<u8>(BufferUsage::TRANSFER_SRC, data.len() as u64)?;
+		staging.write()?.copy_from_slice(data);
 		self
-			.command_buffer
-			.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(buffer, image.clone()))?;
-
+			.raw
+			.copy_buffer_to_image(&staging.raw, &image.raw, [0, 0, 0], [width, height, 1]);
+		self.keepalive.push(Box::new(staging));
+		self.keepalive.push(Box::new(image.clone()));
 		Ok(image)
 	}
 
 	pub fn clear_image(&mut self, image: &Arc<Image>) -> anyhow::Result<()> {
-		let clear_info = ClearColorImageInfo {
-			clear_value: ClearColorValue::Uint([0, 0, 0, 0]),
-			..ClearColorImageInfo::image(image.clone())
-		};
-
-		self.command_buffer.clear_color_image(clear_info)?;
+		self.raw.clear_image(&image.raw);
+		self.keepalive.push(Box::new(image.clone()));
 		Ok(())
 	}
 
@@ -157,28 +170,15 @@ impl WCommandBuffer<CmdBufXfer> {
 		offset: [u32; 3],
 		extent: Option<[u32; 3]>,
 	) -> anyhow::Result<()> {
-		let buffer: Subbuffer<[u8]> = Buffer::new_slice(
-			self.graphics.memory_allocator.clone(),
-			BufferCreateInfo {
-				usage: BufferUsage::TRANSFER_SRC,
-				..Default::default()
-			},
-			AllocationCreateInfo {
-				memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
-				..Default::default()
-			},
-			data.len() as DeviceSize,
-		)?;
-
-		buffer.write()?.copy_from_slice(data);
-
-		let mut copy_info = CopyBufferToImageInfo::buffer_image(buffer, image.clone());
-		copy_info.regions[0].image_offset = offset;
-		if let Some(extent) = extent {
-			copy_info.regions[0].image_extent = extent;
-		}
-
-		self.command_buffer.copy_buffer_to_image(copy_info)?;
+		#[allow(clippy::or_fun_call)] //const fn returning array
+		let extent = extent.unwrap_or(image.extent());
+		let staging = self
+			.graphics
+			.empty_buffer::<u8>(BufferUsage::TRANSFER_SRC, data.len() as u64)?;
+		staging.write()?.copy_from_slice(data);
+		self.raw.copy_buffer_to_image(&staging.raw, &image.raw, offset, extent);
+		self.keepalive.push(Box::new(staging));
+		self.keepalive.push(Box::new(image.clone()));
 		Ok(())
 	}
 
@@ -190,15 +190,16 @@ impl WCommandBuffer<CmdBufXfer> {
 		dst_offset: [u32; 3],
 		extent: Option<[u32; 3]>,
 	) -> anyhow::Result<()> {
-		let mut copy_info = CopyImageInfo::images(src.clone(), dst.clone());
-
-		copy_info.regions[0].src_offset = src_offset;
-		copy_info.regions[0].dst_offset = dst_offset;
-		if let Some(extent) = extent {
-			copy_info.regions[0].extent = extent;
-		}
-
-		self.command_buffer.copy_image(copy_info)?;
+		self.raw.copy_image(
+			&src.raw,
+			src_offset,
+			&dst.raw,
+			dst_offset,
+			#[allow(clippy::or_fun_call)] //const fn returning array
+			extent.unwrap_or(src.extent()),
+		);
+		self.keepalive.push(Box::new(src.clone()));
+		self.keepalive.push(Box::new(dst.clone()));
 		Ok(())
 	}
 }

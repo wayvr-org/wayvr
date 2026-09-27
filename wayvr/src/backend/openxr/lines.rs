@@ -11,20 +11,13 @@ use std::{
 };
 
 use wgui::gfx::{
+    Buffer, BufferUsage, CommandBufferUsage, Scissor, Vert2Uv,
     cmd::WGfxClearMode,
     pass::WGfxPass,
     pipeline::{WGfxPipeline, WPipelineCreateInfo},
 };
 
-use crate::{
-    backend::openxr::helpers,
-    graphics::{GpuFutures, Vert2Uv},
-    state::AppState,
-};
-use vulkano::{
-    buffer::{BufferUsage, Subbuffer},
-    command_buffer::CommandBufferUsage,
-};
+use crate::{backend::openxr::helpers, graphics::GpuFutures, state::AppState};
 
 use super::{
     CompositionLayer, XrState,
@@ -55,7 +48,7 @@ impl LinePool {
         let pipeline = app.gfx.create_pipeline(
             app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
             app.gfx_extras.shaders.get("frag_color").unwrap(), // want panic
-            WPipelineCreateInfo::new(app.gfx.surface_format),
+            WPipelineCreateInfo::new(app.gfx.surface_format()),
         )?;
 
         Ok(Self {
@@ -80,7 +73,7 @@ impl LinePool {
             0..4,
             0..1,
             vec![set0],
-            &Default::default(),
+            Scissor::from_viewport([1.0, 1.0], [0.0, 0.0]),
         )?;
 
         let srd = create_swapchain(xr, app.gfx.clone(), [1, 1], 1, SwapchainOpts::new())?;
@@ -182,7 +175,7 @@ impl LinePool {
                 cmd_buffer.run_ref(&line.pass)?;
                 cmd_buffer.end_rendering()?;
 
-                futures.execute(cmd_buffer.queue.clone(), cmd_buffer.build()?)?;
+                futures.execute(cmd_buffer.build()?);
             }
         }
 
@@ -225,7 +218,7 @@ pub(super) struct Line {
 
 struct LineContainer {
     swapchain: WlxSwapchain,
-    buf_color: Subbuffer<[f32]>,
+    buf_color: Arc<Buffer<f32>>,
     pass: WGfxPass<Vert2Uv>,
     maybe_line: Option<Line>,
 }

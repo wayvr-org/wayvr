@@ -39,10 +39,7 @@ use crate::{
     },
 };
 
-use super::{
-    backend::ScreenBackend,
-    capture::{MainThreadWlxCapture, new_wlx_capture},
-};
+use super::{backend::ScreenBackend, capture::new_wlx_capture};
 
 pub(super) type ScreenCastFinalizeFn = fn(
     Arc<str>,
@@ -347,10 +344,8 @@ fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
                 par.app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
                     OverlaySelector::Name(par.name.clone()),
                     Box::new(move |app, owc| {
-                        let capture = new_wlx_capture!(
-                            app.gfx_extras.queue_capture,
-                            PipewireCapture::new(par.name.clone(), node_id)
-                        );
+                        let capture =
+                            new_wlx_capture!(app, PipewireCapture::new(par.name.clone(), node_id));
 
                         owc.backend =
                             finalize_fn(par.name, par.logical_pos, par.logical_size, capture, app);

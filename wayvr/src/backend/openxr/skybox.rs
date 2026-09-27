@@ -2,11 +2,10 @@ use std::{f32::consts::PI, fs::File, sync::Arc};
 
 use glam::{Quat, Vec3A};
 use openxr as xr;
-use vulkano::{
-    command_buffer::CommandBufferUsage, image::view::ImageView,
-    pipeline::graphics::color_blend::AttachmentBlend,
+use wgui::gfx::{
+    BLEND_ALPHA, CommandBufferUsage, ImageView, Scissor, cmd::WGfxClearMode,
+    pipeline::WPipelineCreateInfo,
 };
-use wgui::gfx::{cmd::WGfxClearMode, pipeline::WPipelineCreateInfo};
 use wlx_common::config_io;
 
 use crate::{
@@ -14,7 +13,7 @@ use crate::{
         helpers::{next_chain_insert, translation_rotation_to_posef},
         swapchain::SwapchainOpts,
     },
-    graphics::{ExtentExt, GpuFutures, dds::WlxCommandBufferDds},
+    graphics::{GpuFutures, dds::WlxCommandBufferDds},
     state::AppState,
 };
 
@@ -76,7 +75,7 @@ impl Skybox {
 
         let view = if let Some(image) = maybe_image {
             command_buffer.build_and_execute_now()?;
-            Some(ImageView::new_default(image)?)
+            Some(app.gfx.create_image_view(image)?)
         } else {
             None
         };
@@ -127,7 +126,7 @@ impl Skybox {
         let extent = self
             .view
             .as_ref()
-            .map_or([4096, 4096], ExtentExt::extent_u32arr);
+            .map_or([4096, 4096], |view| view.extent_2d());
 
         let mut swapchain = create_swapchain(xr, app.gfx.clone(), extent, 1, opts)?;
         let tgt = swapchain
@@ -141,11 +140,11 @@ impl Skybox {
             let pipeline = app.gfx.create_pipeline(
                 app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
                 app.gfx_extras.shaders.get("frag_srgb").unwrap(), // want panic
-                WPipelineCreateInfo::new(app.gfx.surface_format),
+                WPipelineCreateInfo::new(app.gfx.surface_format()),
             )?;
 
-            let set0 = pipeline.uniform_sampler(0, view.clone(), app.gfx.texture_filter)?;
-            let set1 = pipeline.uniform_buffer_upload(1, vec![1f32])?;
+            let set0 = pipeline.uniform_sampler(0, view.clone(), app.gfx.texture_filter())?;
+            let set1 = pipeline.uniform_buffer_upload(1, &[1f32])?;
             pipeline.create_pass(
                 tgt.extent_f32(),
                 [0.0, 0.0],
@@ -153,13 +152,13 @@ impl Skybox {
                 0..4,
                 0..1,
                 vec![set0, set1],
-                &Default::default(),
+                Scissor::new([0, 0], tgt.extent_2d()),
             )?
         } else {
             let pipeline = app.gfx.create_pipeline(
                 app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
                 app.gfx_extras.shaders.get("frag_sky").unwrap(),  // want panic
-                WPipelineCreateInfo::new(app.gfx.surface_format),
+                WPipelineCreateInfo::new(app.gfx.surface_format()),
             )?;
 
             pipeline.create_pass(
@@ -169,7 +168,7 @@ impl Skybox {
                 0..4,
                 0..1,
                 vec![],
-                &Default::default(),
+                Scissor::new([0, 0], tgt.extent_2d()),
             )?
         };
 
@@ -180,7 +179,7 @@ impl Skybox {
         cmd_buffer.run_ref(&pass)?;
         cmd_buffer.end_rendering()?;
 
-        futures.execute(cmd_buffer.queue.clone(), cmd_buffer.build()?)?;
+        futures.execute(cmd_buffer.build()?);
 
         self.sky = Some(swapchain);
         Ok(())
@@ -207,7 +206,7 @@ impl Skybox {
         let pipeline = app.gfx.create_pipeline(
             app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
             app.gfx_extras.shaders.get("frag_grid").unwrap(), // want panic
-            WPipelineCreateInfo::new(app.gfx.surface_format).use_blend(AttachmentBlend::alpha()),
+            WPipelineCreateInfo::new(app.gfx.surface_format()).use_blend(BLEND_ALPHA),
         )?;
 
         let tgt = swapchain
@@ -223,7 +222,7 @@ impl Skybox {
             0..4,
             0..1,
             vec![],
-            &Default::default(),
+            Scissor::new([0, 0], tgt.extent_2d()),
         )?;
 
         let mut cmd_buffer = app
@@ -233,7 +232,7 @@ impl Skybox {
         cmd_buffer.run_ref(&pass)?;
         cmd_buffer.end_rendering()?;
 
-        futures.execute(cmd_buffer.queue.clone(), cmd_buffer.build()?)?;
+        futures.execute(cmd_buffer.build()?);
 
         self.grid = Some(swapchain);
         Ok(())

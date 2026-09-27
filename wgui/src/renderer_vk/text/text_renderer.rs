@@ -1,5 +1,5 @@
 use crate::{
-	gfx::cmd::GfxCommandBuffer,
+	gfx::{Buffer, BufferUsage, CommandBufferUsage, Scissor, cmd::GfxCommandBufferBuilder},
 	renderer_vk::{model_buffer::ModelBuffer, text::text_atlas::TEXT_ATLAS_ISLAND_PADDING_PX, viewport::Viewport},
 };
 
@@ -13,16 +13,10 @@ use etagere::{AllocId, size2};
 use glam::{Mat4, Vec2, Vec3};
 use std::collections::HashSet;
 
-use vulkano::{
-	buffer::{BufferUsage, Subbuffer},
-	command_buffer::CommandBufferUsage,
-	pipeline::graphics,
-};
-
 /// A text renderer that uses cached glyphs to render text into an existing render pass.
 pub struct TextRenderer {
 	pipeline: TextPipeline,
-	vertex_buffer: Subbuffer<[GlyphVertex]>,
+	vertex_buffer: std::sync::Arc<Buffer<GlyphVertex>>,
 	vertex_buffer_capacity: usize,
 	glyph_vertices: Vec<GlyphVertex>,
 	model_buffer: ModelBuffer,
@@ -272,8 +266,8 @@ impl TextRenderer {
 		&mut self,
 		atlas: &TextAtlas,
 		viewport: &mut Viewport,
-		vk_scissor: &graphics::viewport::Scissor,
-		cmd_buf: &mut GfxCommandBuffer,
+		gfx_scissor: &Scissor,
+		cmd_buf: &mut GfxCommandBufferBuilder,
 	) -> anyhow::Result<()> {
 		if self.glyph_vertices.is_empty() {
 			return Ok(());
@@ -296,7 +290,7 @@ impl TextRenderer {
 			0..4,
 			0..self.glyph_vertices.len() as u32,
 			descriptor_sets,
-			vk_scissor,
+			*gfx_scissor,
 		)?;
 
 		cmd_buf.run_ref(&pass)?;

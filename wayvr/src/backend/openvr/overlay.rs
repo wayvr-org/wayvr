@@ -7,13 +7,9 @@ use ovr_overlay::{
     pose::Matrix3x4,
     sys::{ETrackingUniverseOrigin, VRVulkanTextureData_t},
 };
-use vulkano::{
-    Handle, VulkanObject,
-    image::{ImageUsage, view::ImageView},
-};
-use wgui::gfx::WGfx;
+use wgui::gfx::{ImageLayout, ImageUsage, ImageView, WGfx};
 
-use crate::{graphics::ExtentExt, state::AppState, windowing::window::OverlayWindowData};
+use crate::{state::AppState, windowing::window::OverlayWindowData};
 
 use super::helpers::Affine3AConvert;
 
@@ -68,7 +64,7 @@ impl OverlayWindowData<OpenVrOverlayData> {
         extent: [u32; 2],
     ) -> anyhow::Result<Arc<ImageView>> {
         if let Some(image_view) = self.data.image_view.as_ref()
-            && image_view.extent_u32arr() == extent
+            && image_view.extent_2d() == extent
         {
             return Ok(image_view.clone());
         }
@@ -83,10 +79,10 @@ impl OverlayWindowData<OpenVrOverlayData> {
         let image = app.gfx.new_image(
             extent[0],
             extent[1],
-            app.gfx.surface_format,
+            app.gfx.surface_format(),
             ImageUsage::TRANSFER_SRC | ImageUsage::COLOR_ATTACHMENT | ImageUsage::SAMPLED,
         )?;
-        let image_view = ImageView::new_default(image)?;
+        let image_view = app.gfx.create_image_view(image)?;
         self.data.image_view = Some(image_view.clone());
         Ok(image_view)
     }
@@ -293,20 +289,26 @@ impl OverlayWindowData<OpenVrOverlayData> {
             }
         }
 
-        let raw_image = image.handle().as_raw();
-        let format = image.format();
+        if let Err(e) = graphics.transition_image_now(&image, ImageLayout::TransferSrc) {
+            log::error!(
+                "{}: Failed to prepare overlay image: {e:#}",
+                self.config.name
+            );
+            return;
+        }
 
+        let format = image.format();
         let mut texture = VRVulkanTextureData_t {
-            m_nImage: raw_image,
-            m_nFormat: format as _,
+            m_nImage: image.raw_handle(),
+            m_nFormat: graphics.raw_format(format) as _,
             m_nWidth: dimensions[0],
             m_nHeight: dimensions[1],
-            m_nSampleCount: image.samples() as u32,
-            m_pDevice: graphics.device.handle().as_raw() as *mut _,
-            m_pPhysicalDevice: graphics.device.physical_device().handle().as_raw() as *mut _,
-            m_pInstance: graphics.instance.handle().as_raw() as *mut _,
-            m_pQueue: graphics.queue_gfx.handle().as_raw() as *mut _,
-            m_nQueueFamilyIndex: graphics.queue_gfx.queue_family_index(),
+            m_nSampleCount: 1,
+            m_pDevice: graphics.raw_device_handle() as *mut _,
+            m_pPhysicalDevice: graphics.raw_physical_device_handle() as *mut _,
+            m_pInstance: graphics.raw_instance_handle() as *mut _,
+            m_pQueue: graphics.raw_graphics_queue_handle() as *mut _,
+            m_nQueueFamilyIndex: graphics.graphics_queue_family_index(),
         };
         log::trace!(
             "{}: UploadTex {:?}, {}x{}, {:?}",

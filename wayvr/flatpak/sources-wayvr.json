@@ -5987,45 +5987,6 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/vulkano/vulkano-0.35.1.crate",
-        "sha256": "08840c2b51759a6f88f26f5ea378bc8b5c199a5b4760ddda292304be087249c4",
-        "dest": "cargo/vendor/vulkano-0.35.1"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"08840c2b51759a6f88f26f5ea378bc8b5c199a5b4760ddda292304be087249c4\", \"files\": {}}",
-        "dest": "cargo/vendor/vulkano-0.35.1",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/vulkano-macros/vulkano-macros-0.35.0.crate",
-        "sha256": "1dc929c42c9336fd082079ac3ea30126e4a0dfe36fd2e2b3581303f7d140d20f",
-        "dest": "cargo/vendor/vulkano-macros-0.35.0"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"1dc929c42c9336fd082079ac3ea30126e4a0dfe36fd2e2b3581303f7d140d20f\", \"files\": {}}",
-        "dest": "cargo/vendor/vulkano-macros-0.35.0",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/vulkano-shaders/vulkano-shaders-0.35.0.crate",
-        "sha256": "3bf501461be7cef2893c0e62c50945add9763cc482051d29053f6157089d5ea9",
-        "dest": "cargo/vendor/vulkano-shaders-0.35.0"
-    },
-    {
-        "type": "inline",
-        "contents": "{\"package\": \"3bf501461be7cef2893c0e62c50945add9763cc482051d29053f6157089d5ea9\", \"files\": {}}",
-        "dest": "cargo/vendor/vulkano-shaders-0.35.0",
-        "dest-filename": ".cargo-checksum.json"
-    },
-    {
-        "type": "archive",
-        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/walkdir/walkdir-2.5.0.crate",
         "sha256": "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b",
         "dest": "cargo/vendor/walkdir-2.5.0"

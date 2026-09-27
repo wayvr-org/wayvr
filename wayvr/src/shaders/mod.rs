@@ -1,48 +1,126 @@
+use std::sync::Arc;
+
+use wgui::gfx::{DescriptorBinding, DescriptorType, ShaderModule, ShaderStage, WGfx};
+
+fn load(
+    gfx: &WGfx,
+    spirv: &[u8],
+    stage: ShaderStage,
+    bindings: &[DescriptorBinding],
+) -> anyhow::Result<Arc<ShaderModule>> {
+    gfx.create_shader_module_bytes(spirv, stage, bindings)
+}
+
 pub mod vert_quad {
-    vulkano_shaders::shader! {
-        ty: "vertex",
-        path: "src/shaders/quad.vert"
+    use super::{Arc, ShaderModule, ShaderStage, WGfx};
+
+    pub fn load(gfx: &WGfx) -> anyhow::Result<Arc<ShaderModule>> {
+        super::load(
+            gfx,
+            include_bytes!(concat!(env!("OUT_DIR"), "/quad.vert.spv")),
+            ShaderStage::Vertex,
+            &[],
+        )
     }
 }
 
 pub mod frag_color {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/shaders/color.frag",
+    use super::{Arc, DescriptorBinding, DescriptorType, ShaderModule, ShaderStage, WGfx};
+
+    pub fn load(gfx: &WGfx) -> anyhow::Result<Arc<ShaderModule>> {
+        super::load(
+            gfx,
+            include_bytes!(concat!(env!("OUT_DIR"), "/color.frag.spv")),
+            ShaderStage::Fragment,
+            &[DescriptorBinding::new(
+                0,
+                0,
+                DescriptorType::UniformBuffer,
+                ShaderStage::Fragment,
+            )],
+        )
     }
 }
 
 pub mod frag_grid {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/shaders/grid.frag",
+    use super::{Arc, ShaderModule, ShaderStage, WGfx};
+
+    pub fn load(gfx: &WGfx) -> anyhow::Result<Arc<ShaderModule>> {
+        super::load(
+            gfx,
+            include_bytes!(concat!(env!("OUT_DIR"), "/grid.frag.spv")),
+            ShaderStage::Fragment,
+            &[],
+        )
     }
 }
 
 pub mod frag_screen {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/shaders/screen.frag",
+    use super::{Arc, DescriptorBinding, DescriptorType, ShaderModule, ShaderStage, WGfx};
+
+    pub fn load(gfx: &WGfx) -> anyhow::Result<Arc<ShaderModule>> {
+        super::load(
+            gfx,
+            include_bytes!(concat!(env!("OUT_DIR"), "/screen.frag.spv")),
+            ShaderStage::Fragment,
+            &[DescriptorBinding::new(
+                0,
+                0,
+                DescriptorType::CombinedImageSampler,
+                ShaderStage::Fragment,
+            )],
+        )
     }
 }
 
 pub mod frag_simple {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/shaders/simple.frag",
+    use super::{Arc, DescriptorBinding, DescriptorType, ShaderModule, ShaderStage, WGfx};
+
+    pub fn load(gfx: &WGfx) -> anyhow::Result<Arc<ShaderModule>> {
+        super::load(
+            gfx,
+            include_bytes!(concat!(env!("OUT_DIR"), "/simple.frag.spv")),
+            ShaderStage::Fragment,
+            &[DescriptorBinding::new(
+                0,
+                0,
+                DescriptorType::CombinedImageSampler,
+                ShaderStage::Fragment,
+            )],
+        )
     }
 }
 
 pub mod frag_srgb {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/shaders/srgb.frag",
+    use super::{Arc, DescriptorBinding, DescriptorType, ShaderModule, ShaderStage, WGfx};
+
+    pub fn load(gfx: &WGfx) -> anyhow::Result<Arc<ShaderModule>> {
+        super::load(
+            gfx,
+            include_bytes!(concat!(env!("OUT_DIR"), "/srgb.frag.spv")),
+            ShaderStage::Fragment,
+            &[
+                DescriptorBinding::new(
+                    0,
+                    0,
+                    DescriptorType::CombinedImageSampler,
+                    ShaderStage::Fragment,
+                ),
+                DescriptorBinding::new(1, 0, DescriptorType::UniformBuffer, ShaderStage::Fragment),
+            ],
+        )
     }
 }
 
 pub mod frag_sky {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        path: "src/shaders/sky.frag",
+    use super::{Arc, ShaderModule, ShaderStage, WGfx};
+
+    pub fn load(gfx: &WGfx) -> anyhow::Result<Arc<ShaderModule>> {
+        super::load(
+            gfx,
+            include_bytes!(concat!(env!("OUT_DIR"), "/sky.frag.spv")),
+            ShaderStage::Fragment,
+            &[],
+        )
     }
 }

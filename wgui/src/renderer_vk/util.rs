@@ -1,9 +1,7 @@
 use glam::{Mat4, Vec2, Vec3};
-use vulkano::buffer::BufferContents;
 
-// binary compatible mat4 which could be transparently used by vulkano BufferContents
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, BufferContents)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WMat4(pub [f32; 16]);
 
 impl WMat4 {

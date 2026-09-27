@@ -1,25 +1,14 @@
 use glam::{Vec2, vec2};
-use std::{rc::Rc, sync::Arc};
+use std::rc::Rc;
 use testbed::{Testbed, testbed_any::TestbedAny};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use vulkan::init_window;
-use vulkano::{
-	Validated, VulkanError,
-	command_buffer::CommandBufferUsage,
-	format::Format,
-	image::{ImageUsage, view::ImageView},
-	swapchain::{
-		ColorSpace, CompositeAlpha, PresentMode, Surface, SurfaceInfo, Swapchain, SwapchainCreateInfo,
-		SwapchainPresentInfo, acquire_next_image,
-	},
-	sync::GpuFuture,
-};
 use wgui::{
 	event::{MouseButtonEvent, MouseButtonIndex, MouseMotionEvent, MouseWheelEvent},
-	gfx::{WGfx, cmd::WGfxClearMode},
+	gfx::{CommandBufferUsage, PresentStatus, SwapchainError, WGfxClearMode},
 	renderer_vk::{self},
 };
 use winit::{
@@ -74,33 +63,12 @@ fn load_testbed(audio: &mut Box<dyn audio::AudioProvider>) -> anyhow::Result<Box
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 	init_logging();
 
-	let (gfx, event_loop, window, surface, color_space) =
+	let (gfx, event_loop, window) =
 		init_window("[-/=]: gui scale, F10: debug draw, F11: print tree")?;
 	let inner_size = window.inner_size();
 	let mut swapchain_size = [inner_size.width, inner_size.height];
-
-	let mut swapchain_create_info = swapchain_create_info(
-		&gfx,
-		gfx.surface_format,
-		color_space,
-		surface.clone(),
-		swapchain_size,
-	);
-
-	let (mut swapchain, mut images) = {
-		let (swapchain, images) = Swapchain::new(
-			gfx.device.clone(),
-			surface.clone(),
-			swapchain_create_info.clone(),
-		)?;
-
-		let image_views = images
-			.into_iter()
-			.map(|image| ImageView::new_default(image).unwrap())
-			.collect::<Vec<_>>();
-
-		(swapchain, image_views)
-	};
+	let mut swapchain = gfx.create_swapchain(swapchain_size)?;
+	swapchain_size = swapchain.extent();
 
 	let mut recreate = false;
 
@@ -280,20 +248,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 			} => {
 				if recreate {
 					let inner_size = window.inner_size();
-					swapchain_size = [inner_size.width, inner_size.height];
+					if inner_size.width == 0 || inner_size.height == 0 {
+						return;
+					}
 
-					swapchain_create_info.image_extent = swapchain_size;
-
-					(swapchain, images) = {
-						let (swapchain, images) = swapchain.recreate(swapchain_create_info.clone()).unwrap();
-
-						let image_views = images
-							.into_iter()
-							.map(|image| ImageView::new_default(image).unwrap())
-							.collect::<Vec<_>>();
-
-						(swapchain, image_views)
-					};
+					let requested_size = [inner_size.width, inner_size.height];
+					match swapchain.recreate(requested_size) {
+						Ok(new_swapchain) => {
+							swapchain = new_swapchain;
+							swapchain_size = swapchain.extent();
+						}
+						Err(e) => {
+							log::error!("failed to recreate swapchain: {e:#}");
+							return;
+						}
+					}
 
 					render_context
 						.update_viewport(&mut shared_context, swapchain_size, scale)
@@ -330,20 +299,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 				profiler.start();
 
 				{
-					let (image_index, _, acquire_future) =
-						match acquire_next_image(swapchain.clone(), None).map_err(Validated::unwrap) {
-							Ok(r) => r,
-							Err(VulkanError::OutOfDate) => {
-								recreate = true;
-								return;
-							}
-							Err(e) => {
-								log::error!("failed to acquire next image: {e}");
-								return;
-							}
-						};
+					let frame = match swapchain.acquire() {
+						Ok(frame) => frame,
+						Err(SwapchainError::OutOfDate) => {
+							recreate = true;
+							return;
+						}
+						Err(e) => {
+							log::error!("failed to acquire next image: {e}");
+							return;
+						}
+					};
 
-					let tgt = images[image_index as usize].clone();
+					let tgt = frame.image_view().clone();
 
 					let mut cmd_buf = gfx
 						.create_gfx_command_buffer(CommandBufferUsage::OneTimeSubmit)
@@ -386,17 +354,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 					let cmd_buf = cmd_buf.build().unwrap();
 
-					acquire_future
-						.then_execute(gfx.queue_gfx.clone(), cmd_buf)
-						.unwrap()
-						.then_swapchain_present(
-							gfx.queue_gfx.clone(),
-							SwapchainPresentInfo::swapchain_image_index(swapchain.clone(), image_index),
-						)
-						.then_signal_fence_and_flush()
-						.unwrap()
-						.wait(None)
-						.unwrap();
+					match frame.present(&cmd_buf) {
+						Ok(PresentStatus::Optimal) => {}
+						Ok(PresentStatus::Suboptimal) | Err(SwapchainError::OutOfDate) => {
+							recreate = true;
+						}
+						Err(e) => {
+							log::error!("failed to present swapchain image: {e}");
+						}
+					}
 				}
 
 				profiler.end();
@@ -411,67 +377,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	})?;
 
 	Ok(())
-}
-
-fn swapchain_create_info(
-	graphics: &WGfx,
-	format: Format,
-	color_space: ColorSpace,
-	surface: Arc<Surface>,
-	extent: [u32; 2],
-) -> SwapchainCreateInfo {
-	let surface_capabilities = graphics
-		.device
-		.physical_device()
-		.surface_capabilities(&surface, SurfaceInfo::default())
-		.unwrap(); // want panic
-
-	let mut composite_alpha = None;
-	for c in [
-		CompositeAlpha::PreMultiplied,
-		CompositeAlpha::PostMultiplied,
-		CompositeAlpha::Opaque,
-	] {
-		if surface_capabilities
-			.supported_composite_alpha
-			.contains_enum(c)
-		{
-			composite_alpha = Some(c);
-			break;
-		}
-		log::warn!(
-			"GPU driver doesn't support {c:?} compositeAlpha! Desktop window will be blended using a fallback method and may look different than in VR."
-		);
-	}
-	let composite_alpha = composite_alpha
-		.expect("GPU driver issue: VkSurfaceCapabilitiesKHR has empty supportedCompositeAlpha.");
-
-	let present_modes = graphics
-		.device
-		.physical_device()
-		.surface_present_modes(&surface, SurfaceInfo::default())
-		.expect("Could not get GPU present modes for VKSurface.");
-
-	let mut present_mode = None;
-	for pm in [PresentMode::Mailbox, PresentMode::Fifo] {
-		if present_modes.contains(&pm) {
-			present_mode = Some(pm);
-			break;
-		}
-		log::warn!(
-			"GPU driver doesn't support {pm:?} presentMode! Desktop window may have a higher latency and/or glitch during grab/resize."
-		);
-	}
-	let present_mode = present_mode.expect("GPU driver issue: VkPresentModeKHR FIFO is not supported even though it's required by Vulkan spec.");
-
-	SwapchainCreateInfo {
-		min_image_count: surface_capabilities.min_image_count.max(2),
-		present_mode,
-		image_format: format,
-		image_extent: extent,
-		image_usage: ImageUsage::COLOR_ATTACHMENT,
-		image_color_space: color_space,
-		composite_alpha,
-		..Default::default()
-	}
 }

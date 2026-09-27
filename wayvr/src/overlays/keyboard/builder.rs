@@ -23,7 +23,7 @@ use wgui::{
     log::LogErr,
     palette::WguiColorPalette,
     parser::{Fetchable, ParseDocumentParams, TemplateParams},
-    renderer_vk::util,
+    renderer::util,
     taffy::{self, prelude::length},
     widget::{
         EventResult, div::WidgetDiv, label::WidgetLabel, rectangle::WidgetRectangle,

@@ -1,13 +1,9 @@
 use std::sync::Arc;
 
 use glam::{Mat4, Vec3};
-use vulkano::{
-	buffer::{BufferUsage, Subbuffer},
-	descriptor_set::DescriptorSet,
-};
 
 use crate::{
-	gfx,
+	gfx::{self, Buffer, BufferUsage, DescriptorSet},
 	renderer_vk::{image::ImagePipeline, rect::RectPipeline, text::text_atlas::TextPipeline},
 };
 
@@ -15,7 +11,7 @@ pub struct ModelBuffer {
 	idx: u32,
 	models: Vec<glam::Mat4>,
 
-	buffer: Subbuffer<[f32]>, //4x4 floats = 1 mat4
+	buffer: Arc<Buffer<f32>>, // 4x4 floats = 1 mat4
 	buffer_capacity_f32: u32,
 
 	rect_descriptor: Option<Arc<DescriptorSet>>,
@@ -52,7 +48,6 @@ impl ModelBuffer {
 	}
 
 	pub fn upload(&mut self, gfx: &Arc<gfx::WGfx>) -> anyhow::Result<()> {
-		// resize buffer if it's too small
 		let required_capacity_f32 = (self.models.len() * (4 * 4)) as u32;
 
 		if self.buffer_capacity_f32 < required_capacity_f32 {
@@ -61,10 +56,11 @@ impl ModelBuffer {
 				BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_DST,
 				required_capacity_f32.into(),
 			)?;
-			//log::info!("resized to {}", required_capacity_f32);
+			self.rect_descriptor = None;
+			self.text_descriptor = None;
+			self.image_descriptor = None;
 		}
 
-		//safe
 		let floats = unsafe {
 			std::slice::from_raw_parts(
 				self.models.as_slice().as_ptr().cast::<f32>(),
@@ -73,24 +69,14 @@ impl ModelBuffer {
 		};
 
 		self.buffer.write()?.copy_from_slice(floats);
-
 		Ok(())
 	}
 
-	// Returns model matrix ID from the model
 	pub fn register(&mut self, model: &glam::Mat4) -> u32 {
-		/*for (idx, iter_model) in self.models.iter().enumerate() {
-			if iter_model == model {
-				return idx as u32;
-			}
-		}*/
-
 		if self.idx == self.models.len() as u32 {
 			self.models.resize((self.models.len() * 2).max(1), Default::default());
-			//log::info!("ModelBuffer: resized to {}", self.models.len());
 		}
 
-		// insert new
 		self.models[self.idx as usize] = *model;
 		let ret = self.idx;
 		self.idx += 1;

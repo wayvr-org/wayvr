@@ -8,9 +8,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use wgui::log::LogErr;
 use wgui::theme::WguiTheme;
-use wgui::{
-    gfx::WGfx, globals::WguiGlobals, renderer_vk::context::SharedContext as WSharedContext,
-};
+use wgui::{gfx::WGfx, globals::WguiGlobals, renderer::context::SharedContext as WSharedContext};
 #[cfg(feature = "pipewire")]
 use wlx_capture::pipewire::ScreenCastManager;
 use wlx_common::config::PwTokenMap;

@@ -5,10 +5,12 @@ use std::sync::{
 
 use glam::{Affine2, Affine3A, Quat, Vec3};
 use slotmap::Key;
-use vulkano::buffer::BufferUsage;
 use wgui::{
     color::WguiColorName,
-    gfx::pipeline::{WGfxPipeline, WPipelineCreateInfo},
+    gfx::{
+        Buffer, BufferUsage, Scissor, Vert2Uv,
+        pipeline::{WGfxPipeline, WPipelineCreateInfo},
+    },
 };
 use wlx_common::{
     overlays::{BackendAttrib, BackendAttribValue},
@@ -17,7 +19,6 @@ use wlx_common::{
 
 use crate::{
     backend::task::{OverlayTask, TaskType},
-    graphics::Vert2Uv,
     state::AppState,
     windowing::{
         OverlayID, OverlaySelector,
@@ -70,6 +71,7 @@ struct PassthruBackend {
     frame_meta: FrameMeta,
     dirty: bool,
     pipeline: Option<Arc<WGfxPipeline<Vert2Uv>>>,
+    quad_verts: Option<Arc<Buffer<Vert2Uv>>>,
     interaction_transform: Affine2,
     scale: f32,
     overlay_id: OverlayID,
@@ -83,12 +85,13 @@ impl PassthruBackend {
         Self {
             frame_meta: FrameMeta {
                 extent: DEFAULT_EXTENT,
-                format: app.gfx.surface_format,
+                format: app.gfx.surface_format(),
                 ..Default::default()
             },
             interaction_transform: ui_transform(DEFAULT_EXTENT),
             dirty: true,
             pipeline: None,
+            quad_verts: None,
             scale,
             overlay_id: OverlayID::null(),
         }
@@ -129,8 +132,30 @@ impl OverlayBackend for PassthruBackend {
         let pipeline = app.gfx.create_pipeline(
             app.gfx_extras.shaders.get("vert_quad").unwrap(), // want panic
             app.gfx_extras.shaders.get("frag_color").unwrap(), // want panic
-            WPipelineCreateInfo::new(app.gfx.surface_format),
+            WPipelineCreateInfo::new(app.gfx.surface_format()),
         )?;
+        let quad_verts = [
+            Vert2Uv {
+                in_pos: [0.0, 0.0],
+                in_uv: [0.0, 0.0],
+            },
+            Vert2Uv {
+                in_pos: [1.0, 0.0],
+                in_uv: [1.0, 0.0],
+            },
+            Vert2Uv {
+                in_pos: [0.0, 1.0],
+                in_uv: [0.0, 1.0],
+            },
+            Vert2Uv {
+                in_pos: [1.0, 1.0],
+                in_uv: [1.0, 1.0],
+            },
+        ];
+        self.quad_verts = Some(
+            app.gfx
+                .new_buffer(BufferUsage::VERTEX_BUFFER, &quad_verts)?,
+        );
         self.pipeline = Some(pipeline);
         Ok(())
     }
@@ -161,7 +186,7 @@ impl OverlayBackend for PassthruBackend {
 
         let buf_color = app.gfx.new_buffer(
             BufferUsage::TRANSFER_DST | BufferUsage::UNIFORM_BUFFER,
-            color.with_alpha(1.0).as_arr().iter(),
+            color.with_alpha(1.0).as_arr().as_slice(),
         )?;
 
         let set0 = pipeline.buffer(0, buf_color)?;
@@ -173,18 +198,18 @@ impl OverlayBackend for PassthruBackend {
         let pass = pipeline.create_pass(
             extentf32,
             [0.0, 0.0],
-            app.gfx_extras.quad_verts.clone(),
+            self.quad_verts.as_ref().unwrap().clone(),
             0..4,
             0..1,
             vec![set0],
-            &Default::default(),
+            Scissor::from_viewport(extentf32, [0.0, 0.0]),
         )?;
 
         rdr.cmd_buf_single().run_ref(&pass)?;
 
         let buf_color = app.gfx.new_buffer(
             BufferUsage::TRANSFER_DST | BufferUsage::UNIFORM_BUFFER,
-            [0.0, 0.0, 0.0, 1.0].iter(),
+            &[0.0, 0.0, 0.0, 1.0],
         )?;
 
         let set0 = pipeline.buffer(0, buf_color)?;
@@ -192,11 +217,11 @@ impl OverlayBackend for PassthruBackend {
         let pass = pipeline.create_pass(
             [extentf32[0] - 8.0, extentf32[1] - 8.0],
             [4.0, 4.0],
-            app.gfx_extras.quad_verts.clone(),
+            self.quad_verts.as_ref().unwrap().clone(),
             0..4,
             0..1,
             vec![set0],
-            &Default::default(),
+            Scissor::from_viewport([extentf32[0] - 8.0, extentf32[1] - 8.0], [4.0, 4.0]),
         )?;
 
         rdr.cmd_buf_single().run_ref(&pass)?;

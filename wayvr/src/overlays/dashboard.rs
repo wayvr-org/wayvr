@@ -16,7 +16,7 @@ use wgui::{
         MouseMotionEvent, MouseWheelEvent,
     },
     gfx::cmd::WGfxClearMode,
-    renderer_vk::context::Context as WguiContext,
+    renderer::context::Context as WguiContext,
     widget::EventResult,
 };
 use wlx_common::{

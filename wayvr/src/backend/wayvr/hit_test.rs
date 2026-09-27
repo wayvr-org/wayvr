@@ -12,9 +12,7 @@ use smithay::{
     },
 };
 use std::{ops::RangeInclusive, rc::Rc, sync::Arc};
-use vulkano::image::view::ImageView;
-
-use crate::graphics::ExtentExt;
+use wgui::gfx::ImageView;
 
 use crate::backend::input::PointerHit;
 
@@ -328,7 +326,7 @@ pub fn rendered_surfaces_dirty(old: &[RenderedSurface], new: &[RenderedSurface])
         a.surface_id != b.surface_id
             || a.pos != b.pos
             || a.size != b.size
-            || *a.image.image() != *b.image.image()
+            || !Arc::ptr_eq(a.image.image(), b.image.image())
     })
 }
 

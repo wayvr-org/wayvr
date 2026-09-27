@@ -1,12 +1,7 @@
 use std::sync::Arc;
 
-use vulkano::{
-	buffer::{BufferContents, BufferUsage, Subbuffer},
-	descriptor_set::DescriptorSet,
-};
-
 use crate::{
-	gfx::WGfx,
+	gfx::{Buffer, BufferUsage, DescriptorSet, WGfx},
 	renderer_vk::{image::ImagePipeline, util::WMat4},
 };
 
@@ -16,15 +11,14 @@ use super::{rect::RectPipeline, text::text_atlas::TextPipeline};
 /// area will be clipped.
 pub struct Viewport {
 	params: Params,
-	params_buffer: Subbuffer<[Params]>,
+	params_buffer: Arc<Buffer<Params>>,
 	text_descriptor: Option<Arc<DescriptorSet>>,
 	rect_descriptor: Option<Arc<DescriptorSet>>,
 	image_descriptor: Option<Arc<DescriptorSet>>,
 }
 
 impl Viewport {
-	/// Creates a new `Viewport` with the given `device` and `cache`.
-	#[allow(clippy::iter_on_single_items)]
+	/// Creates a new `Viewport` with the given graphics context.
 	pub fn new(gfx: &Arc<WGfx>) -> anyhow::Result<Self> {
 		let params = Params {
 			screen_resolution: [0, 0],
@@ -33,7 +27,7 @@ impl Viewport {
 			projection: WMat4::default(),
 		};
 
-		let params_buffer = gfx.new_buffer(BufferUsage::UNIFORM_BUFFER | BufferUsage::TRANSFER_DST, [params].iter())?;
+		let params_buffer = gfx.new_buffer(BufferUsage::UNIFORM_BUFFER | BufferUsage::TRANSFER_DST, &[params])?;
 
 		Ok(Self {
 			params,
@@ -47,27 +41,21 @@ impl Viewport {
 	pub fn get_text_descriptor(&mut self, pipeline: &TextPipeline) -> Arc<DescriptorSet> {
 		self
 			.text_descriptor
-			.get_or_insert_with(|| {
-				pipeline.inner.buffer(2, self.params_buffer.clone()).unwrap() // safe unwrap
-			})
+			.get_or_insert_with(|| pipeline.inner.buffer(2, self.params_buffer.clone()).unwrap())
 			.clone()
 	}
 
 	pub fn get_rect_descriptor(&mut self, pipeline: &RectPipeline) -> Arc<DescriptorSet> {
 		self
 			.rect_descriptor
-			.get_or_insert_with(|| {
-				pipeline.color_rect.buffer(0, self.params_buffer.clone()).unwrap() // safe unwrap
-			})
+			.get_or_insert_with(|| pipeline.color_rect.buffer(0, self.params_buffer.clone()).unwrap())
 			.clone()
 	}
 
 	pub fn get_image_descriptor(&mut self, pipeline: &ImagePipeline) -> Arc<DescriptorSet> {
 		self
 			.image_descriptor
-			.get_or_insert_with(|| {
-				pipeline.inner.buffer(0, self.params_buffer.clone()).unwrap() // safe unwrap
-			})
+			.get_or_insert_with(|| pipeline.inner.buffer(0, self.params_buffer.clone()).unwrap())
 			.clone()
 	}
 
@@ -94,7 +82,7 @@ impl Viewport {
 }
 
 #[repr(C)]
-#[derive(BufferContents, Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Params {
 	pub screen_resolution: [u32; 2],
 	pub pixel_scale: f32,
