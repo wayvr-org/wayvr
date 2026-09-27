@@ -22,6 +22,7 @@ use crate::state::AppState;
 #[derive(Default)]
 pub(super) struct ExtraExts {
     pub mndx_composition_layer_alpha_blend_system_ui: bool,
+    pub ext_eye_gaze_interaction: bool,
 }
 
 pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId, ExtraExts), anyhow::Error> {
@@ -67,6 +68,7 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId, ExtraExts), anyho
     }
     if available_extensions.ext_eye_gaze_interaction {
         enabled_extensions.ext_eye_gaze_interaction = true;
+        extra_exts.ext_eye_gaze_interaction = true;
     } else {
         log::warn!("Missing EXT_eye_gaze_interaction extension.");
     }

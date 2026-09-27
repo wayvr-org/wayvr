@@ -275,7 +275,7 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 .enqueue(TaskType::Overlay(OverlayTask::ToggleDashboard));
         }
 
-        overlays.values_mut().for_each(|o| o.config.tick(&mut app));
+        overlays.tick(&mut app);
 
         playspace.update(&mut chaperone_mgr, &mut overlays, &mut app);
 

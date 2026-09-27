@@ -314,6 +314,12 @@ impl OpenXrInputSource {
         }
         let physical_inputs = &self.physical_inputs;
 
+        app.input_state.eye_gaze = if xr.extra_exts.ext_eye_gaze_interaction {
+            self.handsfree_pointer.locate_tracked_pose(xr)?
+        } else {
+            None
+        };
+
         let loc = xr.view.locate(&xr.stage, xr.predicted_display_time)?;
         let hmd = posef_to_transform(&loc.pose);
         let mut hmd_tracked = true;
@@ -470,6 +476,18 @@ impl OpenXrPointer {
             .create_space(&xr.session, xr::Path::NULL, xr::Posef::IDENTITY)?;
 
         Ok(Self { source, space })
+    }
+
+    fn locate_tracked_pose(&self, xr: &XrState) -> anyhow::Result<Option<Affine3A>> {
+        let location = self.space.locate(&xr.stage, xr.predicted_display_time)?;
+        let required_flags = xr::SpaceLocationFlags::ORIENTATION_VALID
+            | xr::SpaceLocationFlags::ORIENTATION_TRACKED
+            | xr::SpaceLocationFlags::POSITION_VALID;
+
+        Ok(location
+            .location_flags
+            .contains(required_flags)
+            .then(|| posef_to_transform(&location.pose)))
     }
 
     pub(super) fn update_handsfree(

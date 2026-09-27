@@ -1,14 +1,14 @@
 use glam::{Affine3A, EulerRot, Mat3A, Quat, Vec3, Vec3A};
 use idmap_derive::IntegerId;
-use std::{f32::consts::PI, sync::Arc};
+use std::{f32::consts::PI, sync::Arc, time::Instant};
 use wlx_common::windowing::{OverlayWindowState, Positioning};
 
 use crate::{
     state::AppState,
     subsystem::input::InputFocus,
     windowing::{
-        backend::{FrameMeta, OverlayBackend, RenderResources, ShouldRender},
-        snap_upright,
+        backend::{FrameMeta, OverlayBackend, OverlayLifetimeUpdate, RenderResources, ShouldRender},
+        raycast_overlay, snap_upright,
     },
 };
 
@@ -67,6 +67,41 @@ pub enum OverlayCategory {
     Passthru,
 }
 
+#[derive(Debug, Clone)]
+pub struct OverlayLifetime {
+    remaining: f32,
+    duration: f32,
+    fade_duration: f32,
+    base_alpha: f32,
+    pause_on_gaze: bool,
+    last_tick: Instant,
+}
+
+impl OverlayLifetime {
+    pub fn new(timeout: f32, fade_duration: f32, base_alpha: f32, pause_on_gaze: bool) -> Self {
+        let timeout = timeout.max(0.0);
+        Self {
+            remaining: timeout,
+            duration: timeout,
+            fade_duration: fade_duration.max(0.0),
+            base_alpha: base_alpha.clamp(0.0, 1.0),
+            pause_on_gaze,
+            last_tick: Instant::now(),
+        }
+    }
+
+    pub fn extend(&mut self, seconds: f32) {
+        if seconds.is_finite() && seconds > 0.0 {
+            self.remaining += seconds;
+            self.duration += seconds;
+        }
+    }
+
+    pub const fn is_expired(&self) -> bool {
+        self.remaining <= 0.0
+    }
+}
+
 pub struct OverlayWindowConfig {
     pub name: Arc<str>,
     pub backend: Box<dyn OverlayBackend>,
@@ -92,6 +127,8 @@ pub struct OverlayWindowConfig {
     pub resizing: bool,
     /// Used by grab to pause following of HMD or other devices
     pub pause_movement: bool,
+    /// Optional runtime lifetime. When it expires, the manager drops this overlay.
+    pub lifetime: Option<OverlayLifetime>,
 }
 
 impl OverlayWindowConfig {
@@ -113,6 +150,7 @@ impl OverlayWindowConfig {
             editing: false,
             resizing: false,
             pause_movement: false,
+            lifetime: None,
         }
     }
 
@@ -136,9 +174,83 @@ impl OverlayWindowConfig {
         self.active_state = None;
     }
 
-    pub fn tick(&mut self, app: &mut AppState) {
+    /// Returns true when this overlay's runtime lifetime has expired.
+    pub fn tick(&mut self, app: &mut AppState) -> bool {
         self.auto_movement(app);
         self.angle_fade(app);
+        self.tick_lifetime(app)
+    }
+
+    pub fn extend_lifetime(&mut self, seconds: f32) {
+        if let Some(lifetime) = self.lifetime.as_mut() {
+            lifetime.extend(seconds);
+        }
+    }
+
+    fn tick_lifetime(&mut self, app: &mut AppState) -> bool {
+        let Some(mut lifetime) = self.lifetime.take() else {
+            return false;
+        };
+
+        let gaze_paused = lifetime.pause_on_gaze
+            && app
+                .input_state
+                .eye_gaze
+                .as_ref()
+                .is_some_and(|gaze| self.ray_hits_overlay(gaze));
+
+        let now = Instant::now();
+        let elapsed = now.duration_since(lifetime.last_tick).as_secs_f32();
+        lifetime.last_tick = now;
+
+        if !gaze_paused {
+            lifetime.remaining = (lifetime.remaining - elapsed).max(0.0);
+        }
+
+        let alpha = if lifetime.fade_duration > 0.0
+            && lifetime.remaining < lifetime.fade_duration
+        {
+            let fade = (lifetime.remaining / lifetime.fade_duration).clamp(0.0, 1.0);
+            lifetime.base_alpha * fade * fade
+        } else {
+            lifetime.base_alpha
+        };
+
+        if let Some(state) = self.active_state.as_mut()
+            && (state.alpha - alpha).abs() > f32::EPSILON
+        {
+            state.alpha = alpha;
+            self.dirty = true;
+        }
+
+        self.backend.on_lifetime_update(OverlayLifetimeUpdate {
+            remaining: lifetime.remaining,
+            duration: lifetime.duration,
+            elapsed,
+            paused: gaze_paused,
+        });
+
+        let expired = lifetime.remaining <= 0.0;
+        self.lifetime = Some(lifetime);
+        expired
+    }
+
+    fn ray_hits_overlay(&mut self, ray: &Affine3A) -> bool {
+        let Some(state) = self.active_state.as_ref() else {
+            return false;
+        };
+        let transform = state.transform;
+        let curvature = state.curvature;
+
+        let Some((_dist, local_pos)) = raycast_overlay(ray, &transform, curvature) else {
+            return false;
+        };
+        let Some(interaction_transform) = self.backend.get_interaction_transform() else {
+            return false;
+        };
+
+        let uv = interaction_transform.transform_point2(local_pos);
+        (0.0..=1.0).contains(&uv.x) && (0.0..=1.0).contains(&uv.y)
     }
 
     fn auto_movement(&mut self, app: &mut AppState) {

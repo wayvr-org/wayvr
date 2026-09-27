@@ -6,7 +6,8 @@ use crate::{
     state::AppState,
     subsystem::hid::WheelDelta,
     windowing::backend::{
-        FrameMeta, OverlayBackend, OverlayEventData, RenderResources, ShouldRender, ui_transform,
+        FrameMeta, OverlayBackend, OverlayEventData, OverlayLifetimeUpdate, RenderResources,
+        ShouldRender, ui_transform,
     },
 };
 use anyhow::Context;
@@ -51,6 +52,7 @@ const DEFAULT_MAX_SIZE: f32 = 2048.0;
 
 pub type OnNotifyFunc<S> =
     Box<dyn Fn(&mut GuiPanel<S>, &mut AppState, OverlayEventData) -> anyhow::Result<()>>;
+pub type OnLifetimeUpdateFunc<S> = Box<dyn FnMut(&mut GuiPanel<S>, OverlayLifetimeUpdate)>;
 
 pub struct GuiPanel<S> {
     pub layout: Layout,
@@ -60,6 +62,7 @@ pub struct GuiPanel<S> {
     pub max_size: Vec2,
     pub gui_scale: f32,
     pub on_notify: Option<OnNotifyFunc<S>>,
+    pub on_lifetime_update: Option<OnLifetimeUpdateFunc<S>>,
     pub initialized: bool,
     pub doc_extra: Option<ParseDocumentExtra>,
     pub extra_attribs: IdMap<BackendAttrib, BackendAttribValue>,
@@ -176,6 +179,7 @@ impl<S: 'static> GuiPanel<S> {
             timers: vec![],
             interaction_transform: None,
             on_notify: None,
+            on_lifetime_update: None,
             gui_scale: params.gui_scale,
             initialized: false,
             has_focus: [false, false],
@@ -280,6 +284,14 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
         self.layout.needs_redraw = true;
         self.timestep.reset();
         Ok(())
+    }
+
+    fn on_lifetime_update(&mut self, update: OverlayLifetimeUpdate) {
+        let Some(mut callback) = self.on_lifetime_update.take() else {
+            return;
+        };
+        callback(self, update);
+        self.on_lifetime_update = Some(callback);
     }
 
     fn should_render(&mut self, app: &mut AppState) -> anyhow::Result<ShouldRender> {

@@ -16,7 +16,7 @@ use wlx_common::{
 
 use crate::{
     FRAME_COUNTER,
-    backend::task::{CreateOverlayTask, GlobalChange, OverlayTask, SpawnPos, ToggleMode},
+    backend::task::{CreateOverlayTask, GlobalChange, OverlayTask, SpawnPos, TaskType, ToggleMode},
     config::save_state,
     overlays::{
         anchor::{create_alltab_help, create_anchor, create_grab_help},
@@ -421,6 +421,22 @@ where
                     if let (Some(id), Some(name)) = (id, name) {
                         self.remove_saved_state(id, &name);
                     }
+                    self.dropped_overlays.push_back(o);
+                }
+            }
+            OverlayTask::DropExpired(id) => {
+                let should_drop = self
+                    .overlays
+                    .get(id)
+                    .and_then(|overlay| overlay.config.lifetime.as_ref())
+                    .is_some_and(|lifetime| lifetime.is_expired());
+
+                if should_drop
+                    && let Some(o) = self.remove_by_selector(&OverlaySelector::Id(id), app)
+                {
+                    log::debug!("Dropping expired overlay {}", o.config.name);
+                    let name = o.config.name.clone();
+                    self.remove_saved_state(id, &name);
                     self.dropped_overlays.push_back(o);
                 }
             }
@@ -896,6 +912,20 @@ impl<T> OverlayWindowManager<T> {
 
     pub fn values_mut(&mut self) -> impl Iterator<Item = &'_ mut OverlayWindowData<T>> {
         self.overlays.values_mut()
+    }
+
+    pub fn tick(&mut self, app: &mut AppState) {
+        let mut expired = Vec::new();
+        for (id, overlay) in &mut self.overlays {
+            if overlay.config.tick(app) {
+                expired.push(id);
+            }
+        }
+
+        for id in expired {
+            app.tasks
+                .enqueue(TaskType::Overlay(OverlayTask::DropExpired(id)));
+        }
     }
 
     pub fn lookup(&self, name: &str) -> Option<OverlayID> {

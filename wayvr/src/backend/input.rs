@@ -1,9 +1,8 @@
-use std::f32::consts::PI;
 use std::process::{Child, Command};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use glam::{Affine3A, Quat, Vec2, Vec3A, Vec3Swizzles};
+use glam::{Affine3A, Quat, Vec2, Vec3A};
 
 use idmap_derive::IntegerId;
 use smallvec::{SmallVec, smallvec};
@@ -21,7 +20,7 @@ use crate::subsystem::input::InputFocus;
 use crate::windowing::backend::OverlayEventData;
 use crate::windowing::manager::OverlayWindowManager;
 use crate::windowing::window::{self, OverlayCategory, OverlayWindowData, realign, scalar_scale};
-use crate::windowing::{OverlayID, OverlaySelector};
+use crate::windowing::{OverlayID, OverlaySelector, raycast_overlay};
 
 use super::task::TaskType;
 
@@ -69,6 +68,7 @@ pub enum FocusPickState {
 pub struct InputState {
     pub hmd: Affine3A,
     pub ipd: f32,
+    pub eye_gaze: Option<Affine3A>,
     pub pointers: [Pointer; 2],
     pub devices: Vec<TrackedDevice>,
     pub handsfree_state: PointerState,
@@ -84,6 +84,7 @@ impl InputState {
         Self {
             hmd: Affine3A::IDENTITY,
             ipd: 0.0,
+            eye_gaze: None,
             pointers: [Pointer::new(0), Pointer::new(1)],
             devices: Vec::new(),
             processes: Vec::new(),
@@ -1101,17 +1102,7 @@ fn ray_test(
     overlay_pose: &Affine3A,
     curvature: Option<&f32>,
 ) -> Option<RayHit> {
-    let (dist, local_pos) = curvature.map_or_else(
-        || {
-            Some(raycast_plane(
-                ray_origin,
-                Vec3A::NEG_Z,
-                overlay_pose,
-                Vec3A::NEG_Z,
-            ))
-        },
-        |curvature| raycast_cylinder(ray_origin, Vec3A::NEG_Z, overlay_pose, *curvature),
-    )?;
+    let (dist, local_pos) = raycast_overlay(ray_origin, overlay_pose, curvature.copied())?;
 
     if dist < 0.0 {
         // hit is behind us
@@ -1124,92 +1115,4 @@ fn ray_test(
         local_pos,
         dist,
     })
-}
-
-fn raycast_plane(
-    source: &Affine3A,
-    source_fwd: Vec3A,
-    plane: &Affine3A,
-    plane_norm: Vec3A,
-) -> (f32, Vec2) {
-    let plane_normal = plane.transform_vector3a(plane_norm);
-    let ray_dir = source.transform_vector3a(source_fwd);
-
-    let d = plane.translation.dot(-plane_normal);
-    let mut dist = -(d + source.translation.dot(plane_normal)) / ray_dir.dot(plane_normal);
-
-    let hit_local = plane
-        .inverse()
-        .transform_point3a(source.translation + ray_dir * dist)
-        .xy();
-
-    // hitting the backside of the plane, make the hit invalid
-    if ray_dir.dot(plane_normal) < 0.0 && dist.is_sign_positive() {
-        dist = -dist;
-    }
-
-    (dist, hit_local)
-}
-
-fn raycast_cylinder(
-    source: &Affine3A,
-    source_fwd: Vec3A,
-    plane: &Affine3A,
-    curvature: f32,
-) -> Option<(f32, Vec2)> {
-    // this is solved locally; (0,0) is the center of the cylinder, and the cylinder is aligned with the Y axis
-    let size = plane.x_axis.length();
-    let to_local = Affine3A {
-        matrix3: plane.matrix3.mul_scalar(1.0 / size),
-        translation: plane.translation,
-    }
-    .inverse();
-
-    let radius = size / (2.0 * PI * curvature);
-
-    let ray_dir = to_local.transform_vector3a(source.transform_vector3a(source_fwd));
-    let ray_origin = to_local.transform_point3a(source.translation) + Vec3A::NEG_Z * radius;
-
-    let v_dir = ray_dir.xz();
-    let v_pos = ray_origin.xz();
-
-    let l_dir = v_dir.dot(v_dir);
-    let l_pos = v_dir.dot(v_pos);
-    let c = radius.mul_add(-radius, v_pos.dot(v_pos));
-
-    let d = l_pos.mul_add(l_pos, -(l_dir * c));
-    if d < f32::EPSILON {
-        return None;
-    }
-
-    let sqrt_d = d.sqrt();
-
-    let t1 = (-l_pos - sqrt_d) / l_dir;
-    let t2 = (-l_pos + sqrt_d) / l_dir;
-
-    let mut t = t1.max(t2);
-
-    if t < f32::EPSILON {
-        return None;
-    }
-
-    let mut hit_local = ray_origin + ray_dir * t;
-    if hit_local.z > 0.0 {
-        // hitting the opposite half of the cylinder
-        return None;
-    }
-
-    let normal = Vec3A::new(hit_local.x, 0.0, hit_local.z).normalize();
-    // If hitting from the outside, flip t
-    if ray_dir.dot(normal) < 0.0 && t.is_sign_positive() {
-        t = -t;
-    }
-
-    let max_angle = 2.0 * (size / (2.0 * radius));
-    let x_angle = (hit_local.x / radius).asin();
-
-    hit_local.x = x_angle / max_angle;
-    hit_local.y /= size;
-
-    Some((t, hit_local.xy()))
 }

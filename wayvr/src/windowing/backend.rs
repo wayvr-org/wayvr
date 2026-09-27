@@ -53,6 +53,24 @@ pub enum ShouldRender {
     Unable,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct OverlayLifetimeUpdate {
+    pub remaining: f32,
+    pub duration: f32,
+    pub elapsed: f32,
+    pub paused: bool,
+}
+
+impl OverlayLifetimeUpdate {
+    pub fn progress(self) -> f32 {
+        if self.duration <= f32::EPSILON {
+            0.0
+        } else {
+            (self.remaining / self.duration).clamp(0.0, 1.0)
+        }
+    }
+}
+
 pub struct RenderTarget {
     pub views: SmallVec<[Arc<ImageView>; 2]>,
 }
@@ -145,6 +163,8 @@ pub trait OverlayBackend: Any {
     fn init(&mut self, app: &mut AppState) -> anyhow::Result<()>;
     fn pause(&mut self, app: &mut AppState) -> anyhow::Result<()>;
     fn resume(&mut self, app: &mut AppState) -> anyhow::Result<()>;
+
+    fn on_lifetime_update(&mut self, _update: OverlayLifetimeUpdate) {}
 
     /// Called when the presentation layer is ready to present a new frame
     fn should_render(&mut self, app: &mut AppState) -> anyhow::Result<ShouldRender>;

@@ -12,7 +12,7 @@ use crate::{
     backend::input,
     state::AppState,
     windowing::{
-        OverlaySelector,
+        OverlayID, OverlaySelector,
         window::{OverlayCategory, OverlayWindowConfig},
     },
 };
@@ -135,6 +135,7 @@ pub enum OverlayTask {
     Spawn(OverlaySelector, SpawnPos, Box<CreateOverlayTask>),
     ModifyPanel(ModifyPanelTask),
     Drop(OverlaySelector),
+    DropExpired(OverlayID),
 }
 
 pub type GlobalTask = dyn FnOnce(&mut AppState) + Send;

@@ -349,7 +349,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
             .submit(&mut app);
         }
 
-        overlays.values_mut().for_each(|o| o.config.tick(&mut app));
+        overlays.tick(&mut app);
 
         current_lines.clear();
 

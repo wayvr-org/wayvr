@@ -1,6 +1,7 @@
 <layout version="2">
   <elements>
-    <div interactable="0">
+    <!-- Provides a larger hitbox for eye gaze -->
+    <div padding="60">
       <rectangle
         max_width="500"
         padding="16"

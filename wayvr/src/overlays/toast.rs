@@ -1,16 +1,16 @@
 use std::{
-    ops::Add,
     sync::{Arc, LazyLock},
     time::Instant,
 };
 
 use anyhow::Context;
-use glam::{Affine3A, Quat, Vec2, Vec3, vec3};
+use glam::{Affine3A, Mat4, Quat, Vec2, Vec3, vec3};
 use wgui::{
     animation::{Animation, AnimationDuration, AnimationEasing, AnimationStartDelay},
+    color::WguiColorName,
     i18n::{I18n, Translation},
     parser::Fetchable,
-    widget::label::WidgetLabel,
+    widget::{label::WidgetLabel, rectangle::WidgetRectangle},
 };
 use wlx_common::{
     common::LeftRight,
@@ -22,7 +22,10 @@ use crate::{
     backend::task::{OverlayTask, SpawnPos, TaskType},
     gui::panel::{GuiPanel, NewGuiPanelParams, OnCustomIdFunc},
     state::AppState,
-    windowing::{OverlaySelector, PIXELS_TO_METERS, Z_ORDER_TOAST, window::OverlayWindowConfig},
+    windowing::{
+        OverlaySelector, PIXELS_TO_METERS, Z_ORDER_TOAST,
+        window::{OverlayLifetime, OverlayWindowConfig},
+    },
 };
 
 static TOAST_NAME: LazyLock<Arc<str>> = LazyLock::new(|| "toast".into());
@@ -95,6 +98,13 @@ impl Toast {
         self.submit_at(app, Instant::now());
     }
 
+    pub fn extend_display_time(app: &mut AppState, seconds: f32) {
+        app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+            OverlaySelector::Name(TOAST_NAME.clone()),
+            Box::new(move |_app, overlay| overlay.extend_lifetime(seconds)),
+        )));
+    }
+
     pub fn submit_at(self, app: &mut AppState, instant: Instant) {
         let globals = app.wgui_globals.clone();
         let baked_toast = self.build(&mut globals.i18n());
@@ -136,8 +146,6 @@ impl BakedToast {
     pub fn submit_at(self, app: &mut AppState, instant: Instant) {
         let selector = OverlaySelector::Name(TOAST_NAME.clone());
 
-        let destroy_at = instant.add(std::time::Duration::from_secs_f32(self.params.timeout));
-
         if self.params.sound && app.session.config.notifications_sound_enabled {
             app.audio.play_sample("toast");
         }
@@ -156,18 +164,9 @@ impl BakedToast {
         // frame, only the first one gets created
         app.tasks.enqueue_at(
             TaskType::Overlay(OverlayTask::Spawn(
-                selector.clone(),
+                selector,
                 SpawnPos::Fixed,
-                Box::new(move |app| {
-                    let maybe_toast = new_toast(self, app);
-                    app.tasks.enqueue_at(
-                        // at timeout, drop the overlay by ID instead
-                        // in order to avoid dropping any newer toasts
-                        TaskType::Overlay(OverlayTask::Drop(selector)),
-                        destroy_at,
-                    );
-                    maybe_toast
-                }),
+                Box::new(move |app| new_toast(self, app)),
             )),
             instant,
         );
@@ -201,6 +200,15 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
             };
             (vec3(0., 0., 0.), Quat::IDENTITY, relative_to)
         }
+    };
+
+    let fade_duration = if toast.params.animate
+        && toast.params.timeout > 0.5
+        && toast.params.timeout < 150.0
+    {
+        0.5
+    } else {
+        0.0
     };
 
     let title = Translation::from_raw_text(&toast.title_raw);
@@ -241,56 +249,64 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
     .inspect_err(|e| log::error!("Could not create toast: {e:?}"))
     .ok()?;
 
+    let id_rect = panel.parser_state.get_widget_id("rect").ok()?;
+    let id_rect_separator = panel.parser_state.get_widget_id("rect_separator").ok()?;
+    let base_border_color = panel
+        .layout
+        .state
+        .widgets
+        .get_as::<WidgetRectangle>(id_rect)?
+        .get_border_color();
+    let paused_border_color = WguiColorName::Tertiary.to_wgui_color();
+    let mut last_progress = 1.0;
+    let mut paused_border_mix = 0.0f32;
+
+    panel.on_lifetime_update = Some(Box::new(move |panel, update| {
+        let progress = update.progress();
+        if (progress - last_progress).abs() > f32::EPSILON {
+            if let Some(widget) = panel.layout.state.widgets.get(id_rect_separator).cloned() {
+                widget.state().data.transform =
+                    Mat4::from_scale(Vec3::new(progress, 1.0, 1.0));
+                panel.layout.alterables.mark_redraw();
+            }
+            last_progress = progress;
+        }
+
+        let target_mix = if update.paused { 1.0 } else { 0.0 };
+        let fade_duration = (0.25 * panel.layout.state.theme.animation_mult).max(0.001);
+        let step = update.elapsed / fade_duration;
+        let new_mix = if target_mix > paused_border_mix {
+            (paused_border_mix + step).min(target_mix)
+        } else {
+            (paused_border_mix - step).max(target_mix)
+        };
+
+        if (new_mix - paused_border_mix).abs() > f32::EPSILON {
+            let border_color = if new_mix <= 0.0 {
+                base_border_color
+            } else if new_mix >= 1.0 {
+                paused_border_color
+            } else {
+                let globals = panel.layout.state.globals.get();
+                base_border_color.lerp(&globals.palette, &paused_border_color, new_mix)
+            };
+
+            if let Some(widget) = panel.layout.state.widgets.get(id_rect).cloned()
+                && let Some(mut rect) = widget.get_as::<WidgetRectangle>()
+            {
+                let mut common = panel.layout.common();
+                rect.set_border_color(&mut common, border_color);
+            }
+            paused_border_mix = new_mix;
+        }
+    }));
+
     // animations
     if toast.params.animate {
         let id_div_title = panel.parser_state.get_widget_id("div_title").ok()?;
         let id_label_body = panel.parser_state.get_widget_id("label_body").ok()?;
         let id_label_title = panel.parser_state.get_widget_id("label_title").ok()?;
-        let id_rect = panel.parser_state.get_widget_id("rect").ok()?;
-        let id_rect_separator = panel.parser_state.get_widget_id("rect_separator").ok()?;
         let id_sprite_bell = panel.parser_state.get_widget_id("sprite_bell").ok()?;
-
-        // schedule timeouts
-        let time_window = 0.5;
-        if toast.params.timeout > time_window && toast.params.timeout < 150.0 {
-            let dur = AnimationDuration::SecondsFixed(time_window);
-            let easing = AnimationEasing::OutQuad;
-
-            let mut add = |a: Animation| {
-                a.reversed()
-                    .delayed(AnimationStartDelay::SecondsFixed(
-                        toast.params.timeout - time_window,
-                    ))
-                    .with_id(1)
-                    .submit_l(&mut panel.layout);
-            };
-
-            add(Animation::effect_rectangle_fade_in(id_rect, dur, easing));
-            add(Animation::effect_scale(
-                id_rect_separator,
-                dur,
-                easing,
-                Vec2::new(0.0, 1.0),
-                Vec2::new(1.0, 1.0),
-            ));
-            add(Animation::effect_label_fade_in(id_label_title, dur, easing));
-            add(Animation::effect_label_fade_in(id_label_body, dur, easing));
-            add(Animation::effect_sprite_fade_in(
-                id_sprite_bell,
-                dur,
-                easing,
-            ));
-        }
-
-        // separator scale
-        Animation::effect_scale(
-            id_rect_separator,
-            AnimationDuration::Seconds(1.0),
-            AnimationEasing::OutBack,
-            Vec2::new(0.0, 1.0),
-            Vec2::new(1.0, 1.0),
-        )
-        .submit_l(&mut panel.layout);
 
         // rectangle opacity
         Animation::effect_rectangle_fade_in(
@@ -351,6 +367,7 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
         name: TOAST_NAME.clone(),
         default_state: OverlayWindowState {
             positioning,
+            alpha: toast.params.opacity,
             transform: Affine3A::from_scale_rotation_translation(
                 Vec3::ONE * panel.layout.content_size.x * PIXELS_TO_METERS,
                 spawn_rotation,
@@ -358,6 +375,12 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
             ),
             ..OverlayWindowState::default()
         },
+        lifetime: Some(OverlayLifetime::new(
+            toast.params.timeout,
+            fade_duration,
+            toast.params.opacity,
+            true,
+        )),
         global: true,
         z_order: Z_ORDER_TOAST,
         show_on_spawn: true,
