@@ -76,6 +76,22 @@ pub fn options_diagnostics_row(
 	Ok(())
 }
 
+pub fn options_diagnostics_drm_card(
+	mp: &mut MacroParams,
+	parent: WidgetID,
+	name: &str,
+	info: &str,
+) -> anyhow::Result<()> {
+	let mut params = TemplateParams::new();
+	params.insert("name", name);
+	params.insert("info", info);
+
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "DiagnosticsDrmCard", mp.layout, parent, params)?;
+
+	Ok(())
+}
+
 pub fn options_checkbox(mp: &mut MacroParams, parent: WidgetID, setting: SettingType) -> anyhow::Result<()> {
 	let id = mp.idx.to_string();
 	mp.idx += 1;

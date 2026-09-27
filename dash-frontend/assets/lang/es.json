@@ -251,7 +251,6 @@
 		"ROTATIONS": "Rotaciones del HMD",
 		"SESSION_TIME": "Tiempo de sesión",
 		"LENS_SEPARATION_MM": "Separación de lentes (mm)",
-		"DIAGNOSTICS": "Diagnósticos",
 		"MIDDLE_GRABS_SINGLE": "El modificador de clic central agarra objetos individuales",
 		"MIDDLE_GRABS_SINGLE_HELP": "Al agarrar con el modificador de clic central (láser púrpura),\nse agarrarán overlays individuales y no el set completo",
 		"DIAGNOSTICS_REASON": {
@@ -259,6 +258,11 @@
 			"CAGE": "Recomendado en caso de incompatibilidad con algunas aplicaciones X11 (Modo de compatibilidad)",
 			"XWAYLAND_SATELLITE": "Recomendado si quieres ejecutar aplicaciones X11 (Xwayland) en modo nativo",
 			"XDG_OPEN": "Necesario para abrir URLs o juegos de Steam"
+		},
+		"DIAGNOSTICS": {
+			"CPU_ACCESSIBLE_VRAM": "VRAM accesible por CPU: {NUM} MiB",
+			"TITLE": "Diagnósticos",
+			"ENABLE_REBAR": "Activa [resizable bar] en la configuración de la BIOS para un rendimiento óptimo de VR"
 		}
 	},
 	"APPLICATION_LAUNCHER": "Lanzador de aplicaciones",

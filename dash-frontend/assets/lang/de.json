@@ -251,14 +251,18 @@
 		"ROTATIONS": "HMD-Rotationen",
 		"SESSION_TIME": "Sitzungszeit",
 		"LENS_SEPARATION_MM": "Linsenabstand (mm)",
-		"DIAGNOSTICS": "Diagnose",
 		"MIDDLE_GRABS_SINGLE": "Mittelklick-Modifier greift einzeln",
 		"MIDDLE_GRABS_SINGLE_HELP": "Greifen mit dem Mittelklick-Modifier (lila Laser) \ngreift einzelne Overlays statt des gesamten Sets",
 		"DIAGNOSTICS_REASON": {
-			"PACTL": "Erforderlich für Lautsprecher-/Mikrofonsteuerung und das Wechseln der Audiokarte",
+			"PACTL": "Erforderlich für Lautsprecher-/Mikrofonsteuerung und das Wechseln der Soundkarte",
 			"CAGE": "Empfohlen bei Inkompatibilitäten mit einigen X11-Anwendungen (Kompatibilitätsmodus)",
 			"XWAYLAND_SATELLITE": "Empfohlen, wenn X11 (Xwayland) Anwendungen im nativen Modus ausgeführt werden sollen",
 			"XDG_OPEN": "Erforderlich zum Öffnen von URLs oder Steam-Spielen"
+		},
+		"DIAGNOSTICS": {
+			"CPU_ACCESSIBLE_VRAM": "CPU-zugänglicher VRAM: {NUM} MiB",
+			"TITLE": "Diagnose",
+			"ENABLE_REBAR": "Aktiviere resizable bar in den BIOS-Einstellungen für optimale VR-Performance"
 		}
 	},
 	"APPLICATION_LAUNCHER": "Programmstarter",

@@ -41,6 +41,17 @@
     </div>
   </template>
 
+  <!-- name, info -->
+  <template name="DiagnosticsDrmCard">
+    <GroupBox>
+      <div gap="8">
+        <sprite width="24" height="24" src_builtin="@/dashboard/gpu.svg"/>
+        <label text="${name}"/>
+      </div>
+      <label text="${info}"/>
+    </GroupBox>
+  </template>
+
   <template name="StatRow">
     <div flex_direction="row" justify_content="space_between" align_items="center" gap="12" width="100%">
       <label weight="bold" translation="${translation}" />
@@ -87,7 +98,7 @@
         <Tab macro="tab_style" name="misc" translation="APP_SETTINGS.MISC" sprite_src_builtin="@/dashboard/blocks.svg" />
         <Tab macro="tab_style" name="autostart_apps" translation="APP_SETTINGS.AUTOSTART_APPS" sprite_src_builtin="@/dashboard/apps.svg" />
         <Tab macro="tab_style" name="statistics" translation="APP_SETTINGS.STATISTICS" sprite_src_builtin="@/dashboard/barchart.svg" />
-        <Tab macro="tab_style" name="diagnostics" translation="APP_SETTINGS.DIAGNOSTICS" sprite_src_builtin="@/dashboard/diagnostics.svg" />
+        <Tab macro="tab_style" name="diagnostics" translation="APP_SETTINGS.DIAGNOSTICS.TITLE" sprite_src_builtin="@/dashboard/diagnostics.svg" />
         <Tab macro="tab_style" name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="@/dashboard/cpu.svg" />
       </Tabs>
       <div flex_wrap="wrap" justify_content="stretch" gap="4" id="settings_root" width="100%">

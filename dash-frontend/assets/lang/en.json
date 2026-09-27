@@ -139,7 +139,11 @@
 		"HANDSFREE_POINTER_HELP": "Input to use when motion\ncontrollers are unavailable.\nLeft pinch is grab, right is click.",
 		"HANDSFREE_ALT_TAB": "App switcher aim",
 		"HANDSFREE_ALT_TAB_HELP": "Hold Super+X, aim at the desired window, then release to switch focus.",
-		"DIAGNOSTICS": "Diagnostics",
+		"DIAGNOSTICS": {
+			"CPU_ACCESSIBLE_VRAM": "CPU-accessible VRAM: {NUM} MiB",
+			"TITLE": "Diagnostics",
+			"ENABLE_REBAR": "Enable Resizable BAR in the BIOS settings for optimal VR performance"
+		},
 		"DIAGNOSTICS_REASON": {
 			"PACTL": "Required for speaker/microphone control and audio card switching",
 			"CAGE": "Recommended in case if there's an incompatibility with some X11 applications (Compatibility mode)",

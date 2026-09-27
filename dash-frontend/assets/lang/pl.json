@@ -251,14 +251,18 @@
 		"ROTATIONS": "Obroty HMD",
 		"SESSION_TIME": "Czas sesji",
 		"LENS_SEPARATION_MM": "Rozstaw soczewek (mm)",
-		"DIAGNOSTICS": "Diagnostyka",
 		"MIDDLE_GRABS_SINGLE": "Modyfikator środkowego przycisku chwyta pojedyncze obiekty",
 		"MIDDLE_GRABS_SINGLE_HELP": "Chwytanie z modyfikatorem środkowego przycisku myszy (fioletowy laser)\npochwyci pojedyncze nakładki, a nie cały zestaw",
 		"DIAGNOSTICS_REASON": {
 			"PACTL": "Wymagane do sterowania głośnikami/mikrofonem i przełączania kart dźwiękowych",
 			"CAGE": "Zalecane w przypadku niekompatybilności z niektórymi aplikacjami X11 (tryb kompatybilności)",
 			"XWAYLAND_SATELLITE": "Zalecane, jeśli chcesz uruchamiać aplikacje X11 (Xwayland) w trybie natywnym",
-			"XDG_OPEN": "Wymagane do otwierania linków lub gier Steam"
+			"XDG_OPEN": "Wymagane do otwierania linków URL lub gier Steam"
+		},
+		"DIAGNOSTICS": {
+			"CPU_ACCESSIBLE_VRAM": "VRAM dostępny dla CPU: {NUM} MiB",
+			"TITLE": "Diagnostyka",
+			"ENABLE_REBAR": "Włącz resizable BAR w ustawieniach BIOS, aby uzyskać optymalną wydajność VR"
 		}
 	},
 	"APPLICATION_LAUNCHER": "Launcher aplikacji",

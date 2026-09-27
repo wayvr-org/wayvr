@@ -122,7 +122,9 @@ controllers are unavailable.
 Left pinch is grab, right is click.",Tooltip for the handsfree mode dropdown.
 APP_SETTINGS.HANDSFREE_ALT_TAB,App switcher aim,Dropdown/setting in Settings > Features tab. Controls how the alt-tab app switcher is aimed.
 APP_SETTINGS.HANDSFREE_ALT_TAB_HELP,"Hold Super+X, aim at the desired window, then release to switch focus.",Tooltip explaining the handsfree alt-tab behavior.
-APP_SETTINGS.DIAGNOSTICS,"Diagnostics","Tab name for the hardware/software check panel"
+APP_SETTINGS.DIAGNOSTICS.CPU_ACCESSIBLE_VRAM,"CPU-accessible VRAM: {NUM} MiB","Amount of VRAM accessible by the CPU. For example: 256/4096"
+APP_SETTINGS.DIAGNOSTICS.TITLE,"Diagnostics","Tab name for the hardware/software check panel"
+APP_SETTINGS.DIAGNOSTICS.ENABLE_REBAR,"Enable Resizable BAR in the BIOS settings for optimal VR performance","Info shown if resizable bar is disabled in the BIOS. Leave [resizable bar] translation as-is."
 APP_SETTINGS.DIAGNOSTICS_REASON.PACTL,"Required for speaker/microphone control and audio card switching","Reason for why the given software is recommended"
 APP_SETTINGS.DIAGNOSTICS_REASON.CAGE,"Recommended in case if there's an incompatibility with some X11 applications (Compatibility mode)","Reason for why the given software is required or recommended"
 APP_SETTINGS.DIAGNOSTICS_REASON.XWAYLAND_SATELLITE,"Recommended in case if you want to run X11 (Xwayland) applications in native mode","Reason for why the given software is required or recommended"
