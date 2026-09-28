@@ -9,14 +9,14 @@ use smallvec::{SmallVec, smallvec};
 use vulkano::{
     VulkanError, VulkanObject,
     device::Device,
-    format::{Format, FormatFeatures},
+    format::Format,
     image::{
         Image, ImageAspect, ImageCreateInfo, ImageMemory, ImageTiling, ImageType, ImageUsage,
         SubresourceLayout, sys::RawImage, view::ImageView,
     },
     memory::{
         DedicatedAllocation, DeviceMemory, ExternalMemoryHandleType, ExternalMemoryHandleTypes,
-        MemoryAllocateInfo, MemoryImportInfo, ResourceMemory,
+        MemoryAllocateInfo, MemoryImportInfo, MemoryPropertyFlags, ResourceMemory,
         allocator::{
             AllocationCreateInfo, MemoryAllocatePreference, MemoryAllocator, MemoryTypeFilter,
         },
@@ -66,41 +66,16 @@ impl WGfxDmabuf for WGfx {
         };
 
         let requirements = image.memory_requirements()[0];
-
-        let Some(fd) = frame.planes[0].fd else {
-            anyhow::bail!("DMA-buf plane has no FD");
-        };
-
-        // requirements come from both vkGetImageMemoryRequirements and vkGetMemoryFdPropertiesKHR
-        let mut fd_properties = ash::vk::MemoryFdPropertiesKHR::default();
-        unsafe {
-            (self
-                .device
-                .fns()
-                .khr_external_memory_fd
-                .get_memory_fd_properties_khr)(
-                self.device.handle(),
-                ash::vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT,
-                fd,
-                &mut fd_properties,
-            )
-            .result()
-            .map_err(VulkanError::from)?;
-        }
-
-        let memory_type_bits = requirements.memory_type_bits & fd_properties.memory_type_bits;
-        if memory_type_bits == 0 {
-            anyhow::bail!(
-                "no DMA-buf memory type compatible with vkImage (image bits: {:#x}, fd bits: {:#x})",
-                requirements.memory_type_bits,
-                fd_properties.memory_type_bits
-            );
-        }
-
         let memory_type_index = self
             .memory_allocator
-            .find_memory_type_index(memory_type_bits, MemoryTypeFilter::PREFER_DEVICE)
-            .context("failed to get a compatible DMA-buf memory type index")?;
+            .find_memory_type_index(
+                requirements.memory_type_bits,
+                MemoryTypeFilter {
+                    required_flags: MemoryPropertyFlags::DEVICE_LOCAL,
+                    ..Default::default()
+                },
+            )
+            .context("failed to get memory type index")?;
 
         debug_assert!(self.device.enabled_extensions().khr_external_memory_fd);
         debug_assert!(self.device.enabled_extensions().khr_external_memory);
@@ -108,6 +83,10 @@ impl WGfxDmabuf for WGfx {
 
         // only do the 1st
         unsafe {
+            let Some(fd) = frame.planes[0].fd else {
+                anyhow::bail!("DMA-buf plane has no FD");
+            };
+
             let file = std::fs::File::from_raw_fd(fd);
             let new_file = file.try_clone()?;
             let _ = file.into_raw_fd();
@@ -402,11 +381,7 @@ pub(super) fn get_drm_formats(device: Arc<Device>) -> Vec<DrmFormat> {
         for m in props
             .drm_format_modifier_properties
             .iter()
-            .filter(|m| {
-                m.drm_format_modifier_plane_count == 1
-                    && m.drm_format_modifier_tiling_features
-                        .contains(FormatFeatures::SAMPLED_IMAGE)
-            })
+            .filter(|m| m.drm_format_modifier_plane_count == 1)
             .map(|m| m.drm_format_modifier)
         {
             out_formats.push(DrmFormat {

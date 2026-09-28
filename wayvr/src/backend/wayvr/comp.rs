@@ -239,12 +239,8 @@ impl compositor::CompositorHandler for Application {
                         Some(BufferType::Dma) => {
                             let dmabuf = get_dmabuf(&buffer).unwrap(); // always Ok due to buffer_type
 
-                            if let Ok(image) = self
-                                .image_importer
-                                .get_or_import_dmabuf(dmabuf.clone())
-                                .inspect_err(|e| {
-                                    log::warn!("wayland_server failed to import DMA-buf: {e:?}");
-                                })
+                            if let Ok(image) =
+                                self.image_importer.get_or_import_dmabuf(dmabuf.clone())
                             {
                                 let sbwi = SurfaceBufWithImage {
                                     image,
@@ -614,14 +610,10 @@ impl DmabufHandler for Application {
         dmabuf: Dmabuf,
         notifier: ImportNotifier,
     ) {
-        match self.image_importer.get_or_import_dmabuf(dmabuf) {
-            Ok(_) => {
-                let _ = notifier.successful::<Self>();
-            }
-            Err(e) => {
-                log::warn!("wayland_server rejected DMA-buf import: {e:?}");
-                notifier.failed();
-            }
+        if self.image_importer.get_or_import_dmabuf(dmabuf).is_ok() {
+            let _ = notifier.successful::<Self>();
+        } else {
+            notifier.failed();
         }
     }
 }
