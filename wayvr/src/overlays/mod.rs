@@ -1,6 +1,7 @@
 pub mod anchor;
 pub mod custom;
 pub mod dashboard;
+pub mod drag_item;
 pub mod edit;
 pub mod keyboard;
 pub mod passthrough;

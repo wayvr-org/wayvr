@@ -806,12 +806,22 @@ impl OverlayBackend for WvrWindowBackend {
             return HoverResult::consume();
         }
 
+        if let Some(wvr_server) = app.wvr_server.as_mut() {
+            if wvr_server.dnd_active() && !wvr_server.dnd_active_for_pointer(hit.pointer) {
+                return HoverResult::consume();
+            }
+            wvr_server.set_vr_pointer(hit.pointer);
+        }
+
         let Some(ref ctx) = self.hit_context else {
             return HoverResult::default();
         };
 
         match ctx.hit_target(hit) {
             Some(WvrHitTarget::Panel(hit2)) => {
+                if let Some(wvr_server) = app.wvr_server.as_mut() {
+                    wvr_server.clear_dnd_focus(hit.pointer);
+                }
                 self.panel_hovered = true;
                 self.panel.on_hover(app, &hit2)
             }
@@ -887,6 +897,17 @@ impl OverlayBackend for WvrWindowBackend {
         let Some(index) = Self::mouse_index_from_mode(hit.mode) else {
             return;
         };
+
+        if let Some(wvr_server) = app.wvr_server.as_mut() {
+            if wvr_server.dnd_active() && !wvr_server.dnd_active_for_pointer(hit.pointer) {
+                return;
+            }
+            wvr_server.set_vr_pointer_button(hit.pointer, pressed);
+            if !pressed && wvr_server.dnd_active_for_pointer(hit.pointer) {
+                wvr_server.send_dnd_release(index);
+                return;
+            }
+        }
 
         let Some(ref ctx) = self.hit_context else {
             return;

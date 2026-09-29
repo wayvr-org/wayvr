@@ -8,7 +8,7 @@ use super::{CompositionLayer, XrState, helpers, swapchain::WlxSwapchain};
 use crate::{
     backend::openxr::{
         helpers::next_chain_insert,
-        swapchain::{SwapchainOpts, WlxSwapchainImage, create_swapchain},
+        swapchain::{SwapchainOpts, SwapchainRetirementQueue, WlxSwapchainImage, create_swapchain},
     },
     state::AppState,
     windowing::window::{OverlayCategory, OverlayWindowData},
@@ -29,6 +29,7 @@ impl OverlayWindowData<OpenXrOverlayData> {
         &'a mut self,
         app: &AppState,
         xr: &'a XrState,
+        retired_swapchains: &mut SwapchainRetirementQueue,
         extent: [u32; 2],
         stereo: bool,
     ) -> anyhow::Result<WlxSwapchainImage> {
@@ -56,7 +57,9 @@ impl OverlayWindowData<OpenXrOverlayData> {
             SwapchainOpts::new(),
         )?;
         let tgt = swapchain.acquire_wait_image()?;
-        self.data.swapchain = Some(swapchain);
+        if let Some(old_swapchain) = self.data.swapchain.replace(swapchain) {
+            retired_swapchains.retire(old_swapchain, &app.gfx);
+        }
         Ok(tgt)
     }
 

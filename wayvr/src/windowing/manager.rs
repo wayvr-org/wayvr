@@ -424,6 +424,28 @@ where
                     self.dropped_overlays.push_back(o);
                 }
             }
+            OverlayTask::DropImmediate(sel) => {
+                let (id, name) = match &sel {
+                    OverlaySelector::Id(id) => {
+                        let id = *id;
+                        let name = self.overlays.get(id).map(|o| o.config.name.clone());
+                        (Some(id), name)
+                    }
+                    OverlaySelector::Name(name) => {
+                        let id = self.lookup(name);
+                        (id, Some(name.clone()))
+                    }
+                    _ => (None, None),
+                };
+
+                if let Some(o) = self.remove_by_selector(&sel, app) {
+                    log::debug!("Dropping overlay {} immediately", o.config.name);
+                    if let (Some(id), Some(name)) = (id, name) {
+                        self.remove_saved_state(id, &name);
+                    }
+                    self.dropped_overlays.push_back(o);
+                }
+            }
             OverlayTask::DropExpired(id) => {
                 let should_drop = self
                     .overlays

@@ -81,6 +81,7 @@ use crate::{
     ipc::{event_queue::SyncEventQueue, ipc_server},
     overlays::{
         anchor::ALTTAB_HELP_NAME,
+        drag_item::{DRAG_ITEM_NAME, create_drag_item},
         keyboard::KEYBOARD_NAME,
         wayvr::{WvrCommand, create_wl_window_overlay},
     },
@@ -135,6 +136,11 @@ pub enum WayVRTask {
     NewExternalProcess(ExternalProcessRequest),
     ProcessTerminationRequest(process::ProcessHandle, KillSignal),
     CloseWindowRequest(window::WindowHandle),
+    DndStarted {
+        icon: Option<WlSurface>,
+        pointer: usize,
+    },
+    DndDropped,
 }
 
 pub struct WvrServerState {
@@ -293,6 +299,9 @@ impl WvrServerState {
             redraw_requests: HashSet::new(),
             pending_frame_callbacks: HashMap::new(),
             cursor_image: CursorImageStatus::default_named(),
+            vr_pointer: 0,
+            pointer_button_owner: None,
+            dnd_pointer: None,
         };
 
         Ok(Self {
@@ -640,6 +649,37 @@ impl WvrServerState {
                             "Could not close window - no such handle found: {window_handle:?}"
                         );
                     }
+                }
+                WayVRTask::DndStarted { icon, pointer } => {
+                    // don't freeze on drag start
+                    wvr_server.mouse_freeze = Instant::now();
+
+                    let selector = OverlaySelector::Name(DRAG_ITEM_NAME.clone());
+
+                    app.tasks
+                        .enqueue(TaskType::Overlay(OverlayTask::DropImmediate(
+                            selector.clone(),
+                        )));
+
+                    if let Some(icon) = icon {
+                        app.tasks.enqueue(TaskType::Overlay(OverlayTask::Spawn(
+                            selector,
+                            SpawnPos::FixedNoRealign,
+                            Box::new(move |app| {
+                                create_drag_item(app, icon, pointer)
+                                    .inspect_err(|e| {
+                                        log::warn!("Could not create drag item overlay: {e:?}")
+                                    })
+                                    .ok()
+                            }),
+                        )));
+                    }
+                }
+                WayVRTask::DndDropped => {
+                    app.tasks
+                        .enqueue(TaskType::Overlay(OverlayTask::DropImmediate(
+                            OverlaySelector::Name(DRAG_ITEM_NAME.clone()),
+                        )));
                 }
             }
         }
@@ -1182,6 +1222,47 @@ impl WvrServerState {
             pos: global_pos,
         });
         self.manager.send_pointer_button(index, pressed);
+    }
+
+    pub fn set_vr_pointer(&mut self, pointer: usize) {
+        self.manager.state.vr_pointer = pointer;
+    }
+
+    pub fn set_vr_pointer_button(&mut self, pointer: usize, pressed: bool) {
+        self.manager.state.vr_pointer = pointer;
+        if pressed {
+            self.manager.state.pointer_button_owner = Some(pointer);
+        } else if self.manager.state.dnd_pointer.is_none()
+            && self.manager.state.pointer_button_owner == Some(pointer)
+        {
+            self.manager.state.pointer_button_owner = None;
+        }
+    }
+
+    pub fn dnd_active(&self) -> bool {
+        self.manager.state.dnd_pointer.is_some()
+    }
+
+    pub fn dnd_active_for_pointer(&self, pointer: usize) -> bool {
+        self.manager.state.dnd_pointer == Some(pointer)
+    }
+
+    pub fn clear_dnd_focus(&mut self, pointer: usize) {
+        if !self.dnd_active_for_pointer(pointer) {
+            return;
+        }
+
+        let pos = self
+            .wm
+            .mouse
+            .as_ref()
+            .map_or(DVec2::ZERO, |mouse| mouse.pos);
+        self.manager
+            .send_mouse_move(None, pos, DVec2::ZERO, DVec2::ZERO);
+    }
+
+    pub fn send_dnd_release(&mut self, index: MouseIndex) {
+        self.manager.send_pointer_button(index, false);
     }
 
     pub fn send_mouse_scroll(

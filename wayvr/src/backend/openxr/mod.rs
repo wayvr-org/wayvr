@@ -24,6 +24,7 @@ use crate::{
             helpers::{ExtraExts, try_apply_chroma_key},
             lines::LinePool,
             overlay::OpenXrOverlayData,
+            swapchain::SwapchainRetirementQueue,
         },
         task::{OpenXrTask, OverlayTask, TaskType},
     },
@@ -173,6 +174,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     let mut main_session_visible = false;
     let mut environment_blend_mode = modes[0];
     let mut last_frame_time = Instant::now();
+    let mut retired_swapchains = SwapchainRetirementQueue::default();
 
     // declared last so rust drops this before all long-lived XR objects
     let _gpu_idle_before_xr_drop = OpenXrGpuIdleGuard(app.gfx.clone());
@@ -210,6 +212,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                                 &xr_state,
                                 &modes,
                                 &mut skybox,
+                                &mut retired_swapchains,
                                 &mut environment_blend_mode,
                                 main_session_visible,
                             );
@@ -237,6 +240,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                         &xr_state,
                         &modes,
                         &mut skybox,
+                        &mut retired_swapchains,
                         &mut environment_blend_mode,
                         main_session_visible,
                     );
@@ -258,6 +262,9 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
             log::trace!("session not running: continue");
             continue 'main_loop;
         }
+
+        // poll only, never wait for GPU
+        retired_swapchains.collect(&app.gfx);
 
         log::trace!("xrWaitFrame");
         let xr_frame_state = frame_wait.wait()?;
@@ -424,7 +431,13 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 log::trace!("{}: render new frame", o.config.name);
                 let meta = o.config.backend.frame_meta().unwrap(); // want panic
                 let stereo = !matches!(meta.stereo, StereoMode::None);
-                let wsi = o.ensure_swapchain_acquire(&app, &xr_state, meta.extent, stereo)?;
+                let wsi = o.ensure_swapchain_acquire(
+                    &app,
+                    &xr_state,
+                    &mut retired_swapchains,
+                    meta.extent,
+                    stereo,
+                )?;
                 let tgt = RenderTarget { views: wsi.views };
                 let mut rdr = RenderResources::new(app.gfx.clone(), tgt, &meta)?;
                 o.render(&mut app, &mut rdr)?;
@@ -520,6 +533,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                             &xr_state,
                             &modes,
                             &mut skybox,
+                            &mut retired_swapchains,
                             &mut environment_blend_mode,
                             main_session_visible,
                         );
@@ -530,10 +544,14 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
             }
         }
 
-        while let Some(o) = overlays.pop_dropped() {
+        while let Some(mut o) = overlays.pop_dropped() {
+            if let Some(swapchain) = o.data.swapchain.take() {
+                retired_swapchains.retire(swapchain, &app.gfx);
+            }
             delete_queue.push((o, cur_frame + 5));
         }
 
+        retired_swapchains.collect(&app.gfx);
         delete_queue.retain(|(_, frame)| *frame > cur_frame);
 
         //FIXME: Temporary workaround for Monado bug
@@ -577,6 +595,7 @@ fn reconfigure_environment_blend(
     xr_state: &XrState,
     modes: &[xr::EnvironmentBlendMode],
     skybox: &mut Option<Skybox>,
+    retired_swapchains: &mut SwapchainRetirementQueue,
     environment_blend_mode: &mut xr::EnvironmentBlendMode,
     main_session_visible: bool,
 ) {
@@ -597,18 +616,21 @@ fn reconfigure_environment_blend(
         && !main_session_visible;
 
     if want_skybox {
-        if let Some(curr_skybox) = skybox.as_ref() {
-            if curr_skybox.needs_recreate(app) {
-                *skybox = None;
-                log::debug!("Allocating skybox.");
-                *skybox = create_skybox(xr_state, app);
+        if skybox
+            .as_ref()
+            .is_some_and(|curr_skybox| curr_skybox.needs_recreate(app))
+        {
+            if let Some(old_skybox) = skybox.take() {
+                old_skybox.retire(retired_swapchains, app);
             }
-        } else {
+            log::debug!("Allocating skybox.");
+            *skybox = create_skybox(xr_state, app);
+        } else if skybox.is_none() {
             log::debug!("Allocating skybox.");
             *skybox = create_skybox(xr_state, app);
         }
-    } else {
+    } else if let Some(old_skybox) = skybox.take() {
         log::debug!("Destroying skybox.");
-        *skybox = None;
+        old_skybox.retire(retired_swapchains, app);
     }
 }

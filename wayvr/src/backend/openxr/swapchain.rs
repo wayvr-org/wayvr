@@ -3,7 +3,10 @@ use std::sync::Arc;
 use openxr as xr;
 
 use smallvec::SmallVec;
-use wgui::gfx::{ImageCreateInfo, ImageLayout, ImageUsage, ImageView, ImageViewCreateInfo, WGfx};
+use wgui::gfx::{
+    GpuCompletionMarker, ImageCreateInfo, ImageLayout, ImageUsage, ImageView, ImageViewCreateInfo,
+    WGfx,
+};
 
 use super::XrState;
 
@@ -140,5 +143,74 @@ impl WlxSwapchain {
                 },
             })
             .image_array_index(array_index)
+    }
+}
+
+struct RetiredSwapchain {
+    // keep alive until completion is signaled
+    _swapchain: WlxSwapchain,
+    completion: Option<GpuCompletionMarker>,
+}
+
+/// Keeps destroyed xrswapchains alive until work submitted by runtime from has finished
+#[derive(Default)]
+pub(super) struct SwapchainRetirementQueue {
+    retired: Vec<RetiredSwapchain>,
+}
+
+impl SwapchainRetirementQueue {
+    /// queue the swapchain for non-blocking retirement
+    pub(super) fn retire(&mut self, swapchain: WlxSwapchain, gfx: &Arc<WGfx>) {
+        self.retired.push(RetiredSwapchain {
+            _swapchain: swapchain,
+            completion: None,
+        });
+
+        let idx = self.retired.len() - 1;
+        if let Err(e) = Self::arm(&mut self.retired[idx], gfx) {
+            log::warn!("Failed arming retired OpenXR swapchain: {e:#}");
+        }
+    }
+
+    fn arm(retired: &mut RetiredSwapchain, gfx: &Arc<WGfx>) -> anyhow::Result<()> {
+        if retired.completion.is_some() {
+            return Ok(());
+        }
+
+        retired._swapchain.ensure_image_released()?;
+        retired.completion = Some(gfx.submit_graphics_completion_marker()?);
+        Ok(())
+    }
+
+    pub(super) fn collect(&mut self, gfx: &Arc<WGfx>) {
+        let mut idx = 0;
+        while idx < self.retired.len() {
+            if self.retired[idx].completion.is_none() {
+                if let Err(e) = Self::arm(&mut self.retired[idx], gfx) {
+                    log::warn!("Failed re-arming retired OpenXR swapchain: {e:#}");
+                    idx += 1;
+                    continue;
+                }
+            }
+
+            let complete = match self.retired[idx]
+                .completion
+                .as_ref()
+                .expect("retired swapchain completion marker missing after arm")
+                .is_complete()
+            {
+                Ok(complete) => complete,
+                Err(e) => {
+                    log::warn!("Failed polling retired OpenXR swapchain: {e:#}");
+                    false
+                }
+            };
+
+            if complete {
+                self.retired.swap_remove(idx);
+            } else {
+                idx += 1;
+            }
+        }
     }
 }

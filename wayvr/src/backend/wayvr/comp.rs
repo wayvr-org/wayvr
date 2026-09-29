@@ -14,7 +14,9 @@ use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel;
 use smithay::reexports::wayland_protocols_misc::server_decoration::server::org_kde_kwin_server_decoration;
 use smithay::reexports::wayland_server::Resource;
 use smithay::reexports::wayland_server::backend::ObjectId;
-use smithay::reexports::wayland_server::protocol::{wl_buffer, wl_callback, wl_output, wl_seat};
+use smithay::reexports::wayland_server::protocol::{
+    wl_buffer, wl_callback, wl_data_source, wl_output, wl_seat,
+};
 use smithay::reexports::wayland_server::{self, DisplayHandle};
 use smithay::utils::{Logical, Rectangle, Serial, Size};
 use smithay::wayland::buffer::BufferHandler;
@@ -90,6 +92,12 @@ pub struct Application {
     pub redraw_requests: HashSet<ObjectId>,
     pub pending_frame_callbacks: HashMap<ObjectId, Vec<wl_callback::WlCallback>>,
     pub cursor_image: CursorImageStatus,
+    /// pointer that last drove the wvr_server mouse. used for DND
+    pub vr_pointer: usize,
+    /// pointer that produced the button press that correlates to DND serial
+    pub pointer_button_owner: Option<usize>,
+    /// pointer currently owning a DND grab
+    pub dnd_pointer: Option<usize>,
 }
 
 impl Application {
@@ -350,7 +358,25 @@ impl BufferHandler for Application {
     fn buffer_destroyed(&mut self, _buffer: &wl_buffer::WlBuffer) {}
 }
 
-impl ClientDndGrabHandler for Application {}
+impl ClientDndGrabHandler for Application {
+    fn started(
+        &mut self,
+        _source: Option<wl_data_source::WlDataSource>,
+        icon: Option<WlSurface>,
+        _seat: Seat<Self>,
+    ) {
+        let pointer = self.pointer_button_owner.unwrap_or(self.vr_pointer);
+        self.dnd_pointer = Some(pointer);
+        self.wayvr_tasks
+            .send(WayVRTask::DndStarted { icon, pointer });
+    }
+
+    fn dropped(&mut self, _target: Option<WlSurface>, _validated: bool, _seat: Seat<Self>) {
+        self.dnd_pointer = None;
+        self.pointer_button_owner = None;
+        self.wayvr_tasks.send(WayVRTask::DndDropped);
+    }
+}
 
 impl ServerDndGrabHandler for Application {
     fn send(&mut self, _mime_type: String, _fd: OwnedFd, _seat: Seat<Self>) {}

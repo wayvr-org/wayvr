@@ -11,7 +11,7 @@ use wlx_common::config_io;
 use crate::{
     backend::openxr::{
         helpers::{next_chain_insert, translation_rotation_to_posef},
-        swapchain::SwapchainOpts,
+        swapchain::{SwapchainOpts, SwapchainRetirementQueue},
     },
     graphics::{GpuFutures, dds::WlxCommandBufferDds},
     state::AppState,
@@ -110,6 +110,19 @@ impl Skybox {
 
     pub(super) fn needs_recreate(&self, app: &AppState) -> bool {
         *self.current_skybox != *app.session.config.skybox_texture
+    }
+
+    pub(super) fn retire(
+        mut self,
+        retired_swapchains: &mut SwapchainRetirementQueue,
+        app: &AppState,
+    ) {
+        if let Some(swapchain) = self.sky.take() {
+            retired_swapchains.retire(swapchain, &app.gfx);
+        }
+        if let Some(swapchain) = self.grid.take() {
+            retired_swapchains.retire(swapchain, &app.gfx);
+        }
     }
 
     fn prepare_sky<'a>(

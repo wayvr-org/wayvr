@@ -1628,6 +1628,27 @@ impl Context {
 		Ok(())
 	}
 
+	pub(super) fn submit_graphics_completion_marker(self: &Arc<Self>) -> anyhow::Result<RawQueueCompletionMarker> {
+		let mut command_buffer = self.create_command_buffer(QueueType::Graphics, CommandBufferUsage::OneTimeSubmit)?;
+		command_buffer.record_queue_completion_barrier();
+		command_buffer.finish()?;
+
+		let fence = unsafe { self.device.create_fence(&vk::FenceCreateInfo::default(), None) }
+			.map_err(|e| anyhow!("vkCreateFence failed: {e:?}"))?;
+		let buffers = [command_buffer.handle];
+		let submits = [vk::SubmitInfo::default().command_buffers(&buffers)];
+		if let Err(e) = unsafe { self.device.queue_submit(self.queue_gfx.handle, &submits, fence) } {
+			unsafe { self.device.destroy_fence(fence, None) };
+			return Err(anyhow!("vkQueueSubmit for completion marker failed: {e:?}"));
+		}
+
+		Ok(RawQueueCompletionMarker {
+			context: self.clone(),
+			fence,
+			_command_buffer: command_buffer,
+		})
+	}
+
 	pub(super) fn create_command_buffer(
 		self: &Arc<Self>,
 		queue_type: QueueType,
@@ -2095,6 +2116,24 @@ pub(super) struct RawCommandBuffer {
 	external_images: BTreeMap<u64, RawExternalImageState>,
 }
 
+pub(super) struct RawQueueCompletionMarker {
+	context: Arc<Context>,
+	fence: vk::Fence,
+	_command_buffer: RawCommandBuffer,
+}
+
+impl RawQueueCompletionMarker {
+	pub(super) fn is_complete(&self) -> anyhow::Result<bool> {
+		unsafe { self.context.device.get_fence_status(self.fence) }.map_err(|e| anyhow!("vkGetFenceStatus failed: {e:?}"))
+	}
+}
+
+impl Drop for RawQueueCompletionMarker {
+	fn drop(&mut self) {
+		unsafe { self.context.device.destroy_fence(self.fence, None) };
+	}
+}
+
 struct RawRenderingState {
 	image: Arc<RawImage>,
 	image_view: vk::ImageView,
@@ -2542,6 +2581,25 @@ impl RawCommandBuffer {
 		}
 		self.transition_image(src, ImageLayout::ShaderReadOnly);
 		self.transition_image(dst, ImageLayout::ShaderReadOnly);
+	}
+
+	fn record_queue_completion_barrier(&mut self) {
+		debug_assert!(!self.ended);
+		debug_assert!(self.active_rendering.is_none());
+		let memory_barriers = [vk::MemoryBarrier::default()
+			.src_access_mask(vk::AccessFlags::MEMORY_READ | vk::AccessFlags::MEMORY_WRITE)
+			.dst_access_mask(vk::AccessFlags::MEMORY_READ | vk::AccessFlags::MEMORY_WRITE)];
+		unsafe {
+			self.context.device.cmd_pipeline_barrier(
+				self.handle,
+				vk::PipelineStageFlags::ALL_COMMANDS,
+				vk::PipelineStageFlags::ALL_COMMANDS,
+				vk::DependencyFlags::empty(),
+				&memory_barriers,
+				&[],
+				&[],
+			);
+		}
 	}
 
 	pub(super) fn finish(&mut self) -> anyhow::Result<()> {

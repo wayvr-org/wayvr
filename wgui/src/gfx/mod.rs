@@ -37,6 +37,17 @@ pub use types::{
 pub type Vert2Buf = Arc<Buffer<Vert2Uv>>;
 pub type IndexBuf = Arc<Buffer<u32>>;
 
+/// non-blocking marker that marks the completion of queue work that was submitted before it
+pub struct GpuCompletionMarker {
+	raw: raw::RawQueueCompletionMarker,
+}
+
+impl GpuCompletionMarker {
+	pub fn is_complete(&self) -> anyhow::Result<bool> {
+		self.raw.is_complete()
+	}
+}
+
 pub fn upload_quad_vertices(
 	buf: &Buffer<Vert2Uv>,
 	width: f32,
@@ -189,6 +200,16 @@ impl WGfx {
 	/// Wait until all submissions on this vk device are finished
 	pub fn wait_idle(&self) -> anyhow::Result<()> {
 		self.raw.wait_idle()
+	}
+
+	/// Submit a non-blocking completion marker to the queue
+	///
+	/// It uses an ALL_COMMANDS to ALL_COMMANDS barrier, so its fence doesn't
+	/// complete until all earlier work is finished.
+	pub fn submit_graphics_completion_marker(&self) -> anyhow::Result<GpuCompletionMarker> {
+		Ok(GpuCompletionMarker {
+			raw: self.raw.submit_graphics_completion_marker()?,
+		})
 	}
 
 	pub fn raw_instance_handle(&self) -> u64 {

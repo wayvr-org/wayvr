@@ -349,6 +349,8 @@ pub struct Pointer {
     pub(super) interaction: InteractionState,
     pub tracked: bool,
     pub handsfree: bool,
+    /// distance of the most recent ray hit on a wayland client window, used for drag n drop
+    pub last_wvr_hit_distance: Option<f32>,
 }
 
 impl Pointer {
@@ -365,6 +367,7 @@ impl Pointer {
             interaction: InteractionState::default(),
             tracked: false,
             handsfree: false,
+            last_wvr_hit_distance: None,
         }
     }
 
@@ -515,6 +518,8 @@ where
         );
     }
 
+    crate::overlays::drag_item::update_position(overlays, app);
+
     [hits[0].1, hits[1].1]
 }
 
@@ -549,9 +554,23 @@ where
 
     let hovered_id = pointer.interaction.hovered_id.take();
     let (Some((mut hit, raw_hit)), haptics) = get_nearest_hit(idx, overlays, app) else {
+        if let Some(wvr_server) = app.wvr_server.as_mut() {
+            wvr_server.clear_dnd_focus(idx);
+        }
         handle_no_hit(idx, hovered_id, overlays, app);
         return (None, pending_haptics); // no hit
     };
+
+    let hit_is_wayvr = overlays
+        .iter()
+        .find(|(id, _)| *id == hit.overlay)
+        .is_some_and(|(_, overlay)| overlay.config.category == OverlayCategory::WayVR);
+
+    if hit_is_wayvr {
+        app.input_state.pointers[idx].last_wvr_hit_distance = Some(raw_hit.dist);
+    } else if let Some(wvr_server) = app.wvr_server.as_mut() {
+        wvr_server.clear_dnd_focus(idx);
+    }
 
     // focus change
     if let Some(hovered_id) = hovered_id

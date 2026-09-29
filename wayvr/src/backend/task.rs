@@ -135,6 +135,7 @@ pub enum OverlayTask {
     Spawn(OverlaySelector, SpawnPos, Box<CreateOverlayTask>),
     ModifyPanel(ModifyPanelTask),
     Drop(OverlaySelector),
+    DropImmediate(OverlaySelector),
     DropExpired(OverlayID),
 }
 
