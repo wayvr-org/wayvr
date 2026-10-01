@@ -9,6 +9,7 @@ use std::{
 use anyhow::Context;
 use glam::{DVec2, Vec2};
 use slotmap::DenseSlotMap;
+use smithay::wayland::selection::data_device::set_data_device_selection;
 use smithay::{
     backend::input::{Axis, AxisSource, ButtonState, Keycode},
     input::{
@@ -21,13 +22,13 @@ use smithay::{
 use wgui::log::LogErr;
 use xkbcommon::xkb;
 
-use crate::backend::wayvr::{ExternalProcessRequest, WayVRTask};
-
 use super::{
     ProcessWayVREnv,
     comp::{self, ClientState},
     process,
 };
+use crate::backend::wayvr::comp::Application;
+use crate::backend::wayvr::{ExternalProcessRequest, WayVRTask};
 
 pub struct WayVRClient {
     pub client: wayland_server::Client,
@@ -259,6 +260,17 @@ impl WayVRCompositor {
         }
     }
 
+    pub fn set_clipboard_text(&mut self, text: String) {
+        set_data_device_selection::<Application>(
+            &self.state.display_handle,
+            &self.state.seat,
+            vec![
+                "text/plain;charset=utf-8".to_string(),
+                "text/plain".to_string(),
+            ],
+            text.as_bytes().into(),
+        );
+    }
     pub fn set_keymap(&mut self, keymap: &xkb::Keymap) -> anyhow::Result<()> {
         // Smithay only accepts keymaps in a string form due to thread safety concerns
         self.seat_keyboard

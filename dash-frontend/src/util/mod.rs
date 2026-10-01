@@ -1,9 +1,11 @@
 pub mod cached_fetcher;
+pub mod downloadable_file;
 pub mod networking;
 pub mod openxr_bindings;
 pub mod pactl_wrapper;
 pub mod popup_manager;
 pub mod steam_utils;
+pub mod swipe_type;
 pub mod toast_manager;
 pub mod wgui_simple;
 pub mod whisper;

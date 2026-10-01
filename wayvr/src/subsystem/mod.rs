@@ -3,7 +3,7 @@ pub mod hid;
 pub mod input;
 pub mod notifications;
 
-#[cfg(feature = "whisper")]
+#[cfg(any(feature = "whisper", feature = "swipe-to-type"))]
 pub mod clipboard;
 
 #[cfg(feature = "whisper")]

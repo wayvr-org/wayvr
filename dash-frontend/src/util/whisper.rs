@@ -1,42 +1,37 @@
 use std::{fs, io, path::PathBuf};
 
+use crate::util::downloadable_file::DownloadableFile;
 use wlx_common::data_dir;
 
-pub struct WhisperModel {
-	pub file_name: &'static str,
-	pub display_name: &'static str,
-	pub url: &'static str,
-}
-
-pub const WHISPER_MODELS: &[WhisperModel] = &[
-	WhisperModel {
+pub const WHISPER_MODELS: &[DownloadableFile] = &[
+	DownloadableFile {
 		file_name: "ggml-base-q8_0.bin",
 		display_name: "Base Q8 (78MiB)",
 		url: "https://wayvr.org/files/whisper/ggml-base-q8_0.bin",
 	},
-	WhisperModel {
+	DownloadableFile {
 		file_name: "ggml-small-q8_0.bin",
 		display_name: "Small Q8 (252MiB)",
 		url: "https://wayvr.org/files/whisper/ggml-small-q8_0.bin",
 	},
-	WhisperModel {
+	DownloadableFile {
 		file_name: "ggml-large-v3-turbo-q5_0.bin",
 		display_name: "Turbo Q5 (574MiB)",
 		url: "https://wayvr.org/files/whisper/ggml-large-v3-turbo-q5_0.bin",
 	},
-	WhisperModel {
+	DownloadableFile {
 		file_name: "ggml-large-v3-turbo-q8_0.bin",
 		display_name: "Turbo Q8 (874MiB)",
 		url: "https://wayvr.org/files/whisper/ggml-large-v3-turbo-q8_0.bin",
 	},
-	WhisperModel {
+	DownloadableFile {
 		file_name: "ggml-large-v3-turbo.bin",
 		display_name: "Turbo (1.5GiB)",
 		url: "https://wayvr.org/files/whisper/ggml-large-v3-turbo.bin",
 	},
 ];
 
-pub fn whisper_model_from_name(file_name: &str) -> Option<&'static WhisperModel> {
+pub fn whisper_model_from_name(file_name: &str) -> Option<&'static DownloadableFile> {
 	WHISPER_MODELS.iter().find(|x| x.file_name == file_name)
 }
 

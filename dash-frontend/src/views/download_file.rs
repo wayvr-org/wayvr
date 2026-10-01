@@ -92,7 +92,7 @@ impl ViewTrait for View {
 							par.layout,
 							self.id_loading_parent,
 							Vec2::splat(32.0),
-							AssetPathRef::BuiltIn("@/dashboard/check.svg"),
+							AssetPathRef::BuiltIn("dashboard/check.svg"),
 						)?;
 
 						// "Close window" button
@@ -114,7 +114,7 @@ impl ViewTrait for View {
 							par.layout,
 							self.id_loading_parent,
 							Vec2::splat(32.0),
-							AssetPathRef::BuiltIn("@/dashboard/error.svg"),
+							AssetPathRef::BuiltIn("dashboard/error.svg"),
 						)?;
 					}
 					Task::Close => {

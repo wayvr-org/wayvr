@@ -52,6 +52,7 @@ pub struct InterfaceFeats {
 	pub monado: bool,
 	pub passthru: bool,
 	pub whisper: bool,
+	pub swipe_to_type: bool,
 }
 
 impl InterfaceFeats {
@@ -62,6 +63,7 @@ impl InterfaceFeats {
 			monado: false,
 			passthru: false,
 			whisper: false,
+			swipe_to_type: false,
 		}
 	}
 }
