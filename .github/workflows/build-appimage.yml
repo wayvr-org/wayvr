@@ -48,3 +48,8 @@ jobs:
         with:
           name: WayVR-${{ github.ref_name }}-${{ matrix.arch }}.AppImage
           path: ./wayvr/WayVR-${{ matrix.arch }}.AppImage
+      - name: Upload AppImage zsync
+        uses: actions/upload-artifact@v4
+        with:
+          name: WayVR-${{ github.ref_name }}-${{ matrix.arch }}.AppImage.zsync
+          path: ./wayvr/WayVR-${{ matrix.arch }}.AppImage.zsync

@@ -83,6 +83,16 @@ jobs:
           asset_name: WayVR-${{ github.ref_name }}-x86_64.AppImage
           asset_content_type: application/octet-stream
 
+      - name: Upload AppImage zsync
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_KEY }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./wayvr/WayVR-x86_64.AppImage.zsync
+          asset_name: WayVR-${{ github.ref_name }}-x86_64.AppImage.zsync
+          asset_content_type: application/octet-stream
+
       - name: Upload vendor tarball
         uses: actions/upload-release-asset@v1
         env:
