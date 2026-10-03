@@ -333,7 +333,7 @@ where
 		let tasks = mp.tasks.clone();
 		move |_common, e: ButtonClickEvent| {
 			tasks.push(Task::OpenContextMenu(
-				e.mouse_pos_absolute.unwrap_or_default(),
+				e.mouse_pos_absolute.into(),
 				EnumType::VARIANTS
 					.iter()
 					.filter_map(|item| {

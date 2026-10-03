@@ -1,26 +1,16 @@
 use wgui::layout::WidgetID;
 
-use crate::tab::settings::{
-	SettingsMountParams, SettingsTab,
-	macros::{MacroParams, options_category, options_diagnostics_drm_card, options_diagnostics_row},
+use crate::{
+	tab::settings::{
+		SettingsMountParams, SettingsTab,
+		macros::{MacroParams, options_category, options_diagnostics_drm_card, options_diagnostics_row},
+	},
+	util::is_exec_installed,
 };
 
 pub struct State {}
 
 impl SettingsTab for State {}
-
-// works good enough
-fn is_exec_installed(exec: &str) -> bool {
-	let mut cmd = std::process::Command::new("sh");
-	cmd.arg("-c");
-	cmd.arg(format!("command -v {}", exec));
-
-	let Ok(res) = cmd.output() else {
-		return false;
-	};
-
-	res.status.success()
-}
 
 #[derive(Default)]
 struct LspciInfo {

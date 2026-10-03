@@ -335,6 +335,10 @@ MODIFICATION_DATE,Modification date,Column label in the remote skymap downloader
 MONADO_RUNTIME,Monado runtime,Tab label in the dashboard sidebar for the Monado runtime tab.
 LOADING,Loading...,Label in the loading spinner template used across the UI.
 POPUP_ADD_DISPLAY.RESOLUTION,Resolution,Label for the resolution field in the add display popup.
+POWER_OPTIONS.TITLE,"Power options","A button which allows the user to perform a specific power action"
+POWER_OPTIONS.SHUTDOWN,"Shut down","One of the power options: shuts down the computer"
+POWER_OPTIONS.SUSPEND,"Suspend","One of the power options: suspends the computer"
+POWER_OPTIONS.SHUTDOWN_ARE_YOU_SURE,"Are you sure you want to turn off your computer?","Question dialog box before shutting down the computer"
 PROCESS.FORCE_KILL,Force-kill,Tooltip on the kill button in the running games list.
 PROCESS.STOP,Stop,Tooltip on the stop button in the running games list.
 PROCESS_LIST,Process list,Tab name and group box title in the Monado runtime process list section.
@@ -356,3 +360,5 @@ REMOVE_FROM_FAVOURITES,Remove from pinned apps,"Label on the unpin section in th
 EMPTY,Empty,Label shown in the pinned apps section when there are no pinned apps.
 INSTALLED,"Installed","Installation flag (installed/not installed)"
 NOT_INSTALLED,"Not installed","Installation flag (installed/not installed)"
+YES,"Yes","Just a simple 'Yes' message, button in the dialog box"
+NO,"No","Just a simple 'No' message, button in the dialog box"

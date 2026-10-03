@@ -367,5 +367,13 @@
 	"REMOVE_FROM_FAVOURITES": "从固定应用中移除",
 	"EMPTY": "暂无",
 	"INSTALLED": "已安装",
-	"NOT_INSTALLED": "未安装"
+	"NOT_INSTALLED": "未安装",
+	"POWER_OPTIONS": {
+		"TITLE": "电源选项",
+		"SHUTDOWN": "关机",
+		"SUSPEND": "暂停",
+		"SHUTDOWN_ARE_YOU_SURE": "确定要关机吗？"
+	},
+	"YES": "确定",
+	"NO": "否"
 }

@@ -350,10 +350,7 @@ fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Re
 				},
 			);
 
-			parent_tasks.push(ParentTask::OpenContextMenu(
-				e.mouse_pos_absolute.unwrap_or_default(),
-				cells,
-			));
+			parent_tasks.push(ParentTask::OpenContextMenu(e.mouse_pos_absolute.into(), cells));
 			Ok(())
 		}
 	}));

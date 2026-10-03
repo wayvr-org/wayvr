@@ -367,5 +367,13 @@
 	"REMOVE_FROM_FAVOURITES": "Aus angehefteten Anwendungen entfernen",
 	"EMPTY": "Leer",
 	"INSTALLED": "Installiert",
-	"NOT_INSTALLED": "Nicht installiert"
+	"NOT_INSTALLED": "Nicht installiert",
+	"POWER_OPTIONS": {
+		"TITLE": "Energieoptionen",
+		"SHUTDOWN": "Herunterfahren",
+		"SUSPEND": "Ruhezustand",
+		"SHUTDOWN_ARE_YOU_SURE": "Bist du sicher, dass du den Computer ausschalten willst?"
+	},
+	"YES": "Ja",
+	"NO": "Nein"
 }

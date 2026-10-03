@@ -33,7 +33,7 @@ use wlx_common::locale::WayVRLangProvider;
 #[derive(Clone)]
 pub enum TestbedTask {
 	ShowPopup,
-	ShowContextMenu(Vec2),
+	ShowContextMenu(context_menu::Position),
 }
 
 struct Data {
@@ -196,7 +196,7 @@ impl TestbedGeneric {
 		button_context_menu.on_click({
 			let tasks = testbed.tasks.clone();
 			Rc::new(move |_common, m| {
-				tasks.push(TestbedTask::ShowContextMenu(m.boundary.bottom_left()));
+				tasks.push(TestbedTask::ShowContextMenu(m.boundary.into()));
 				Ok(())
 			})
 		});
@@ -212,7 +212,9 @@ impl TestbedGeneric {
 	) -> anyhow::Result<()> {
 		match task {
 			TestbedTask::ShowPopup => self.show_popup(params, data)?,
-			TestbedTask::ShowContextMenu(position) => self.show_context_menu(params, data, *position),
+			TestbedTask::ShowContextMenu(position) => {
+				self.show_context_menu(params, data, position.clone())
+			}
 		}
 
 		Ok(())
@@ -251,7 +253,7 @@ impl TestbedGeneric {
 		&mut self,
 		_params: &mut TestbedUpdateParams,
 		data: &mut Data,
-		position: Vec2,
+		position: context_menu::Position,
 	) {
 		data.context_menu.open(context_menu::OpenParams {
 			on_custom_attribs: Some(Rc::new(move |custom_attribs| {

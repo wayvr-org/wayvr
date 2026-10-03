@@ -1,9 +1,10 @@
 use crate::{
 	assets::AssetPathRef,
 	components::{ComponentTrait, button::ComponentButton},
+	drawing::Boundary,
 	globals::WguiGlobals,
 	i18n::Translation,
-	layout::Layout,
+	layout::{Layout, WidgetID},
 	parser::{self, Fetchable, ParserState, TemplateParams},
 	task::Tasks,
 	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra, WguiWindowPlacement},
@@ -27,9 +28,47 @@ pub enum Blueprint {
 	},
 }
 
+#[derive(Clone)]
+pub enum Position {
+	Unspecified,
+	Absolute(Vec2),
+	Widget(WidgetID),
+	Boundary(Boundary),
+}
+
+// absolute position
+impl From<Vec2> for Position {
+	fn from(value: Vec2) -> Self {
+		Self::Absolute(value)
+	}
+}
+
+impl From<Option<Vec2>> for Position {
+	fn from(value: Option<Vec2>) -> Self {
+		match value {
+			Some(v) => Self::Absolute(v),
+			None => Self::Unspecified,
+		}
+	}
+}
+
+// relative to widget center
+impl From<WidgetID> for Position {
+	fn from(value: WidgetID) -> Self {
+		Self::Widget(value)
+	}
+}
+
+// relative to absolute rectangle center
+impl From<Boundary> for Position {
+	fn from(value: Boundary) -> Self {
+		Self::Boundary(value)
+	}
+}
+
 pub struct OpenParams {
 	pub on_custom_attribs: Option<parser::OnCustomAttribsFunc>,
-	pub position: Vec2,
+	pub position: Position,
 	pub blueprint: Blueprint,
 }
 
@@ -89,14 +128,24 @@ impl ContextMenu {
 			Blueprint::Cells(cells) => cells,
 		};
 
+		let absolute_pos = match params.position {
+			Position::Unspecified => Vec2::new(0.0, 0.0),
+			Position::Absolute(pos) => pos,
+			Position::Boundary(boundary) => boundary.center(),
+			Position::Widget(widget_id) => {
+				let widget = layout.state.widgets.fetch(widget_id)?;
+				widget.state().data.cached_absolute_boundary.center()
+			}
+		};
+
 		let root_size = layout.state.get_widget_size(layout.content_root_widget);
 
-		let (window_pos, placement) = if params.position.y < root_size.y / 2.0 {
-			(params.position, WguiWindowPlacement::TopLeft)
+		let (window_pos, placement) = if absolute_pos.y < root_size.y / 2.0 {
+			(absolute_pos, WguiWindowPlacement::TopLeft)
 		} else {
 			// invert y axis (position.y is counted from the bottom)
 			(
-				Vec2::new(params.position.x, root_size.y - params.position.y),
+				Vec2::new(absolute_pos.x, root_size.y - absolute_pos.y),
 				WguiWindowPlacement::BottomLeft,
 			)
 		};

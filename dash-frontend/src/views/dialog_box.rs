@@ -32,6 +32,21 @@ enum Task {
 	ActionClicked(&'static str),
 }
 
+pub fn get_entries_yes_no() -> Vec<ButtonEntry> {
+	vec![
+		ButtonEntry {
+			content: Translation::from_translation_key("YES"),
+			icon: "@/dashboard/check.svg",
+			action: "yes",
+		},
+		ButtonEntry {
+			content: Translation::from_translation_key("NO"),
+			icon: "@/dashboard/cancel.svg",
+			action: "no",
+		},
+	]
+}
+
 pub struct View {
 	tasks: Tasks<Task>,
 
@@ -52,6 +67,13 @@ fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
 
 impl ViewTrait for View {
 	fn update(&mut self, _par: &mut ViewUpdateParams) -> anyhow::Result<()> {
+		self.tick();
+		Ok(())
+	}
+}
+
+impl View {
+	pub fn tick(&mut self) {
 		for task in self.tasks.drain() {
 			match task {
 				Task::ActionClicked(action) => {
@@ -65,11 +87,8 @@ impl ViewTrait for View {
 				}
 			}
 		}
-		Ok(())
 	}
-}
 
-impl View {
 	pub fn new(
 		layout: &mut Layout,
 		id_parent: WidgetID,

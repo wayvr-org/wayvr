@@ -244,7 +244,7 @@ pub(super) fn setup_custom_button<S: 'static>(
                                     template_name: template_name.clone(),
                                     template_params: template_params.clone(),
                                 },
-                                position: data.metadata.get_mouse_pos_absolute().unwrap(), //want panic
+                                position: data.metadata.get_mouse_pos_absolute().unwrap().into(), // want panic
                             });
                             Ok(EventResult::Consumed)
                         }

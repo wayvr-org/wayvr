@@ -367,5 +367,13 @@
 	"REMOVE_FROM_FAVOURITES": "固定済みアプリから外す",
 	"EMPTY": "なし",
 	"INSTALLED": "インストール済み",
-	"NOT_INSTALLED": "未インストール"
+	"NOT_INSTALLED": "未インストール",
+	"POWER_OPTIONS": {
+		"TITLE": "電源オプション",
+		"SHUTDOWN": "シャットダウン",
+		"SUSPEND": "サスペンド",
+		"SHUTDOWN_ARE_YOU_SURE": "コンピューターをシャットダウンしてもよろしいですか？"
+	},
+	"YES": "はい",
+	"NO": "いいえ"
 }

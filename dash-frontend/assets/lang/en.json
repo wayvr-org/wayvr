@@ -345,6 +345,12 @@
 	"POPUP_ADD_DISPLAY": {
 		"RESOLUTION": "Resolution"
 	},
+	"POWER_OPTIONS": {
+		"TITLE": "Power options",
+		"SHUTDOWN": "Shut down",
+		"SUSPEND": "Suspend",
+		"SHUTDOWN_ARE_YOU_SURE": "Are you sure you want to turn off your computer?"
+	},
 	"PROCESS": {
 		"FORCE_KILL": "Force-kill",
 		"STOP": "Stop"
@@ -367,5 +373,7 @@
 	"REMOVE_FROM_FAVOURITES": "Remove from pinned apps",
 	"EMPTY": "Empty",
 	"INSTALLED": "Installed",
-	"NOT_INSTALLED": "Not installed"
+	"NOT_INSTALLED": "Not installed",
+	"YES": "Yes",
+	"NO": "No"
 }

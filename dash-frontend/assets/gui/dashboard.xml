@@ -6,6 +6,13 @@
     <var key="side_button_size" value="48" />
   </vars>
 
+  <blueprint name="context_menu_power_options">
+    <context_menu>
+      <cell translation="POWER_OPTIONS.SUSPEND" action="suspend"/>
+      <cell translation="POWER_OPTIONS.SHUTDOWN" action="shutdown" />
+    </context_menu>
+  </blueprint>
+
   <template name="SideButton">
     <Button
       id="${id}"
@@ -136,6 +143,9 @@
 
           <!-- Left bottom side -->
           <div margin_left="8">
+            <Button id="btn_power" color="background(transparent)" border_color="background(transparent)" tooltip="POWER_OPTIONS.TITLE" tooltip_side="top">
+              <sprite src_builtin="@/dashboard/power.svg" width="24" height="24" margin="8" />
+            </Button>
             <Button id="btn_audio" color="background(transparent)" border_color="background(transparent)" tooltip="AUDIO.VOLUME" tooltip_side="top">
               <sprite src_builtin="@/dashboard/volume.svg" width="24" height="24" margin="8" />
             </Button>

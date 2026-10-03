@@ -367,5 +367,13 @@
 	"REMOVE_FROM_FAVOURITES": "Rimuovi dalle app fissate",
 	"EMPTY": "Vuoto",
 	"INSTALLED": "Installato",
-	"NOT_INSTALLED": "Non installato"
+	"NOT_INSTALLED": "Non installato",
+	"POWER_OPTIONS": {
+		"TITLE": "Opzioni di alimentazione",
+		"SHUTDOWN": "Spegni",
+		"SUSPEND": "Sospendi",
+		"SHUTDOWN_ARE_YOU_SURE": "Sei sicuro di voler spegnere il computer?"
+	},
+	"YES": "Sì",
+	"NO": "No"
 }

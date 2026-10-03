@@ -39,7 +39,7 @@ use crate::{
 enum Task {
 	Save,
 	Cancel,
-	OpenContextMenu(glam::Vec2, Vec<context_menu::Cell>),
+	OpenContextMenu(context_menu::Position, Vec<context_menu::Cell>),
 	UpdateThreshold(Rc<str>, XrInputSide, usize, f32),
 	AddChordMember(Rc<str>, XrInputSide),
 	RemoveChordMember(Rc<str>, XrInputSide, usize),
@@ -1052,10 +1052,7 @@ fn create_dropdown_with_cells(
 		let tasks = mp.tasks.clone();
 		let cells = cells.clone();
 		move |_common, e: ButtonClickEvent| {
-			tasks.push(Task::OpenContextMenu(
-				e.mouse_pos_absolute.unwrap_or_default(),
-				cells.clone(),
-			));
+			tasks.push(Task::OpenContextMenu(e.mouse_pos_absolute.into(), cells.clone()));
 			Ok(())
 		}
 	}));

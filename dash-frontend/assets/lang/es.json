@@ -367,5 +367,13 @@
 	"REMOVE_FROM_FAVOURITES": "Quitar de aplicaciones fijadas",
 	"EMPTY": "Vacío",
 	"INSTALLED": "Instalado",
-	"NOT_INSTALLED": "No instalado"
+	"NOT_INSTALLED": "No instalado",
+	"POWER_OPTIONS": {
+		"TITLE": "Opciones de energía",
+		"SHUTDOWN": "Apagar",
+		"SUSPEND": "Suspender",
+		"SHUTDOWN_ARE_YOU_SURE": "¿Seguro que quieres apagar el ordenador?"
+	},
+	"YES": "Sí",
+	"NO": "No"
 }

@@ -1,4 +1,3 @@
-use glam::Vec2;
 use std::{marker::PhantomData, rc::Rc, str::FromStr};
 use strum::{AsRefStr, EnumProperty, EnumString};
 use wgui::{
@@ -81,7 +80,7 @@ pub(crate) enum Task {
 	ClearPipewireTokens,
 	ClearSavedState,
 	DeleteAllConfigs,
-	OpenContextMenu(Vec2, Vec<context_menu::Cell>),
+	OpenContextMenu(context_menu::Position, Vec<context_menu::Cell>),
 	RemoveAutostartApp(Rc<str>),
 	ResetPlayspace,
 	ResetPlayspaceCenter,

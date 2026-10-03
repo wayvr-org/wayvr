@@ -367,5 +367,13 @@
 	"REMOVE_FROM_FAVOURITES": "Usuń z przypiętych aplikacji",
 	"EMPTY": "Puste",
 	"INSTALLED": "Zainstalowano",
-	"NOT_INSTALLED": "Nie zainstalowano"
+	"NOT_INSTALLED": "Nie zainstalowano",
+	"POWER_OPTIONS": {
+		"TITLE": "Opcje zasilania",
+		"SHUTDOWN": "Wyłącz",
+		"SUSPEND": "Uśpij",
+		"SHUTDOWN_ARE_YOU_SURE": "Czy na pewno chcesz wyłączyć komputer?"
+	},
+	"YES": "Tak",
+	"NO": "Nie"
 }

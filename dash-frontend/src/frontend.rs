@@ -1,11 +1,11 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{path::PathBuf, process::Command, rc::Rc};
 
 use chrono::Timelike;
 use glam::Vec2;
 use strum::EnumCount;
 use wgui::{
 	assets::{AssetPathRef, AssetProvider},
-	components::button::ComponentButton,
+	components::{ComponentTrait, button::ComponentButton},
 	event::{CallbackDataCommon, StyleSetRequest},
 	font_config::WguiFontConfig,
 	globals::WguiGlobals,
@@ -17,7 +17,10 @@ use wgui::{
 	task::Tasks,
 	theme::WguiTheme,
 	widget::{label::WidgetLabel, rectangle::WidgetRectangle, sprite::WidgetSprite},
-	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra, WguiWindowPlacement},
+	windowing::{
+		context_menu::{self, ContextMenu},
+		window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra, WguiWindowPlacement},
+	},
 };
 use wlx_common::{
 	async_executor::AsyncExecutor,
@@ -35,10 +38,11 @@ use crate::{
 		settings::TabSettings, welcome::TabWelcome,
 	},
 	util::{
-		popup_manager::{MountPopupOnceParams, PopupManager, PopupManagerParams},
+		is_exec_installed,
+		popup_manager::{MountPopupOnceParams, PopupHolder, PopupManager, PopupManagerParams},
 		toast_manager::ToastManager,
 	},
-	views,
+	views::{self, ViewUpdateParams},
 };
 
 pub struct FrontendWidgets {
@@ -74,9 +78,11 @@ pub struct Frontend<T> {
 	toast_manager: ToastManager,
 	timestep: Timestep,
 	sounds_to_play: Vec<SoundType>,
+	context_menu_power: ContextMenu,
 
 	window_audio_settings: WguiWindow,
 	view_audio_settings: Option<views::audio_settings::View>,
+	popup_dialog_box: PopupHolder<views::dialog_box::View>,
 }
 
 pub struct FrontendUpdateParams<'a, T> {
@@ -116,11 +122,13 @@ pub enum FrontendTask {
 	MountPopupOnce(MountPopupOnceParams),
 	RefreshPopupManager,
 	ShowAudioSettings,
+	ShowPowerSettings(WidgetID /* source widget */),
 	UpdateAudioSettingsView,
 	RecenterPlayspace,
 	PushToast(Translation),
 	PlaySound(SoundType),
 	OpenURL(Rc<str>),
+	RunCommand(String /* program */, Vec<String> /* args */),
 	HideDashboard,
 	MarkTutorialGraduated,
 }
@@ -202,9 +210,11 @@ impl<T: 'static> Frontend<T> {
 			popup_manager,
 			toast_manager,
 			window_audio_settings: WguiWindow::default(),
+			context_menu_power: Default::default(),
 			view_audio_settings: None,
 			executor: params.executor,
 			sounds_to_play: Vec::new(),
+			popup_dialog_box: Default::default(),
 		};
 
 		// init some things first
@@ -275,10 +285,69 @@ impl<T: 'static> Frontend<T> {
 		Ok(())
 	}
 
+	fn action_poweroff_confirm(&mut self) {
+		let tasks = self.tasks.clone();
+		views::dialog_box::mount_popup(
+			self.popup_dialog_box.clone(),
+			self.tasks.clone(),
+			views::dialog_box::Params {
+				globals: self.globals.clone(),
+				message: Translation::from_translation_key("POWER_OPTIONS.SHUTDOWN_ARE_YOU_SURE"),
+				entries: views::dialog_box::get_entries_yes_no(),
+				on_action_click: Box::new(move |action| {
+					if action == "yes" {
+						tasks.push(FrontendTask::RunCommand(
+							String::from("systemctl"),
+							vec![String::from("poweroff")],
+						));
+					}
+				}),
+			},
+		);
+	}
+
+	fn process_power_action(&mut self, action: &str) {
+		if !is_exec_installed("systemctl") {
+			// TODO: add support for other init systems?
+			self.tasks.push(FrontendTask::PushToast(Translation::from_raw_text(
+				"systemctl is not installed",
+			)));
+			return;
+		}
+
+		match action {
+			"suspend" => {
+				self.tasks.push(FrontendTask::RunCommand(
+					String::from("systemctl"),
+					vec![String::from("suspend")],
+				));
+			}
+			"shutdown" => {
+				self.action_poweroff_confirm();
+			}
+			_ => {
+				unreachable!()
+			}
+		}
+	}
+
 	fn tick(&mut self, params: FrontendUpdateParams<T>) -> anyhow::Result<FrontendUpdateResult> {
 		// fixme: timer events instead of this thing
 		if self.ticks.is_multiple_of(1000) {
 			self.update_time(params.data)?;
+		}
+
+		// TODO: refactor: simplify update function (no configs or T are required in most cases)
+		let mut config_change_kind = None;
+		self.popup_dialog_box.update(&mut ViewUpdateParams {
+			layout: &mut self.layout,
+			executor: &self.executor,
+			general_config: self.interface.general_config(params.data),
+			config_change_kind: &mut config_change_kind,
+		})?;
+
+		if let context_menu::TickResult::Action(action) = self.context_menu_power.tick(&mut self.layout, &mut self.state)? {
+			self.process_power_action(&action);
 		}
 
 		{
@@ -371,12 +440,14 @@ impl<T: 'static> Frontend<T> {
 			FrontendTask::MountPopupOnce(popup_params) => self.mount_popup_once(popup_params, params.data)?,
 			FrontendTask::RefreshPopupManager => self.refresh_popup_manager()?,
 			FrontendTask::ShowAudioSettings => self.action_show_audio_settings()?,
+			FrontendTask::ShowPowerSettings(pos) => self.action_show_power_settings(pos)?,
 			FrontendTask::UpdateAudioSettingsView => self.action_update_audio_settings()?,
 			FrontendTask::RecenterPlayspace => self.action_recenter_playspace(params.data)?,
 			FrontendTask::PushToast(content) => self.toast_manager.push(content),
 			FrontendTask::PlaySound(sound_type) => self.queue_play_sound(sound_type),
 			FrontendTask::HideDashboard => self.action_hide_dashboard(params.data),
 			FrontendTask::OpenURL(url) => self.action_open_url(url),
+			FrontendTask::RunCommand(program, args) => self.action_run_command(program, args),
 			FrontendTask::MarkTutorialGraduated => self.action_tutorial_graduated(params.data),
 		};
 		Ok(())
@@ -503,12 +574,29 @@ impl<T: 'static> Frontend<T> {
 			FrontendTask::ShowAudioSettings,
 		);
 
+		let btn_power = self.state.fetch_component_as::<ComponentButton>("btn_power")?;
+		self
+			.tasks
+			.handle_button(&btn_power, FrontendTask::ShowPowerSettings(btn_power.base().get_id()));
+
 		// "Recenter playspace" bottom bar button
 		self.tasks.handle_button(
 			&self.state.fetch_component_as::<ComponentButton>("btn_recenter")?,
 			FrontendTask::RecenterPlayspace,
 		);
 
+		Ok(())
+	}
+
+	fn action_show_power_settings(&mut self, source_id: WidgetID) -> anyhow::Result<()> {
+		self.context_menu_power.open(context_menu::OpenParams {
+			on_custom_attribs: None,
+			position: source_id.into(),
+			blueprint: context_menu::Blueprint::Template {
+				template_name: "context_menu_power_options".into(),
+				template_params: Default::default(),
+			},
+		});
 		Ok(())
 	}
 
@@ -575,5 +663,15 @@ impl<T: 'static> Frontend<T> {
 				"Opened URL: {}",
 				url
 			))));
+	}
+
+	fn action_run_command(&mut self, command: String, args: Vec<String>) {
+		if let Err(e) = Command::new(command).args(args).spawn() {
+			self
+				.tasks
+				.push(FrontendTask::PushToast(Translation::from_raw_text_string(format!(
+					"Failed to launch command: {e}"
+				))))
+		};
 	}
 }
