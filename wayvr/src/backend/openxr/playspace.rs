@@ -21,7 +21,7 @@ struct MoverData<T> {
 
 pub(super) struct PlayspaceMover {
     drag: Option<MoverData<Vec3A>>,
-    rotate: Option<MoverData<Quat>>,
+    rotate: Option<MoverData<Affine3A>>,
     gravity: SpaceGravity,
     playspace_state: PlayspaceState,
 }
@@ -93,32 +93,37 @@ impl PlayspaceMover {
                 return;
             }
 
-            let pose_quat = Quat::from_affine3(&data.pose).normalize();
-            let new_hand = (pose_quat
-                * Quat::from_affine3(&app.input_state.pointers[data.hand].raw_pose))
-            .normalize();
+            let new_hand = data.pose * app.input_state.pointers[data.hand].raw_pose;
+            let before_pose = data.pose;
 
-            let dq = (pose_quat.conjugate() * (new_hand * data.hand_pose.conjugate()) * pose_quat)
-                .normalize();
-            let mut space_transform = if app.session.config.space_rotate_unlocked {
-                Affine3A::from_quat(dq)
+            if app.session.config.space_rotate_unlocked {
+                // pivot on the hand so the body orbits it
+                let pose = new_hand * data.hand_pose.inverse() * data.pose;
+                data.pose = Affine3A::from_rotation_translation(
+                    Quat::from_affine3(&pose).normalize(),
+                    pose.translation.into(),
+                );
             } else {
+                let pose_quat = Quat::from_affine3(&data.pose).normalize();
+                let dq = (pose_quat.conjugate()
+                    * Quat::from_affine3(&(new_hand * data.hand_pose.inverse()))
+                    * pose_quat)
+                    .normalize();
                 let rel_y = f32::atan2(
                     2.0 * dq.y.mul_add(dq.w, dq.x * dq.z),
                     2.0f32.mul_add(dq.w.mul_add(dq.w, dq.x * dq.x), -1.0),
                 );
 
-                Affine3A::from_rotation_y(rel_y)
-            };
-            let offset = (space_transform.transform_vector3a(app.input_state.hmd.translation)
-                - app.input_state.hmd.translation)
-                * -1.0;
+                let mut space_transform = Affine3A::from_rotation_y(rel_y);
+                space_transform.translation = (space_transform
+                    .transform_vector3a(app.input_state.hmd.translation)
+                    - app.input_state.hmd.translation)
+                    * -1.0;
 
-            space_transform.translation = offset;
+                data.pose *= space_transform;
+                data.pose.matrix3 = Mat3A::from_quat(Quat::from_affine3(&data.pose).normalize());
+            }
 
-            let before_pose = data.pose;
-            data.pose *= space_transform;
-            data.pose.matrix3 = Mat3A::from_quat(Quat::from_affine3(&data.pose).normalize());
             if !app.session.config.space_drag_affects_world {
                 playspace_common::shift_world(overlays, &mut app.anchor, &before_pose, &data.pose);
             }
@@ -126,6 +131,8 @@ impl PlayspaceMover {
 
             apply_offset(data.pose, &mut monado.ipc);
             self.rotate = Some(data);
+            // drag and rotate can share a button
+            return;
         } else {
             // start space rotate
             for (i, pointer) in app.input_state.pointers.iter().enumerate() {
@@ -144,7 +151,7 @@ impl PlayspaceMover {
                         return;
                     };
 
-                    let hand_pose = Quat::from_affine3(&(pose * pointer.raw_pose)).normalize();
+                    let hand_pose = pose * pointer.raw_pose;
                     self.rotate = Some(MoverData {
                         pose,
                         hand: i,
