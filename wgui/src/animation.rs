@@ -330,10 +330,10 @@ impl Animations {
 
 			anim.pos_prev = anim.pos;
 			anim.pos = pos;
+			alterables.needs_redraw = true;
 
 			if anim.last_tick {
 				let _ = anim.call(state, alterables, 1.0);
-				alterables.needs_redraw = true;
 			} else {
 				ticks.remaining -= 1;
 			}

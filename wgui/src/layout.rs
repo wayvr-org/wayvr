@@ -748,7 +748,7 @@ impl Layout {
 		self.animations.tick(&self.state, &mut alterables);
 		self.process_pending_widget_ticks(&mut alterables);
 		self.process_alterables(alterables)?;
-		self.recompute_layout(None)?;
+		self.recompute_layout(Some(self.prev_size))?;
 		self.process_pending_components();
 		Ok(())
 	}
