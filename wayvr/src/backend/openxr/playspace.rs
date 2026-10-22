@@ -13,6 +13,8 @@ use crate::{
 
 use super::overlay::OpenXrOverlayData;
 
+const SPACE_ROTATE_SMOOTHING: f32 = 0.05;
+
 struct MoverData<T> {
     pose: Affine3A,
     hand: usize,
@@ -93,7 +95,16 @@ impl PlayspaceMover {
                 return;
             }
 
-            let new_hand = data.pose * app.input_state.pointers[data.hand].raw_pose;
+            let raw_hand = data.pose * app.input_state.pointers[data.hand].raw_pose;
+            let new_hand = if app.session.config.space_rotate_unlocked {
+                let t = 1.0 - (-app.delta_time / SPACE_ROTATE_SMOOTHING).exp();
+                Affine3A::from_rotation_translation(
+                    Quat::from_affine3(&data.hand_pose).slerp(Quat::from_affine3(&raw_hand), t),
+                    raw_hand.translation.into(),
+                )
+            } else {
+                raw_hand
+            };
             let before_pose = data.pose;
 
             if app.session.config.space_rotate_unlocked {
