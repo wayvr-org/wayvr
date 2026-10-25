@@ -1527,6 +1527,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_more"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d751e9e49156b02b44f9c1815bcb94b984cdcc4396ecc32521c739452808b134"
+dependencies = [
+ "derive_more-impl",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "799a97264921d8623a957f6c3b9011f3b5492f557bbb7a5a19b7fa6d06ba8dcb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "syn 2.0.118",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3725,7 +3746,7 @@ version = "0.0.0"
 source = "git+https://github.com/galister/ovr_overlay_oyasumi?rev=3b7d24cee24aa2b1ad7dffc5d5c8568508049bdd#3b7d24cee24aa2b1ad7dffc5d5c8568508049bdd"
 dependencies = [
  "byteorder",
- "derive_more",
+ "derive_more 0.99.20",
  "enumset",
  "lazy_static",
  "log",
@@ -5554,6 +5575,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "timeline_syncobj"
+version = "0.2.1"
+source = "git+https://github.com/Schmarni-Dev/timeline_syncobj?rev=7f67e49ebf466487cf35138fc108618092acb9e8#7f67e49ebf466487cf35138fc108618092acb9e8"
+dependencies = [
+ "bitflags 2.13.0",
+ "derive_more 2.1.1",
+ "rustix 1.1.4",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "tiny-keccak"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6844,6 +6876,7 @@ dependencies = [
  "rxscreen",
  "slotmap",
  "smithay-client-toolkit 0.20.0",
+ "timeline_syncobj",
  "wayland-client",
  "wayland-protocols",
 ]

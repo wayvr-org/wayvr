@@ -558,9 +558,15 @@ pub(super) struct WlxCaptureOut {
     pub(super) image: Arc<ImageView>,
     pub(super) format: FrameFormat,
     pub(super) mouse: Option<MouseMeta>,
+    pub(super) acquire_sync: wlx_frame::FrameAcquireSync,
+    pub(super) _lease: Option<wlx_frame::FrameLease>,
 }
 
 impl WlxCaptureOut {
+    pub(super) fn is_ready(&mut self) -> std::io::Result<bool> {
+        self.acquire_sync.check_ready()
+    }
+
     pub(super) fn get_frame_meta(&self, config: &GeneralConfig, stereo: StereoMode) -> FrameMeta {
         FrameMeta {
             clear: WGfxClearMode::DontCare,
@@ -719,18 +725,23 @@ fn upload_image_with_row_length(
 
 pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<WlxCaptureOut> {
     match frame {
-        WlxFrame::Dmabuf(frame) => {
+        WlxFrame::Dmabuf(mut frame) => {
             if !frame.is_valid() {
                 log::error!("{}: Invalid frame", me.name);
                 return None;
             }
             log::trace!("{}: New DMA-buf frame", me.name);
             let format = frame.format;
-            match me.gfx.dmabuf_texture(frame) {
+            let lease = frame.lease.clone();
+            let acquire_sync = std::mem::take(&mut frame.acquire_sync);
+
+            match me.gfx.dmabuf_texture(&frame) {
                 Ok(image) => Some(WlxCaptureOut {
                     image: me.gfx.create_image_view(image).ok()?,
                     format,
                     mouse: None,
+                    acquire_sync,
+                    _lease: lease,
                 }),
                 Err(e) => {
                     log::error!("{}: Failed to create DMA-buf vkImage: {}", me.name, e);
@@ -766,6 +777,8 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
                 image: me.gfx.create_image_view(image).ok()?,
                 format: frame.format,
                 mouse: None,
+                acquire_sync: wlx_frame::FrameAcquireSync::Ready,
+                _lease: None,
             })
         }
         WlxFrame::MemPtr(frame) => {
@@ -800,6 +813,8 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
                 image: me.gfx.create_image_view(image).ok()?,
                 format: frame.format,
                 mouse: frame.mouse,
+                acquire_sync: wlx_frame::FrameAcquireSync::Ready,
+                _lease: None,
             })
         }
         WlxFrame::Implicit(transform) => {
@@ -823,6 +838,8 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
                 image,
                 format,
                 mouse: None,
+                acquire_sync: wlx_frame::FrameAcquireSync::Ready,
+                _lease: None,
             })
         }
     }

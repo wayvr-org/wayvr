@@ -344,8 +344,14 @@ fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
                 par.app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
                     OverlaySelector::Name(par.name.clone()),
                     Box::new(move |app, owc| {
-                        let capture =
-                            new_wlx_capture!(app, PipewireCapture::new(par.name.clone(), node_id));
+                        let capture = new_wlx_capture!(
+                            app,
+                            PipewireCapture::new(
+                                par.name.clone(),
+                                node_id,
+                                app.gfx_extras.drm_render_node.clone()
+                            )
+                        );
 
                         owc.backend =
                             finalize_fn(par.name, par.logical_pos, par.logical_size, capture, app);

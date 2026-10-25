@@ -4,11 +4,11 @@ use wgui::gfx::{DmabufImportInfo, DmabufPlaneLayout, Format, Image, ImageView, W
 use wlx_capture::{DrmFormat, DrmFourcc, DrmModifier, frame::DmabufFrame};
 
 pub trait WGfxDmabuf {
-    fn dmabuf_texture(&self, frame: DmabufFrame) -> anyhow::Result<Arc<Image>>;
+    fn dmabuf_texture(&self, frame: &DmabufFrame) -> anyhow::Result<Arc<Image>>;
 }
 
 impl WGfxDmabuf for WGfx {
-    fn dmabuf_texture(&self, frame: DmabufFrame) -> anyhow::Result<Arc<Image>> {
+    fn dmabuf_texture(&self, frame: &DmabufFrame) -> anyhow::Result<Arc<Image>> {
         let format = fourcc_to_vk(frame.format.drm_format.code)?;
         let modifier = (!matches!(frame.format.drm_format.modifier, DrmModifier::Invalid))
             .then(|| u64::from(frame.format.drm_format.modifier));
