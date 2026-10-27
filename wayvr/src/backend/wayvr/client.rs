@@ -21,7 +21,7 @@ use smithay::{
 use wgui::log::LogErr;
 use xkbcommon::xkb;
 
-use crate::backend::wayvr::{ExternalProcessRequest, WayVRTask};
+use crate::backend::wayvr::WayVRTask;
 
 use super::{
     ProcessWayVREnv,
@@ -32,6 +32,7 @@ use super::{
 pub struct WayVRClient {
     pub client: wayland_server::Client,
     pub pid: u32,
+    pub process: process::ProcessHandle,
 }
 
 pub struct WayVRCompositor {
@@ -160,16 +161,17 @@ impl WayVRCompositor {
         let process_env = get_wayvr_env_from_pid(credentials.pid)?;
 
         // Find suitable auth key from the process list
-        for (_, process) in processes {
-            if let process::Process::Managed(process) = &process
+        for (handle, process) in processes.iter() {
+            if let process::Process::Managed(process) = process
                 && let Some(auth_key) = &process_env.display_auth
             {
                 // Find process with matching auth key
                 if process.auth_key.as_str() == auth_key {
-                    // Add client
+                    // Associate client now, instead of trying to match env later
                     self.add_client(WayVRClient {
                         client,
                         pid: credentials.pid as u32,
+                        process: handle,
                     });
                     return Ok(());
                 }
@@ -178,18 +180,15 @@ impl WayVRCompositor {
 
         // This is a new process which we didn't met before.
         // Treat external processes exclusively (spawned by the user or external program)
-        log::warn!(
-            "External process ID {} connected to this Wayland server",
-            credentials.pid
-        );
-
-        self.state
-            .wayvr_tasks
-            .send(WayVRTask::NewExternalProcess(ExternalProcessRequest {
-                env: process_env,
-                client,
-                pid: credentials.pid as u32,
-            }));
+        let pid = credentials.pid as u32;
+        log::warn!("External process ID {pid} connected to this Wayland server");
+        let process =
+            processes.insert(process::Process::External(process::ExternalProcess { pid }));
+        self.add_client(WayVRClient {
+            client,
+            pid,
+            process,
+        });
 
         Ok(())
     }

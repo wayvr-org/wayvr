@@ -119,21 +119,12 @@ pub struct ProcessWayVREnv {
 }
 
 #[derive(Clone)]
-pub struct ExternalProcessRequest {
-    #[allow(dead_code)]
-    pub env: ProcessWayVREnv,
-    pub client: wayland_server::Client,
-    pub pid: u32,
-}
-
-#[derive(Clone)]
 pub enum WayVRTask {
     NewToplevel(ClientId, ToplevelSurface),
     DropToplevel(ClientId, ToplevelSurface),
     MinimizeRequest(ClientId, ToplevelSurface),
     TitleChange(ClientId, ToplevelSurface),
     VisibilityChange(window::WindowHandle, bool),
-    NewExternalProcess(ExternalProcessRequest),
     ProcessTerminationRequest(process::ProcessHandle, KillSignal),
     CloseWindowRequest(window::WindowHandle),
     DndStarted {
@@ -171,10 +162,6 @@ pub enum PointerFocusTarget {
     Surface { surface: WlSurface, origin: Vec2 },
     Toplevel,
     None,
-}
-
-pub enum TickTask {
-    NewExternalProcess(ExternalProcessRequest), // Call WayVRCompositor::add_client after receiving this message
 }
 
 const KEY_REPEAT_DELAY: i32 = 500;
@@ -325,26 +312,29 @@ impl WvrServerState {
 
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::significant_drop_tightening)]
-    pub fn tick_events(app: &mut AppState) -> anyhow::Result<Vec<TickTask>> {
-        let mut tasks: Vec<TickTask> = Vec::new();
-
+    pub fn tick_events(app: &mut AppState) -> anyhow::Result<()> {
         let Some(wvr_server) = app.wvr_server.as_mut() else {
-            return Ok(tasks);
+            return Ok(());
         };
 
         app.ipc_server.tick(&mut ipc_server::TickParams {
             wvr_server,
             input_state: &app.input_state,
-            tasks: &mut tasks,
             signals: &app.wayvr_signals,
             hid_wrapper: &mut app.hid_provider,
         });
 
-        // Tick all child processes
+        // Keep launch records while wl client is attached
+        let attached_processes: HashSet<_> = wvr_server
+            .manager
+            .clients
+            .iter()
+            .map(|client| client.process)
+            .collect();
         let mut to_remove: SmallVec<[process::ProcessHandle; 2]> = SmallVec::new();
 
         for (handle, process) in &mut wvr_server.processes {
-            if !process.is_running() {
+            if !process.is_running() && !attached_processes.contains(&handle) {
                 to_remove.push(handle);
             }
         }
@@ -356,9 +346,6 @@ impl WvrServerState {
 
         while let Some(task) = wvr_server.tasks.read() {
             match task {
-                WayVRTask::NewExternalProcess(req) => {
-                    tasks.push(TickTask::NewExternalProcess(req));
-                }
                 WayVRTask::NewToplevel(client_id, toplevel) => {
                     let toplevel = Rc::new(toplevel);
 
@@ -368,15 +355,14 @@ impl WvrServerState {
                             continue;
                         }
 
-                        let Some(process_handle) =
-                            process::find_by_pid(&wvr_server.processes, client.pid)
-                        else {
+                        let process_handle = client.process;
+                        if !wvr_server.processes.contains_key(process_handle) {
                             log::error!(
-                                "WayVR window creation failed: Unexpected process ID {}. It wasn't registered before.",
+                                "WayVR window creation failed: Process for PID {} was removed after the client connected.",
                                 client.pid
                             );
                             continue;
-                        };
+                        }
 
                         let output_bounds = wvr_server.manager.state.output_logical_size();
 
@@ -601,7 +587,7 @@ impl WvrServerState {
                         }
                         let Some(window_handle) = wvr_server.wm.find_window_handle(&toplevel)
                         else {
-                            log::warn!("MinimizeRequest: Couldn't find matching window handle");
+                            log::warn!("TitleChange: Couldn't find matching window handle");
                             continue;
                         };
                         if let Some(oid) = wvr_server.window_to_overlay.get(&window_handle) {
@@ -703,7 +689,7 @@ impl WvrServerState {
 
         wvr_server.ticks += 1;
 
-        Ok(tasks)
+        Ok(())
     }
 
     pub fn config_changed(&mut self, config: &GeneralConfig) {
@@ -1305,11 +1291,6 @@ impl WvrServerState {
 
     pub fn set_clipboard(&mut self, content: &str) {
         self.manager.state.set_clipboard_text(content);
-    }
-
-    pub fn add_external_process(&mut self, pid: u32) -> process::ProcessHandle {
-        self.processes
-            .insert(process::Process::External(process::ExternalProcess { pid }))
     }
 
     #[allow(clippy::too_many_arguments)]

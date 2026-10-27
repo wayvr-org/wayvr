@@ -89,8 +89,6 @@ fn read_payload(conn: &mut local_socket::Stream, size: u32) -> anyhow::Result<Op
 
 pub struct TickParams<'a> {
     pub wvr_server: &'a mut WvrServerState,
-    #[allow(dead_code)]
-    pub tasks: &'a mut Vec<wayvr::TickTask>,
     pub signals: &'a SyncEventQueue<WayVRSignal>,
     pub input_state: &'a InputState,
     pub hid_wrapper: &'a mut HidWrapper,

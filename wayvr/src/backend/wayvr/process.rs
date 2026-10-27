@@ -87,12 +87,14 @@ impl Process {
 
 impl Drop for WayVRProcess {
     fn drop(&mut self) {
-        log::info!(
-            "Sending SIGTERM (graceful exit) to process {} ({})",
-            self.child.id(),
-            self.exec_path.as_str()
-        );
-        self.kill(libc::SIGTERM);
+        if self.is_running() {
+            log::info!(
+                "Sending SIGTERM (graceful exit) to process {} ({})",
+                self.child.id(),
+                self.exec_path.as_str()
+            );
+            self.kill(libc::SIGTERM);
+        }
     }
 }
 
@@ -127,9 +129,11 @@ impl WayVRProcess {
     }
 
     fn kill(&mut self, signal: i32) {
-        unsafe {
-            // Gracefully stop process
-            libc::kill(self.child.id() as i32, signal);
+        if self.is_running() {
+            unsafe {
+                // Gracefully stop process
+                libc::kill(self.child.id() as i32, signal);
+            }
         }
     }
 
