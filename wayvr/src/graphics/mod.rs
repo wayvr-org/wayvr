@@ -59,14 +59,15 @@ impl WGfxExtras {
         ];
         let quad_verts = gfx.new_buffer(BufferUsage::VERTEX_BUFFER, &vertices)?;
 
+        #[cfg(feature = "pipewire")]
         let drm_device = gfx.device_info().drm_render_node.map(|(major, minor)| {
             log::info!("DRM render device: {major} {minor}");
             (i64::from(major), i64::from(minor))
         });
+        #[cfg(feature = "pipewire")]
         if drm_device.is_none() {
             log::warn!("No DRM device.");
         }
-
         #[cfg(feature = "pipewire")]
         let drm_render_node = drm_device.and_then(|(maj, min)| {
             use wgui::log::LogErr;
@@ -82,6 +83,7 @@ impl WGfxExtras {
             drm_formats,
             quad_verts,
             drm_device,
+            #[cfg(feature = "pipewire")]
             drm_render_node,
         })
     }
