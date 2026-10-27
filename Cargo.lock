@@ -6374,8 +6374,7 @@ dependencies = [
 [[package]]
 name = "whisper-rs"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2088172d00f936c348d6a72f488dc2660ab3f507263a195df308a3c2383229f6"
+source = "git+https://github.com/wayvr-org/whisper-rs.git?rev=2d908ec36cd41521a28f7f5fb5dc95499fd40051#2d908ec36cd41521a28f7f5fb5dc95499fd40051"
 dependencies = [
  "libc",
  "whisper-rs-sys",
@@ -6384,8 +6383,7 @@ dependencies = [
 [[package]]
 name = "whisper-rs-sys"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6986c0fe081241d391f09b9a071fbcbb59720c3563628c3c829057cf69f2a56f"
+source = "git+https://github.com/wayvr-org/whisper-rs.git?rev=2d908ec36cd41521a28f7f5fb5dc95499fd40051#2d908ec36cd41521a28f7f5fb5dc95499fd40051"
 dependencies = [
  "bindgen",
  "cfg-if",

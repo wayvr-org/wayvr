@@ -109,7 +109,13 @@ smithay-clipboard = "0.7.3"
 sysinfo = { version = "0.39.6" }
 thiserror = "2.0.18"
 tracing = "0.1.44"
-whisper-rs = { version = "0.16.0", features = ["vulkan"], optional = true }
+whisper-rs = {
+  # version = "0.16.0",
+  git = "https://github.com/wayvr-org/whisper-rs.git",
+  rev = "2d908ec36cd41521a28f7f5fb5dc95499fd40051",
+  features = ["vulkan"],
+  optional = true
+}
 xcb = {
   version = "1.7.0",
   features = [
