@@ -49,6 +49,10 @@ use crate::frame::{
 use crate::pipewire::raw_buffer::{HeldBuffers, MAX_PW_BUFFERS};
 use crate::syncobj::import_timeline;
 
+const SPA_DATA_SYNCOBJ: u32 = 5;
+const SPA_META_SYNC_TIMELINE: u32 = 9;
+const SPA_PARAM_BUFFERS_META_TYPE: u32 = 7;
+
 #[derive(Default)]
 struct StreamData {
     format: Option<FrameFormat>,
@@ -276,7 +280,7 @@ where
                     // order defines preference, we prefer explicit sync
                     param_bytes.push(
                         obj_to_bytes(get_meta_object(
-                            spa::sys::SPA_META_SyncTimeline,
+                            SPA_META_SYNC_TIMELINE,
                             std::mem::size_of::<MetaSyncTimeline>(),
                         ))
                         .unwrap(),
@@ -370,8 +374,8 @@ where
                     return;
                 }
                 let is_explicit = datas.len() >= 3
-                    && datas[datas.len() - 2].type_().as_raw() == spa::sys::SPA_DATA_SyncObj
-                    && datas[datas.len() - 1].type_().as_raw() == spa::sys::SPA_DATA_SyncObj;
+                    && datas[datas.len() - 2].type_().as_raw() == SPA_DATA_SYNCOBJ
+                    && datas[datas.len() - 1].type_().as_raw() == SPA_DATA_SYNCOBJ;
                 if is_explicit != acquire_point.is_some() {
                     log::warn!("{name}: inconsistent SyncTimeline metadata / SyncObj FD layout");
                     return;
@@ -386,7 +390,7 @@ where
                     || datas.len() > 4
                     || datas
                         .iter()
-                        .any(|d| d.type_().as_raw() == spa::sys::SPA_DATA_SyncObj)
+                        .any(|d| d.type_().as_raw() == SPA_DATA_SYNCOBJ)
                 {
                     log::warn!("{name}: invalid PipeWire plane layout");
                     return;
@@ -664,9 +668,9 @@ fn get_sync_buffer_params() -> Object {
         ))),
     });
     obj.properties.push(Property {
-        key: spa::sys::SPA_PARAM_BUFFERS_metaType,
+        key: SPA_PARAM_BUFFERS_META_TYPE,
         flags: PropertyFlags::MANDATORY,
-        value: Value::Int(1_i32 << spa::sys::SPA_META_SyncTimeline),
+        value: Value::Int(1_i32 << SPA_META_SYNC_TIMELINE),
     });
     obj
 }
@@ -818,5 +822,5 @@ struct MetaSyncTimeline {
 }
 
 impl spa::buffer::meta::Metadata for MetaSyncTimeline {
-    const META_TYPE: u32 = spa::sys::SPA_META_SyncTimeline;
+    const META_TYPE: u32 = SPA_META_SYNC_TIMELINE;
 }
