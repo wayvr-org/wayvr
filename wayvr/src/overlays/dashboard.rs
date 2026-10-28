@@ -332,7 +332,7 @@ fn tutorial_spawn_effect(app: &mut AppState) {
                 realign(&mut transform, hmd, 1.0, app.session.config.snap_angle_deg);
 
                 owc.active_state = Some(OverlayWindowState {
-                    saved_transform: Some(Affine3A::from_translation(vec3(0., -0.1, -0.9))),
+                    saved_transform: Some(Affine3A::from_translation(vec3(0., -0.1, -0.1))),
                     transform,
                     grabbable: true,
                     interactable: true,
@@ -370,7 +370,7 @@ pub fn create_dash_frontend(app: &mut AppState) -> anyhow::Result<OverlayWindowC
     Ok(OverlayWindowConfig {
         name: DASH_NAME.into(),
         default_state: OverlayWindowState {
-            transform: Affine3A::from_translation(vec3(0., 0., -0.9)),
+            transform: Affine3A::from_translation(vec3(0., 0., -0.1)),
             grabbable: true,
             interactable: true,
             positioning: Positioning::Floating,
