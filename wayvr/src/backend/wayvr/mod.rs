@@ -4,12 +4,15 @@ pub mod hit_test;
 mod image_importer;
 mod input_capture;
 pub mod process;
+mod session;
+mod session_protocol;
 mod time;
 pub mod window;
 
 use anyhow::Context;
 use comp::Application;
 use glam::{DVec2, Vec2};
+use session::{SessionRegistry, app_key, tag_key};
 use slotmap::{DenseSlotMap, SecondaryMap};
 use smallvec::SmallVec;
 use smithay::{
@@ -19,7 +22,7 @@ use smithay::{
     reexports::{
         wayland_protocols_misc::server_decoration::server::org_kde_kwin_server_decoration_manager as kde_decoration,
         wayland_server::{
-            self,
+            self, Resource,
             backend::ClientId,
             protocol::{wl_buffer, wl_surface::WlSurface},
         },
@@ -121,9 +124,14 @@ pub struct ProcessWayVREnv {
 #[derive(Clone)]
 pub enum WayVRTask {
     NewToplevel(ClientId, ToplevelSurface),
+    FirstToplevelCommit(ToplevelSurface),
     DropToplevel(ClientId, ToplevelSurface),
     MinimizeRequest(ClientId, ToplevelSurface),
     TitleChange(ClientId, ToplevelSurface),
+    WindowIdentityChanged(ToplevelSurface),
+    FreezeWindowState(ToplevelSurface, Arc<str>),
+    RenameWindowState(Arc<str>, Arc<str>),
+    ForgetWindowState(Arc<str>),
     VisibilityChange(window::WindowHandle, bool),
     ProcessTerminationRequest(process::ProcessHandle, KillSignal),
     CloseWindowRequest(window::WindowHandle),
@@ -169,7 +177,11 @@ const KEY_REPEAT_RATE: i32 = 50;
 const WAYVR_SCREEN_RES: [i32; 2] = [2560, 1440];
 
 impl WvrServerState {
-    pub fn new(gfx: Arc<WGfx>, gfx_extras: &WGfxExtras) -> anyhow::Result<Self> {
+    pub fn new(
+        gfx: Arc<WGfx>,
+        gfx_extras: &WGfxExtras,
+        config: &GeneralConfig,
+    ) -> anyhow::Result<Self> {
         const fn filter_allow_any(_: &wayland_server::Client) -> bool {
             true
         }
@@ -178,6 +190,16 @@ impl WvrServerState {
         let dh = display.handle();
         let compositor = compositor::CompositorState::new::<Application>(&dh);
         let xdg_shell = XdgShellState::new::<Application>(&dh);
+        let _session_global = dh.create_global::<Application,
+            session_protocol::server::xdg_session_manager_v1::XdgSessionManagerV1, _>(1, ());
+        let xdg_toplevel_tags =
+            smithay::wayland::xdg_toplevel_tag::XdgToplevelTagManager::new::<Application>(&dh);
+        let stored_keys: HashSet<Arc<str>> = config
+            .sets
+            .iter()
+            .flat_map(|set| set.overlays.keys().chain(set.hidden_overlays.keys()))
+            .cloned()
+            .collect();
         let mut seat_state = SeatState::new();
         let shm = ShmState::new::<Application>(&dh, Vec::new());
         let data_device = DataDeviceState::new::<Application>(&dh);
@@ -269,6 +291,9 @@ impl WvrServerState {
             display_handle: dh,
             compositor,
             xdg_shell,
+            xdg_toplevel_tags,
+            sessions: SessionRegistry::new(stored_keys),
+            toplevel_tags: HashMap::new(),
             seat,
             seat_state,
             shm,
@@ -414,6 +439,29 @@ impl WvrServerState {
                                 ),
                             };
 
+                        let (xdg_title, app_id): (Option<String>, Option<String>) =
+                            with_states(toplevel.wl_surface(), |states| {
+                                states.data_map.get::<XdgToplevelSurfaceData>().map_or(
+                                    (None, None),
+                                    |t| {
+                                        let t = t.lock().unwrap();
+                                        (t.title.clone(), t.app_id.clone())
+                                    },
+                                )
+                            });
+                        let app_id: Option<Arc<str>> =
+                            app_id.filter(|s| !s.is_empty()).map(Into::into);
+                        let parent = toplevel.parent().and_then(|surface| {
+                            wvr_server
+                                .wm
+                                .windows
+                                .iter()
+                                .find(|(_, window)| *window.toplevel.wl_surface() == surface)
+                                .map(|(handle, _)| handle)
+                        });
+                        let (name, restore_on_spawn) =
+                            wvr_server.window_identity(&toplevel, app_id.as_deref(), parent, None);
+
                         let window_handle = wvr_server.wm.create_window(CreateWindowParams {
                             toplevel: toplevel.clone(),
                             process: process_handle,
@@ -422,6 +470,10 @@ impl WvrServerState {
                             max_size,
                             size_x: fallback_size.w as _,
                             size_y: fallback_size.h as _,
+                            app_id: app_id.clone(),
+                            parent,
+                            name: name.clone(),
+                            restore_on_spawn,
                         });
 
                         toplevel.with_pending_state(|state| {
@@ -430,42 +482,42 @@ impl WvrServerState {
                             state.size = Some(fallback_size);
                             state.states.set(xdg_toplevel::State::Activated);
                         });
-                        toplevel.send_configure();
+                        // xdg-shell requires an empty commit before initial configure
+                        if wvr_server
+                            .manager
+                            .state
+                            .sessions
+                            .committed_toplevels
+                            .contains(&toplevel.xdg_toplevel().id())
+                        {
+                            wvr_server.send_first_configure(&toplevel);
+                        }
 
                         let mut title: Arc<str> = fallback_title
-                            .unwrap_or_else(|| format!("P{}", client.pid))
+                            .map(Arc::from)
+                            .or_else(|| name.clone())
+                            .unwrap_or_else(|| format!("P{}", client.pid).into())
                             .into();
 
-                        let spawn_pos = wvr_server
-                            .last_process_overlay(process_handle)
-                            .map_or(SpawnPos::Spread, |oid| {
-                                SpawnPos::Parent(OverlaySelector::Id(oid))
-                            });
+                        let spawn_pos = SpawnPos::WlDefault(
+                            window_handle,
+                            wvr_server.last_process_overlay(process_handle),
+                        );
 
                         let mut icon = icon;
 
                         // Try to get title from xdg_toplevel, unless it's running in cage
                         if !is_cage {
                             let mut needs_title = true;
-                            let (xdg_title, app_id): (Option<String>, Option<String>) =
-                                with_states(toplevel.wl_surface(), |states| {
-                                    states.data_map.get::<XdgToplevelSurfaceData>().map_or(
-                                        (None, None),
-                                        |t| {
-                                            let t = t.lock().unwrap();
-                                            (t.title.clone(), t.app_id.clone())
-                                        },
-                                    )
-                                });
                             if let Some(xdg_title) = xdg_title {
                                 needs_title = false;
                                 title = xdg_title.into();
                             }
 
                             // Try to get title & icon from desktop entry
-                            if let Some(app_id) = app_id
+                            if let Some(app_id) = app_id.as_deref()
                                 && let Some(desktop_entry) =
-                                    app.desktop_finder.get_cached_entry(&app_id)
+                                    app.desktop_finder.get_cached_entry(app_id)
                             {
                                 if needs_title {
                                     title = desktop_entry.app_name.as_ref().into();
@@ -488,8 +540,20 @@ impl WvrServerState {
                             OverlaySelector::Nothing,
                             spawn_pos,
                             Box::new(move |app: &mut AppState| {
+                                let (identity, restore_on_spawn) = app
+                                    .wvr_server
+                                    .as_ref()
+                                    .and_then(|wvr| wvr.wm.windows.get(window_handle))
+                                    .map(|w| (w.name.clone(), w.restore_on_spawn))
+                                    .unwrap_or((None, false));
+                                let persistent = identity.is_some();
+                                let name =
+                                    identity.unwrap_or_else(|| window_handle.transient_name());
                                 create_wl_window_overlay(
+                                    name,
                                     title,
+                                    persistent,
+                                    restore_on_spawn,
                                     app,
                                     window_handle,
                                     icon,
@@ -501,6 +565,11 @@ impl WvrServerState {
                                 .ok()
                             }),
                         )));
+                    }
+                }
+                WayVRTask::FirstToplevelCommit(toplevel) => {
+                    if wvr_server.wm.find_window_handle(&toplevel).is_some() {
+                        wvr_server.send_first_configure(&toplevel);
                     }
                 }
                 WayVRTask::DropToplevel(client_id, toplevel) => {
@@ -543,8 +612,80 @@ impl WvrServerState {
                             }
                         }
 
+                        if let Some(key) = wvr_server
+                            .wm
+                            .windows
+                            .get(window_handle)
+                            .and_then(|w| w.name.clone())
+                        {
+                            wvr_server.manager.state.sessions.stored_keys.insert(key);
+                        }
                         wvr_server.wm.remove_window(window_handle);
                     }
+                }
+                WayVRTask::WindowIdentityChanged(toplevel) => {
+                    let Some(handle) = wvr_server.wm.find_window_handle(&toplevel) else {
+                        continue;
+                    };
+                    let app_id: Option<Arc<str>> = with_states(toplevel.wl_surface(), |states| {
+                        states
+                            .data_map
+                            .get::<XdgToplevelSurfaceData>()
+                            .and_then(|d| {
+                                d.lock()
+                                    .unwrap()
+                                    .app_id
+                                    .as_deref()
+                                    .filter(|s| !s.is_empty())
+                                    .map(Into::into)
+                            })
+                    });
+                    let parent = toplevel.parent().and_then(|surface| {
+                        wvr_server
+                            .wm
+                            .windows
+                            .iter()
+                            .find(|(_, w)| *w.toplevel.wl_surface() == surface)
+                            .map(|(id, _)| id)
+                    });
+                    let (key, restore) = wvr_server.window_identity(
+                        &toplevel,
+                        app_id.as_deref(),
+                        parent,
+                        Some(handle),
+                    );
+                    if let Some(window) = wvr_server.wm.windows.get_mut(handle) {
+                        window.app_id = app_id;
+                        window.parent = parent;
+                        if window.name != key || window.restore_on_spawn != restore {
+                            window.name = key.clone();
+                            window.restore_on_spawn = restore;
+                            if let Some(oid) = wvr_server.window_to_overlay.get(&handle) {
+                                let persistent = key.is_some();
+                                let name = key.unwrap_or_else(|| handle.transient_name());
+                                app.tasks
+                                    .enqueue(TaskType::Overlay(OverlayTask::SetOverlayName(
+                                        *oid, name, persistent, restore,
+                                    )));
+                            }
+                        }
+                    }
+                }
+                WayVRTask::FreezeWindowState(toplevel, key) => {
+                    if let Some(handle) = wvr_server.wm.find_window_handle(&toplevel)
+                        && let Some(oid) = wvr_server.window_to_overlay.get(&handle)
+                    {
+                        app.tasks
+                            .enqueue(TaskType::Overlay(OverlayTask::ForgetWindowState(*oid, key)));
+                    }
+                }
+                WayVRTask::RenameWindowState(old, new) => {
+                    app.tasks
+                        .enqueue(TaskType::Overlay(OverlayTask::RenameWindowState(old, new)));
+                }
+                WayVRTask::ForgetWindowState(key) => {
+                    app.tasks
+                        .enqueue(TaskType::Overlay(OverlayTask::ClearWindowState(key)));
                 }
                 WayVRTask::VisibilityChange(window_handle, visible) => {
                     if let Some(oid) = wvr_server.window_to_overlay.get(&window_handle) {
@@ -591,15 +732,29 @@ impl WvrServerState {
                             continue;
                         };
                         if let Some(oid) = wvr_server.window_to_overlay.get(&window_handle) {
-                            app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
-                                OverlaySelector::Id(*oid),
-                                Box::new(|app, owc| {
-                                    let _ = owc.backend.notify(
-                                        app,
-                                        OverlayEventData::WvrCommand(WvrCommand::ReloadTitle),
-                                    );
-                                }),
-                            )));
+                            let title: Option<Arc<str>> =
+                                with_states(toplevel.wl_surface(), |states| {
+                                    states
+                                        .data_map
+                                        .get::<XdgToplevelSurfaceData>()
+                                        .and_then(|data| {
+                                            data.lock().ok().and_then(|data| data.title.clone())
+                                        })
+                                        .filter(|title| !title.is_empty())
+                                        .map(Into::into)
+                                });
+                            if let Some(title) = title {
+                                app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                                    OverlaySelector::Id(*oid),
+                                    Box::new(move |app, owc| {
+                                        owc.title = Some(title);
+                                        let _ = owc.backend.notify(
+                                            app,
+                                            OverlayEventData::WvrCommand(WvrCommand::ReloadTitle),
+                                        );
+                                    }),
+                                )));
+                            }
                         }
                     }
                 }
@@ -730,6 +885,70 @@ impl WvrServerState {
             .get(&process_handle)
             .and_then(|overlays| overlays.last())
             .copied()
+    }
+
+    /// session restore send as part of first configure
+    fn send_first_configure(&self, toplevel: &ToplevelSurface) {
+        if toplevel.is_initial_configure_sent() {
+            return;
+        }
+        if let Some(s) = self.manager.state.sessions.get_toplevel(toplevel)
+            && s.restore_requested
+            && self.manager.state.sessions.stored_keys.contains(&s.key)
+            && let Some(resource) = s.restore_resource.as_ref()
+        {
+            resource.restored();
+        }
+        toplevel.send_configure();
+    }
+
+    /// Identifier key based on xdg session or app_id+tags or app_id+pid
+    fn window_identity(
+        &self,
+        toplevel: &ToplevelSurface,
+        app_id: Option<&str>,
+        parent: Option<window::WindowHandle>,
+        except: Option<window::WindowHandle>,
+    ) -> (Option<Arc<str>>, bool) {
+        let session = self.manager.state.sessions.get_toplevel(toplevel);
+        let tag = self
+            .manager
+            .state
+            .toplevel_tags
+            .get(&toplevel.xdg_toplevel().id());
+        let identity = session
+            .map(|s| (s.key.clone(), s.restore_requested))
+            .or_else(|| {
+                app_id
+                    .zip(tag)
+                    .map(|(app_id, tag)| (tag_key(app_id, tag), true))
+            })
+            .or_else(|| {
+                let app_id = app_id?;
+                if parent.is_some()
+                    || self.wm.windows.iter().any(|(id, w)| {
+                        Some(id) != except
+                            && w.parent.is_none()
+                            && w.app_id.as_deref() == Some(app_id)
+                    })
+                {
+                    None
+                } else {
+                    Some((app_key(app_id), true))
+                }
+            });
+        match identity {
+            Some((key, restore))
+                if !self
+                    .wm
+                    .windows
+                    .iter()
+                    .any(|(id, w)| Some(id) != except && w.name.as_ref() == Some(&key)) =>
+            {
+                (Some(key), restore)
+            }
+            _ => (None, false),
+        }
     }
 
     pub fn process_removed(&mut self, tasks: &mut TaskContainer, process: process::ProcessHandle) {

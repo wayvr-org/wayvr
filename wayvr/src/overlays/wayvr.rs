@@ -88,6 +88,9 @@ const BLEND_WAYLAND_ALPHA: AttachmentBlend = AttachmentBlend {
 
 pub fn create_wl_window_overlay(
     name: Arc<str>,
+    title: Arc<str>,
+    persistent: bool,
+    restore_on_spawn: bool,
     app: &mut AppState,
     window: wayvr::window::WindowHandle,
     icon: Arc<str>,
@@ -109,7 +112,10 @@ pub fn create_wl_window_overlay(
         .is_some_and(Window::resizable);
 
     Ok(OverlayWindowConfig {
-        name: name.clone(),
+        name,
+        title: Some(title.clone()),
+        persistent,
+        restore_on_spawn,
         default_state: OverlayWindowState {
             grabbable: true,
             interactable: true,
@@ -131,7 +137,7 @@ pub fn create_wl_window_overlay(
         category: OverlayCategory::WayVR,
         show_on_spawn: true,
         ..OverlayWindowConfig::from_backend(Box::new(WvrWindowBackend::new(
-            name,
+            title,
             app,
             window,
             icon,
@@ -142,7 +148,7 @@ pub fn create_wl_window_overlay(
 }
 
 pub struct WvrWindowBackend {
-    name: Arc<str>,
+    title: Arc<str>,
     icon: Arc<str>,
     pipeline: Option<ScreenPipeline>,
     subsurface_pipeline_opaque: Arc<WGfxPipeline<Vert2Uv>>,
@@ -176,7 +182,7 @@ pub struct WvrWindowBackend {
 
 impl WvrWindowBackend {
     fn new(
-        name: Arc<str>,
+        title: Arc<str>,
         app: &mut AppState,
         window: wayvr::window::WindowHandle,
         icon: Arc<str>,
@@ -243,7 +249,7 @@ impl WvrWindowBackend {
             NewGuiPanelParams {
                 resize_to_parent: true,
                 on_custom_attrib: Some(on_custom_attrib),
-                extra_vars: [("title".into(), name.as_ref().into())].into(),
+                extra_vars: [("title".into(), title.as_ref().into())].into(),
                 ..Default::default()
             },
         )?;
@@ -251,7 +257,7 @@ impl WvrWindowBackend {
         panel.update_layout(app)?;
 
         Ok(Self {
-            name,
+            title,
             icon,
             pipeline: None,
             window,
@@ -390,6 +396,7 @@ impl WvrWindowBackend {
     }
 
     fn update_title(&mut self, new_title: Rc<str>) {
+        self.title = new_title.as_ref().into();
         let mut common = CallbackDataCommon {
             state: &self.panel.layout.state,
             alterables: &mut self.panel.layout.alterables,
@@ -568,7 +575,7 @@ impl OverlayBackend for WvrWindowBackend {
         else {
             log::debug!(
                 "{:?}: WayVR overlay without matching window entry",
-                self.name
+                self.title
             );
             return Ok(ShouldRender::Unable);
         };
@@ -656,7 +663,7 @@ impl OverlayBackend for WvrWindowBackend {
                 Some((surf, surface_size, source_uv, window_geometry))
             })
         else {
-            log::trace!("{}: no buffer for wl_surface", self.name);
+            log::trace!("{}: no buffer for wl_surface", self.title);
             return Ok(ShouldRender::Unable);
         };
 
@@ -771,7 +778,7 @@ impl OverlayBackend for WvrWindowBackend {
         {
             log::trace!(
                 "{}: new {} image",
-                self.name,
+                self.title,
                 if surf.dmabuf { "DMA-buf" } else { "SHM" }
             );
             self.cur_image = Some(surf.image);
@@ -1161,7 +1168,7 @@ impl OverlayBackend for WvrWindowBackend {
         match value {
             BackendAttribValue::Stereo(new) => {
                 if let Some(stereo) = self.stereo.as_mut() {
-                    log::debug!("{}: stereo: {stereo:?} → {new:?}", self.name);
+                    log::debug!("{}: stereo: {stereo:?} → {new:?}", self.title);
                     *stereo = new;
                     if let Some(meta) = self.meta {
                         let _ = self.apply_extent(app, &meta);

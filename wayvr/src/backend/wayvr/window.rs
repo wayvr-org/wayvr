@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use glam::DVec2;
 use slotmap::{DenseSlotMap, new_key_type};
@@ -24,6 +24,10 @@ pub struct Window {
     pub visible: bool,
     pub toplevel: Rc<ToplevelSurface>,
     pub process: process::ProcessHandle,
+    pub app_id: Option<Arc<str>>,
+    pub parent: Option<WindowHandle>,
+    pub name: Option<Arc<str>>,
+    pub restore_on_spawn: bool,
 
     pub pending_configure: Option<PendingConfigure>,
 }
@@ -35,6 +39,10 @@ impl Window {
         bounds: Size<i32, Logical>,
         min_size: Size<i32, Logical>,
         max_size: Size<i32, Logical>,
+        app_id: Option<Arc<str>>,
+        parent: Option<WindowHandle>,
+        name: Option<Arc<str>>,
+        restore_on_spawn: bool,
     ) -> Self {
         Self {
             bounds,
@@ -45,6 +53,10 @@ impl Window {
             visible: true,
             toplevel,
             process,
+            app_id,
+            parent,
+            name,
+            restore_on_spawn,
             pending_configure: None,
         }
     }
@@ -148,6 +160,10 @@ pub struct CreateWindowParams {
     pub max_size: Size<i32, Logical>,
     pub size_x: u32,
     pub size_y: u32,
+    pub app_id: Option<Arc<str>>,
+    pub parent: Option<WindowHandle>,
+    pub name: Option<Arc<str>>,
+    pub restore_on_spawn: bool,
 }
 
 impl WindowManager {
@@ -175,6 +191,10 @@ impl WindowManager {
             par.bounds,
             par.min_size,
             par.max_size,
+            par.app_id,
+            par.parent,
+            par.name,
+            par.restore_on_spawn,
         );
         window.remember_committed_size(Size::new(par.size_x as i32, par.size_y as i32), None);
         self.windows.insert(window)
@@ -198,5 +218,9 @@ impl WindowHandle {
         packet_server::WvrWindowHandle {
             user: self.0.as_ffi(),
         }
+    }
+
+    pub fn transient_name(self) -> Arc<str> {
+        format!("wayvr/volatile/{}", self.as_packet().user).into()
     }
 }

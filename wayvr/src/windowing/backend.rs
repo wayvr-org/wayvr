@@ -127,6 +127,7 @@ macro_rules! attrib_value {
 pub struct OverlayMeta {
     pub id: OverlayID,
     pub name: Arc<str>,
+    pub title: Option<Arc<str>>,
     pub category: OverlayCategory,
     pub visible: bool,
     pub icon: Option<Arc<str>>,

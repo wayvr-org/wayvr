@@ -98,23 +98,6 @@ impl Drop for WayVRProcess {
     }
 }
 
-fn get_process_env_value(pid: i32, key: &str) -> anyhow::Result<Option<String>> {
-    let path = format!("/proc/{pid}/environ");
-    let mut env_data = String::new();
-    std::fs::File::open(path)?.read_to_string(&mut env_data)?;
-    let lines: Vec<&str> = env_data.split('\0').filter(|s| !s.is_empty()).collect();
-
-    for line in lines {
-        if let Some(cell) = line.split_once('=')
-            && cell.0 == key
-        {
-            return Ok(Some(String::from(cell.1)));
-        }
-    }
-
-    Ok(None)
-}
-
 impl WayVRProcess {
     fn is_running(&mut self) -> bool {
         match self.child.try_wait() {
@@ -181,43 +164,6 @@ impl ExternalProcess {
 
 new_key_type! {
     pub struct ProcessHandle;
-}
-
-pub fn find_by_pid(
-    processes: &DenseSlotMap<ProcessHandle, Process>,
-    pid: u32,
-) -> Option<ProcessHandle> {
-    log::debug!("Finding process with PID {pid}");
-
-    for (handle, process) in processes {
-        match &process {
-            Process::Managed(wayvr_process) => {
-                if wayvr_process.child.id() == pid {
-                    return Some(handle);
-                }
-            }
-            Process::External(external_process) => {
-                if external_process.pid == pid {
-                    return Some(handle);
-                }
-            }
-        }
-    }
-
-    log::debug!("Finding by PID failed, trying WAYVR_DISPLAY_AUTH...");
-
-    if let Ok(Some(value)) = get_process_env_value(pid as i32, "WAYVR_DISPLAY_AUTH") {
-        for (handle, process) in processes {
-            if let Process::Managed(wayvr_process) = &process
-                && wayvr_process.auth_key == value
-            {
-                return Some(handle);
-            }
-        }
-    }
-
-    log::debug!("Process find with PID {pid} failed");
-    None
 }
 
 impl ProcessHandle {

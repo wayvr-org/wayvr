@@ -116,7 +116,7 @@ impl OverlayList {
                     }
 
                     params.insert_rc("idx", i.to_string().into());
-                    params.insert("name", meta.name.as_ref());
+                    params.insert("name", meta.title.as_deref().unwrap_or(meta.name.as_ref()));
                     parser_state
                         .instantiate_template(doc_params, template, layout, root, params)?;
                     let overlay_button = parser_state

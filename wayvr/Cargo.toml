@@ -54,7 +54,8 @@ strum.workspace = true
 tracing-subscriber.workspace = true
 uuid = { workspace = true }
 wayland-client = { workspace = true }
-wayland-protocols = { workspace = true }
+wayland-protocols = { workspace = true, features = ["server", "staging"] }
+wayland-scanner = "0.31.10"
 wayland-protocols-misc = { workspace = true }
 winit = { workspace = true, optional = true }
 xdg.workspace = true

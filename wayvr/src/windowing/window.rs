@@ -108,6 +108,10 @@ impl OverlayLifetime {
 
 pub struct OverlayWindowConfig {
     pub name: Arc<str>,
+    /// Optional presentation title
+    pub title: Option<Arc<str>>,
+    pub persistent: bool,
+    pub restore_on_spawn: bool,
     pub backend: Box<dyn OverlayBackend>,
     /// The default state to show when the overlay is newly spawned.
     pub default_state: OverlayWindowState,
@@ -136,9 +140,16 @@ pub struct OverlayWindowConfig {
 }
 
 impl OverlayWindowConfig {
+    pub fn can_persist(&self) -> bool {
+        self.persistent
+    }
+
     pub fn from_backend(backend: Box<dyn OverlayBackend>) -> Self {
         Self {
             name: "".into(),
+            title: None,
+            persistent: true,
+            restore_on_spawn: true,
             backend,
             default_state: OverlayWindowState {
                 transform: Affine3A::from_translation(Vec3::NEG_Z),

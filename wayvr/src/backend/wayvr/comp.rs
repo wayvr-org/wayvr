@@ -12,6 +12,7 @@ use smithay::output::Output;
 use smithay::reexports::rustix::fs::{OFlags, fcntl_setfl};
 use smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1;
 use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel;
+use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::XdgToplevel;
 use smithay::reexports::wayland_protocols_misc::server_decoration::server::org_kde_kwin_server_decoration;
 use smithay::reexports::wayland_server::Resource;
 use smithay::reexports::wayland_server::backend::ObjectId;
@@ -46,6 +47,7 @@ use smithay::wayland::shell::xdg::{
 use smithay::wayland::shm::{ShmHandler, ShmState, shm_format_to_fourcc, with_buffer_contents};
 use smithay::wayland::single_pixel_buffer::get_single_pixel_buffer;
 use smithay::wayland::viewporter::ViewporterState;
+use smithay::wayland::xdg_toplevel_tag::{XdgToplevelTagHandler, XdgToplevelTagManager};
 use smithay::{
     delegate_compositor, delegate_data_control, delegate_data_device, delegate_dmabuf,
     delegate_ext_data_control, delegate_kde_decoration, delegate_output,
@@ -62,6 +64,7 @@ use wayland_server::backend::{ClientData, ClientId, DisconnectReason};
 use wayland_server::protocol::wl_surface::WlSurface;
 use wlx_capture::DrmFourcc;
 
+use super::session::SessionRegistry;
 use crate::backend::wayvr::image_importer::ImageImporter;
 use crate::backend::wayvr::{SurfaceBufWithImage, WAYVR_SCREEN_RES, time};
 use crate::ipc::event_queue::SyncEventQueue;
@@ -74,6 +77,10 @@ pub struct Application {
     pub dmabuf_state: (DmabufState, DmabufGlobal, Option<DmabufFeedback>),
     pub compositor: compositor::CompositorState,
     pub xdg_shell: XdgShellState,
+    #[allow(dead_code)]
+    pub xdg_toplevel_tags: XdgToplevelTagManager,
+    pub sessions: SessionRegistry,
+    pub toplevel_tags: HashMap<ObjectId, Arc<str>>,
     pub seat: Seat<Application>,
     pub seat_state: SeatState<Application>,
     pub shm: ShmState,
@@ -256,6 +263,22 @@ impl compositor::CompositorHandler for Application {
 
     #[allow(clippy::significant_drop_tightening)]
     fn commit(&mut self, surface: &WlSurface) {
+        if let Some(toplevel) = self
+            .xdg_shell
+            .toplevel_surfaces()
+            .iter()
+            .find(|toplevel| toplevel.wl_surface() == surface)
+        {
+            // first commit is special in terms of restoring session
+            if self
+                .sessions
+                .committed_toplevels
+                .insert(toplevel.xdg_toplevel().id())
+            {
+                self.wayvr_tasks
+                    .send(WayVRTask::FirstToplevelCommit(toplevel.clone()));
+            }
+        }
         self.popups_commit(surface);
 
         smithay::wayland::compositor::with_states(surface, |states| {
@@ -497,6 +520,8 @@ impl XdgShellHandler for Application {
     }
 
     fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
+        self.toplevel_tags.remove(&surface.xdg_toplevel().id());
+        self.sessions.forget_toplevel(&surface);
         self.output.leave(surface.wl_surface());
         self.no_server_decorations
             .remove(&surface.wl_surface().id());
@@ -653,10 +678,34 @@ impl XdgShellHandler for Application {
         }
     }
 
+    fn app_id_changed(&mut self, surface: ToplevelSurface) {
+        self.wayvr_tasks
+            .send(WayVRTask::WindowIdentityChanged(surface));
+    }
+
+    fn parent_changed(&mut self, surface: ToplevelSurface) {
+        self.wayvr_tasks
+            .send(WayVRTask::WindowIdentityChanged(surface));
+    }
+
     fn title_changed(&mut self, surface: ToplevelSurface) {
         if let Some(client) = surface.wl_surface().client() {
             self.wayvr_tasks
                 .send(WayVRTask::TitleChange(client.id(), surface.clone()));
+        }
+    }
+}
+
+impl XdgToplevelTagHandler for Application {
+    fn set_tag(&mut self, toplevel: XdgToplevel, tag: String) {
+        if tag.is_empty() {
+            self.toplevel_tags.remove(&toplevel.id());
+        } else {
+            self.toplevel_tags.insert(toplevel.id(), tag.into());
+        }
+        if let Some(surface) = self.xdg_shell.get_toplevel(&toplevel) {
+            self.wayvr_tasks
+                .send(WayVRTask::WindowIdentityChanged(surface));
         }
     }
 }
@@ -765,6 +814,7 @@ impl KdeDecorationHandler for Application {
 
 delegate_dmabuf!(Application);
 delegate_xdg_shell!(Application);
+smithay::delegate_xdg_toplevel_tag!(Application);
 delegate_compositor!(Application);
 delegate_viewporter!(Application);
 delegate_shm!(Application);
