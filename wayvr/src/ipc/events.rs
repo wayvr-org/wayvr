@@ -6,10 +6,7 @@ use wayvr_ipc::packet_server::PacketServer;
 use wlx_common::config::HandsfreePointer;
 
 use crate::{
-    backend::{
-        self,
-        task::{InputTask, OverlayTask, TaskType, ToggleMode},
-    },
+    backend::task::{InputTask, OverlayTask, TaskType, ToggleMode},
     ipc::{signal::WayVRSignal, window_attrib, window_state},
     state::AppState,
     windowing::{OverlaySelector, manager::OverlayWindowManager},

@@ -218,7 +218,7 @@ impl WGfx {
 
 	/// Submit a non-blocking completion marker to the queue
 	///
-	/// It uses an ALL_COMMANDS to ALL_COMMANDS barrier, so its fence doesn't
+	/// It uses an `ALL_COMMANDS` to `ALL_COMMANDS` barrier, so its fence doesn't
 	/// complete until all earlier work is finished.
 	pub fn submit_graphics_completion_marker(&self) -> anyhow::Result<GpuCompletionMarker> {
 		Ok(GpuCompletionMarker {

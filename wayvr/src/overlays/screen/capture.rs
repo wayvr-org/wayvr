@@ -147,6 +147,7 @@ impl ScreenPipeline {
 
     /// Select normalized rect from backing image
     pub fn set_source_uv(&mut self, source_uv: [f32; 4]) {
+        #[allow(clippy::float_cmp)]
         if self.source_uv != source_uv {
             self.source_uv = source_uv;
             self.pass.clear();

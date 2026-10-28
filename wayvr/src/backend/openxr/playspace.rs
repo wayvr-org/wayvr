@@ -133,34 +133,30 @@ impl PlayspaceMover {
             self.rotate = Some(data);
             // drag and rotate can share a button
             return;
-        } else {
-            // start space rotate
-            for (i, pointer) in app.input_state.pointers.iter().enumerate() {
-                if pointer.now.space_rotate {
-                    let Ok(pose) = monado
-                        .ipc
-                        .get_reference_space_offset(ReferenceSpaceType::Stage)
-                        .log_err("Could not get reference space offset.")
-                        .map(|p| {
-                            Affine3A::from_rotation_translation(
-                                p.orientation.into(),
-                                p.position.into(),
-                            )
-                        })
-                    else {
-                        return;
-                    };
-
-                    let hand_pose = pose * pointer.raw_pose;
-                    self.rotate = Some(MoverData {
-                        pose,
-                        hand: i,
-                        hand_pose,
-                    });
-                    self.drag = None;
-                    log::info!("Start space rotate");
+        }
+        // start space rotate
+        for (i, pointer) in app.input_state.pointers.iter().enumerate() {
+            if pointer.now.space_rotate {
+                let Ok(pose) = monado
+                    .ipc
+                    .get_reference_space_offset(ReferenceSpaceType::Stage)
+                    .log_err("Could not get reference space offset.")
+                    .map(|p| {
+                        Affine3A::from_rotation_translation(p.orientation.into(), p.position.into())
+                    })
+                else {
                     return;
-                }
+                };
+
+                let hand_pose = pose * pointer.raw_pose;
+                self.rotate = Some(MoverData {
+                    pose,
+                    hand: i,
+                    hand_pose,
+                });
+                self.drag = None;
+                log::info!("Start space rotate");
+                return;
             }
         }
 

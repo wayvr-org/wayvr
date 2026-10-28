@@ -148,7 +148,7 @@ impl WlxSwapchain {
 
 struct RetiredSwapchain {
     // keep alive until completion is signaled
-    _swapchain: WlxSwapchain,
+    swapchain: WlxSwapchain,
     completion: Option<GpuCompletionMarker>,
 }
 
@@ -162,7 +162,7 @@ impl SwapchainRetirementQueue {
     /// queue the swapchain for non-blocking retirement
     pub(super) fn retire(&mut self, swapchain: WlxSwapchain, gfx: &Arc<WGfx>) {
         self.retired.push(RetiredSwapchain {
-            _swapchain: swapchain,
+            swapchain,
             completion: None,
         });
 
@@ -177,7 +177,7 @@ impl SwapchainRetirementQueue {
             return Ok(());
         }
 
-        retired._swapchain.ensure_image_released()?;
+        retired.swapchain.ensure_image_released()?;
         retired.completion = Some(gfx.submit_graphics_completion_marker()?);
         Ok(())
     }
@@ -185,12 +185,12 @@ impl SwapchainRetirementQueue {
     pub(super) fn collect(&mut self, gfx: &Arc<WGfx>) {
         let mut idx = 0;
         while idx < self.retired.len() {
-            if self.retired[idx].completion.is_none() {
-                if let Err(e) = Self::arm(&mut self.retired[idx], gfx) {
-                    log::warn!("Failed re-arming retired OpenXR swapchain: {e:#}");
-                    idx += 1;
-                    continue;
-                }
+            if self.retired[idx].completion.is_none()
+                && let Err(e) = Self::arm(&mut self.retired[idx], gfx)
+            {
+                log::warn!("Failed re-arming retired OpenXR swapchain: {e:#}");
+                idx += 1;
+                continue;
             }
 
             let complete = match self.retired[idx]

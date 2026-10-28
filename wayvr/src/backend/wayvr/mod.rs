@@ -504,8 +504,7 @@ impl WvrServerState {
                         let mut title: Arc<str> = fallback_title
                             .map(Arc::from)
                             .or_else(|| name.clone())
-                            .unwrap_or_else(|| format!("P{}", client.pid).into())
-                            .into();
+                            .unwrap_or_else(|| format!("P{}", client.pid).into());
 
                         let spawn_pos = SpawnPos::WlDefault(
                             window_handle,
@@ -559,8 +558,9 @@ impl WvrServerState {
                                     .wvr_server
                                     .as_ref()
                                     .and_then(|wvr| wvr.wm.windows.get(window_handle))
-                                    .map(|w| (w.name.clone(), w.restore_on_spawn))
-                                    .unwrap_or((None, false));
+                                    .map_or((None, false), |w| {
+                                        (w.name.clone(), w.restore_on_spawn)
+                                    });
                                 let persistent = identity.is_some();
                                 let name =
                                     identity.unwrap_or_else(|| window_handle.transient_name());
@@ -686,7 +686,7 @@ impl WvrServerState {
                         window.app_id = app_id;
                         window.parent = parent;
                         if window.name != key || window.restore_on_spawn != restore {
-                            window.name = key.clone();
+                            window.name.clone_from(&key);
                             window.restore_on_spawn = restore;
                             if let Some(oid) = wvr_server.window_to_overlay.get(&handle) {
                                 let persistent = key.is_some();
@@ -878,7 +878,7 @@ impl WvrServerState {
                             Box::new(move |app| {
                                 create_drag_item(app, icon, pointer)
                                     .inspect_err(|e| {
-                                        log::warn!("Could not create drag item overlay: {e:?}")
+                                        log::warn!("Could not create drag item overlay: {e:?}");
                                     })
                                     .ok()
                             }),
@@ -1499,7 +1499,7 @@ impl WvrServerState {
         self.manager.send_pointer_button(index, pressed);
     }
 
-    pub fn set_vr_pointer(&mut self, pointer: usize) {
+    pub const fn set_vr_pointer(&mut self, pointer: usize) {
         self.manager.state.vr_pointer = pointer;
     }
 
@@ -1514,7 +1514,7 @@ impl WvrServerState {
         }
     }
 
-    pub fn dnd_active(&self) -> bool {
+    pub const fn dnd_active(&self) -> bool {
         self.manager.state.dnd_pointer.is_some()
     }
 
@@ -1736,6 +1736,7 @@ impl SurfaceBufWithImage {
 
         let mut guard = surface_data.cached_state.get::<ViewportCachedState>();
         let viewport = *guard.current();
+        drop(guard);
         let Some(src) = viewport.src else {
             return [0.0, 0.0, 1.0, 1.0];
         };

@@ -140,7 +140,7 @@ pub struct OverlayWindowConfig {
 }
 
 impl OverlayWindowConfig {
-    pub fn can_persist(&self) -> bool {
+    pub const fn can_persist(&self) -> bool {
         self.persistent
     }
 

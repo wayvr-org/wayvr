@@ -661,6 +661,7 @@ impl OverlayBackend for WvrWindowBackend {
                 let source_uv = surf.source_uv(states);
                 let mut xdg_state = states.cached_state.get::<SurfaceCachedState>();
                 let window_geometry = xdg_state.current().geometry;
+                drop(xdg_state);
                 Some((surf, surface_size, source_uv, window_geometry))
             })
         else {
@@ -699,9 +700,9 @@ impl OverlayBackend for WvrWindowBackend {
         }
 
         let inner_extent = meta.extent;
-        let committed_window_extent = window_geometry
-            .map(|geometry| [geometry.size.w.max(1) as u32, geometry.size.h.max(1) as u32])
-            .unwrap_or(inner_extent);
+        let committed_window_extent = window_geometry.map_or(inner_extent, |geometry| {
+            [geometry.size.w.max(1) as u32, geometry.size.h.max(1) as u32]
+        });
         self.sync_committed_toplevel_size(app, committed_window_extent);
 
         if self.server_side_decorations {

@@ -1,6 +1,6 @@
-use std::{collections::HashMap, io::Read, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-use slotmap::{DenseSlotMap, new_key_type};
+use slotmap::new_key_type;
 use wayvr_ipc::{packet_client, packet_server};
 
 #[derive(Debug)]

@@ -459,7 +459,7 @@ where
                     .overlays
                     .get(id)
                     .and_then(|overlay| overlay.config.lifetime.as_ref())
-                    .is_some_and(|lifetime| lifetime.is_expired());
+                    .is_some_and(super::window::OverlayLifetime::is_expired);
 
                 if should_drop
                     && let Some(o) = self.remove_by_selector(&OverlaySelector::Id(id), app)
@@ -796,10 +796,9 @@ impl<T> OverlayWindowManager<T> {
         for o in self.overlays.values() {
             if o.config.global
                 && let Some(state) = &o.config.active_state
+                && o.config.can_persist()
             {
-                if o.config.can_persist() {
-                    global_overlays.insert(o.config.name.clone(), state.clone());
-                }
+                global_overlays.insert(o.config.name.clone(), state.clone());
             }
         }
         let global_hidden: HashMap<_, _> = self
@@ -1302,13 +1301,12 @@ impl<T> OverlayWindowManager<T> {
                         fallback_pid.filter(|candidate| *candidate != oid)
                     }
                 });
-                if let Some(parent_id) = parent_id {
-                    if self
+                if let Some(parent_id) = parent_id
+                    && self
                         .offset_spawn_from_parent(app, oid, &OverlaySelector::Id(parent_id))
                         .is_some()
-                    {
-                        return;
-                    }
+                {
+                    return;
                 }
                 if let Some(parent_id) = self.spread_parent_for(oid) {
                     let _ =

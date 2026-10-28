@@ -874,11 +874,11 @@ fn start_grab(par: StartGrabParams) {
     // - not in editmode
     // - not using grab_float
     // - grabbing with one hand. (grabbing with the 2nd hand will grab the individual overlay instead)
-    let grab_anchor = !par.edit_mode
-        && !par.grab_float
-        && !app.anchor_grabbed
-        && matches!(state.positioning, Positioning::Anchored)
-        && !(app.session.config.middle_grabs_single
+    let grab_anchor = !(par.edit_mode
+        || par.grab_float
+        || app.anchor_grabbed
+        || !matches!(state.positioning, Positioning::Anchored)
+        || app.session.config.middle_grabs_single
             && pointer.interaction.mode == PointerMode::Middle);
 
     let relative_grab_transform = if grab_anchor {

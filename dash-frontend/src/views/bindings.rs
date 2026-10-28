@@ -1008,7 +1008,7 @@ fn create_dropdown<B: 'static + BindingsDropdown>(
 		.iter()
 		.map(|item| {
 			context_menu::Cell::Button(context_menu::Button {
-				action_name: Some(item.action_str(&action, side).into()),
+				action_name: Some(item.action_str(&action, side)),
 				title: item.translation(),
 				..Default::default()
 			})
@@ -1019,7 +1019,7 @@ fn create_dropdown<B: 'static + BindingsDropdown>(
 		cells.insert(
 			0,
 			context_menu::Cell::Button(context_menu::Button {
-				action_name: Some(action_str.into()),
+				action_name: Some(action_str),
 				title: Translation::from_translation_key("APP_SETTINGS.OPTION.NONE"),
 				..Default::default()
 			}),

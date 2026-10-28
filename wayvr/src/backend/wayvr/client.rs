@@ -21,8 +21,6 @@ use smithay::{
 use wgui::log::LogErr;
 use xkbcommon::xkb;
 
-use crate::backend::wayvr::WayVRTask;
-
 use super::{
     ProcessWayVREnv,
     comp::{self, ClientState},

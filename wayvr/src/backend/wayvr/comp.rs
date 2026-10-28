@@ -248,7 +248,7 @@ impl Application {
     }
 }
 
-fn drm_format_has_alpha(format: DrmFourcc) -> bool {
+const fn drm_format_has_alpha(format: DrmFourcc) -> bool {
     matches!(
         format,
         DrmFourcc::Abgr8888 | DrmFourcc::Argb8888 | DrmFourcc::Abgr2101010

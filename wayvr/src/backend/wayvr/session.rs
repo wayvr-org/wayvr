@@ -39,7 +39,7 @@ pub(super) fn app_key(app_id: &str) -> Arc<str> {
     format!("wayvr/app/{}:{app_id}", app_id.len()).into()
 }
 
-pub(super) struct WindowSession {
+pub struct WindowSession {
     pub key: Arc<str>,
     pub restore_requested: bool,
     pub restore_resource: Option<XdgToplevelSessionV1>,
