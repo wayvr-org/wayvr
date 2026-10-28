@@ -270,7 +270,7 @@ impl OverlayWindowData<OpenVrOverlayData> {
         };
 
         let Some(view) = self.data.image_view.as_ref() else {
-            log::debug!("{}: Not rendered", self.config.name);
+            log::trace!("{}: Not rendered", self.config.name);
             return;
         };
 
