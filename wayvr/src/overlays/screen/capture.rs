@@ -8,8 +8,8 @@ use glam::Affine3A;
 use smallvec::{SmallVec, smallvec};
 use wgui::{
     gfx::{
-        Buffer, BufferUsage, CommandBufferUsage, Filter, Format, Image, ImageView, Scissor,
-        Vert2Uv, WGfx,
+        AttachmentBlend, BlendFactor, BlendOp, Buffer, BufferUsage, CommandBufferUsage, Filter,
+        Format, Image, ImageView, Scissor, Vert2Uv, WGfx,
         cmd::WGfxClearMode,
         pass::WGfxPass,
         pipeline::{WGfxPipeline, WPipelineCreateInfo},
@@ -42,6 +42,8 @@ struct BufPass {
 /// A render pipeline that supports mouse + stereo
 pub struct ScreenPipeline {
     mouse: BufPass,
+    mouse_pipeline: Arc<WGfxPipeline<Vert2Uv>>,
+    default_cursor_image: Arc<ImageView>,
     pass: SmallVec<[BufPass; 2]>,
     pipeline: Arc<WGfxPipeline<Vert2Uv>>,
     extentf: [f32; 2],
@@ -110,6 +112,22 @@ impl ScreenPipeline {
         cmd_xfer.build_and_execute_now()?;
         let fallback_image = app.gfx.create_image_view(fallback_image)?;
 
+        let mouse_pipeline = app.gfx.create_pipeline(
+            app.gfx_extras.shaders.get("vert_quad").unwrap(),
+            app.gfx_extras.shaders.get("frag_wayland").unwrap(),
+            WPipelineCreateInfo::new(app.gfx.surface_format())
+                .use_updatable_descriptors([0])
+                .use_blend(AttachmentBlend {
+                    src_color_blend_factor: BlendFactor::One,
+                    dst_color_blend_factor: BlendFactor::OneMinusSrcAlpha,
+                    color_blend_op: BlendOp::Add,
+                    src_alpha_blend_factor: BlendFactor::One,
+                    dst_alpha_blend_factor: BlendFactor::OneMinusSrcAlpha,
+                    alpha_blend_op: BlendOp::Add,
+                }),
+        )?;
+        let (mouse, default_cursor_image) =
+            Self::create_mouse_pass(app, mouse_pipeline.clone(), extentf, offsetf)?;
         let mut me = Self {
             pass: smallvec![Self::create_pass(
                 app,
@@ -118,7 +136,9 @@ impl ScreenPipeline {
                 extentf,
                 offsetf,
             )?],
-            mouse: Self::create_mouse_pass(app, pipeline.clone(), extentf, offsetf)?,
+            mouse,
+            mouse_pipeline,
+            default_cursor_image,
             pipeline,
             extentf,
             offsetf,
@@ -197,7 +217,8 @@ impl ScreenPipeline {
         self.transform = transform;
         self.pass.clear();
 
-        self.mouse = Self::create_mouse_pass(app, self.pipeline.clone(), extentf, offsetf)?;
+        (self.mouse, self.default_cursor_image) =
+            Self::create_mouse_pass(app, self.mouse_pipeline.clone(), extentf, offsetf)?;
         Ok(())
     }
 
@@ -231,7 +252,7 @@ impl ScreenPipeline {
         pipeline: Arc<WGfxPipeline<Vert2Uv>>,
         extentf: [f32; 2],
         offsetf: [f32; 2],
-    ) -> anyhow::Result<BufPass> {
+    ) -> anyhow::Result<(BufPass, Arc<ImageView>)> {
         #[rustfmt::skip]
         let mouse_bytes = [
             0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,
@@ -252,7 +273,7 @@ impl ScreenPipeline {
             .gfx
             .empty_buffer(BufferUsage::TRANSFER_DST | BufferUsage::VERTEX_BUFFER, 4)?;
 
-        let set0 = pipeline.uniform_sampler(0, view, Filter::Nearest)?;
+        let set0 = pipeline.uniform_sampler(0, view.clone(), Filter::Nearest)?;
         let pass = pipeline.create_pass(
             extentf,
             offsetf,
@@ -264,7 +285,7 @@ impl ScreenPipeline {
         )?;
 
         cmd_xfer.build_and_execute_now()?;
-        Ok(BufPass { pass, buf_vert })
+        Ok((BufPass { pass, buf_vert }, view))
     }
 
     pub fn render(
@@ -276,7 +297,7 @@ impl ScreenPipeline {
     ) -> anyhow::Result<()> {
         self.render_screen(image, app, rdr)?;
         if let Some(mouse) = mouse {
-            self.render_mouse(mouse, rdr)?;
+            self.render_mouse(mouse, rdr, None)?;
         }
         Ok(())
     }
@@ -306,10 +327,19 @@ impl ScreenPipeline {
         &mut self,
         mouse: &MouseMeta,
         rdr: &mut RenderResources,
+        cursor: Option<(&Arc<ImageView>, [f32; 2], [f32; 2])>,
     ) -> anyhow::Result<()> {
+        let image = cursor.map_or(&self.default_cursor_image, |(image, _, _)| image);
+        self.mouse
+            .pass
+            .update_sampler(0, image.clone(), Filter::Nearest)?;
         for cmd_buf in &mut rdr.cmd_bufs {
             let size = CURSOR_SIZE * self.extentf[1];
-            let half_size = size * 0.5;
+            let (width, height, hotspot_x, hotspot_y) = if let Some((_, size, hotspot)) = cursor {
+                (size[0], size[1], hotspot[0], hotspot[1])
+            } else {
+                (size, size, size * 0.5, size * 0.5)
+            };
 
             let (x_scale, y_scale) = if self.stereo_adjust_mouse {
                 match self.stereo {
@@ -325,10 +355,10 @@ impl ScreenPipeline {
                 &self.mouse.buf_vert,
                 self.extentf[0],
                 self.extentf[1],
-                mouse.x.mul_add(self.extentf[0] * x_scale, -half_size),
-                mouse.y.mul_add(self.extentf[1] * y_scale, -half_size),
-                size,
-                size,
+                mouse.x.mul_add(self.extentf[0] * x_scale, -hotspot_x),
+                mouse.y.mul_add(self.extentf[1] * y_scale, -hotspot_y),
+                width,
+                height,
             )?;
 
             cmd_buf.run_ref(&self.mouse.pass)?;

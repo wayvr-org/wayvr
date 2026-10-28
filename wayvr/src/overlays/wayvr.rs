@@ -4,9 +4,9 @@ use glam::{Affine2, Affine3A, Quat, Vec3, vec2, vec3};
 use slotmap::Key;
 use smithay::{
     desktop::PopupManager,
-    input::pointer::CursorImageStatus,
+    input::pointer::{CursorImageStatus, CursorImageSurfaceData},
     reexports::wayland_server::Resource,
-    utils::{Logical, Size},
+    utils::{IsAlive, Logical, Size},
     wayland::{
         compositor::with_states,
         shell::xdg::{SurfaceCachedState, XdgPopupSurfaceData, XdgToplevelSurfaceData},
@@ -163,6 +163,7 @@ pub struct WvrWindowBackend {
     just_resumed: bool,
     meta: Option<FrameMeta>,
     mouse: Option<MouseMeta>,
+    cursor_revision: Option<(Arc<ImageView>, [i32; 2])>,
     stereo: Option<StereoMode>,
     stereo_full_frame: bool,
     stereo_adjust_mouse: bool,
@@ -272,6 +273,7 @@ impl WvrWindowBackend {
             just_resumed: false,
             meta: None,
             mouse: None,
+            cursor_revision: None,
             stereo: app
                 .feats
                 .xr_backend
@@ -761,7 +763,33 @@ impl OverlayBackend for WvrWindowBackend {
                 y: (m.pos.y as f32) / (inner_extent[1] as f32),
             });
 
-        let dirty = self.mouse != mouse || rendered_surfaces_dirty(&self.popups, &popups);
+        let cursor_revision = if mouse.is_some() {
+            match &app.wvr_server.as_ref().unwrap().manager.state.cursor_image {
+                CursorImageStatus::Surface(surface) if surface.alive() => {
+                    with_states(surface, |states| {
+                        let image = SurfaceBufWithImage::get_from_surface(states)?;
+                        let hotspot = states
+                            .data_map
+                            .get::<CursorImageSurfaceData>()?
+                            .lock()
+                            .ok()?
+                            .hotspot;
+                        Some((image.image, [hotspot.x, hotspot.y]))
+                    })
+                }
+                _ => None,
+            }
+        } else {
+            None
+        };
+        let cursor_dirty = match (&self.cursor_revision, &cursor_revision) {
+            (Some((a, ah)), Some((b, bh))) => !Arc::ptr_eq(a, b) || ah != bh,
+            (None, None) => false,
+            _ => true,
+        };
+        self.cursor_revision = cursor_revision;
+        let dirty =
+            cursor_dirty || self.mouse != mouse || rendered_surfaces_dirty(&self.popups, &popups);
         if !self.scrolling {
             self.mouse = mouse;
         }
@@ -826,13 +854,41 @@ impl OverlayBackend for WvrWindowBackend {
         if let Some(wvr_server) = app.wvr_server.as_mut() {
             let state = &mut wvr_server.manager.state;
 
-            match state.cursor_image {
-                CursorImageStatus::Hidden => {}
-                CursorImageStatus::Named(_) | CursorImageStatus::Surface(_) => {
-                    // TODO: properly render surface?
-                    if let Some(mouse) = self.mouse.as_ref() {
-                        self.pipeline.as_mut().unwrap().render_mouse(mouse, rdr)?;
+            if let Some(mouse) = self.mouse.as_ref() {
+                match state.cursor_image.clone() {
+                    CursorImageStatus::Hidden => {}
+                    CursorImageStatus::Named(_) => {
+                        self.pipeline
+                            .as_mut()
+                            .unwrap()
+                            .render_mouse(mouse, rdr, None)?;
                     }
+                    CursorImageStatus::Surface(surface) if surface.alive() => {
+                        let cursor = with_states(&surface, |states| {
+                            let image = SurfaceBufWithImage::get_from_surface(states)?;
+                            let size = image.logical_size(states);
+                            let hotspot = states
+                                .data_map
+                                .get::<CursorImageSurfaceData>()?
+                                .lock()
+                                .ok()?
+                                .hotspot;
+                            Some((
+                                image.image,
+                                [size.w as f32, size.h as f32],
+                                [hotspot.x as f32, hotspot.y as f32],
+                            ))
+                        });
+                        if let Some((image, size, hotspot)) = cursor {
+                            self.pipeline.as_mut().unwrap().render_mouse(
+                                mouse,
+                                rdr,
+                                Some((&image, size, hotspot)),
+                            )?;
+                            state.send_frame_callbacks_for_surface_id(&surface.id());
+                        }
+                    }
+                    CursorImageStatus::Surface(_) => {}
                 }
             }
 
