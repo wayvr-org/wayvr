@@ -2,7 +2,7 @@ use std::{collections::HashMap, rc::Rc, sync::Arc};
 
 use chrono::Offset;
 use idmap::IdMap;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use strum::{AsRefStr, EnumProperty, EnumString, VariantArray, VariantNames};
 use wayvr_ipc::packet_client::WvrProcessLaunchParams;
 use wgui::drawing::{self, HsvColor};
@@ -285,6 +285,15 @@ const fn def_osc_port() -> u16 {
 	9000
 }
 
+fn deserialize_or_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+	D: Deserializer<'de>,
+	T: Deserialize<'de> + Default,
+{
+	let value = serde_json::Value::deserialize(deserializer)?;
+	Ok(T::deserialize(value).unwrap_or_default())
+}
+
 fn def_timezones() -> Vec<String> {
 	const EMEA: i32 = -60 * 60; // UTC-1
 	const APAC: i32 = 5 * 60 * 60; // UTC+5
@@ -493,7 +502,7 @@ pub struct GeneralConfig {
 	#[serde(default)]
 	pub spawn_overlays: Vec<Arc<str>>,
 
-	#[serde(default)]
+	#[serde(default, deserialize_with = "deserialize_or_default")]
 	pub autostart_apps: Vec<WvrProcessLaunchParams>,
 
 	#[serde(default)]
