@@ -297,6 +297,11 @@ impl compositor::CompositorHandler for Application {
                 .committed_toplevels
                 .insert(toplevel.xdg_toplevel().id())
             {
+                log::debug!(
+                    "first toplevel commit, surface: {:?}, toplevel: {:?}",
+                    surface.id(),
+                    toplevel.xdg_toplevel().id()
+                );
                 self.wayvr_tasks
                     .send(WayVRTask::FirstToplevelCommit(toplevel.clone()));
             }
@@ -534,6 +539,11 @@ impl XdgShellHandler for Application {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let wl_surface = surface.wl_surface();
+        log::debug!(
+            "new_toplevel:, surface: {:?}, toplevel: {:?}",
+            wl_surface.id(),
+            surface.xdg_toplevel().id()
+        );
         self.send_initial_surface_state(wl_surface);
         if let Some(client) = wl_surface.client() {
             self.wayvr_tasks
@@ -721,7 +731,12 @@ impl XdgShellHandler for Application {
 }
 
 impl XdgToplevelIconHandler for Application {
-    fn set_icon(&mut self, _toplevel: XdgToplevel, surface: WlSurface) {
+    fn set_icon(&mut self, toplevel: XdgToplevel, surface: WlSurface) {
+        log::debug!(
+            "set_icon, surface: {:?}, toplevel: {:?}",
+            surface.id(),
+            toplevel.id()
+        );
         let icon = icon::snapshot_pending_icon(&surface);
         self.pending_icon_changes.insert(surface.id(), icon);
     }

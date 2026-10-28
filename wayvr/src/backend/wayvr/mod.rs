@@ -199,6 +199,13 @@ impl WvrServerState {
         let mut xdg_toplevel_icons =
             smithay::wayland::xdg_toplevel_icon::XdgToplevelIconManager::new::<Application>(&dh);
         xdg_toplevel_icons.add_icon_size(64);
+        if std::env::var("WAYVR_DISABLE_TOPLEVEL_ICONS")
+            .ok()
+            .as_deref()
+            .is_some_and(|value| !value.is_empty() && value != "0")
+        {
+            dh.disable_global::<Application>(xdg_toplevel_icons.global());
+        }
         let stored_keys: HashSet<Arc<str>> = config
             .sets
             .iter()
@@ -380,6 +387,10 @@ impl WvrServerState {
         while let Some(task) = wvr_server.tasks.read() {
             match task {
                 WayVRTask::NewToplevel(client_id, toplevel) => {
+                    log::debug!(
+                        "NewToplevel: client: {client_id:?}, toplevel: {:?}",
+                        toplevel.xdg_toplevel().id()
+                    );
                     let toplevel = Rc::new(toplevel);
 
                     // Attach newly created toplevel surfaces to displays
@@ -596,7 +607,12 @@ impl WvrServerState {
                     }
                 }
                 WayVRTask::FirstToplevelCommit(toplevel) => {
-                    if wvr_server.wm.find_window_handle(&toplevel).is_some() {
+                    let has_window = wvr_server.wm.find_window_handle(&toplevel).is_some();
+                    log::debug!(
+                        "FirstToplevelCommit toplevel: {:?}, has_window: {has_window}",
+                        toplevel.xdg_toplevel().id()
+                    );
+                    if has_window {
                         wvr_server.send_first_configure(&toplevel);
                     }
                 }
@@ -967,7 +983,11 @@ impl WvrServerState {
         {
             resource.restored();
         }
-        toplevel.send_configure();
+        let serial = toplevel.send_configure();
+        log::debug!(
+            "Initial configure sent: to toplevel: {:?}, serial: {serial:?}",
+            toplevel.xdg_toplevel().id()
+        );
     }
 
     /// Identifier key based on xdg session or app_id+tags or app_id+pid
