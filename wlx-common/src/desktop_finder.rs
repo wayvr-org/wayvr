@@ -3,14 +3,14 @@ use std::{
 	ffi::OsStr,
 	fmt::Debug,
 	fs::exists,
-	path::Path,
+	path::{Path, PathBuf},
 	rc::Rc,
 	sync::Arc,
 	thread::JoinHandle,
 	time::Instant,
 };
 
-use crate::{cache_dir, locale::Language};
+use crate::{cache_dir, desktop_watcher::DesktopWatcher, locale::Language};
 use anyhow::Context;
 use freedesktop_desktop_entry::DesktopEntry as FreedesktopDesktopEntry;
 use serde::{Deserialize, Serialize};
@@ -57,14 +57,32 @@ const CATEGORY_TYPE_BLOCKLIST: [&str; 1] = ["ConsoleOnly"];
 struct DesktopFinderParams {
 	size_preferences: Vec<&'static OsStr>,
 	icon_folders: Vec<String>,
-	app_folders: Vec<String>,
+	app_folders: Vec<PathBuf>,
 	langs: Vec<String>,
+}
+
+struct CachedFileOwned {
+	root_index: usize,
+	entry: DesktopEntryOwned,
+}
+
+struct CachedFile {
+	root_index: usize,
+	entry: Rc<DesktopEntry>,
+}
+
+struct CacheBuild {
+	files: HashMap<PathBuf, CachedFileOwned>,
+	watcher: Option<DesktopWatcher>,
 }
 
 pub struct DesktopFinder {
 	params: Arc<DesktopFinderParams>,
+	// include all desktop files, so that removing a higher-prio one will reveal the lower-prio underneath
+	files: HashMap<PathBuf, CachedFile>,
 	entry_cache: HashMap<String, Rc<DesktopEntry>>,
-	bg_task: Option<JoinHandle<HashMap<String, DesktopEntryOwned>>>,
+	watcher: Option<DesktopWatcher>,
+	bg_task: Option<JoinHandle<CacheBuild>>,
 }
 
 impl DesktopFinder {
@@ -76,13 +94,8 @@ impl DesktopFinder {
 		let mut icon_folders = vec![];
 
 		if let Some(data_home) = xdg.get_data_home() {
-			app_folders.push(data_home.join("applications").to_string_lossy().to_string());
-			app_folders.push(
-				data_home
-					.join("flatpak/exports/share/applications")
-					.to_string_lossy()
-					.to_string(),
-			);
+			app_folders.push(data_home.join("applications"));
+			app_folders.push(data_home.join("flatpak/exports/share/applications"));
 			icon_folders.push(data_home.join("icons").to_string_lossy().to_string());
 			icon_folders.push(
 				data_home
@@ -97,7 +110,7 @@ impl DesktopFinder {
 
 		// /usr/share and such
 		for data_dir in xdg.get_data_dirs() {
-			app_folders.push(data_dir.join("applications").to_string_lossy().to_string());
+			app_folders.push(data_dir.join("applications"));
 			icon_folders.push(data_dir.join("icons").to_string_lossy().to_string());
 		}
 
@@ -122,126 +135,113 @@ impl DesktopFinder {
 				size_preferences,
 				langs,
 			}),
+			files: HashMap::new(),
 			entry_cache: HashMap::new(),
+			watcher: None,
 			bg_task: None,
 		}
 	}
 
-	fn build_cache(params: Arc<DesktopFinderParams>) -> HashMap<String, DesktopEntryOwned> {
-		let start = Instant::now();
+	fn read_single(params: &DesktopFinderParams, path: &Path) -> Option<DesktopEntryOwned> {
+		let file_path = path.display();
+		let file_name = path.file_name()?.to_string_lossy();
+		let desktop = match FreedesktopDesktopEntry::from_path(path, Some(&params.langs)) {
+			Ok(desktop) => desktop,
+			Err(e) => {
+				log::debug!("Failed to read .desktop file {}: {:?}, skipping", file_path, e);
+				return None;
+			}
+		};
 
-		let mut known_files = HashSet::new();
-		let mut entries = HashMap::<String, DesktopEntryOwned>::new();
+		if desktop.groups.desktop_entry().is_none() {
+			log::debug!("Failed to get [Desktop Entry] section for file {}, skipping", file_path);
+			return None;
+		}
+		if desktop.only_show_in().is_some() || desktop.terminal() || desktop.no_display() || desktop.hidden() {
+			return None;
+		}
+
+		let exec = desktop.exec()?;
+		if CMD_BLOCKLIST.iter().any(|blocked| exec.contains(blocked)) {
+			return None;
+		}
+		let exec_argv = desktop
+			.parse_exec_with_uris(&[], &params.langs)
+			.into_iter()
+			.flatten()
+			.map(|x| x.into_boxed_str())
+			.collect::<Box<[_]>>();
+		if exec_argv.is_empty() {
+			log::debug!("Invalid Exec in desktop file {}, skipping", file_path);
+			return None;
+		}
+		let app_name = desktop.name(&params.langs)?;
+		let mut vec_categories = Vec::<Box<str>>::new();
+		for cat in desktop.categories().unwrap_or_default() {
+			if CATEGORY_TYPE_BLOCKLIST.contains(&cat) {
+				return None;
+			}
+			if !cat.is_empty() {
+				vec_categories.push(cat.into());
+			}
+		}
+
+		let icon_path = desktop
+			.icon()
+			.and_then(|icon_name| Self::find_icon(params, icon_name))
+			.or_else(|| Self::create_icon(&file_name).ok());
+
+		Some(DesktopEntryOwned {
+			app_id: desktop.id().into(),
+			app_name: app_name.into(),
+			exec_argv,
+			icon_path: icon_path.map(|i| i.into_boxed_str()),
+			categories: vec_categories.into_boxed_slice(),
+		})
+	}
+
+	fn build_cache_full(params: Arc<DesktopFinderParams>) -> CacheBuild {
+		let start = Instant::now();
+		// install watch before scan so edits during scan remain in inotify event queue
+		let watcher = match DesktopWatcher::new(&params.app_folders) {
+			Ok(watcher) => Some(watcher),
+			Err(err) => {
+				log::warn!("Could not watch .desktop files: {err}");
+				None
+			}
+		};
+		let mut files = HashMap::new();
 
 		let icons_folder = cache_dir::get_path("icons");
 		if !std::fs::exists(&icons_folder).unwrap_or(false) {
 			let _ = std::fs::create_dir(&icons_folder);
 		}
 
-		for path in &params.app_folders {
-			log::debug!("Searching desktop entries in path {}", path);
-
-			'entries: for entry in WalkDir::new(path)
+		for (root_index, root) in params.app_folders.iter().enumerate() {
+			log::debug!("Searching desktop entries in path {}", root.display());
+			for entry in WalkDir::new(root)
 				.into_iter()
-				.filter_map(|e| e.ok())
-				.filter(|e| !e.file_type().is_dir())
+				.filter_map(Result::ok)
+				.filter(|entry| !entry.file_type().is_dir())
 			{
-				let Some(extension) = Path::new(entry.file_name()).extension() else {
-					continue;
-				};
-
-				if extension != "desktop" {
-					continue; // ignore, go on
-				}
-
-				let file_name = entry.file_name().to_string_lossy();
-				let file_path = entry.path().display().to_string();
-
-				let desktop = match FreedesktopDesktopEntry::from_path(entry.path(), Some(&params.langs)) {
-					Ok(desktop) => desktop,
-					Err(e) => {
-						log::debug!("Failed to read .desktop file {}: {:?}, skipping", file_path, e);
-						continue;
-					}
-				};
-
-				if desktop.groups.desktop_entry().is_none() {
-					log::debug!("Failed to get [Desktop Entry] section for file {}, skipping", file_path);
+				let path = entry.path();
+				if path.extension() != Some(OsStr::new("desktop")) || files.contains_key(path) {
 					continue;
 				}
-
-				// prefer entries from earlier data directories
-				let app_id = desktop.id();
-				if known_files.contains(app_id) {
-					continue;
-				}
-
-				if desktop.only_show_in().is_some() || desktop.terminal() || desktop.no_display() || desktop.hidden() {
-					continue;
-				}
-
-				let Some(exec) = desktop.exec() else {
-					log::debug!("Failed to get desktop entry Exec for file {}, skipping", file_path);
-					continue;
-				};
-
-				if CMD_BLOCKLIST.iter().any(|blocked| exec.contains(blocked)) {
-					continue;
-				}
-
-				let exec_argv = desktop
-					.parse_exec_with_uris(&[], &params.langs)
-					.into_iter()
-					.flatten()
-					.map(|x| x.into_boxed_str())
-					.collect::<Box<[_]>>();
-
-				if exec_argv.is_empty() {
-					log::debug!("Invalid Exec in desktop file {}, skipping", file_path);
-					continue;
-				};
-
-				let Some(app_name) = desktop.name(&params.langs) else {
-					log::debug!(
-						"Failed to get desktop entry application name for file {}, skipping",
-						file_path
+				if let Some(parsed) = Self::read_single(&params, path) {
+					files.insert(
+						path.to_path_buf(),
+						CachedFileOwned {
+							root_index,
+							entry: parsed,
+						},
 					);
-					continue;
-				};
-
-				let icon_path = desktop
-					.icon()
-					.and_then(|icon_name| Self::find_icon(&params, icon_name))
-					.or_else(|| Self::create_icon(&file_name).ok());
-
-				let mut vec_categories = Vec::<Box<str>>::new();
-				for cat in desktop.categories().unwrap_or_default() {
-					if CATEGORY_TYPE_BLOCKLIST.contains(&cat) {
-						continue 'entries;
-					}
-					if !cat.is_empty() {
-						vec_categories.push(cat.into());
-					}
 				}
-
-				known_files.insert(app_id.to_owned());
-
-				entries.insert(
-					app_id.to_owned(),
-					DesktopEntryOwned {
-						app_id: app_id.into(),
-						app_name: app_name.into(),
-						exec_argv,
-						icon_path: icon_path.map(|i| i.into_boxed_str()),
-						categories: vec_categories.into_boxed_slice(),
-					},
-				);
 			}
 		}
 
 		log::debug!("Desktop entry & icon scan took {:?}", start.elapsed());
-
-		entries
+		CacheBuild { files, watcher }
 	}
 
 	fn find_icon(params: &DesktopFinderParams, icon_name: &str) -> Option<String> {
@@ -306,29 +306,113 @@ impl DesktopFinder {
 			return;
 		};
 
-		let Ok(entries) = bg_task.join() else {
+		let Ok(CacheBuild { files, watcher }) = bg_task.join() else {
+			log::warn!("Desktop entry scan thread panicked");
 			return;
 		};
 
+		self.files = files
+			.into_iter()
+			.map(|(path, file)| {
+				(
+					path,
+					CachedFile {
+						root_index: file.root_index,
+						entry: Rc::new(file.entry.into()),
+					},
+				)
+			})
+			.collect();
+		self.watcher = watcher;
+
+		let mut files: Vec<_> = self.files.iter().collect();
+		files.sort_by(|(path_a, a), (path_b, b)| a.root_index.cmp(&b.root_index).then_with(|| path_a.cmp(path_b)));
 		self.entry_cache.clear();
-		for (app_id, entry) in entries {
-			self.entry_cache.insert(app_id, Rc::new(entry.into()));
+		for (_, file) in files {
+			self
+				.entry_cache
+				.entry(file.entry.app_id.to_string())
+				.or_insert_with(|| Rc::clone(&file.entry));
 		}
 	}
 
-	pub fn get_cached_entry(&self, app_id: &str) -> Option<&Rc<DesktopEntry>> {
+	fn update_app_id(&mut self, app_id: &str) {
+		let best = self
+			.files
+			.iter()
+			.filter(|(_, file)| file.entry.app_id.as_ref() == app_id)
+			.min_by(|(path_a, a), (path_b, b)| a.root_index.cmp(&b.root_index).then_with(|| path_a.cmp(path_b)))
+			.map(|(_, file)| Rc::clone(&file.entry));
+		if let Some(best) = best {
+			self.entry_cache.insert(app_id.to_owned(), best);
+		} else {
+			self.entry_cache.remove(app_id);
+		}
+	}
+
+	fn sync_file_changes(&mut self) {
+		self.wait_for_entries();
+		let Some(watcher) = self.watcher.as_mut() else {
+			return;
+		};
+		let changes = watcher.collect_changes();
+		if changes.overflowed {
+			log::warn!("Desktop file inotify event queue overflowed; rebuilding cache");
+			self.refresh();
+			self.wait_for_entries();
+			return;
+		}
+
+		let mut affected_ids = HashSet::new();
+		if !changes.removed_directories.is_empty() {
+			self.files.retain(|path, file| {
+				let removed = changes
+					.removed_directories
+					.iter()
+					.any(|directory| path.starts_with(directory));
+				if removed {
+					affected_ids.insert(file.entry.app_id.to_string());
+				}
+				!removed
+			});
+		}
+		for path in changes.files {
+			if let Some(previous) = self.files.remove(&path) {
+				affected_ids.insert(previous.entry.app_id.to_string());
+			}
+			let root_index = self.params.app_folders.iter().position(|root| path.starts_with(root));
+			if let Some(root_index) = root_index
+				&& let Some(entry) = Self::read_single(&self.params, &path)
+			{
+				affected_ids.insert(entry.app_id.to_string());
+				self.files.insert(
+					path,
+					CachedFile {
+						root_index,
+						entry: Rc::new(entry.into()),
+					},
+				);
+			}
+		}
+		for app_id in affected_ids {
+			self.update_app_id(&app_id);
+		}
+	}
+
+	pub fn get_cached_entry(&mut self, app_id: &str) -> Option<&Rc<DesktopEntry>> {
+		self.sync_file_changes();
 		self.entry_cache.get(app_id)
 	}
 
 	pub fn find_entries(&mut self) -> HashMap<String, Rc<DesktopEntry>> {
-		self.wait_for_entries();
+		self.sync_file_changes();
 		self.entry_cache.clone()
 	}
 
 	pub fn refresh(&mut self) {
 		let bg_task = std::thread::spawn({
 			let params = self.params.clone();
-			move || Self::build_cache(params)
+			move || Self::build_cache_full(params)
 		});
 		self.bg_task = Some(bg_task);
 	}

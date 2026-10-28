@@ -15,6 +15,7 @@ chrono.workspace = true
 glam.workspace = true
 idmap = { workspace = true, features = ["serde"] }
 idmap-derive.workspace = true
+libc.workspace = true
 log.workspace = true
 serde = { workspace = true, features = ["rc"] }
 serde_json.workspace = true
@@ -34,3 +35,4 @@ rodio = {
 }
 walkdir = "2.5.0"
 wgui = { path = "../wgui/" }
+inotify = { version = "0.11.5", default-features = false }
