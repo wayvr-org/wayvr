@@ -14,6 +14,8 @@ use crate::{
 	windowing::OverlayWindowState,
 };
 
+pub const CONFIG_VERSION: u32 = 1;
+
 pub type PwTokenMap = AStrMap<String>;
 pub type SerializedWindowStates = HashMap<Arc<str>, OverlayWindowState>;
 
@@ -562,4 +564,10 @@ pub struct GeneralConfig {
 
 	#[serde(default)]
 	pub middle_grabs_single: bool,
+
+	#[serde(default)]
+	pub state_version: u32,
+
+	#[serde(default)]
+	pub config_version: u32,
 }

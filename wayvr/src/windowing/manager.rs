@@ -13,6 +13,7 @@ use wlx_common::{
     astr_containers::{AStrMap, AStrMapExt},
     config::SerializedWindowSet,
     overlays::{BackendAttrib, BackendAttribValue, ToastTopic},
+    windowing::{OverlayWindowState, Positioning},
 };
 
 use crate::{
@@ -653,6 +654,29 @@ impl<T> OverlayWindowManager<T> {
         if app.session.config.sets.is_empty() {
             // keep defaults
             return;
+        }
+
+        // floating transforms in older states are relative to hmd, not anchor
+        if app.session.config.state_version < 1 {
+            let clear_legacy_floating = |state: &mut OverlayWindowState| {
+                if matches!(state.positioning, Positioning::Floating) {
+                    state.saved_transform = None;
+                }
+            };
+
+            for set in &mut app.session.config.sets {
+                for state in set
+                    .overlays
+                    .values_mut()
+                    .chain(set.hidden_overlays.values_mut())
+                {
+                    clear_legacy_floating(state);
+                }
+            }
+            for state in app.session.config.global_set.values_mut() {
+                clear_legacy_floating(state);
+            }
+            app.session.config.state_version = 1;
         }
 
         // only safe to load when current_set is None
