@@ -29,7 +29,7 @@ use crate::{
     windowing::backend::{FrameMeta, RenderResources},
 };
 
-const CURSOR_SIZE: f32 = 16. / 1440.;
+const CURSOR_SIZE: f32 = 64. / 1440.;
 
 // synchronize queue shared by the WlxCapture worker threads
 static CAPTURE_QUEUE_MUTEX: Mutex<()> = Mutex::new(());
@@ -335,11 +335,18 @@ impl ScreenPipeline {
             .update_sampler(0, image.clone(), Filter::Nearest)?;
         for cmd_buf in &mut rdr.cmd_bufs {
             let size = CURSOR_SIZE * self.extentf[1];
-            let (width, height, hotspot_x, hotspot_y) = if let Some((_, size, hotspot)) = cursor {
-                (size[0], size[1], hotspot[0], hotspot[1])
-            } else {
-                (size, size, size * 0.5, size * 0.5)
-            };
+            let (width, height, hotspot_x, hotspot_y) =
+                if let Some((_, dimensions, hotspot)) = cursor {
+                    let scale = size / dimensions[0].max(dimensions[1]).max(1.0);
+                    (
+                        dimensions[0] * scale,
+                        dimensions[1] * scale,
+                        hotspot[0] * scale,
+                        hotspot[1] * scale,
+                    )
+                } else {
+                    (size, size, size * 0.5, size * 0.5)
+                };
 
             let (x_scale, y_scale) = if self.stereo_adjust_mouse {
                 match self.stereo {

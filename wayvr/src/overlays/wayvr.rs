@@ -163,7 +163,8 @@ pub struct WvrWindowBackend {
     just_resumed: bool,
     meta: Option<FrameMeta>,
     mouse: Option<MouseMeta>,
-    cursor_revision: Option<(Arc<ImageView>, [i32; 2])>,
+    cursor_revision: Option<(Arc<ImageView>, [i32; 2], [i32; 2])>,
+    cursor_status: CursorImageStatus,
     stereo: Option<StereoMode>,
     stereo_full_frame: bool,
     stereo_adjust_mouse: bool,
@@ -274,6 +275,7 @@ impl WvrWindowBackend {
             meta: None,
             mouse: None,
             cursor_revision: None,
+            cursor_status: CursorImageStatus::default_named(),
             stereo: app
                 .feats
                 .xr_backend
@@ -595,7 +597,7 @@ impl OverlayBackend for WvrWindowBackend {
         let surfaces = collect_rendered_surface_tree(toplevel.wl_surface());
 
         let mut popup_roots = Vec::new();
-        let mut popups = Vec::new();
+        let mut popup_trees = Vec::new();
 
         for (popup, point) in PopupManager::popups_for_surface(toplevel.wl_surface()) {
             let configured = with_states(popup.wl_surface(), |states| {
@@ -619,12 +621,14 @@ impl OverlayBackend for WvrWindowBackend {
                 surface_origin: vec2(popup_origin.x as f32, popup_origin.y as f32),
             });
 
-            popups.extend(collect_rendered_surface_tree_at(
+            popup_trees.push(collect_rendered_surface_tree_at(
                 popup.wl_surface(),
                 popup_origin,
                 true,
             ));
         }
+
+        let popups: Vec<RenderedSurface> = popup_trees.into_iter().rev().flatten().collect();
 
         let mut tree_dirty = false;
 
@@ -763,30 +767,45 @@ impl OverlayBackend for WvrWindowBackend {
                 y: (m.pos.y as f32) / (inner_extent[1] as f32),
             });
 
-        let cursor_revision = if mouse.is_some() {
-            match &app.wvr_server.as_ref().unwrap().manager.state.cursor_image {
-                CursorImageStatus::Surface(surface) if surface.alive() => {
-                    with_states(surface, |states| {
-                        let image = SurfaceBufWithImage::get_from_surface(states)?;
-                        let hotspot = states
-                            .data_map
-                            .get::<CursorImageSurfaceData>()?
-                            .lock()
-                            .ok()?
-                            .hotspot;
-                        Some((image.image, [hotspot.x, hotspot.y]))
-                    })
-                }
-                _ => None,
+        let cursor_status = {
+            let state = &mut app.wvr_server.as_mut().unwrap().manager.state;
+            if matches!(
+                &state.cursor_image,
+                CursorImageStatus::Surface(surface) if !surface.alive()
+            ) {
+                state.cursor_image = CursorImageStatus::default_named();
             }
-        } else {
-            None
+            if mouse.is_some() {
+                state.cursor_image.clone()
+            } else {
+                CursorImageStatus::default_named()
+            }
         };
-        let cursor_dirty = match (&self.cursor_revision, &cursor_revision) {
-            (Some((a, ah)), Some((b, bh))) => !Arc::ptr_eq(a, b) || ah != bh,
-            (None, None) => false,
-            _ => true,
+        let cursor_revision = match &cursor_status {
+            CursorImageStatus::Surface(surface) if surface.alive() => {
+                with_states(surface, |states| {
+                    let image = SurfaceBufWithImage::get_from_surface(states)?;
+                    let size = image.logical_size(states);
+                    let hotspot = states
+                        .data_map
+                        .get::<CursorImageSurfaceData>()?
+                        .lock()
+                        .ok()?
+                        .hotspot;
+                    Some((image.image, [size.w, size.h], [hotspot.x, hotspot.y]))
+                })
+            }
+            _ => None,
         };
+        let cursor_dirty = self.cursor_status != cursor_status
+            || match (&self.cursor_revision, &cursor_revision) {
+                (Some((a, asize, ah)), Some((b, bsize, bh))) => {
+                    !Arc::ptr_eq(a, b) || asize != bsize || ah != bh
+                }
+                (None, None) => false,
+                _ => true,
+            };
+        self.cursor_status = cursor_status;
         self.cursor_revision = cursor_revision;
         let dirty =
             cursor_dirty || self.mouse != mouse || rendered_surfaces_dirty(&self.popups, &popups);
@@ -857,12 +876,6 @@ impl OverlayBackend for WvrWindowBackend {
             if let Some(mouse) = self.mouse.as_ref() {
                 match state.cursor_image.clone() {
                     CursorImageStatus::Hidden => {}
-                    CursorImageStatus::Named(_) => {
-                        self.pipeline
-                            .as_mut()
-                            .unwrap()
-                            .render_mouse(mouse, rdr, None)?;
-                    }
                     CursorImageStatus::Surface(surface) if surface.alive() => {
                         let cursor = with_states(&surface, |states| {
                             let image = SurfaceBufWithImage::get_from_surface(states)?;
@@ -887,8 +900,14 @@ impl OverlayBackend for WvrWindowBackend {
                             )?;
                             state.send_frame_callbacks_for_surface_id(&surface.id());
                         }
+                        // a live cursor surface with no buffer makes an invisible cursor
                     }
-                    CursorImageStatus::Surface(_) => {}
+                    CursorImageStatus::Named(_) | CursorImageStatus::Surface(_) => {
+                        self.pipeline
+                            .as_mut()
+                            .unwrap()
+                            .render_mouse(mouse, rdr, None)?;
+                    }
                 }
             }
 
@@ -994,6 +1013,12 @@ impl OverlayBackend for WvrWindowBackend {
             Some(WvrHitTarget::Panel(hit2)) => {
                 if let Some(wvr_server) = app.wvr_server.as_mut() {
                     wvr_server.clear_dnd_focus(hit.pointer);
+                    wvr_server.send_mouse_move(
+                        PointerFocusTarget::None,
+                        ctx.unclamped_client_pos_from_hit(hit),
+                        self.window,
+                        false,
+                    );
                 }
                 self.panel_hovered = true;
                 self.panel.on_hover(app, &hit2)
@@ -1063,6 +1088,9 @@ impl OverlayBackend for WvrWindowBackend {
         if self.panel_hovered {
             self.panel.on_left(app, pointer);
             self.panel_hovered = false;
+        }
+        if let Some(wvr_server) = app.wvr_server.as_mut() {
+            wvr_server.leave_overlay(self.window, pointer);
         }
     }
 

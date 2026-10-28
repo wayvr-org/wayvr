@@ -1353,11 +1353,39 @@ impl WvrServerState {
     }
 
     /// Use HidWrapper::set_input_focus instead!!!
-    pub const fn set_input_focus(&mut self, has_focus: bool) {
+    pub fn set_input_focus(&mut self, has_focus: bool) {
+        if self.has_input_focus && !has_focus {
+            let pos = self
+                .wm
+                .mouse
+                .as_ref()
+                .map_or(DVec2::ZERO, |mouse| mouse.pos);
+            self.manager
+                .send_mouse_move(None, pos, DVec2::ZERO, DVec2::ZERO);
+            self.manager.state.cursor_image = CursorImageStatus::default_named();
+        }
         self.has_input_focus = has_focus;
         if !has_focus {
             self.wm.mouse = None;
         }
+    }
+
+    pub fn leave_overlay(&mut self, window: window::WindowHandle, pointer: usize) {
+        if self.manager.state.vr_pointer != pointer || self.dnd_active_for_pointer(pointer) {
+            return;
+        }
+        let Some(mouse) = self
+            .wm
+            .mouse
+            .as_ref()
+            .filter(|mouse| mouse.hover_window == window)
+        else {
+            return;
+        };
+        let pos = mouse.pos;
+        self.manager
+            .send_mouse_move(None, pos, DVec2::ZERO, DVec2::ZERO);
+        self.wm.mouse = None;
     }
 
     pub const fn get_focused_window(&self) -> Option<window::WindowHandle> {
