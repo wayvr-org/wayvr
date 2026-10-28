@@ -73,7 +73,7 @@
 		"MOVE_PRESS_AND_DRAG": "Move (press & drag)",
 		"OPACITY": "Opacity",
 		"POS_ANCHORED": "Anchored: Moves together with set. Default.",
-		"POS_FLOATING": "Floating: Moves independently, recenters when shown.",
+		"POS_FLOATING": "Floating: Moves independently, Saves with the anchor.",
 		"POS_HAND_L": "Follow the left hand.",
 		"POS_HAND_R": "Follow the right hand.",
 		"POS_HMD": "Follow the HMD.",

@@ -43,14 +43,14 @@
 		"MOVE_PRESS_AND_DRAG": "Przesuń (przyciśnij i przeciągnij)",
 		"OPACITY": "Przezroczystość",
 		"POS_ANCHORED": "Przytwierdzone: Przesuwa się wraz z zestawem. Domyślnie.",
-		"POS_FLOATING": "Pływający: przesuwa się niezależnie, centruje się po wyświetleniu.",
 		"POS_HAND_L": "Podążaj za lewą ręką.",
 		"POS_HAND_R": "Podążaj za prawą ręką.",
 		"POS_HMD": "Podążaj za HMD.",
 		"POS_STATIC": "Stacjonarny: Poza jakimkolwiek zestawem, brak recentrowania.",
 		"POSITIONING": "Pozycjonowanie",
 		"RESIZE_PRESS_AND_DRAG": "Zmień rozmiar (naciśnij i przeciągnij)",
-		"RESIZE_CORNER": "Przeciągnij, aby zmienić rozmiar"
+		"RESIZE_CORNER": "Przeciągnij, aby zmienić rozmiar",
+		"POS_FLOATING": "Pływający: przesuwa się niezależnie, zapisuje wraz z kotwicą."
 	},
 	"DEFINITIONS": {
 		"ANCHORED": "Przytwierdzone",

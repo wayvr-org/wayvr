@@ -73,7 +73,6 @@
 		"MOVE_PRESS_AND_DRAG": "Flytta (tryck & dra)",
 		"OPACITY": "Opacitet",
 		"POS_ANCHORED": "Förankrad: Flyttas tillsammans med set. Standard.",
-		"POS_FLOATING": "Flytande: Flyttas oberoende, centreras om vid visning.",
 		"POS_HAND_L": "Följ vänster hand.",
 		"POS_HAND_R": "Följ höger hand.",
 		"POS_HMD": "Följ HMD.",
@@ -92,7 +91,8 @@
 			"SPLIT_RIGHT_LEFT": "HÖGER→VÄNSTER",
 			"SPLIT_TOP_BOTTOM": "TOPP→BOTTEN",
 			"TITLE": "3D-stereoläge"
-		}
+		},
+		"POS_FLOATING": "Flytande: Flyttas oberoende, sparas med ankaret."
 	},
 	"ALTTAB": {
 		"RELEASE_TO_FOCUS": "Sikta på en app och släpp Super för att fokusera på den.",

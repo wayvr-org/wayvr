@@ -166,7 +166,7 @@ impl View {
 		// TODO: configurable defaults ?
 		let mut res_mode = AppResMode::Res1080;
 		let mut orientation_mode = AppOrientationMode::Wide;
-		let pos_mode = AppPosMode::Anchored;
+		let pos_mode = AppPosMode::Floating;
 
 		if let Some(pinned_app) = &params.pinned_app {
 			res_mode = pinned_app.res_mode;

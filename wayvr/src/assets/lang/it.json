@@ -43,14 +43,14 @@
 		"MOVE_PRESS_AND_DRAG": "Sposta (premi e trascina)",
 		"OPACITY": "Opacità",
 		"POS_ANCHORED": "Ancorato: Si muove insieme al set. Predefinito.",
-		"POS_FLOATING": "Fluttuante: si muove indipendentemente, si ricentra quando appare.",
 		"POS_HAND_L": "Segui la mano sinistra.",
 		"POS_HAND_R": "Segui la mano destra.",
 		"POS_HMD": "Segue l'HMD.",
 		"POS_STATIC": "Statico: non fa parte di alcun set, nessun ricentramento.",
 		"POSITIONING": "Posizionamento",
 		"RESIZE_PRESS_AND_DRAG": "Ridimensiona (premi e trascina)",
-		"RESIZE_CORNER": "Trascina per ridimensionare"
+		"RESIZE_CORNER": "Trascina per ridimensionare",
+		"POS_FLOATING": "Fluttuante: si muove indipendentemente, salva con l'ancora."
 	},
 	"DEFINITIONS": {
 		"ANCHORED": "Ancorato",

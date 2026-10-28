@@ -43,14 +43,14 @@
 		"MOVE_PRESS_AND_DRAG": "Bewegen (drücken & ziehen)",
 		"OPACITY": "Undurchsichtigkeit",
 		"POS_ANCHORED": "Verankert: Bewegt sich gemeinsam mit dem Set. Standard.",
-		"POS_FLOATING": "Schwebend: Bewegt sich unabhängig, zentriert sich beim Anzeigen neu.",
 		"POS_HAND_L": "Folgt der linken Hand.",
 		"POS_HAND_R": "Rechter Hand folgen.",
 		"POS_HMD": "Folgt dem HMD.",
 		"POS_STATIC": "Statisch: Nicht Teil eines Sets, kein Recenter.",
 		"POSITIONING": "Positionierung",
 		"RESIZE_PRESS_AND_DRAG": "Größe ändern (drücken & ziehen)",
-		"RESIZE_CORNER": "Zum Vergrößern ziehen"
+		"RESIZE_CORNER": "Zum Vergrößern ziehen",
+		"POS_FLOATING": "Schwebend: Bewegt sich unabhängig, wird mit dem Anker gespeichert."
 	},
 	"DEFINITIONS": {
 		"ANCHORED": "Verankert",

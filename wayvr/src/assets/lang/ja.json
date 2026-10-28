@@ -42,7 +42,6 @@
 		"LOCK_INTERACTION": "インタラクションをロック",
 		"MOVE_PRESS_AND_DRAG": "移動（押しながらドラッグ）",
 		"OPACITY": "不透明度",
-		"POS_FLOATING": "フローティング：独立して移動し、表示時に中心位置がリセットされる。",
 		"POS_HAND_L": "左手に追従",
 		"POS_HAND_R": "右手に従う",
 		"POS_HMD": "HMDに従う",
@@ -50,7 +49,8 @@
 		"POSITIONING": "配置",
 		"RESIZE_PRESS_AND_DRAG": "リサイズ (押し込みながらドラッグ)",
 		"RESIZE_CORNER": "ドラッグしてリサイズ",
-		"POS_ANCHORED": "セット追従：セットと一緒に移動。デフォルト。"
+		"POS_ANCHORED": "セット追従：セットと一緒に移動。デフォルト。",
+		"POS_FLOATING": "フローティング：独立して移動し、アンカーと共に保存される。"
 	},
 	"DEFINITIONS": {
 		"ANCHORED": "セット追従",
