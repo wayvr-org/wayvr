@@ -9,6 +9,7 @@ use glam::{Affine3A, Vec3, Vec3A};
 use slotmap::{Key, SecondaryMap, SlotMap};
 use wgui::{i18n::Translation, log::LogErr};
 use wlx_common::{
+    DesktopBackend,
     astr_containers::{AStrMap, AStrMapExt},
     config::SerializedWindowSet,
     overlays::{BackendAttrib, BackendAttribValue, ToastTopic},
@@ -84,6 +85,8 @@ where
         };
 
         if headless {
+            app.screens.clear();
+            app.feats.desktop_backend = DesktopBackend::Headless;
             log::info!("Running in headless mode; keyboard will be en-US");
         } else {
             // create one window set for each screen.
@@ -92,12 +95,12 @@ where
             match create_screens(app) {
                 Ok((data, backend)) => {
                     app.feats.desktop_backend = backend;
-                    let last_idx = data.screens.len() - 1;
+                    let screen_count = data.screens.len();
                     for (idx, (meta, mut config)) in data.screens.into_iter().enumerate() {
                         config.show_on_spawn = true;
                         me.add(OverlayWindowData::from_config(config), app);
 
-                        if idx < last_idx {
+                        if idx + 1 < screen_count {
                             me.sets.push(OverlayWindowSet::default());
                             me.switch_to_set(app, Some(me.current_set.unwrap() + 1), false);
                         }
