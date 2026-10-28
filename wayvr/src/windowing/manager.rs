@@ -403,48 +403,24 @@ where
                 self.spawn_overlay(app, sel, spawn_pos, f);
             }
             OverlayTask::Drop(sel) => {
-                let (id, name) = match &sel {
-                    OverlaySelector::Id(id) => {
-                        let id = *id;
-                        let name = self.overlays.get(id).map(|o| o.config.name.clone());
-                        (Some(id), name)
-                    }
-                    OverlaySelector::Name(name) => {
-                        let id = self.lookup(name);
-                        (id, Some(name.clone()))
-                    }
-                    _ => (None, None),
-                };
-
+                let id = self.id_by_selector(&sel);
                 if let Some(o) = self.mut_by_selector(&sel)
                     && o.birthframe < FRAME_COUNTER.load(Ordering::Relaxed)
                     && let Some(o) = self.remove_by_selector(&sel, app)
                 {
                     log::debug!("Dropping overlay {}", o.config.name);
-                    if let (Some(id), Some(name)) = (id, name) {
-                        self.remove_saved_state(id, &name);
+                    if let Some(id) = id {
+                        self.on_overlay_dropped(id, &o);
                     }
                     self.dropped_overlays.push_back(o);
                 }
             }
             OverlayTask::DropImmediate(sel) => {
-                let (id, name) = match &sel {
-                    OverlaySelector::Id(id) => {
-                        let id = *id;
-                        let name = self.overlays.get(id).map(|o| o.config.name.clone());
-                        (Some(id), name)
-                    }
-                    OverlaySelector::Name(name) => {
-                        let id = self.lookup(name);
-                        (id, Some(name.clone()))
-                    }
-                    _ => (None, None),
-                };
-
+                let id = self.id_by_selector(&sel);
                 if let Some(o) = self.remove_by_selector(&sel, app) {
                     log::debug!("Dropping overlay {} immediately", o.config.name);
-                    if let (Some(id), Some(name)) = (id, name) {
-                        self.remove_saved_state(id, &name);
+                    if let Some(id) = id {
+                        self.on_overlay_dropped(id, &o);
                     }
                     self.dropped_overlays.push_back(o);
                 }
@@ -460,8 +436,7 @@ where
                     && let Some(o) = self.remove_by_selector(&OverlaySelector::Id(id), app)
                 {
                     log::debug!("Dropping expired overlay {}", o.config.name);
-                    let name = o.config.name.clone();
-                    self.remove_saved_state(id, &name);
+                    self.on_overlay_dropped(id, &o);
                     self.dropped_overlays.push_back(o);
                 }
             }
@@ -535,14 +510,44 @@ impl<T> OverlayWindowManager<T> {
         self.dropped_overlays.pop_front()
     }
 
-    fn remove_saved_state(&mut self, id: OverlayID, name: &str) {
+    fn on_overlay_dropped(&mut self, id: OverlayID, overlay: &OverlayWindowData<T>) {
+        let name = &overlay.config.name;
+        let remember_position = overlay.config.category == OverlayCategory::WayVR;
+
+        // keep removed overlays by name
         for set in &mut self.sets {
-            set.overlays.retain(|k, _| k != id);
-            set.inactive_overlays.arc_rm(name);
-            set.hidden_overlays.arc_rm(name);
+            let state = set.overlays.remove(id);
+            let hidden_state = set.hidden_overlays.arc_rm(name);
+            if remember_position {
+                if let Some(state) = state.or(hidden_state) {
+                    set.inactive_overlays.arc_set(name.clone(), state);
+                }
+            } else {
+                set.inactive_overlays.arc_rm(name);
+            }
         }
-        self.global_set.inactive_overlays.arc_rm(name);
-        self.global_set.hidden_overlays.arc_rm(name);
+
+        let state = self.global_set.overlays.remove(id);
+        let hidden_state = self.global_set.hidden_overlays.arc_rm(name);
+        if remember_position {
+            if let Some(state) = state.or(hidden_state) {
+                self.global_set
+                    .inactive_overlays
+                    .arc_set(name.clone(), state);
+            }
+
+            if let Some(state) = &overlay.config.active_state {
+                let set = if overlay.config.global {
+                    &mut self.global_set
+                } else {
+                    &mut self.sets[self.current_set.unwrap_or(self.restore_set)]
+                };
+                set.inactive_overlays.arc_set(name.clone(), state.clone());
+            }
+        } else {
+            // transient overlays (toasts, etc)
+            self.global_set.inactive_overlays.arc_rm(name);
+        }
     }
 
     pub fn persist_layout(&mut self, app: &mut AppState) {
