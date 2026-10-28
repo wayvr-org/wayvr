@@ -24,17 +24,12 @@ raw-window-handle = "0.6"
 cosmic-text = "0.19.0"
 etagere = "0.3.0"
 flate2 = "1.1.9"
-image = {
-  version = "0.25.10",
-  default-features = false,
-  features = [
-    "gif",
-    "jpeg",
-    "png",
-    "rayon",
-    "webp",
-  ]
-}
+image = { workspace = true, features = [
+  "gif",
+  "jpeg",
+  "rayon",
+  "webp",
+] }
 lru = "0.18.1"
 ouroboros = "0.18.5"
 parking_lot = "0.12.5"

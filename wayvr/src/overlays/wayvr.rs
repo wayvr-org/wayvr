@@ -70,6 +70,7 @@ use crate::{
 #[derive(Clone)]
 pub enum WvrCommand {
     ReloadTitle,
+    SetIcon(Arc<str>),
     CloseWindow,
     KillProcess(KillSignal),
 }
@@ -863,6 +864,9 @@ impl OverlayBackend for WvrWindowBackend {
                 self.overlay_id = oid;
                 let wvr_server = app.wvr_server.as_mut().unwrap(); //never None
                 wvr_server.overlay_added(oid, self.window);
+            }
+            OverlayEventData::WvrCommand(WvrCommand::SetIcon(icon)) => {
+                self.icon = icon;
             }
             OverlayEventData::WvrCommand(WvrCommand::ReloadTitle) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap(); //never None

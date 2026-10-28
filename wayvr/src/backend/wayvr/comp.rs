@@ -47,6 +47,7 @@ use smithay::wayland::shell::xdg::{
 use smithay::wayland::shm::{ShmHandler, ShmState, shm_format_to_fourcc, with_buffer_contents};
 use smithay::wayland::single_pixel_buffer::get_single_pixel_buffer;
 use smithay::wayland::viewporter::ViewporterState;
+use smithay::wayland::xdg_toplevel_icon::{XdgToplevelIconHandler, XdgToplevelIconManager};
 use smithay::wayland::xdg_toplevel_tag::{XdgToplevelTagHandler, XdgToplevelTagManager};
 use smithay::{
     delegate_compositor, delegate_data_control, delegate_data_device, delegate_dmabuf,
@@ -64,6 +65,7 @@ use wayland_server::backend::{ClientData, ClientId, DisconnectReason};
 use wayland_server::protocol::wl_surface::WlSurface;
 use wlx_capture::DrmFourcc;
 
+use super::icon::{self, ToplevelIconSnapshot};
 use super::session::SessionRegistry;
 use crate::backend::wayvr::image_importer::ImageImporter;
 use crate::backend::wayvr::{SurfaceBufWithImage, WAYVR_SCREEN_RES, time};
@@ -79,6 +81,10 @@ pub struct Application {
     pub xdg_shell: XdgShellState,
     #[allow(dead_code)]
     pub xdg_toplevel_tags: XdgToplevelTagManager,
+    #[allow(dead_code)]
+    pub xdg_toplevel_icons: XdgToplevelIconManager,
+    pub pending_icon_changes: HashMap<ObjectId, ToplevelIconSnapshot>,
+    pub current_icons: HashMap<ObjectId, ToplevelIconSnapshot>,
     pub sessions: SessionRegistry,
     pub toplevel_tags: HashMap<ObjectId, Arc<str>>,
     pub seat: Seat<Application>,
@@ -263,6 +269,22 @@ impl compositor::CompositorHandler for Application {
 
     #[allow(clippy::significant_drop_tightening)]
     fn commit(&mut self, surface: &WlSurface) {
+        if let Some(icon) = self.pending_icon_changes.remove(&surface.id()) {
+            if icon.is_empty() {
+                self.current_icons.remove(&surface.id());
+            } else {
+                self.current_icons.insert(surface.id(), icon);
+            }
+            if let Some(toplevel) = self
+                .xdg_shell
+                .toplevel_surfaces()
+                .iter()
+                .find(|t| t.wl_surface() == surface)
+            {
+                self.wayvr_tasks
+                    .send(WayVRTask::IconChange(toplevel.clone()));
+            }
+        }
         if let Some(toplevel) = self
             .xdg_shell
             .toplevel_surfaces()
@@ -520,6 +542,8 @@ impl XdgShellHandler for Application {
     }
 
     fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
+        self.pending_icon_changes.remove(&surface.wl_surface().id());
+        self.current_icons.remove(&surface.wl_surface().id());
         self.toplevel_tags.remove(&surface.xdg_toplevel().id());
         self.sessions.forget_toplevel(&surface);
         self.output.leave(surface.wl_surface());
@@ -696,6 +720,13 @@ impl XdgShellHandler for Application {
     }
 }
 
+impl XdgToplevelIconHandler for Application {
+    fn set_icon(&mut self, _toplevel: XdgToplevel, surface: WlSurface) {
+        let icon = icon::snapshot_pending_icon(&surface);
+        self.pending_icon_changes.insert(surface.id(), icon);
+    }
+}
+
 impl XdgToplevelTagHandler for Application {
     fn set_tag(&mut self, toplevel: XdgToplevel, tag: String) {
         if tag.is_empty() {
@@ -815,6 +846,7 @@ impl KdeDecorationHandler for Application {
 delegate_dmabuf!(Application);
 delegate_xdg_shell!(Application);
 smithay::delegate_xdg_toplevel_tag!(Application);
+smithay::delegate_xdg_toplevel_icon!(Application);
 delegate_compositor!(Application);
 delegate_viewporter!(Application);
 delegate_shm!(Application);

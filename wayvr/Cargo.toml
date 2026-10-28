@@ -64,6 +64,7 @@ bytes = { workspace = true }
 chrono-tz = "0.10.4"
 config = "0.15.25"
 futures = "0.3.32"
+image.workspace = true
 image_dds = {
   version = "0.7.2",
   default-features = false,

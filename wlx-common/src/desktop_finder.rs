@@ -244,6 +244,10 @@ impl DesktopFinder {
 		CacheBuild { files, watcher }
 	}
 
+	pub fn resolve_icon(&self, icon_name: &str) -> Option<String> {
+		Self::find_icon(&self.params, icon_name)
+	}
+
 	fn find_icon(params: &DesktopFinderParams, icon_name: &str) -> Option<String> {
 		if icon_name.starts_with("/") && exists(icon_name).unwrap_or(false) {
 			return Some(icon_name.to_string());

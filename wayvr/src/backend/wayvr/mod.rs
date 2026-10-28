@@ -1,6 +1,7 @@
 pub mod client;
 mod comp;
 pub mod hit_test;
+mod icon;
 mod image_importer;
 mod input_capture;
 pub mod process;
@@ -128,6 +129,7 @@ pub enum WayVRTask {
     DropToplevel(ClientId, ToplevelSurface),
     MinimizeRequest(ClientId, ToplevelSurface),
     TitleChange(ClientId, ToplevelSurface),
+    IconChange(ToplevelSurface),
     WindowIdentityChanged(ToplevelSurface),
     FreezeWindowState(ToplevelSurface, Arc<str>),
     RenameWindowState(Arc<str>, Arc<str>),
@@ -194,6 +196,9 @@ impl WvrServerState {
             session_protocol::server::xdg_session_manager_v1::XdgSessionManagerV1, _>(1, ());
         let xdg_toplevel_tags =
             smithay::wayland::xdg_toplevel_tag::XdgToplevelTagManager::new::<Application>(&dh);
+        let mut xdg_toplevel_icons =
+            smithay::wayland::xdg_toplevel_icon::XdgToplevelIconManager::new::<Application>(&dh);
+        xdg_toplevel_icons.add_icon_size(64);
         let stored_keys: HashSet<Arc<str>> = config
             .sets
             .iter()
@@ -292,6 +297,9 @@ impl WvrServerState {
             compositor,
             xdg_shell,
             xdg_toplevel_tags,
+            xdg_toplevel_icons,
+            pending_icon_changes: HashMap::new(),
+            current_icons: HashMap::new(),
             sessions: SessionRegistry::new(stored_keys),
             toplevel_tags: HashMap::new(),
             seat,
@@ -530,6 +538,13 @@ impl WvrServerState {
                             }
                         }
 
+                        let icon = icon::toplevel_icon(
+                            toplevel.wl_surface(),
+                            &wvr_server.manager.state.current_icons,
+                            &app.desktop_finder,
+                        )
+                        .or(icon);
+
                         // Fall back to identicon
                         let icon = match icon {
                             Some(icon) => icon,
@@ -549,6 +564,19 @@ impl WvrServerState {
                                 let persistent = identity.is_some();
                                 let name =
                                     identity.unwrap_or_else(|| window_handle.transient_name());
+                                let icon = app
+                                    .wvr_server
+                                    .as_ref()
+                                    .and_then(|wvr| {
+                                        wvr.wm.windows.get(window_handle).and_then(|window| {
+                                            icon::toplevel_icon(
+                                                window.toplevel.wl_surface(),
+                                                &wvr.manager.state.current_icons,
+                                                &app.desktop_finder,
+                                            )
+                                        })
+                                    })
+                                    .unwrap_or(icon);
                                 create_wl_window_overlay(
                                     name,
                                     title,
@@ -718,6 +746,46 @@ impl WvrServerState {
                                     OverlaySelector::Id(*oid),
                                     ToggleMode::EnsureOff,
                                 )));
+                        }
+                    }
+                }
+                WayVRTask::IconChange(toplevel) => {
+                    if let Some(handle) = wvr_server.wm.find_window_handle(&toplevel)
+                        && let Some(oid) = wvr_server.window_to_overlay.get(&handle)
+                    {
+                        let icon = icon::toplevel_icon(
+                            toplevel.wl_surface(),
+                            &wvr_server.manager.state.current_icons,
+                            &app.desktop_finder,
+                        );
+                        let fallback = wvr_server
+                            .wm
+                            .windows
+                            .get(handle)
+                            .and_then(|w| w.app_id.as_deref())
+                            .and_then(|id| app.desktop_finder.get_cached_entry(id))
+                            .and_then(|entry| entry.icon_path.as_ref())
+                            .map(|s| Arc::<str>::from(s.as_ref()));
+                        let icon = icon.or(fallback).or_else(|| {
+                            let title =
+                                with_states(toplevel.wl_surface(), |states| {
+                                    states.data_map.get::<XdgToplevelSurfaceData>().and_then(
+                                        |data| data.lock().ok().and_then(|data| data.title.clone()),
+                                    )
+                                })
+                                .unwrap_or_else(|| "window".to_owned());
+                            DesktopFinder::create_icon(&title).ok().map(Into::into)
+                        });
+                        if let Some(icon) = icon {
+                            app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+                                OverlaySelector::Id(*oid),
+                                Box::new(move |app, owc| {
+                                    let _ = owc.backend.notify(
+                                        app,
+                                        OverlayEventData::WvrCommand(WvrCommand::SetIcon(icon)),
+                                    );
+                                }),
+                            )));
                         }
                     }
                 }

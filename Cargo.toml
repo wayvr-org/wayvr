@@ -23,6 +23,7 @@ dbus = { version = "0.9.12" }
 glam = { version = "0.30.9", features = ["mint", "serde"] }
 idmap = "0.2.2"
 idmap-derive = "0.2.22"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
 interprocess = { version = "2.2.3" }
 libc = "0.2.178"
 log = "0.4.29"

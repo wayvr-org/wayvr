@@ -394,8 +394,16 @@ where
                 if let Some(o) = self.mut_by_selector(&sel) {
                     let was_visible = o.config.is_active();
                     let old_title = o.config.title.clone();
+                    let old_icon = match o.config.backend.get_attrib(BackendAttrib::Icon) {
+                        Some(BackendAttribValue::Icon(icon)) => Some(icon),
+                        _ => None,
+                    };
                     f(app, &mut o.config);
-                    let title_changed = old_title != o.config.title;
+                    let new_icon = match o.config.backend.get_attrib(BackendAttrib::Icon) {
+                        Some(BackendAttribValue::Icon(icon)) => Some(icon),
+                        _ => None,
+                    };
+                    let title_changed = old_title != o.config.title || old_icon != new_icon;
                     let visibility_changed = was_visible != o.config.is_active();
 
                     if title_changed {
