@@ -244,6 +244,7 @@ impl WvrServerState {
                 subpixel: smithay::output::Subpixel::None,
                 make: String::from("Completely Legit"),
                 model: String::from("Virtual WayVR Display"),
+                serial_number: String::new(),
             },
         );
 

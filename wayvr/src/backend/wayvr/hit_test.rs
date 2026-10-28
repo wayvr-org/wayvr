@@ -1,14 +1,11 @@
 use glam::{Affine2, Vec2};
 use smithay::{
-    desktop::PopupManager,
+    desktop::{PopupKind, PopupManager},
     reexports::wayland_server::{Resource, backend::ObjectId, protocol::wl_surface::WlSurface},
     utils::{Logical, Point},
-    wayland::{
-        compositor::{
-            SUBSURFACE_ROLE, SubsurfaceCachedState, SurfaceAttributes, TraversalAction,
-            with_states, with_surface_tree_upward,
-        },
-        shell::xdg::XdgPopupSurfaceData,
+    wayland::compositor::{
+        SUBSURFACE_ROLE, SubsurfaceCachedState, SurfaceAttributes, TraversalAction, with_states,
+        with_surface_tree_upward,
     },
 };
 use std::{ops::RangeInclusive, rc::Rc, sync::Arc};
@@ -383,17 +380,9 @@ pub fn build_hit_context(
     let mut popup_roots = Vec::new();
 
     for (popup, point) in PopupManager::popups_for_surface(toplevel) {
-        let configured = with_states(popup.wl_surface(), |states| {
-            states
-                .data_map
-                .get::<XdgPopupSurfaceData>()
-                .unwrap()
-                .lock()
-                .unwrap()
-                .configured
-        });
-
-        if !configured {
+        if let PopupKind::Xdg(popup) = &popup
+            && !popup.is_initial_configure_sent()
+        {
             continue;
         }
 

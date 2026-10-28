@@ -6,6 +6,7 @@ use smithay::desktop::{
     PopupKeyboardGrab, PopupKind, PopupManager, PopupPointerGrab, PopupUngrabStrategy,
     find_popup_root_surface, get_popup_toplevel_coords,
 };
+use smithay::input::dnd::{DnDGrab, DndGrabHandler, DndTarget, GrabType, Source};
 use smithay::input::pointer::{CursorImageStatus, Focus};
 use smithay::input::{Seat, SeatHandler, SeatState};
 use smithay::output::Output;
@@ -16,11 +17,9 @@ use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::Xdg
 use smithay::reexports::wayland_protocols_misc::server_decoration::server::org_kde_kwin_server_decoration;
 use smithay::reexports::wayland_server::Resource;
 use smithay::reexports::wayland_server::backend::ObjectId;
-use smithay::reexports::wayland_server::protocol::{
-    wl_buffer, wl_callback, wl_data_source, wl_output, wl_seat,
-};
+use smithay::reexports::wayland_server::protocol::{wl_buffer, wl_callback, wl_output, wl_seat};
 use smithay::reexports::wayland_server::{self, DisplayHandle};
-use smithay::utils::{Logical, Rectangle, Serial, Size};
+use smithay::utils::{Logical, Point, Rectangle, Serial, Size};
 use smithay::wayland::buffer::BufferHandler;
 use smithay::wayland::compositor::{self, BufferAssignment, SurfaceAttributes, send_surface_state};
 use smithay::wayland::dmabuf::{
@@ -28,10 +27,11 @@ use smithay::wayland::dmabuf::{
 };
 use smithay::wayland::fractional_scale::with_fractional_scale;
 use smithay::wayland::output::OutputHandler;
+use smithay::wayland::pointer_constraints::PointerConstraintsHandler;
 use smithay::wayland::relative_pointer::RelativePointerManagerState;
 use smithay::wayland::selection::data_device::{
-    ClientDndGrabHandler, DataDeviceHandler, DataDeviceState, ServerDndGrabHandler,
-    set_data_device_focus, set_data_device_selection,
+    DataDeviceHandler, DataDeviceState, WaylandDndGrabHandler, set_data_device_focus,
+    set_data_device_selection,
 };
 use smithay::wayland::selection::{self, SelectionHandler};
 use smithay::wayland::selection::{
@@ -49,12 +49,6 @@ use smithay::wayland::single_pixel_buffer::get_single_pixel_buffer;
 use smithay::wayland::viewporter::ViewporterState;
 use smithay::wayland::xdg_toplevel_icon::{XdgToplevelIconHandler, XdgToplevelIconManager};
 use smithay::wayland::xdg_toplevel_tag::{XdgToplevelTagHandler, XdgToplevelTagManager};
-use smithay::{
-    delegate_compositor, delegate_data_control, delegate_data_device, delegate_dmabuf,
-    delegate_ext_data_control, delegate_kde_decoration, delegate_output,
-    delegate_primary_selection, delegate_relative_pointer, delegate_seat, delegate_shm,
-    delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_decoration, delegate_xdg_shell,
-};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Write;
@@ -447,33 +441,75 @@ impl BufferHandler for Application {
     fn buffer_destroyed(&mut self, _buffer: &wl_buffer::WlBuffer) {}
 }
 
-impl ClientDndGrabHandler for Application {
-    fn started(
+impl PointerConstraintsHandler for Application {}
+
+impl WaylandDndGrabHandler for Application {
+    fn dnd_requested<S: Source>(
         &mut self,
-        _source: Option<wl_data_source::WlDataSource>,
+        source: S,
         icon: Option<WlSurface>,
-        _seat: Seat<Self>,
+        seat: Seat<Self>,
+        serial: Serial,
+        type_: GrabType,
     ) {
         let pointer = self.pointer_button_owner.unwrap_or(self.vr_pointer);
         self.dnd_pointer = Some(pointer);
         self.wayvr_tasks
             .send(WayVRTask::DndStarted { icon, pointer });
-    }
 
-    fn dropped(&mut self, _target: Option<WlSurface>, _validated: bool, _seat: Seat<Self>) {
+        match type_ {
+            GrabType::Pointer => {
+                let Some(pointer) = seat.get_pointer() else {
+                    log::warn!("dnd_requested: seat has no pointer");
+                    return;
+                };
+                let Some(start_data) = pointer.grab_start_data() else {
+                    log::warn!("dnd_requested: no pointer grab start data");
+                    return;
+                };
+                pointer.set_grab(
+                    self,
+                    DnDGrab::new_pointer(&self.display_handle, start_data, source, seat),
+                    serial,
+                    Focus::Keep,
+                );
+            }
+            GrabType::Touch => {
+                let Some(touch) = seat.get_touch() else {
+                    log::warn!("dnd_requested: seat has no touch");
+                    return;
+                };
+                let Some(start_data) = touch.grab_start_data() else {
+                    log::warn!("dnd_requested: no touch grab start data");
+                    return;
+                };
+                touch.set_grab(
+                    self,
+                    DnDGrab::new_touch(&self.display_handle, start_data, source, seat),
+                    serial,
+                );
+            }
+        }
+    }
+}
+
+impl DndGrabHandler for Application {
+    fn dropped(
+        &mut self,
+        _target: Option<DndTarget<'_, Self>>,
+        _validated: bool,
+        _seat: Seat<Self>,
+        _location: Point<f64, Logical>,
+    ) {
         self.dnd_pointer = None;
         self.pointer_button_owner = None;
         self.wayvr_tasks.send(WayVRTask::DndDropped);
     }
 }
 
-impl ServerDndGrabHandler for Application {
-    fn send(&mut self, _mime_type: String, _fd: OwnedFd, _seat: Seat<Self>) {}
-}
-
 impl DataDeviceHandler for Application {
-    fn data_device_state(&self) -> &DataDeviceState {
-        &self.data_device
+    fn data_device_state(&mut self) -> &mut DataDeviceState {
+        &mut self.data_device
     }
 }
 
@@ -790,20 +826,20 @@ impl DmabufHandler for Application {
 }
 
 impl PrimarySelectionHandler for Application {
-    fn primary_selection_state(&self) -> &PrimarySelectionState {
-        &self.primary_selection_state
+    fn primary_selection_state(&mut self) -> &mut PrimarySelectionState {
+        &mut self.primary_selection_state
     }
 }
 
 impl selection_wlr::DataControlHandler for Application {
-    fn data_control_state(&self) -> &selection_wlr::DataControlState {
-        &self.wlr_data_control_state
+    fn data_control_state(&mut self) -> &mut selection_wlr::DataControlState {
+        &mut self.wlr_data_control_state
     }
 }
 
 impl selection_ext::DataControlHandler for Application {
-    fn data_control_state(&self) -> &selection_ext::DataControlState {
-        &self.ext_data_control_state
+    fn data_control_state(&mut self) -> &mut selection_ext::DataControlState {
+        &mut self.ext_data_control_state
     }
 }
 impl XdgDecorationHandler for Application {
@@ -858,23 +894,7 @@ impl KdeDecorationHandler for Application {
     }
 }
 
-delegate_dmabuf!(Application);
-delegate_xdg_shell!(Application);
-smithay::delegate_xdg_toplevel_tag!(Application);
-smithay::delegate_xdg_toplevel_icon!(Application);
-delegate_compositor!(Application);
-delegate_viewporter!(Application);
-delegate_shm!(Application);
-delegate_seat!(Application);
-delegate_data_device!(Application);
-delegate_output!(Application);
-delegate_primary_selection!(Application);
-delegate_data_control!(Application);
-delegate_ext_data_control!(Application);
-delegate_xdg_decoration!(Application);
-delegate_kde_decoration!(Application);
-delegate_single_pixel_buffer!(Application);
-delegate_relative_pointer!(Application);
+smithay::delegate_dispatch2!(Application);
 
 const fn wl_transform_to_frame_transform(
     transform: wl_output::Transform,

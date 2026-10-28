@@ -3,13 +3,13 @@ use std::{mem, ops::RangeInclusive, rc::Rc, sync::Arc};
 use glam::{Affine2, Affine3A, Quat, Vec3, vec2, vec3};
 use slotmap::Key;
 use smithay::{
-    desktop::PopupManager,
+    desktop::{PopupKind, PopupManager},
     input::pointer::{CursorImageStatus, CursorImageSurfaceData},
     reexports::wayland_server::Resource,
     utils::{IsAlive, Logical, Size},
     wayland::{
         compositor::with_states,
-        shell::xdg::{SurfaceCachedState, XdgPopupSurfaceData, XdgToplevelSurfaceData},
+        shell::xdg::{SurfaceCachedState, XdgToplevelSurfaceData},
     },
 };
 use wayvr_ipc::packet_client::PositionMode;
@@ -539,7 +539,11 @@ impl WvrWindowBackend {
             states
                 .data_map
                 .get::<XdgToplevelSurfaceData>()
-                .and_then(|data| data.lock().ok().and_then(|data| data.current_serial))
+                .and_then(|data| {
+                    data.lock()
+                        .ok()
+                        .and_then(|data| data.last_acked.as_ref().map(|c| c.serial))
+                })
         });
 
         if committed == clamped {
@@ -600,17 +604,9 @@ impl OverlayBackend for WvrWindowBackend {
         let mut popup_trees = Vec::new();
 
         for (popup, point) in PopupManager::popups_for_surface(toplevel.wl_surface()) {
-            let configured = with_states(popup.wl_surface(), |states| {
-                states
-                    .data_map
-                    .get::<XdgPopupSurfaceData>()
-                    .unwrap()
-                    .lock()
-                    .unwrap()
-                    .configured
-            });
-
-            if !configured {
+            if let PopupKind::Xdg(popup) = &popup
+                && !popup.is_initial_configure_sent()
+            {
                 continue;
             }
 
