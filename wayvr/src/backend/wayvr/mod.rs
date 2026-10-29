@@ -1742,7 +1742,7 @@ fn generate_auth_key() -> String {
 }
 
 struct SurfaceBufWithImageContainer {
-    inner: RefCell<SurfaceBufWithImage>,
+    inner: RefCell<Option<SurfaceBufWithImage>>,
     retained_dmabuf_buffer: RefCell<Option<wl_buffer::WlBuffer>>,
 }
 
@@ -1801,13 +1801,13 @@ impl SurfaceBufWithImage {
         retained_buffer: Option<wl_buffer::WlBuffer>,
     ) -> Option<wl_buffer::WlBuffer> {
         if let Some(container) = surface_data.data_map.get::<SurfaceBufWithImageContainer>() {
-            container.inner.replace(self);
+            container.inner.replace(Some(self));
             container.retained_dmabuf_buffer.replace(retained_buffer)
         } else {
             surface_data
                 .data_map
                 .insert_if_missing(|| SurfaceBufWithImageContainer {
-                    inner: RefCell::new(self),
+                    inner: RefCell::new(Some(self)),
                     retained_dmabuf_buffer: RefCell::new(retained_buffer),
                 });
             None
@@ -1818,6 +1818,16 @@ impl SurfaceBufWithImage {
         surface_data
             .data_map
             .get::<SurfaceBufWithImageContainer>()
-            .map(|x| x.inner.borrow().clone())
+            .and_then(|x| x.inner.borrow().clone())
+    }
+
+    fn remove_from_surface(surface_data: &SurfaceData) -> Option<wl_buffer::WlBuffer> {
+        surface_data
+            .data_map
+            .get::<SurfaceBufWithImageContainer>()
+            .and_then(|container| {
+                container.inner.replace(None);
+                container.retained_dmabuf_buffer.replace(None)
+            })
     }
 }

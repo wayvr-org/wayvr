@@ -357,7 +357,9 @@ impl compositor::CompositorHandler for Application {
                                         has_alpha: shm_format_to_fourcc(buf.format)
                                             .is_some_and(drm_format_has_alpha),
                                     };
-                                    sbwi.apply_to_surface(states, None);
+                                    if let Some(old_buffer) = sbwi.apply_to_surface(states, None) {
+                                        old_buffer.release();
+                                    }
                                 }
                             });
                             buffer.release();
@@ -379,7 +381,9 @@ impl compositor::CompositorHandler for Application {
                                     dmabuf: false,
                                     has_alpha: true,
                                 };
-                                sbwi.apply_to_surface(states, None);
+                                if let Some(old_buffer) = sbwi.apply_to_surface(states, None) {
+                                    old_buffer.release();
+                                }
                             }
                             buffer.release();
                         }
@@ -387,7 +391,12 @@ impl compositor::CompositorHandler for Application {
                         None => { /* don't draw anything */ }
                     }
                 }
-                Some(BufferAssignment::Removed) | None => {}
+                Some(BufferAssignment::Removed) => {
+                    if let Some(old_buffer) = SurfaceBufWithImage::remove_from_surface(states) {
+                        old_buffer.release();
+                    }
+                }
+                None => {}
             }
 
             let callbacks = std::mem::take(&mut attrs.frame_callbacks);
@@ -403,11 +412,25 @@ impl compositor::CompositorHandler for Application {
         smithay::wayland::compositor::with_states(surface, |states| {
             if let Some(buf) = SurfaceBufWithImage::get_from_surface(states) {
                 let extent = buf.image.extent_2d();
-                let scale = buf.scale.max(1) as u32;
+                let mut attributes = states.cached_state.get::<SurfaceAttributes>();
+                let attrs = attributes.current();
+                let scale = attrs.buffer_scale.max(1) as u32;
+                let (width, height) = if matches!(
+                    attrs.buffer_transform,
+                    wl_output::Transform::_90
+                        | wl_output::Transform::_270
+                        | wl_output::Transform::Flipped90
+                        | wl_output::Transform::Flipped270
+                ) {
+                    (extent[1], extent[0])
+                } else {
+                    (extent[0], extent[1])
+                };
                 let buffer_size = Size::new(
-                    (extent[0] / scale).max(1) as i32,
-                    (extent[1] / scale).max(1) as i32,
+                    (width / scale).max(1) as i32,
+                    (height / scale).max(1) as i32,
                 );
+                drop(attributes);
                 smithay::wayland::viewporter::ensure_viewport_valid(states, buffer_size);
             }
         });

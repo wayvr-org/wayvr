@@ -5,11 +5,15 @@ use slotmap::Key;
 use smithay::{
     desktop::{PopupKind, PopupManager},
     input::pointer::{CursorImageStatus, CursorImageSurfaceData},
-    reexports::wayland_server::Resource,
+    reexports::wayland_server::{
+        Resource,
+        protocol::{wl_output, wl_surface::WlSurface},
+    },
     utils::{IsAlive, Logical, Size},
     wayland::{
-        compositor::with_states,
+        compositor::{SurfaceAttributes, with_states},
         shell::xdg::{SurfaceCachedState, XdgToplevelSurfaceData},
+        viewporter::ViewportCachedState,
     },
 };
 use wayvr_ipc::packet_client::PositionMode;
@@ -53,7 +57,7 @@ use crate::{
         GuiPanel, NewGuiPanelParams, OnCustomAttribFunc,
         button::{BUTTON_EVENT_SUFFIX, BUTTON_EVENTS},
     },
-    overlays::screen::capture::ScreenPipeline,
+    overlays::screen::capture::{CursorSurface, ScreenPipeline},
     state::{self, AppState},
     subsystem::{hid::WheelDelta, input::InputFocus},
     windowing::{
@@ -77,6 +81,75 @@ pub enum WvrCommand {
 
 const BORDER_SIZE: u32 = 5;
 const BAR_SIZE: u32 = 48;
+
+fn cursor_surface(surface: &WlSurface) -> Option<CursorSurface> {
+    with_states(surface, |states| {
+        let image = SurfaceBufWithImage::get_from_surface(states)?;
+        let extent = image.image.extent_2d();
+
+        let mut attributes = states.cached_state.get::<SurfaceAttributes>();
+        let attrs = attributes.current();
+        let scale = attrs.buffer_scale.max(1) as f32;
+        let transform = match attrs.buffer_transform {
+            wl_output::Transform::_90 => Transform::Rotated90,
+            wl_output::Transform::_180 => Transform::Rotated180,
+            wl_output::Transform::_270 => Transform::Rotated270,
+            wl_output::Transform::Flipped => Transform::Flipped,
+            wl_output::Transform::Flipped90 => Transform::Flipped90,
+            wl_output::Transform::Flipped180 => Transform::Flipped180,
+            wl_output::Transform::Flipped270 => Transform::Flipped270,
+            _ => Transform::Normal,
+        };
+        drop(attributes);
+
+        let (width, height) = if matches!(
+            transform,
+            Transform::Rotated90
+                | Transform::Rotated270
+                | Transform::Flipped90
+                | Transform::Flipped270
+        ) {
+            (extent[1] as f32 / scale, extent[0] as f32 / scale)
+        } else {
+            (extent[0] as f32 / scale, extent[1] as f32 / scale)
+        };
+
+        let mut viewports = states.cached_state.get::<ViewportCachedState>();
+        let viewport = *viewports.current();
+        drop(viewports);
+        let (source_uv, source_size) = if let Some(source) = viewport.src {
+            (
+                [
+                    (source.loc.x as f32 / width).clamp(0.0, 1.0),
+                    (source.loc.y as f32 / height).clamp(0.0, 1.0),
+                    ((source.loc.x + source.size.w) as f32 / width).clamp(0.0, 1.0),
+                    ((source.loc.y + source.size.h) as f32 / height).clamp(0.0, 1.0),
+                ],
+                [source.size.w as f32, source.size.h as f32],
+            )
+        } else {
+            ([0.0, 0.0, 1.0, 1.0], [width, height])
+        };
+        let size = viewport
+            .size()
+            .map_or(source_size, |size| [size.w as f32, size.h as f32]);
+        let hotspot = states
+            .data_map
+            .get::<CursorImageSurfaceData>()?
+            .lock()
+            .ok()?
+            .hotspot;
+
+        Some(CursorSurface {
+            image: image.image,
+            source_size,
+            size,
+            hotspot: [hotspot.x as f32, hotspot.y as f32],
+            source_uv,
+            transform,
+        })
+    })
+}
 
 const BLEND_WAYLAND_ALPHA: AttachmentBlend = AttachmentBlend {
     src_color_blend_factor: BlendFactor::One,
@@ -163,7 +236,7 @@ pub struct WvrWindowBackend {
     just_resumed: bool,
     meta: Option<FrameMeta>,
     mouse: Option<MouseMeta>,
-    cursor_revision: Option<(Arc<ImageView>, [i32; 2], [i32; 2])>,
+    cursor_revision: Option<CursorSurface>,
     cursor_status: CursorImageStatus,
     stereo: Option<StereoMode>,
     stereo_full_frame: bool,
@@ -778,33 +851,29 @@ impl OverlayBackend for WvrWindowBackend {
             }
         };
         let cursor_revision = match &cursor_status {
-            CursorImageStatus::Surface(surface) if surface.alive() => {
-                with_states(surface, |states| {
-                    let image = SurfaceBufWithImage::get_from_surface(states)?;
-                    let size = image.logical_size(states);
-                    let hotspot = states
-                        .data_map
-                        .get::<CursorImageSurfaceData>()?
-                        .lock()
-                        .ok()?
-                        .hotspot;
-                    Some((image.image, [size.w, size.h], [hotspot.x, hotspot.y]))
-                })
-            }
+            CursorImageStatus::Surface(surface) if surface.alive() => cursor_surface(surface),
             _ => None,
         };
         let cursor_dirty = self.cursor_status != cursor_status
             || match (&self.cursor_revision, &cursor_revision) {
-                (Some((a, asize, ah)), Some((b, bsize, bh))) => {
-                    !Arc::ptr_eq(a, b) || asize != bsize || ah != bh
-                }
+                (Some(a), Some(b)) => !a.same_revision(b),
                 (None, None) => false,
                 _ => true,
             };
         self.cursor_status = cursor_status;
         self.cursor_revision = cursor_revision;
-        let dirty =
-            cursor_dirty || self.mouse != mouse || rendered_surfaces_dirty(&self.popups, &popups);
+        let cursor_redraw = match &self.cursor_status {
+            CursorImageStatus::Surface(surface) if surface.alive() => {
+                let state = &mut app.wvr_server.as_mut().unwrap().manager.state;
+                state.take_redraw_request(&surface.id())
+                    || state.has_pending_frame_callbacks(&surface.id())
+            }
+            _ => false,
+        };
+        let dirty = cursor_dirty
+            || cursor_redraw
+            || self.mouse != mouse
+            || rendered_surfaces_dirty(&self.popups, &popups);
         if !self.scrolling {
             self.mouse = mouse;
         }
@@ -873,30 +942,14 @@ impl OverlayBackend for WvrWindowBackend {
                 match state.cursor_image.clone() {
                     CursorImageStatus::Hidden => {}
                     CursorImageStatus::Surface(surface) if surface.alive() => {
-                        let cursor = with_states(&surface, |states| {
-                            let image = SurfaceBufWithImage::get_from_surface(states)?;
-                            let size = image.logical_size(states);
-                            let hotspot = states
-                                .data_map
-                                .get::<CursorImageSurfaceData>()?
-                                .lock()
-                                .ok()?
-                                .hotspot;
-                            Some((
-                                image.image,
-                                [size.w as f32, size.h as f32],
-                                [hotspot.x as f32, hotspot.y as f32],
-                            ))
-                        });
-                        if let Some((image, size, hotspot)) = cursor {
+                        if let Some(cursor) = self.cursor_revision.as_ref() {
                             self.pipeline.as_mut().unwrap().render_mouse(
                                 mouse,
                                 rdr,
-                                Some((&image, size, hotspot)),
+                                Some(cursor),
                             )?;
                             state.send_frame_callbacks_for_surface_id(&surface.id());
                         }
-                        // a live cursor surface with no buffer makes an invisible cursor
                     }
                     CursorImageStatus::Named(_) | CursorImageStatus::Surface(_) => {
                         self.pipeline

@@ -13,7 +13,7 @@ use wgui::{
         cmd::WGfxClearMode,
         pass::WGfxPass,
         pipeline::{WGfxPipeline, WPipelineCreateInfo},
-        upload_quad_vertices,
+        upload_quad_vertices_uv,
     },
     log::LogErr,
 };
@@ -37,6 +37,26 @@ static CAPTURE_QUEUE_MUTEX: Mutex<()> = Mutex::new(());
 struct BufPass {
     pass: WGfxPass<Vert2Uv>,
     buf_vert: Arc<Buffer<Vert2Uv>>,
+}
+
+pub struct CursorSurface {
+    pub image: Arc<ImageView>,
+    pub source_size: [f32; 2],
+    pub size: [f32; 2],
+    pub hotspot: [f32; 2],
+    pub source_uv: [f32; 4],
+    pub transform: wlx_frame::Transform,
+}
+
+impl CursorSurface {
+    pub fn same_revision(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.image, &other.image)
+            && self.source_size.map(f32::to_bits) == other.source_size.map(f32::to_bits)
+            && self.size.map(f32::to_bits) == other.size.map(f32::to_bits)
+            && self.hotspot.map(f32::to_bits) == other.hotspot.map(f32::to_bits)
+            && self.source_uv.map(f32::to_bits) == other.source_uv.map(f32::to_bits)
+            && self.transform == other.transform
+    }
 }
 
 /// A render pipeline that supports mouse + stereo
@@ -253,8 +273,8 @@ impl ScreenPipeline {
         extentf: [f32; 2],
         offsetf: [f32; 2],
     ) -> anyhow::Result<(BufPass, Arc<ImageView>)> {
-        let cursor = image::load_from_memory(include_bytes!("../../res/default_cursor.png"))?
-            .to_rgba8();
+        let cursor =
+            image::load_from_memory(include_bytes!("../../res/default_cursor.png"))?.to_rgba8();
 
         let mut cmd_xfer = app
             .gfx
@@ -327,47 +347,70 @@ impl ScreenPipeline {
         &mut self,
         mouse: &MouseMeta,
         rdr: &mut RenderResources,
-        cursor: Option<(&Arc<ImageView>, [f32; 2], [f32; 2])>,
+        cursor: Option<&CursorSurface>,
     ) -> anyhow::Result<()> {
-        let image = cursor.map_or(&self.default_cursor_image, |(image, _, _)| image);
+        let image = cursor.map_or(&self.default_cursor_image, |cursor| &cursor.image);
         self.mouse
             .pass
             .update_sampler(0, image.clone(), Filter::Nearest)?;
-        for cmd_buf in &mut rdr.cmd_bufs {
-            let size = CURSOR_SIZE * self.extentf[1];
-            let (width, height, hotspot_x, hotspot_y) =
-                if let Some((_, dimensions, hotspot)) = cursor {
-                    let scale = size / dimensions[0].max(dimensions[1]).max(1.0);
-                    (
-                        dimensions[0] * scale,
-                        dimensions[1] * scale,
-                        hotspot[0] * scale,
-                        hotspot[1] * scale,
-                    )
-                } else {
-                    (size, size, 0.0, 0.0)
-                };
 
-            let (x_scale, y_scale) = if self.stereo_adjust_mouse {
-                match self.stereo {
-                    StereoMode::LeftRight | StereoMode::RightLeft => (2.0, 1.0),
-                    StereoMode::TopBottom | StereoMode::BottomTop => (1.0, 2.0),
-                    _ => (1.0, 1.0),
-                }
+        let size = CURSOR_SIZE * self.extentf[1];
+        let (width, height, hotspot_x, hotspot_y, source_uv, transform) =
+            if let Some(cursor) = cursor {
+                let scale = size
+                    / cursor.source_size[0]
+                        .max(cursor.source_size[1])
+                        .max(f32::EPSILON);
+                (
+                    cursor.size[0] * scale,
+                    cursor.size[1] * scale,
+                    cursor.hotspot[0] * scale,
+                    cursor.hotspot[1] * scale,
+                    cursor.source_uv,
+                    cursor.transform,
+                )
             } else {
-                (1.0, 1.0)
+                (
+                    size,
+                    size,
+                    0.0,
+                    0.0,
+                    [0.0, 0.0, 1.0, 1.0],
+                    wlx_frame::Transform::Normal,
+                )
             };
 
-            upload_quad_vertices(
-                &self.mouse.buf_vert,
-                self.extentf[0],
-                self.extentf[1],
-                mouse.x.mul_add(self.extentf[0] * x_scale, -hotspot_x),
-                mouse.y.mul_add(self.extentf[1] * y_scale, -hotspot_y),
-                width,
-                height,
-            )?;
+        let (x_scale, y_scale) = if self.stereo_adjust_mouse {
+            match self.stereo {
+                StereoMode::LeftRight | StereoMode::RightLeft => (2.0, 1.0),
+                StereoMode::TopBottom | StereoMode::BottomTop => (1.0, 2.0),
+                _ => (1.0, 1.0),
+            }
+        } else {
+            (1.0, 1.0)
+        };
 
+        upload_quad_vertices_uv(
+            &self.mouse.buf_vert,
+            self.extentf[0],
+            self.extentf[1],
+            mouse.x.mul_add(self.extentf[0] * x_scale, -hotspot_x),
+            mouse.y.mul_add(self.extentf[1] * y_scale, -hotspot_y),
+            width,
+            height,
+            source_uv,
+        )?;
+        if !matches!(
+            transform,
+            wlx_frame::Transform::Normal | wlx_frame::Transform::Undefined
+        ) {
+            let mut vertices = self.mouse.buf_vert.write()?;
+            for vertex in &mut vertices[..4] {
+                vertex.in_uv = transform_uv(vertex.in_uv, transform);
+            }
+        }
+
+        for cmd_buf in &mut rdr.cmd_bufs {
             cmd_buf.run_ref(&self.mouse.pass)?;
         }
 
