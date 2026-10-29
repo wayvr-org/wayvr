@@ -1271,8 +1271,6 @@ impl WvrServerState {
                     hid_wrapper.inner.send_key(hid::VirtualKey::LSuper, false);
                     hid_wrapper.inner.send_key(hid::VirtualKey::RSuper, false);
                     self.manager.release_all_keys();
-                    self.has_input_focus = false;
-                    self.wm.keyboard_focus = None;
                     audio.play_sample("input_ungrab");
                 }
                 input_capture::CapturedEvent::KeyCombo { combo, pressed } => match combo {
