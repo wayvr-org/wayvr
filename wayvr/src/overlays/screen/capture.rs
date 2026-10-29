@@ -253,19 +253,19 @@ impl ScreenPipeline {
         extentf: [f32; 2],
         offsetf: [f32; 2],
     ) -> anyhow::Result<(BufPass, Arc<ImageView>)> {
-        #[rustfmt::skip]
-        let mouse_bytes = [
-            0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,
-            0x00, 0x00, 0x00, 0xff,  0xff, 0xff, 0xff, 0xff,  0xff, 0xff, 0xff, 0xff,  0x00, 0x00, 0x00, 0xff,
-            0x00, 0x00, 0x00, 0xff,  0xff, 0xff, 0xff, 0xff,  0xff, 0xff, 0xff, 0xff,  0x00, 0x00, 0x00, 0xff,
-            0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,  0x00, 0x00, 0x00, 0xff,
-        ];
+        let cursor = image::load_from_memory(include_bytes!("../../res/default_cursor.png"))?
+            .to_rgba8();
 
         let mut cmd_xfer = app
             .gfx
             .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
-        let image = cmd_xfer.upload_image(4, 4, Format::R8G8B8A8_UNORM, &mouse_bytes)?;
+        let image = cmd_xfer.upload_image(
+            cursor.width(),
+            cursor.height(),
+            Format::R8G8B8A8_UNORM,
+            cursor.as_raw(),
+        )?;
 
         let view = app.gfx.create_image_view(image)?;
 
@@ -345,7 +345,7 @@ impl ScreenPipeline {
                         hotspot[1] * scale,
                     )
                 } else {
-                    (size, size, size * 0.5, size * 0.5)
+                    (size, size, 0.0, 0.0)
                 };
 
             let (x_scale, y_scale) = if self.stereo_adjust_mouse {

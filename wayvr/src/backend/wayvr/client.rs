@@ -50,6 +50,7 @@ pub struct WayVRCompositor {
 
     toplevel_surf_count: u32,     // for logging purposes
     scroll_accumulator: [f32; 2], // turn smooth scroll into discrete scroll
+    cursor_target: Option<WlSurface>,
 
     pub clients: Vec<WayVRClient>,
 }
@@ -121,6 +122,7 @@ impl WayVRCompositor {
             clients: Vec::new(),
             toplevel_surf_count: 0,
             scroll_accumulator: [0.0, 0.0],
+            cursor_target: None,
         })
     }
 
@@ -285,6 +287,12 @@ impl WayVRCompositor {
 
             (surface, focus_location)
         });
+
+        let target = focus.as_ref().map(|(surface, _)| surface);
+        if self.cursor_target.as_ref() != target {
+            self.cursor_target = target.cloned();
+            self.state.cursor_image = CursorImageStatus::default_named();
+        }
 
         let previous_focus = self.seat_pointer.current_focus();
         let time = InputTime::from_millis(super::time::get_millis() as u32);
