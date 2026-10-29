@@ -11,7 +11,7 @@ use wgui::{
 /// Helper for managing a list of overlays
 /// Populates `id="panels_root"` with `<Screen>`, `<Mirror>`, `<Panel>` templates
 /// Populates `id="apps_root"` with `<App>` templates (optional)
-/// Uses the following parameters: `name` (All), `display` (Screen, Mirror), `icon` (App, Panel)
+/// Uses the following parameters: `name`+`title` (All), `display` (Screen, Mirror), `icon` (App, Panel)
 pub struct OverlayList {
     overlay_buttons: SecondaryMap<OverlayID, Rc<ComponentButton>>,
 }
@@ -116,7 +116,8 @@ impl OverlayList {
                     }
 
                     params.insert_rc("idx", i.to_string().into());
-                    params.insert("name", meta.title.as_deref().unwrap_or(&meta.name));
+                    params.insert("name", meta.name.as_ref());
+                    params.insert("title", meta.title.as_deref().unwrap_or(&meta.name));
                     parser_state
                         .instantiate_template(doc_params, template, layout, root, params)?;
                     let overlay_button = parser_state

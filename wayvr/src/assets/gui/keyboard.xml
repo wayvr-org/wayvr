@@ -111,7 +111,7 @@
 
   <!-- An app with a single icon. -->
   <template name="App">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_app" _press_right="::OverlayToggle ${name}">  
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _context_name="${name}" _press_left="::ContextMenuOpen menu_app" _press_right="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_ext="${icon}" parent_color="ignore" />
     </Button>
   </template>
@@ -126,7 +126,7 @@
 
   <!-- A screen with a shortened connector name, e.g. "H1" for HDMI-A-1 or "D2" for DP-2 -->
   <template name="Screen">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_screen" _press_right="::OverlayToggle ${name}">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _context_name="${name}" _press_left="::ContextMenuOpen menu_screen" _press_right="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_builtin="@/edit/screen.svg" />
       <div position="absolute" margin_top="-7" margin_left="-1">
         <label text="${display}" size="~text_size" weight="bold" parent_color="background" />
@@ -144,7 +144,7 @@
   </blueprint>
 
   <template name="Panel">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_panel" _press_right="::OverlayToggle ${name}">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _context_name="${name}" _press_left="::ContextMenuOpen menu_panel" _press_right="::OverlayToggle ${name}">
       <sprite width="38" height="38" src="${icon}" />
     </Button>
   </template>
@@ -159,7 +159,7 @@
   </blueprint>
 
   <template name="Mirror">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_mirror" _press_right="::OverlayToggle ${name}">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _context_name="${name}" _press_left="::ContextMenuOpen menu_mirror" _press_right="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_builtin="@/edit/mirror.svg" />
       <div position="absolute" margin_top="5" margin_left="13">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
@@ -169,7 +169,7 @@
 
   <!-- mirror with a different icon -->
   <template name="Passthru">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _context_name="${name}" _press_left="::ContextMenuOpen menu_mirror" _press_right="::OverlayToggle ${name}">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _context_name="${name}" _press_left="::ContextMenuOpen menu_mirror" _press_right="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_builtin="@/icons/landscape.svg" />
       <div position="absolute" margin_top="5" margin_left="13">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
