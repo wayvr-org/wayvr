@@ -381,7 +381,7 @@ pub fn build_hit_context(
 
     for (popup, point) in PopupManager::popups_for_surface(toplevel) {
         if let PopupKind::Xdg(popup) = &popup
-            && !popup.is_initial_configure_sent()
+            && popup.with_committed_state(|state| state.is_none())
         {
             continue;
         }
