@@ -8,6 +8,9 @@ pub struct SpaceGravityUpdateParams<'a> {
     pub dragging: bool,
     pub config: &'a GeneralConfig,
     pub floor_height: f32,
+
+    // current playspace offset
+    pub current_space_pos: Vec3A,
 }
 
 pub struct SpaceGravity {
@@ -34,7 +37,6 @@ pub fn shift_world<OverlayData>(
 }
 
 pub struct SpaceGravityUpdateResult {
-    pub playspace_pos: Vec3A,
     pub playspace_pos_offset: Vec3A, // position difference compared to previous update() call
 }
 
@@ -71,6 +73,8 @@ impl SpaceGravity {
             return None;
         }
 
+        self.space_pos = par.current_space_pos;
+
         let prev_pos = self.space_pos;
 
         self.velocity.y += par.config.space_gravity_gravity * par.dt;
@@ -94,7 +98,6 @@ impl SpaceGravity {
         if self.velocity.length_squared() > 0.00003 {
             // Space position changed
             return Some(SpaceGravityUpdateResult {
-                playspace_pos: self.space_pos,
                 playspace_pos_offset: self.space_pos - prev_pos,
             });
         }

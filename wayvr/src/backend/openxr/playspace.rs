@@ -1,6 +1,7 @@
 use glam::{Affine3A, Mat3A, Quat, Vec3, Vec3A, vec3a};
 use libmonado::{Monado, Pose, ReferenceSpaceType};
 use wgui::log::LogErr;
+use wlx_common::config::GeneralConfig;
 
 use crate::{
     backend::{
@@ -24,6 +25,11 @@ pub(super) struct PlayspaceMover {
     rotate: Option<MoverData<Affine3A>>,
     gravity: SpaceGravity,
     playspace_state: PlayspaceState,
+}
+
+struct SpaceGravityStepResult {
+    pose_prev: Affine3A,
+    playspace_offset_delta: Vec3A,
 }
 
 impl PlayspaceMover {
@@ -124,10 +130,17 @@ impl PlayspaceMover {
                 data.pose.matrix3 = Mat3A::from_quat(Quat::from_affine3(&data.pose).normalize());
             }
 
+            data.hand_pose = new_hand;
+
+            if let Some(res_step) =
+                self.space_gravity_step(&mut monado.ipc, &app.session.config, app.delta_time, false)
+            {
+                data.pose.translation += res_step.playspace_offset_delta;
+            }
+
             if !app.session.config.space_drag_affects_world {
                 playspace_common::shift_world(overlays, &mut app.anchor, &before_pose, &data.pose);
             }
-            data.hand_pose = new_hand;
 
             apply_offset(data.pose, &mut monado.ipc);
             self.rotate = Some(data);
@@ -231,21 +244,55 @@ impl PlayspaceMover {
             }
         }
 
-        if let Some(res) = self.gravity.update(SpaceGravityUpdateParams {
-            dt: app.delta_time,
-            dragging: self.drag.is_some(),
-            config: &app.session.config,
-            floor_height: app.session.config.space_gravity_floor_height,
-        }) {
-            let prev_playspace_pos = res.playspace_pos - res.playspace_pos_offset;
-            let before_pose = Affine3A::from_translation(prev_playspace_pos.into());
-            let after_pose = Affine3A::from_translation(res.playspace_pos.into());
-            apply_offset(after_pose, &mut monado.ipc);
+        // no drag/rotate
+        if let Some(res_step) = self.space_gravity_step(
+            &mut monado.ipc,
+            &app.session.config,
+            app.delta_time,
+            self.drag.is_some(),
+        ) {
+            let mut pose = res_step.pose_prev;
+            pose.translation += res_step.playspace_offset_delta;
+            apply_offset(pose, &mut monado.ipc);
 
             if !app.session.config.space_drag_affects_world {
-                playspace_common::shift_world(overlays, &mut app.anchor, &before_pose, &after_pose);
+                playspace_common::shift_world(
+                    overlays,
+                    &mut app.anchor,
+                    &res_step.pose_prev,
+                    &pose,
+                );
             }
         }
+    }
+
+    fn space_gravity_step(
+        &mut self,
+        monado: &mut Monado,
+        config: &GeneralConfig,
+        dt: f32,
+        dragging: bool,
+    ) -> Option<SpaceGravityStepResult> {
+        let Ok(pose) = monado
+            .get_reference_space_offset(ReferenceSpaceType::Stage)
+            .log_err("Could not get reference space offset.")
+            .map(|p| Affine3A::from_rotation_translation(p.orientation.into(), p.position.into()))
+        else {
+            return None;
+        };
+
+        let res = self.gravity.update(SpaceGravityUpdateParams {
+            dt,
+            dragging,
+            config,
+            floor_height: config.space_gravity_floor_height,
+            current_space_pos: pose.translation,
+        })?;
+
+        Some(SpaceGravityStepResult {
+            pose_prev: pose,
+            playspace_offset_delta: res.playspace_pos_offset,
+        })
     }
 
     pub fn recenter(
@@ -379,6 +426,7 @@ impl PlayspaceMover {
             log::info!("Space rotate interrupted by fix floor");
             self.rotate = None;
         }
+        self.gravity.reset();
 
         let input = &app.input_state;
         let anchor = &mut app.anchor;
