@@ -427,7 +427,7 @@ where
                 {
                     log::debug!("Dropping overlay {}", o.config.name);
                     if let Some(id) = id {
-                        self.on_overlay_dropped(id, &o);
+                        self.on_overlay_dropped(app, id, &o);
                     }
                     self.dropped_overlays.push_back(o);
                 }
@@ -437,7 +437,7 @@ where
                 if let Some(o) = self.remove_by_selector(&sel, app) {
                     log::debug!("Dropping overlay {} immediately", o.config.name);
                     if let Some(id) = id {
-                        self.on_overlay_dropped(id, &o);
+                        self.on_overlay_dropped(app, id, &o);
                     }
                     self.dropped_overlays.push_back(o);
                 }
@@ -446,7 +446,7 @@ where
                 self.set_window_name(app, id, name, persistent, restore_on_spawn);
             }
             OverlayTask::ForgetWindowState(id, key) => {
-                self.freeze_window_state(id, &key);
+                self.freeze_window_state(app, id, &key);
             }
             OverlayTask::RenameWindowState(old, new) => {
                 self.rename_window_state(app, &old, &new);
@@ -465,7 +465,7 @@ where
                     && let Some(o) = self.remove_by_selector(&OverlaySelector::Id(id), app)
                 {
                     log::debug!("Dropping expired overlay {}", o.config.name);
-                    self.on_overlay_dropped(id, &o);
+                    self.on_overlay_dropped(app, id, &o);
                     self.dropped_overlays.push_back(o);
                 }
             }
@@ -539,8 +539,35 @@ impl<T> OverlayWindowManager<T> {
         self.dropped_overlays.pop_front()
     }
 
-    fn on_overlay_dropped(&mut self, id: OverlayID, overlay: &OverlayWindowData<T>) {
+    fn save_window_size(app: &mut AppState, overlay: &OverlayWindowData<T>, name: &Arc<str>) {
+        if overlay.config.category != OverlayCategory::WayVR || !overlay.config.can_persist() {
+            return;
+        }
+        let Some(BackendAttribValue::WindowSize(size)) =
+            overlay.config.backend.get_attrib(BackendAttrib::WindowSize)
+        else {
+            return;
+        };
+        let mut attrs = app
+            .session
+            .config
+            .attribs
+            .arc_get(name)
+            .cloned()
+            .unwrap_or_default();
+        attrs.retain(|attr| !matches!(attr, BackendAttribValue::WindowSize(_)));
+        attrs.push(BackendAttribValue::WindowSize(size));
+        app.session.config.attribs.arc_set(name.clone(), attrs);
+    }
+
+    fn on_overlay_dropped(
+        &mut self,
+        app: &mut AppState,
+        id: OverlayID,
+        overlay: &OverlayWindowData<T>,
+    ) {
         let name = &overlay.config.name;
+        Self::save_window_size(app, overlay, name);
         let remember_position =
             overlay.config.category == OverlayCategory::WayVR && overlay.config.can_persist();
 
@@ -633,6 +660,12 @@ impl<T> OverlayWindowManager<T> {
             return;
         }
 
+        if let Some(attrs) = app.session.config.attribs.arc_get(&name).cloned() {
+            for value in attrs {
+                self.overlays[id].config.backend.set_attrib(app, value);
+            }
+        }
+
         // apply to all saved states
         if global {
             if let Some(state) = self.global_set.inactive_overlays.arc_rm(&name) {
@@ -658,10 +691,11 @@ impl<T> OverlayWindowManager<T> {
         }
     }
 
-    fn freeze_window_state(&mut self, id: OverlayID, name: &Arc<str>) {
+    fn freeze_window_state(&mut self, app: &mut AppState, id: OverlayID, name: &Arc<str>) {
         let Some(overlay) = self.overlays.get(id) else {
             return;
         };
+        Self::save_window_size(app, overlay, name);
         if let Some(state) = overlay.config.active_state.clone() {
             let set = if overlay.config.global {
                 &mut self.global_set

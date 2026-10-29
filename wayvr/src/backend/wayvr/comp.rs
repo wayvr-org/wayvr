@@ -871,7 +871,9 @@ impl XdgDecorationHandler for Application {
         toplevel.with_pending_state(|state| {
             state.decoration_mode = Some(zxdg_toplevel_decoration_v1::Mode::ServerSide);
         });
-        toplevel.send_configure();
+        if toplevel.is_initial_configure_sent() {
+            toplevel.send_configure();
+        }
     }
 
     fn request_mode(&mut self, toplevel: ToplevelSurface, mode: zxdg_toplevel_decoration_v1::Mode) {
@@ -882,7 +884,9 @@ impl XdgDecorationHandler for Application {
         toplevel.with_pending_state(|state| {
             state.decoration_mode = Some(mode);
         });
-        toplevel.send_configure();
+        if toplevel.is_initial_configure_sent() {
+            toplevel.send_configure();
+        }
     }
 
     fn unset_mode(&mut self, toplevel: ToplevelSurface) {
@@ -890,7 +894,9 @@ impl XdgDecorationHandler for Application {
         toplevel.with_pending_state(|state| {
             state.decoration_mode = Some(zxdg_toplevel_decoration_v1::Mode::ServerSide);
         });
-        toplevel.send_configure();
+        if toplevel.is_initial_configure_sent() {
+            toplevel.send_configure();
+        }
     }
 }
 

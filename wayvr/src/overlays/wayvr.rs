@@ -61,12 +61,12 @@ use crate::{
     state::{self, AppState},
     subsystem::{hid::WheelDelta, input::InputFocus},
     windowing::{
-        OverlayID, OverlaySelector,
+        BAR_SIZE, BORDER_SIZE, OverlayID, OverlaySelector,
         backend::{
             FrameMeta, OverlayBackend, OverlayEventData, RenderResources, ShouldRender,
             ui_transform,
         },
-        overlay_scale_from_extent,
+        client_size_from_overlay_size, overlay_scale_from_extent, overlay_size_from_client_size,
         window::{OverlayCategory, OverlayWindowConfig},
     },
 };
@@ -78,9 +78,6 @@ pub enum WvrCommand {
     CloseWindow,
     KillProcess(KillSignal),
 }
-
-const BORDER_SIZE: u32 = 5;
-const BAR_SIZE: u32 = 48;
 
 fn cursor_surface(surface: &WlSurface) -> Option<CursorSurface> {
     with_states(surface, |states| {
@@ -244,6 +241,7 @@ pub struct WvrWindowBackend {
     cur_image: Option<Arc<ImageView>>,
     panel: GuiPanel<WindowHandle>,
     inner_extent: [u32; 2],
+    window_size: Option<[u32; 2]>,
     mouse_transform: Affine2,
     uv_range: RangeInclusive<f32>,
     panel_hovered: bool,
@@ -358,6 +356,7 @@ impl WvrWindowBackend {
             stereo_adjust_mouse: false,
             cur_image: None,
             inner_extent: [0, 0],
+            window_size: None,
             panel,
             mouse_transform: Affine2::ZERO,
             uv_range: 0.0..=1.0,
@@ -775,9 +774,14 @@ impl OverlayBackend for WvrWindowBackend {
         }
 
         let inner_extent = meta.extent;
-        let committed_window_extent = window_geometry.map_or(inner_extent, |geometry| {
-            [geometry.size.w.max(1) as u32, geometry.size.h.max(1) as u32]
-        });
+        let committed_window_extent = window_geometry.map_or(
+            [surface_size.w.max(1) as u32, surface_size.h.max(1) as u32],
+            |geometry| [geometry.size.w.max(1) as u32, geometry.size.h.max(1) as u32],
+        );
+        self.window_size = Some(overlay_size_from_client_size(
+            committed_window_extent,
+            self.server_side_decorations,
+        ));
         self.sync_committed_toplevel_size(app, committed_window_extent);
 
         if self.server_side_decorations {
@@ -1298,6 +1302,7 @@ impl OverlayBackend for WvrWindowBackend {
                 self.stereo_adjust_mouse,
             )),
             BackendAttrib::Resizable => Some(BackendAttribValue::Resizable(self.resizable)),
+            BackendAttrib::WindowSize => self.window_size.map(BackendAttribValue::WindowSize),
 
             _ => None,
         }
@@ -1340,13 +1345,22 @@ impl OverlayBackend for WvrWindowBackend {
                     log::warn!("Could not process resize request: window not found");
                     return true;
                 };
-                // xdg_toplevel.configure has client window geometry, exclude decorations
-                let client_width = new_size[0].saturating_sub(BORDER_SIZE * 2).max(1);
-                let client_height = new_size[1]
-                    .saturating_sub(BORDER_SIZE * 2 + BAR_SIZE)
-                    .max(1);
-                let size: Size<i32, Logical> = Size::new(client_width as i32, client_height as i32);
-                win.checked_configure_size(size);
+                let ssd = wvr_server
+                    .manager
+                    .state
+                    .has_server_side_decorations(win.toplevel.wl_surface());
+                let size = win
+                    .clamp_configure_size(client_size_from_overlay_size(new_size, ssd), win.bounds);
+                if !win.toplevel.is_initial_configure_sent() {
+                    win.toplevel
+                        .with_pending_state(|state| state.size = Some(size));
+                    win.remember_committed_size(size, None);
+                } else if win.size_x != size.w as u32
+                    || win.size_y != size.h as u32
+                    || win.pending_configure.is_some()
+                {
+                    win.checked_configure_size(size);
+                }
                 true
             }
             _ => false,

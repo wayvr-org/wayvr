@@ -64,9 +64,11 @@ use wgui::{
 };
 use wlx_capture::frame::Transform;
 use wlx_common::{
+    astr_containers::AStrMapExt,
     audio,
     config::{DefaultPositioning, GeneralConfig, InputCaptureMethod},
     desktop_finder::DesktopFinder,
+    overlays::BackendAttribValue,
 };
 use xkbcommon::xkb;
 
@@ -95,10 +97,29 @@ use crate::{
         hid::{self, MODS_TO_KEYS, WheelDelta},
         input::HidWrapper,
     },
-    windowing::{OverlayID, OverlaySelector, backend::OverlayEventData},
+    windowing::{
+        OverlayID, OverlaySelector, backend::OverlayEventData, client_size_from_overlay_size,
+        overlay_size_from_client_size,
+    },
 };
 
 pub use hit_test::{WvrHitTarget, build_hit_context};
+
+fn saved_window_size(
+    config: &GeneralConfig,
+    name: Option<&str>,
+    restore_on_spawn: bool,
+) -> Option<[u32; 2]> {
+    if !restore_on_spawn {
+        return None;
+    }
+    config.attribs.arc_get(name?).and_then(|attrs| {
+        attrs.iter().find_map(|attr| match attr {
+            BackendAttribValue::WindowSize(size) => Some(*size),
+            _ => None,
+        })
+    })
+}
 
 #[derive(Debug, Clone)]
 pub struct WaylandEnv {
@@ -481,6 +502,23 @@ impl WvrServerState {
                         });
                         let (name, restore_on_spawn) =
                             wvr_server.window_identity(&toplevel, app_id.as_deref(), parent, None);
+                        let ssd = wvr_server
+                            .manager
+                            .state
+                            .has_server_side_decorations(toplevel.wl_surface());
+                        let initial_size = saved_window_size(
+                            &app.session.config,
+                            name.as_deref(),
+                            restore_on_spawn,
+                        )
+                        .map(|size| {
+                            client_size_from_overlay_size(size, ssd).clamp(min_size, max_size)
+                        })
+                        .unwrap_or(fallback_size);
+                        let initial_overlay_size = overlay_size_from_client_size(
+                            [initial_size.w as u32, initial_size.h as u32],
+                            ssd,
+                        );
 
                         let window_handle = wvr_server.wm.create_window(CreateWindowParams {
                             toplevel: toplevel.clone(),
@@ -488,8 +526,8 @@ impl WvrServerState {
                             bounds: output_bounds,
                             min_size,
                             max_size,
-                            size_x: fallback_size.w as _,
-                            size_y: fallback_size.h as _,
+                            size_x: initial_size.w as _,
+                            size_y: initial_size.h as _,
                             app_id: app_id.clone(),
                             parent,
                             name: name.clone(),
@@ -499,7 +537,7 @@ impl WvrServerState {
                         toplevel.with_pending_state(|state| {
                             state.bounds = Some(output_bounds);
                             // suggest an initial size but let the app request a different one
-                            state.size = Some(fallback_size);
+                            state.size = Some(initial_size);
                             state.states.set(xdg_toplevel::State::Activated);
                         });
                         // xdg-shell requires an empty commit before initial configure
@@ -566,13 +604,26 @@ impl WvrServerState {
                             OverlaySelector::Nothing,
                             spawn_pos,
                             Box::new(move |app: &mut AppState| {
-                                let (identity, restore_on_spawn) = app
+                                let (identity, restore_on_spawn, overlay_size) = app
                                     .wvr_server
                                     .as_ref()
-                                    .and_then(|wvr| wvr.wm.windows.get(window_handle))
-                                    .map_or((None, false), |w| {
-                                        (w.name.clone(), w.restore_on_spawn)
-                                    });
+                                    .and_then(|wvr| {
+                                        wvr.wm.windows.get(window_handle).map(|win| {
+                                            let ssd =
+                                                wvr.manager.state.has_server_side_decorations(
+                                                    win.toplevel.wl_surface(),
+                                                );
+                                            (
+                                                win.name.clone(),
+                                                win.restore_on_spawn,
+                                                overlay_size_from_client_size(
+                                                    [win.size_x, win.size_y],
+                                                    ssd,
+                                                ),
+                                            )
+                                        })
+                                    })
+                                    .unwrap_or((None, false, initial_overlay_size));
                                 let persistent = identity.is_some();
                                 let name =
                                     identity.unwrap_or_else(|| window_handle.transient_name());
@@ -597,7 +648,7 @@ impl WvrServerState {
                                     app,
                                     window_handle,
                                     icon,
-                                    [fallback_size.w as _, fallback_size.h as _],
+                                    overlay_size,
                                     pos,
                                 )
                                 .context("Could not create WvrWindow overlay")
@@ -699,12 +750,28 @@ impl WvrServerState {
                         parent,
                         Some(handle),
                     );
+                    let saved_size =
+                        saved_window_size(&app.session.config, key.as_deref(), restore);
+                    let ssd = wvr_server
+                        .manager
+                        .state
+                        .has_server_side_decorations(toplevel.wl_surface());
                     if let Some(window) = wvr_server.wm.windows.get_mut(handle) {
                         window.app_id = app_id;
                         window.parent = parent;
                         if window.name != key || window.restore_on_spawn != restore {
                             window.name.clone_from(&key);
                             window.restore_on_spawn = restore;
+                            if !toplevel.is_initial_configure_sent()
+                                && let Some(size) = saved_size
+                            {
+                                let size = window.clamp_configure_size(
+                                    client_size_from_overlay_size(size, ssd),
+                                    window.bounds,
+                                );
+                                toplevel.with_pending_state(|state| state.size = Some(size));
+                                window.remember_committed_size(size, None);
+                            }
                             if let Some(oid) = wvr_server.window_to_overlay.get(&handle) {
                                 let persistent = key.is_some();
                                 let name = key.unwrap_or_else(|| handle.transient_name());

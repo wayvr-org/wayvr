@@ -11,12 +11,12 @@ use smithay::{
 use std::{ops::RangeInclusive, rc::Rc, sync::Arc};
 use wgui::gfx::ImageView;
 
-use crate::backend::input::PointerHit;
+use crate::{
+    backend::input::PointerHit,
+    windowing::{BAR_SIZE, BORDER_SIZE},
+};
 
 use super::SurfaceBufWithImage;
-
-pub const BORDER_SIZE: u32 = 5;
-pub const BAR_SIZE: u32 = 48;
 
 #[derive(Clone)]
 pub struct PopupRoot {
