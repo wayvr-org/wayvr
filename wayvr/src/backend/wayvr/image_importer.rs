@@ -12,7 +12,10 @@ use smithay::{
     },
 };
 use wgui::gfx::{CommandBufferUsage, Format, ImageView, WGfx};
-use wlx_capture::frame::{DmabufFrame, FrameFormat, Transform};
+use wlx_capture::{
+    DrmFourcc,
+    frame::{DmabufFrame, FrameFormat, Transform},
+};
 
 use crate::graphics::dmabuf::{WGfxDmabuf, fourcc_to_vk};
 
@@ -69,26 +72,39 @@ impl ImageImporter {
             other => anyhow::bail!("unsupported SHM format for packed upload: {other:?}"),
         };
 
-        let row_bytes = bd.width as usize * bytes_per_pixel;
-        let stride = bd.stride as usize;
-        let height = bd.height as usize;
+        let width = usize::try_from(bd.width).context("invalid wl_shm width")?;
+        let height = usize::try_from(bd.height).context("invalid wl_shm height")?;
+        let stride = usize::try_from(bd.stride).context("invalid wl_shm stride")?;
+        let offset = usize::try_from(bd.offset).context("invalid wl_shm offset")?;
+        let row_bytes = width
+            .checked_mul(bytes_per_pixel)
+            .context("invalid wl_shm row size")?;
 
-        if stride < row_bytes {
-            anyhow::bail!("invalid wl_shm stride: {stride} < {row_bytes}");
+        if width == 0 || height == 0 || stride < row_bytes {
+            anyhow::bail!("invalid wl_shm dimensions or stride");
         }
 
-        let required = stride * height;
-        if size < required {
-            anyhow::bail!("wl_shm buffer too small: {size} < {required}");
+        let required = (height - 1)
+            .checked_mul(stride)
+            .and_then(|n| n.checked_add(row_bytes))
+            .context("invalid wl_shm buffer size")?;
+        if offset.checked_add(required).is_none_or(|end| end > size) {
+            anyhow::bail!("wl_shm buffer exceeds pool size");
         }
 
-        let src = unsafe { std::slice::from_raw_parts(data, required) };
+        let src = unsafe { std::slice::from_raw_parts(data.add(offset), required) };
         let mut packed = vec![0u8; row_bytes * height];
 
         for y in 0..height {
             let src_row = &src[y * stride..y * stride + row_bytes];
             let dst_row = &mut packed[y * row_bytes..(y + 1) * row_bytes];
             dst_row.copy_from_slice(src_row);
+        }
+
+        if matches!(fourcc, DrmFourcc::Xrgb8888 | DrmFourcc::Xbgr8888) {
+            for pixel in packed.as_chunks_mut::<4>().0 {
+                pixel[3] = 255;
+            }
         }
 
         let image = cmd_buf.upload_image(bd.width as _, bd.height as _, format, &packed)?;

@@ -13,10 +13,7 @@ use smithay::{
     backend::input::{Axis, AxisSource, ButtonState, InputTime, Keycode},
     input::{
         keyboard::KeyboardHandle,
-        pointer::{
-            AxisFrame, ButtonEvent, CursorImageStatus, MotionEvent, PointerHandle,
-            RelativeMotionEvent,
-        },
+        pointer::{AxisFrame, ButtonEvent, MotionEvent, PointerHandle, RelativeMotionEvent},
     },
     reexports::wayland_server::{self, protocol::wl_surface::WlSurface},
     utils::{Logical, Point, SerialCounter},
@@ -50,7 +47,6 @@ pub struct WayVRCompositor {
 
     toplevel_surf_count: u32,     // for logging purposes
     scroll_accumulator: [f32; 2], // turn smooth scroll into discrete scroll
-    cursor_target: Option<WlSurface>,
 
     pub clients: Vec<WayVRClient>,
 }
@@ -122,7 +118,6 @@ impl WayVRCompositor {
             clients: Vec::new(),
             toplevel_surf_count: 0,
             scroll_accumulator: [0.0, 0.0],
-            cursor_target: None,
         })
     }
 
@@ -288,13 +283,6 @@ impl WayVRCompositor {
             (surface, focus_location)
         });
 
-        let target = focus.as_ref().map(|(surface, _)| surface);
-        if self.cursor_target.as_ref() != target {
-            self.cursor_target = target.cloned();
-            self.state.cursor_image = CursorImageStatus::default_named();
-        }
-
-        let previous_focus = self.seat_pointer.current_focus();
         let time = InputTime::from_millis(super::time::get_millis() as u32);
         self.seat_pointer.motion(
             &mut self.state,
@@ -316,13 +304,6 @@ impl WayVRCompositor {
         );
 
         self.seat_pointer.frame(&mut self.state);
-        self.reset_cursor_on_focus_change(previous_focus);
-    }
-
-    fn reset_cursor_on_focus_change(&mut self, previous_focus: Option<WlSurface>) {
-        if previous_focus != self.seat_pointer.current_focus() {
-            self.state.cursor_image = CursorImageStatus::default_named();
-        }
     }
 
     pub fn send_pointer_button(&mut self, index: super::MouseIndex, pressed: bool) {
@@ -340,7 +321,6 @@ impl WayVRCompositor {
             super::MouseIndex::Right => 0x111,
         };
 
-        let previous_focus = self.seat_pointer.current_focus();
         self.seat_pointer.button(
             &mut self.state,
             &ButtonEvent {
@@ -352,7 +332,6 @@ impl WayVRCompositor {
         );
 
         self.seat_pointer.frame(&mut self.state);
-        self.reset_cursor_on_focus_change(previous_focus);
     }
 
     pub fn send_pointer_axis_wheel_raw(&mut self, delta: super::WheelDelta) {

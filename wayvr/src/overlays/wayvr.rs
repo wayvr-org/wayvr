@@ -943,7 +943,7 @@ impl OverlayBackend for WvrWindowBackend {
             let state = &mut wvr_server.manager.state;
 
             if let Some(mouse) = self.mouse.as_ref() {
-                match state.cursor_image.clone() {
+                match self.cursor_status.clone() {
                     CursorImageStatus::Hidden => {}
                     CursorImageStatus::Surface(surface) if surface.alive() => {
                         if let Some(cursor) = self.cursor_revision.as_ref() {
@@ -952,8 +952,8 @@ impl OverlayBackend for WvrWindowBackend {
                                 rdr,
                                 Some(cursor),
                             )?;
-                            state.send_frame_callbacks_for_surface_id(&surface.id());
                         }
+                        state.send_frame_callbacks_for_surface_id(&surface.id());
                     }
                     CursorImageStatus::Named(_) | CursorImageStatus::Surface(_) => {
                         self.pipeline
