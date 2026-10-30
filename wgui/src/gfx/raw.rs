@@ -15,6 +15,10 @@ use ash::{
 	Entry,
 	vk::{self, Handle as _},
 };
+use gpu_allocator::{
+	MemoryLocation,
+	vulkan::{Allocation, AllocationCreateDesc, AllocationScheme, Allocator, AllocatorCreateDesc},
+};
 use parking_lot::Mutex;
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
@@ -49,6 +53,7 @@ pub(super) struct Context {
 	instance: ash::Instance,
 	physical_device: vk::PhysicalDevice,
 	device: ash::Device,
+	allocator: ManuallyDrop<Mutex<Allocator>>,
 	memory_properties: vk::PhysicalDeviceMemoryProperties,
 	queue_gfx: RawQueue,
 	queue_xfer: RawQueue,
@@ -209,6 +214,13 @@ impl Context {
 				.map_err(|e| anyhow!("vkCreateDevice failed for {}: {e:?}", candidate.info.name))?;
 
 			let memory_properties = unsafe { instance.get_physical_device_memory_properties(candidate.physical_device) };
+			let allocator = match Self::create_allocator(&instance, &device, candidate.physical_device) {
+				Ok(allocator) => allocator,
+				Err(e) => {
+					unsafe { device.destroy_device(None) };
+					return Err(e);
+				}
+			};
 			let queue_gfx = RawQueue {
 				handle: unsafe { device.get_device_queue(candidate.gfx_family, 0) },
 				family_index: candidate.gfx_family,
@@ -223,6 +235,7 @@ impl Context {
 			Ok((
 				candidate,
 				device,
+				allocator,
 				memory_properties,
 				queue_gfx,
 				queue_xfer,
@@ -230,7 +243,7 @@ impl Context {
 			))
 		})();
 
-		let (candidate, device, memory_properties, queue_gfx, queue_xfer, surface_format) = match init {
+		let (candidate, device, allocator, memory_properties, queue_gfx, queue_xfer, surface_format) = match init {
 			Ok(v) => v,
 			Err(e) => {
 				if let (Some(surface_loader), Some(surface)) = (&surface_loader, surface) {
@@ -246,6 +259,7 @@ impl Context {
 			instance,
 			physical_device: candidate.physical_device,
 			device,
+			allocator: ManuallyDrop::new(allocator),
 			memory_properties,
 			queue_gfx,
 			queue_xfer,
@@ -345,6 +359,13 @@ impl Context {
 			)?;
 			let device = unsafe { ash::Device::load(instance.fp_v1_0(), vk::Device::from_raw(device_handle)) };
 			let memory_properties = unsafe { instance.get_physical_device_memory_properties(physical_device) };
+			let allocator = match Self::create_allocator(&instance, &device, physical_device) {
+				Ok(allocator) => allocator,
+				Err(e) => {
+					unsafe { device.destroy_device(None) };
+					return Err(e);
+				}
+			};
 			let queue_gfx = RawQueue {
 				handle: unsafe { device.get_device_queue(candidate.gfx_family, 0) },
 				family_index: candidate.gfx_family,
@@ -356,10 +377,10 @@ impl Context {
 				queue_index: u32::from(candidate.has_capture_queue),
 			};
 
-			Ok((candidate, device, memory_properties, queue_gfx, queue_xfer))
+			Ok((candidate, device, allocator, memory_properties, queue_gfx, queue_xfer))
 		})();
 
-		let (candidate, device, memory_properties, queue_gfx, queue_xfer) = match init {
+		let (candidate, device, allocator, memory_properties, queue_gfx, queue_xfer) = match init {
 			Ok(values) => values,
 			Err(error) => {
 				unsafe { instance.destroy_instance(None) };
@@ -372,6 +393,7 @@ impl Context {
 			instance,
 			physical_device: candidate.physical_device,
 			device,
+			allocator: ManuallyDrop::new(allocator),
 			memory_properties,
 			queue_gfx,
 			queue_xfer,
@@ -382,6 +404,29 @@ impl Context {
 			info: candidate.info,
 			caps: candidate.caps,
 		}))
+	}
+
+	fn create_allocator(
+		instance: &ash::Instance,
+		device: &ash::Device,
+		physical_device: vk::PhysicalDevice,
+	) -> anyhow::Result<Mutex<Allocator>> {
+		Allocator::new(&AllocatorCreateDesc {
+			instance: instance.clone(),
+			device: device.clone(),
+			physical_device,
+			debug_settings: Default::default(),
+			buffer_device_address: false,
+			allocation_sizes: Default::default(),
+		})
+		.map(Mutex::new)
+		.context("initializing Vulkan GPU allocator")
+	}
+
+	fn free_allocation(&self, allocation: Allocation) {
+		if let Err(e) = self.allocator.lock().free(allocation) {
+			log::error!("failed to free Vulkan GPU allocation: {e}");
+		}
 	}
 
 	#[allow(clippy::similar_names)]
@@ -748,65 +793,70 @@ impl Context {
 			.sharing_mode(vk::SharingMode::EXCLUSIVE);
 		let handle =
 			unsafe { self.device.create_buffer(&create_info, None) }.map_err(|e| anyhow!("vkCreateBuffer failed: {e:?}"))?;
-		let requirements = unsafe { self.device.get_buffer_memory_requirements(handle) };
-
-		let required = vk::MemoryPropertyFlags::HOST_VISIBLE;
-		let preferred = vk::MemoryPropertyFlags::HOST_COHERENT | vk::MemoryPropertyFlags::DEVICE_LOCAL;
-		let Some(memory_type_index) = self.find_memory_type(requirements.memory_type_bits, required, preferred) else {
+		let mut requirements = unsafe { self.device.get_buffer_memory_requirements(handle) };
+		let memory_type = self
+			.find_memory_type(
+				requirements.memory_type_bits,
+				vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+				vk::MemoryPropertyFlags::DEVICE_LOCAL,
+			)
+			.or_else(|| {
+				self.find_memory_type(
+					requirements.memory_type_bits,
+					vk::MemoryPropertyFlags::HOST_VISIBLE,
+					vk::MemoryPropertyFlags::DEVICE_LOCAL,
+				)
+			});
+		let Some(memory_type) = memory_type else {
 			unsafe { self.device.destroy_buffer(handle, None) };
 			bail!("no HOST_VISIBLE Vulkan memory type for buffer");
 		};
+		let coherent = self.memory_properties.memory_types[memory_type as usize]
+			.property_flags
+			.contains(vk::MemoryPropertyFlags::HOST_COHERENT);
+		requirements.memory_type_bits = 1 << memory_type;
 
-		let flags = self.memory_properties.memory_types[memory_type_index as usize].property_flags;
-		let coherent = flags.contains(vk::MemoryPropertyFlags::HOST_COHERENT);
-		let alloc_info = vk::MemoryAllocateInfo::default()
-			.allocation_size(requirements.size)
-			.memory_type_index(memory_type_index);
-		let memory = match unsafe { self.device.allocate_memory(&alloc_info, None) } {
-			Ok(memory) => memory,
-			Err(e) => {
-				unsafe { self.device.destroy_buffer(handle, None) };
-				return Err(anyhow!("vkAllocateMemory for buffer failed: {e:?}"));
-			}
-		};
+		let allocation = self
+			.allocator
+			.lock()
+			.allocate(&AllocationCreateDesc {
+				name: "wgui buffer",
+				requirements,
+				location: if coherent {
+					MemoryLocation::CpuToGpu
+				} else {
+					MemoryLocation::Unknown
+				},
+				linear: true,
+				allocation_scheme: if coherent {
+					AllocationScheme::GpuAllocatorManaged
+				} else {
+					AllocationScheme::DedicatedBuffer(handle)
+				},
+			})
+			.inspect_err(|_| unsafe { self.device.destroy_buffer(handle, None) })
+			.context("allocating Vulkan buffer memory failed")?;
 
-		if let Err(e) = unsafe { self.device.bind_buffer_memory(handle, memory, 0) } {
-			unsafe {
-				self.device.free_memory(memory, None);
-				self.device.destroy_buffer(handle, None);
-			}
+		if let Err(e) = unsafe {
+			self
+				.device
+				.bind_buffer_memory(handle, allocation.memory(), allocation.offset())
+		} {
+			unsafe { self.device.destroy_buffer(handle, None) };
+			self.free_allocation(allocation);
 			return Err(anyhow!("vkBindBufferMemory failed: {e:?}"));
 		}
 
-		let mapped = match unsafe {
-			self
-				.device
-				.map_memory(memory, 0, requirements.size, vk::MemoryMapFlags::empty())
-		} {
-			Ok(ptr) => {
-				if let Some(ptr) = NonNull::new(ptr.cast::<u8>()) {
-					ptr
-				} else {
-					unsafe {
-						self.device.free_memory(memory, None);
-						self.device.destroy_buffer(handle, None);
-					}
-					bail!("vkMapMemory returned null");
-				}
-			}
-			Err(e) => {
-				unsafe {
-					self.device.free_memory(memory, None);
-					self.device.destroy_buffer(handle, None);
-				}
-				return Err(anyhow!("vkMapMemory failed: {e:?}"));
-			}
+		let Some(mapped) = allocation.mapped_ptr().map(NonNull::cast::<u8>) else {
+			unsafe { self.device.destroy_buffer(handle, None) };
+			self.free_allocation(allocation);
+			bail!("Vulkan buffer allocation is not host-mapped");
 		};
 
 		Ok(Arc::new(RawBuffer {
 			context: self.clone(),
 			handle,
-			memory,
+			allocation: Some(allocation),
 			mapped,
 			coherent,
 			write_lock: Mutex::new(()),
@@ -850,37 +900,45 @@ impl Context {
 
 		let handle =
 			unsafe { self.device.create_image(&image_info, None) }.map_err(|e| anyhow!("vkCreateImage failed: {e:?}"))?;
-		let requirements = unsafe { self.device.get_image_memory_requirements(handle) };
-		let memory_type = self
-			.find_memory_type(
-				requirements.memory_type_bits,
-				vk::MemoryPropertyFlags::empty(),
-				vk::MemoryPropertyFlags::DEVICE_LOCAL,
-			)
-			.context("no compatible Vulkan memory type for image")?;
-		let alloc_info = vk::MemoryAllocateInfo::default()
-			.allocation_size(requirements.size)
-			.memory_type_index(memory_type);
-		let memory = match unsafe { self.device.allocate_memory(&alloc_info, None) } {
-			Ok(memory) => memory,
-			Err(e) => {
-				unsafe { self.device.destroy_image(handle, None) };
-				return Err(anyhow!("vkAllocateMemory for image failed: {e:?}"));
-			}
+		let mut requirements = unsafe { self.device.get_image_memory_requirements(handle) };
+		let memory_type = self.find_memory_type(
+			requirements.memory_type_bits,
+			vk::MemoryPropertyFlags::empty(),
+			vk::MemoryPropertyFlags::DEVICE_LOCAL,
+		);
+		let Some(memory_type) = memory_type else {
+			unsafe { self.device.destroy_image(handle, None) };
+			bail!("no compatible Vulkan memory type for image");
 		};
+		requirements.memory_type_bits = 1 << memory_type;
 
-		if let Err(e) = unsafe { self.device.bind_image_memory(handle, memory, 0) } {
-			unsafe {
-				self.device.free_memory(memory, None);
-				self.device.destroy_image(handle, None);
-			}
+		let allocation = self
+			.allocator
+			.lock()
+			.allocate(&AllocationCreateDesc {
+				name: "wgui image",
+				requirements,
+				location: MemoryLocation::Unknown,
+				linear: info.tiling == ImageTiling::Linear,
+				allocation_scheme: AllocationScheme::DedicatedImage(handle),
+			})
+			.inspect_err(|_| unsafe { self.device.destroy_image(handle, None) })
+			.context("allocating Vulkan image memory failed")?;
+
+		if let Err(e) = unsafe {
+			self
+				.device
+				.bind_image_memory(handle, allocation.memory(), allocation.offset())
+		} {
+			unsafe { self.device.destroy_image(handle, None) };
+			self.free_allocation(allocation);
 			return Err(anyhow!("vkBindImageMemory failed: {e:?}"));
 		}
 
 		Ok(Arc::new(RawImage {
 			context: self.clone(),
 			handle,
-			memory: Some(memory),
+			memory: Some(ImageMemory::Managed(allocation)),
 			owns_image: true,
 			swapchain_owner: None,
 			layout: Mutex::new(vk::ImageLayout::UNDEFINED),
@@ -1127,7 +1185,7 @@ impl Context {
 		Ok(Arc::new(RawImage {
 			context: self.clone(),
 			handle,
-			memory: Some(memory),
+			memory: Some(ImageMemory::External(memory)),
 			owns_image: true,
 			swapchain_owner: None,
 			layout: Mutex::new(vk::ImageLayout::GENERAL),
@@ -1243,7 +1301,7 @@ impl Context {
 			Arc::new(RawImage {
 				context: self.clone(),
 				handle,
-				memory: Some(memory),
+				memory: Some(ImageMemory::External(memory)),
 				owns_image: true,
 				swapchain_owner: None,
 				layout: Mutex::new(vk::ImageLayout::GENERAL),
@@ -1712,6 +1770,7 @@ impl Drop for Context {
 	fn drop(&mut self) {
 		unsafe {
 			let _ = self.device.device_wait_idle();
+			ManuallyDrop::drop(&mut self.allocator);
 			self.device.destroy_device(None);
 			if let (Some(surface_loader), Some(surface)) = (&self.surface_loader, self.surface) {
 				surface_loader.destroy_surface(surface, None);
@@ -1931,7 +1990,7 @@ impl RawSwapchainError {
 pub(super) struct RawBuffer {
 	context: Arc<Context>,
 	handle: vk::Buffer,
-	memory: vk::DeviceMemory,
+	allocation: Option<Allocation>,
 	mapped: NonNull<u8>,
 	coherent: bool,
 	pub(super) write_lock: Mutex<()>,
@@ -1949,8 +2008,11 @@ impl RawBuffer {
 		if self.coherent {
 			return Ok(());
 		}
+		let allocation = self.allocation.as_ref().expect("buffer allocation missing");
+		debug_assert!(allocation.is_dedicated());
+		debug_assert_eq!(allocation.offset(), 0);
 		let range = [vk::MappedMemoryRange::default()
-			.memory(self.memory)
+			.memory(unsafe { allocation.memory() })
 			.offset(0)
 			.size(vk::WHOLE_SIZE)];
 		unsafe { self.context.device.flush_mapped_memory_ranges(&range) }
@@ -1960,18 +2022,22 @@ impl RawBuffer {
 
 impl Drop for RawBuffer {
 	fn drop(&mut self) {
-		unsafe {
-			self.context.device.unmap_memory(self.memory);
-			self.context.device.destroy_buffer(self.handle, None);
-			self.context.device.free_memory(self.memory, None);
+		unsafe { self.context.device.destroy_buffer(self.handle, None) };
+		if let Some(allocation) = self.allocation.take() {
+			self.context.free_allocation(allocation);
 		}
 	}
+}
+
+enum ImageMemory {
+	Managed(Allocation),
+	External(vk::DeviceMemory),
 }
 
 pub(super) struct RawImage {
 	context: Arc<Context>,
 	handle: vk::Image,
-	memory: Option<vk::DeviceMemory>,
+	memory: Option<ImageMemory>,
 	owns_image: bool,
 	#[allow(dead_code)]
 	swapchain_owner: Option<Arc<RawSwapchainOwner>>,
@@ -2002,13 +2068,13 @@ impl RawImage {
 
 impl Drop for RawImage {
 	fn drop(&mut self) {
-		unsafe {
-			if self.owns_image {
-				self.context.device.destroy_image(self.handle, None);
-			}
-			if let Some(memory) = self.memory {
-				self.context.device.free_memory(memory, None);
-			}
+		if self.owns_image {
+			unsafe { self.context.device.destroy_image(self.handle, None) };
+		}
+		match self.memory.take() {
+			Some(ImageMemory::Managed(allocation)) => self.context.free_allocation(allocation),
+			Some(ImageMemory::External(memory)) => unsafe { self.context.device.free_memory(memory, None) },
+			None => {}
 		}
 	}
 }
