@@ -221,7 +221,12 @@ impl OpenVrInputSource {
         let picking_focus = app.input_state.picking_focus;
         let mut any_tracked = false;
 
+        let delta_time = app.delta_time;
+        let pointer_lerp_factor = app.session.config.pointer_lerp_factor;
+
         if picking_focus.is_none() {
+            let should_disable_lerp = app.input_state.should_disable_lerp();
+
             for i in 0..2 {
                 let hand = &mut self.hands[i];
                 let app_hand = &mut app.input_state.pointers[i];
@@ -247,7 +252,10 @@ impl OpenVrInputSource {
                         INPUT_ANY,
                     )
                     .map(|pose| {
-                        app_hand.pose = pose.0.pose.mDeviceToAbsoluteTracking.to_affine();
+                        let new_pose = pose.0.pose.mDeviceToAbsoluteTracking.to_affine();
+                        let lerp_factor = (!should_disable_lerp)
+                            .then(|| (delta_time * 100.0 * pointer_lerp_factor).clamp(0.1, 1.0));
+                        Self::pointer_load_pose(app_hand, new_pose, lerp_factor);
                         hand.has_pose = true;
                     });
 
@@ -322,8 +330,6 @@ impl OpenVrInputSource {
                 app.session.config.handsfree_alt_tab.into()
             };
             let handsfree_state = app.input_state.handsfree_state;
-            let delta_time = app.delta_time;
-            let pointer_lerp_factor = app.session.config.pointer_lerp_factor;
 
             Self::update_handsfree(
                 &mut app.input_state.pointers[0],
@@ -335,6 +341,21 @@ impl OpenVrInputSource {
                 delta_time,
                 pointer_lerp_factor,
             );
+        }
+    }
+
+    fn pointer_load_pose(pointer: &mut Pointer, new_pose: Affine3A, lerp_factor: Option<f32>) {
+        if let Some(lerp_factor) = lerp_factor {
+            let cur_quat = Quat::from_affine3(&pointer.pose);
+            let cur_pos = Vec3::from(pointer.pose.translation);
+            let new_quat = Quat::from_affine3(&new_pose);
+            let new_pos = Vec3::from(new_pose.translation);
+            pointer.pose = Affine3A::from_rotation_translation(
+                cur_quat.lerp(new_quat, lerp_factor),
+                cur_pos.lerp(new_pos, lerp_factor),
+            );
+        } else {
+            pointer.pose = new_pose; // no lerp
         }
     }
 
@@ -363,17 +384,10 @@ impl OpenVrInputSource {
             }
         };
 
-        let cur_quat = Quat::from_affine3(&pointer.pose);
-        let cur_pos = Vec3::from(pointer.pose.translation);
-        let new_quat = Quat::from_affine3(&raw_pose);
-        let new_pos = Vec3::from(raw_pose.translation);
         let lerp_factor = (delta_time * 100.0 * pointer_lerp_factor * lerp_scale).clamp(0.1, 1.0);
 
         pointer.raw_pose = raw_pose;
-        pointer.pose = Affine3A::from_rotation_translation(
-            cur_quat.lerp(new_quat, lerp_factor),
-            cur_pos.lerp(new_pos, lerp_factor),
-        );
+        Self::pointer_load_pose(pointer, raw_pose, Some(lerp_factor));
         pointer.tracked = tracked;
         pointer.handsfree = tracked;
         pointer.now = handsfree_pointer_state(handsfree_state);

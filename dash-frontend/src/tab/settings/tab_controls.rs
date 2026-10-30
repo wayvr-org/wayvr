@@ -124,11 +124,7 @@ impl State {
 		options_slider_f32(par.mp, c, SettingType::ScrollSpeed, 0.1, 5.0, 0.1)?;
 		options_slider_f32(par.mp, c, SettingType::LongPressDuration, 0.1, 2.0, 0.1)?;
 		options_slider_f32(par.mp, c, SettingType::SnapAngleDeg, 0., 45., 5.)?;
-
-		if par.feats.xr_backend.is_open_xr() {
-			options_slider_f32(par.mp, c, SettingType::PointerLerpFactor, 0.1, 1.0, 0.1)?;
-		}
-
+		options_slider_f32(par.mp, c, SettingType::PointerLerpFactor, 0.1, 1.0, 0.1)?;
 		options_slider_i32(par.mp, c, SettingType::ClickFreezeTimeMs, 0, 500, 50)?;
 
 		options_slider_f32(par.mp, c, SettingType::MouseSpeed, -1., 1., 0.05)?;
