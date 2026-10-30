@@ -1,4 +1,10 @@
-use std::os::fd::RawFd;
+use std::{
+    os::fd::{AsRawFd, OwnedFd, RawFd},
+    sync::Arc,
+};
+
+#[cfg(feature = "pipewire")]
+use timeline_syncobj::timeline_syncobj::TimelineSyncObj;
 
 use drm_fourcc::{DrmFormat, DrmFourcc, DrmModifier};
 
@@ -69,6 +75,8 @@ pub struct DmabufFrame {
     pub num_planes: usize,
     pub planes: [FramePlane; 4],
     pub mouse: Option<MouseMeta>,
+    pub acquire_sync: FrameAcquireSync,
+    pub lease: Option<FrameLease>,
 }
 
 impl DmabufFrame {
@@ -137,6 +145,107 @@ pub struct MemPtrFrame {
 pub struct MouseMeta {
     pub x: f32,
     pub y: f32,
+}
+
+#[derive(Clone)]
+pub struct FrameLease(Arc<FrameLeaseInner>);
+
+struct FrameLeaseInner(Box<dyn Fn() + Send + Sync>);
+
+impl FrameLease {
+    pub fn new(f: impl Fn() + Send + Sync + 'static) -> Self {
+        Self(Arc::new(FrameLeaseInner(Box::new(f))))
+    }
+}
+
+impl Drop for FrameLeaseInner {
+    fn drop(&mut self) {
+        (self.0)();
+    }
+}
+
+#[derive(Clone, Default)]
+pub enum FrameAcquireSync {
+    #[default]
+    /// Frame is ready, no sync needed
+    Ready,
+    /// Implicit sync using polled FDs
+    Implicit { fds: Arc<[OwnedFd]> },
+    #[cfg(feature = "pipewire")]
+    /// Explicit sync using DRM SyncObj
+    Explicit {
+        timeline: Arc<TimelineSyncObj>,
+        point: u64,
+    },
+}
+
+impl FrameAcquireSync {
+    pub fn check_ready(&mut self) -> std::io::Result<bool> {
+        match self {
+            FrameAcquireSync::Ready => Ok(true),
+            FrameAcquireSync::Implicit { fds } => {
+                if fds.is_empty() {
+                    return Err(std::io::Error::other("implicit DMA-buf without planes"));
+                }
+                for plane_fd in fds.iter() {
+                    let fd = plane_fd.as_raw_fd();
+                    let mut pfd = libc::pollfd {
+                        fd,
+                        events: libc::POLLIN,
+                        revents: 0,
+                    };
+                    let result = unsafe { libc::poll(&mut pfd, 1, 0) };
+                    if result < 0 {
+                        let error = std::io::Error::last_os_error();
+                        if error.kind() == std::io::ErrorKind::Interrupted {
+                            return Ok(false);
+                        }
+                        return Err(error);
+                    }
+                    if result == 0 {
+                        return Ok(false);
+                    }
+                    if pfd.revents & (libc::POLLNVAL | libc::POLLHUP) != 0 {
+                        return Err(std::io::Error::other(format!(
+                            "DMA-buf plane fd {fd} poll returned with {:#x}",
+                            pfd.revents
+                        )));
+                    }
+                    if pfd.revents & libc::POLLERR != 0 {
+                        static WARNED: std::sync::atomic::AtomicBool =
+                            std::sync::atomic::AtomicBool::new(false);
+                        if !WARNED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                            log::error!(
+                                "Could not poll implicit acquire fence. Falling back to unsynchronized behavior. Visual artifacts may happen."
+                            );
+                        }
+                        continue;
+                    }
+                    if pfd.revents & libc::POLLIN == 0 {
+                        return Ok(false);
+                    }
+                }
+                *self = FrameAcquireSync::Ready;
+                Ok(true)
+            }
+            #[cfg(feature = "pipewire")]
+            FrameAcquireSync::Explicit { timeline, point } => {
+                if *point == 0 {
+                    return Ok(true);
+                }
+                if timeline
+                    .query_signaled_point()
+                    .map(|signaled| signaled >= *point)
+                    .map_err(|e| std::io::Error::from_raw_os_error(e.raw_os_error()))?
+                {
+                    *self = FrameAcquireSync::Ready;
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+        }
+    }
 }
 
 pub trait DmaExporter {

@@ -16,6 +16,7 @@ idmap = { workspace = true }
 libc.workspace = true
 log = { workspace = true }
 pipewire = { workspace = true, optional = true }
+timeline_syncobj = { git = "https://github.com/Schmarni-Dev/timeline_syncobj", rev = "7f67e49ebf466487cf35138fc108618092acb9e8", optional = true }
 slotmap.workspace = true
 wayland-client = { workspace = true, optional = true }
 wayland-protocols = {
@@ -46,7 +47,7 @@ smithay-client-toolkit = { version = "0.20.0", optional = true }
 [features]
 default = ["pipewire", "wayland"]
 egl = []
-pipewire = ["dep:dbus", "dep:pipewire", "wayland"]
+pipewire = ["dep:dbus", "dep:pipewire", "dep:timeline_syncobj", "wayland"]
 wayland = [
   "dep:smithay-client-toolkit",
   "dep:wayland-client",

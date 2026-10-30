@@ -114,6 +114,8 @@ impl ImageImporter {
             num_planes: dmabuf.num_planes(),
             planes: Default::default(),
             mouse: None,
+            acquire_sync: Default::default(),
+            lease: None,
         };
 
         for (i, handle) in dmabuf.handles().enumerate() {
@@ -129,7 +131,7 @@ impl ImageImporter {
             frame.planes[i].stride = stride as _;
         }
 
-        let image = self.gfx.dmabuf_texture(frame)?;
+        let image = self.gfx.dmabuf_texture(&frame)?;
         log::info!("DMA-buf import: creating image view");
         let image_view = self.gfx.create_image_view(image)?;
         log::info!("DMA-buf import: image view created");

@@ -26,6 +26,7 @@ slotmap::new_key_type! {
 
 pub mod capture;
 mod dbus_screencast;
+mod raw_buffer;
 
 #[derive(Debug, Clone)]
 pub struct PipewireStream {

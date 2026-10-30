@@ -6,11 +6,11 @@ use frame::WlxFrame;
 
 pub mod frame;
 
+#[cfg(feature = "pipewire")]
+pub mod syncobj;
+
 #[cfg(feature = "wayland")]
 pub mod wayland;
-
-#[cfg(feature = "wlr")]
-pub mod wlr_dmabuf;
 
 #[cfg(feature = "wlr")]
 pub mod wlr_screencopy;
