@@ -1,8 +1,9 @@
 use std::{
     collections::VecDeque,
+    num::NonZeroU32,
     sync::{
         Arc, LazyLock,
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicU32, Ordering},
     },
     time::Instant,
 };
@@ -33,14 +34,31 @@ use crate::{
 };
 
 pub static TOAST_NAME: LazyLock<Arc<str>> = LazyLock::new(|| "toast".into());
-static TOAST_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+// D-bus notification IDs are non-null u32
+static TOAST_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ToastId(u64);
+pub struct ToastId(NonZeroU32);
 
 impl ToastId {
     fn next() -> Self {
-        Self(TOAST_ID_COUNTER.fetch_add(1, Ordering::Relaxed))
+        loop {
+            if let Some(id) = NonZeroU32::new(TOAST_ID_COUNTER.fetch_add(1, Ordering::Relaxed)) {
+                return Self(id);
+            }
+        }
+    }
+
+    pub const fn from_u32(id: u32) -> Option<Self> {
+        match NonZeroU32::new(id) {
+            Some(id) => Some(Self(id)),
+            None => None,
+        }
+    }
+
+    pub const fn as_u32(self) -> u32 {
+        self.0.get()
     }
 }
 
@@ -86,6 +104,23 @@ pub fn toast_enqueue(app: &mut AppState, toast: BakedToast) {
     let queue = &mut app.toast_queue;
     let params = toast.params.clone();
 
+    if let Some(existing) = queue.queue.iter_mut().find(|entry| entry.id == toast.id) {
+        *existing = toast;
+        return;
+    }
+
+    if queue.current_id() == Some(toast.id) {
+        queue.current_remaining = params.timeout;
+        queue.current = Some(toast);
+        queue
+            .current
+            .as_ref()
+            .unwrap()
+            .clone()
+            .submit_at(app, Instant::now());
+        return;
+    }
+
     // nothing currently showing, display immediately
     if queue.current.is_none() {
         queue.current = Some(toast);
@@ -123,7 +158,21 @@ pub fn toast_enqueue(app: &mut AppState, toast: BakedToast) {
     }
 }
 
-pub fn toast_tick(app: &mut AppState, delta: f32) {
+pub fn toast_close(app: &mut AppState, id: ToastId) {
+    let queue = &mut app.toast_queue;
+    if let Some(index) = queue.queue.iter().position(|entry| entry.id == id) {
+        queue.queue.remove(index);
+    } else if queue.current_id() == Some(id) {
+        queue.current = None;
+        queue.current_remaining = 0.0;
+        app.tasks
+            .enqueue(TaskType::Overlay(OverlayTask::Drop(OverlaySelector::Name(
+                TOAST_NAME.clone(),
+            ))));
+    }
+}
+
+pub fn toast_tick(app: &mut AppState, delta: f32) -> Option<ToastId> {
     let queue = &mut app.toast_queue;
     let gaze_paused = queue.gaze_paused;
     queue.gaze_paused = false;
@@ -141,7 +190,7 @@ pub fn toast_tick(app: &mut AppState, delta: f32) {
                 .clone()
                 .submit_at(app, Instant::now());
         }
-        return;
+        return None;
     }
 
     if !gaze_paused {
@@ -149,9 +198,10 @@ pub fn toast_tick(app: &mut AppState, delta: f32) {
     }
 
     if queue.current_remaining <= 0.0 {
-        // OverlayWindowManager handles the actual drop
-        queue.current = None;
+        return queue.current.take().map(|toast| toast.id);
     }
+
+    None
 }
 
 #[allow(dead_code)]
@@ -257,6 +307,15 @@ impl Toast {
 }
 
 impl BakedToast {
+    pub const fn id(&self) -> ToastId {
+        self.id
+    }
+
+    pub fn with_id(mut self, id: ToastId) -> Self {
+        self.id = id;
+        self
+    }
+
     pub fn submit(self, app: &mut AppState) -> ToastId {
         let id = self.id;
         toast_enqueue(app, self);
@@ -494,12 +553,14 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
             ),
             ..OverlayWindowState::default()
         },
-        lifetime: Some(OverlayLifetime::new(
-            toast.params.timeout,
-            fade_duration,
-            toast.params.opacity,
-            true,
-        )),
+        lifetime: toast.params.timeout.is_finite().then(|| {
+            OverlayLifetime::new(
+                toast.params.timeout,
+                fade_duration,
+                toast.params.opacity,
+                true,
+            )
+        }),
         global: true,
         z_order: Z_ORDER_TOAST,
         show_on_spawn: true,

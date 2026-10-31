@@ -261,7 +261,6 @@ impl compositor::CompositorHandler for Application {
         &client.get_data::<ClientState>().unwrap().compositor_state
     }
 
-    #[allow(clippy::significant_drop_tightening)]
     fn commit(&mut self, surface: &WlSurface) {
         if let Some(icon) = self.pending_icon_changes.remove(&surface.id()) {
             if icon.is_empty() {

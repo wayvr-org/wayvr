@@ -25,7 +25,7 @@ use crate::backend;
 use crate::backend::wayvr::WvrServerState;
 use wlx_common::dash_interface::InterfaceFeats;
 
-use crate::subsystem::notifications::NotificationManager;
+use crate::subsystem::notifications::{NotificationEvent, NotificationManager};
 #[cfg(feature = "osc")]
 use crate::subsystem::osc::OscSender;
 
@@ -35,7 +35,7 @@ use crate::{
     backend::{input::InputState, task::TaskContainer},
     graphics::WGfxExtras,
     ipc::{event_queue::SyncEventQueue, ipc_server, signal::WayVRSignal},
-    overlays::toast::{ToastQueue, toast_tick},
+    overlays::toast::{ToastQueue, toast_close, toast_tick},
     subsystem::{dbus::DbusConnector, input::HidWrapper},
 };
 
@@ -270,10 +270,17 @@ impl AppState {
         while self.executor.try_tick() {}
         self.dbus.tick();
 
-        toast_tick(self, self.delta_time);
+        for event in self.notifications.drain_pending(&self.session) {
+            match event {
+                NotificationEvent::Show(toast) => {
+                    toast.submit(self);
+                }
+                NotificationEvent::Close(id) => toast_close(self, id),
+            }
+        }
 
-        for toast in self.notifications.drain_pending(&self.session) {
-            toast.submit(self);
+        if let Some(id) = toast_tick(self, self.delta_time) {
+            self.notifications.notification_closed(id, 1);
         }
 
         #[cfg(feature = "whisper")]

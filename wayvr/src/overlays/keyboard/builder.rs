@@ -53,7 +53,7 @@ fn bool_to_rc_str(val: bool) -> Rc<str> {
     if val { "1" } else { "0" }.into()
 }
 
-#[allow(clippy::too_many_lines, clippy::significant_drop_tightening)]
+#[allow(clippy::too_many_lines)]
 pub(super) fn create_keyboard_panel(
     app: &mut AppState,
     keymap: Option<&XkbKeymap>,
