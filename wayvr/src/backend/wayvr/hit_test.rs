@@ -237,7 +237,6 @@ fn surface_accepts_input(surface: &RenderedSurface, global_pos: Vec2) -> bool {
         return false;
     }
 
-    #[allow(clippy::significant_drop_tightening)]
     with_states(&surface.surface, |states| {
         let mut guard = states.cached_state.get::<SurfaceAttributes>();
         let attrs = guard.current();
@@ -253,7 +252,6 @@ fn surface_accepts_input(surface: &RenderedSurface, global_pos: Vec2) -> bool {
     })
 }
 
-#[allow(clippy::significant_drop_tightening)]
 fn surface_accepts_input_states(
     states: &smithay::wayland::compositor::SurfaceData,
     local: Vec2,

@@ -373,7 +373,6 @@ impl WvrServerState {
     }
 
     #[allow(clippy::too_many_lines)]
-    #[allow(clippy::significant_drop_tightening)]
     pub fn tick_events(app: &mut AppState) -> anyhow::Result<()> {
         let Some(wvr_server) = app.wvr_server.as_mut() else {
             return Ok(());

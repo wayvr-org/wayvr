@@ -13,6 +13,7 @@
     clippy::needless_pass_by_ref_mut,
     clippy::needless_pass_by_value,
     clippy::option_if_let_else,
+    clippy::significant_drop_tightening,
     clippy::struct_excessive_bools,
     clippy::suboptimal_flops,
     clippy::too_many_lines,

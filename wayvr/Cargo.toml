@@ -30,6 +30,7 @@ anyhow.workspace = true
 chrono = { workspace = true, features = ["unstable-locales"] }
 clap.workspace = true
 dbus.workspace = true
+dbus-crossroads = "0.5.3"
 glam = { workspace = true, features = ["mint", "serde"] }
 idmap = { workspace = true, features = ["serde"] }
 idmap-derive.workspace = true
