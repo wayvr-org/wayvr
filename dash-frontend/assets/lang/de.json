@@ -380,5 +380,6 @@
 		"SUSPEND_ARE_YOU_SURE": "Bist du sicher, dass du den Computer in den Ruhezustand versetzen willst?"
 	},
 	"YES": "Ja",
-	"NO": "Nein"
+	"NO": "Nein",
+	"RESET_SPACE_DRAG": "Playspace-Drag zurücksetzen"
 }

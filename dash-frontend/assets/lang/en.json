@@ -362,6 +362,7 @@
 	},
 	"PROCESS_LIST": "Process list",
 	"REFRESH": "Refresh",
+	"RESET_SPACE_DRAG": "Reset playspace drag",
 	"REMOVE": "Remove",
 	"APPLY": "Apply",
 	"RELOAD_FROM_DISK": "Reload from disk",

@@ -1,4 +1,4 @@
-use glam::{Affine3A, Vec3A};
+use glam::{Affine3A, Mat3A, Vec3A};
 use wlx_common::config::GeneralConfig;
 
 use crate::windowing::manager::OverlayWindowManager;
@@ -11,11 +11,12 @@ pub struct SpaceGravityUpdateParams<'a> {
 
     // current playspace offset
     pub current_space_pos: Vec3A,
+
+    pub current_playspace_rot: Mat3A,
 }
 
 pub struct SpaceGravity {
-    velocity: Vec3A,
-    space_pos: Vec3A,
+    velocity: Vec3A, // local space
 }
 
 pub fn shift_world<OverlayData>(
@@ -37,14 +38,13 @@ pub fn shift_world<OverlayData>(
 }
 
 pub struct SpaceGravityUpdateResult {
-    pub playspace_pos_offset: Vec3A, // position difference compared to previous update() call
+    pub playspace_pos_offset: Vec3A, // position difference compared to the previous update() call
 }
 
 impl SpaceGravity {
     pub fn new() -> Self {
         Self {
             velocity: Vec3A::default(),
-            space_pos: Vec3A::default(),
         }
     }
 
@@ -52,20 +52,19 @@ impl SpaceGravity {
         &mut self,
         config: &GeneralConfig,
         hand_pos_diff: Vec3A,
-        space_pos: Vec3A,
+        space_rot: Mat3A,
         dt: f32,
     ) {
         if config.space_gravity_enabled {
-            self.velocity = hand_pos_diff * config.space_gravity_fling_strength / dt;
-            self.space_pos = space_pos;
+            self.velocity =
+                space_rot.inverse() * hand_pos_diff * config.space_gravity_fling_strength / dt;
         } else {
             self.reset();
         }
     }
 
     pub fn reset(&mut self) {
-        self.velocity = Vec3A::default();
-        self.space_pos = Vec3A::default();
+        self.velocity = Default::default();
     }
 
     pub fn update(&mut self, par: SpaceGravityUpdateParams) -> Option<SpaceGravityUpdateResult> {
@@ -73,32 +72,29 @@ impl SpaceGravity {
             return None;
         }
 
-        self.space_pos = par.current_space_pos;
+        let mut velocity = self.velocity;
+        velocity += Vec3A::new(0.0, par.config.space_gravity_gravity * par.dt, 0.0) /* downwards gravity */;
+        velocity *= par.config.space_gravity_damping.powf(par.dt * 10.0) /* damping */;
 
-        let prev_pos = self.space_pos;
+        // local space
+        let prev_pos = par.current_playspace_rot.inverse() * par.current_space_pos;
+        let mut space_pos = prev_pos;
+        space_pos += velocity * par.dt;
+        space_pos.y = space_pos.y.min(par.floor_height);
 
-        self.velocity.y += par.config.space_gravity_gravity * par.dt;
-
-        // terminal velocity
-        self.velocity.y = self.velocity.y.min(200.0);
-
-        self.velocity *= (par.config.space_gravity_damping).powf(par.dt * 10.0);
-
-        self.space_pos += self.velocity * par.dt;
-
-        self.space_pos.y = self.space_pos.y.min(par.floor_height);
-
-        if self.space_pos.y >= par.floor_height
-        /* at floor height or below */
-        {
+        // at floor height or below
+        if space_pos.y >= par.floor_height {
             // apply ground friction
-            self.velocity *= 1.0 - par.config.space_gravity_ground_friction * par.dt * 10.0;
+            velocity *= 1.0 - par.config.space_gravity_ground_friction * par.dt * 10.0;
         }
 
-        if self.velocity.length_squared() > 0.00003 {
+        self.velocity = velocity;
+
+        let pos_diff = space_pos - prev_pos;
+        if velocity.length_squared() > 0.00003 {
             // Space position changed
             return Some(SpaceGravityUpdateResult {
-                playspace_pos_offset: self.space_pos - prev_pos,
+                playspace_pos_offset: par.current_playspace_rot * pos_diff,
             });
         }
 

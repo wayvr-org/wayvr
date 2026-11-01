@@ -123,10 +123,10 @@ pub trait Fetchable {
 	/// Fetch a component by widget ID (returns Component)
 	fn fetch_component_by_widget_id(&self, state: &LayoutState, widget_id: WidgetID) -> anyhow::Result<Component>;
 
-	/// Fetch a component by string ID and down‑cast it to a concrete component type `T` (see `components/mod.rs`)
+	/// Fetch a component by string ID and down-cast it to a concrete component type `T` (see `components/mod.rs`)
 	fn fetch_component_as<T: 'static>(&self, id: &str) -> anyhow::Result<Rc<T>>;
 
-	/// Fetch a component by widget ID and down‑cast it to a concrete component type `T` (see `components/mod.rs`)
+	/// Fetch a component by widget ID and down-cast it to a concrete component type `T` (see `components/mod.rs`)
 	fn fetch_component_from_widget_id_as<T: 'static>(
 		&self,
 		state: &LayoutState,
@@ -139,7 +139,7 @@ pub trait Fetchable {
 	/// Retrieve the widget associated with a string ID, returning a `WidgetPair` (id and widget itself)
 	fn fetch_widget(&self, state: &LayoutState, id: &str) -> anyhow::Result<WidgetPair>;
 
-	/// Retrieve a widget by string ID and down‑cast its inner value to type `T` (see `widget/mod.rs`)
+	/// Retrieve a widget by string ID and down-cast its inner value to type `T` (see `widget/mod.rs`)
 	fn fetch_widget_as<'a, T: 'static>(&self, state: &'a LayoutState, id: &str) -> anyhow::Result<RefMut<'a, T>>;
 }
 

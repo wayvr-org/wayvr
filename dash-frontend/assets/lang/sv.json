@@ -380,5 +380,6 @@
 	"INSTALLED": "Installerad",
 	"NOT_INSTALLED": "Ej installerad",
 	"YES": "Ja",
-	"NO": "Nej"
+	"NO": "Nej",
+	"RESET_SPACE_DRAG": "Återställ playspace-drag"
 }

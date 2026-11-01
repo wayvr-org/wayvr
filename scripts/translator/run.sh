@@ -33,7 +33,7 @@
 #
 # Base language: English (en.json)
 # 
-# This tool expects llama.cpp server being present (llama-server) at port 8080.
+# This tool expects llama.cpp server being present (llama-server) at port 9931.
 # 
 # Currently we're using Gemma 4 for machine translations.
 # Model URL:
@@ -51,7 +51,7 @@ if [ -z "${MODEL}" ]; then
 fi
 
 if [ -z "${LLAMA_BASE_URL}" ]; then
-	export LLAMA_BASE_URL="http://127.0.0.1:8080"
+	export LLAMA_BASE_URL="http://127.0.0.1:9931"
 fi
 
 TEMPLATE="en" bun main.ts

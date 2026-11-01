@@ -380,5 +380,6 @@
 		"SUSPEND_ARE_YOU_SURE": "确定要让计算机进入睡眠状态吗？"
 	},
 	"YES": "确定",
-	"NO": "否"
+	"NO": "否",
+	"RESET_SPACE_DRAG": "重置活动空间拖拽"
 }
