@@ -188,7 +188,7 @@ impl PlayspaceMover {
                 self.gravity.mark_end_drag(
                     &app.session.config,
                     relative_pos,
-                    data.pose.translation,
+                    data.pose.matrix3,
                     app.delta_time,
                 );
 
@@ -283,6 +283,7 @@ impl PlayspaceMover {
             config,
             floor_height: config.space_gravity_floor_height,
             current_space_pos: pose.translation,
+            current_playspace_rot: pose.matrix3,
         })?;
 
         Some(SpaceGravityStepResult {

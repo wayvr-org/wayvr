@@ -380,5 +380,6 @@
 		"SUSPEND_ARE_YOU_SURE": "¿Estás seguro de que quieres suspender el equipo?"
 	},
 	"YES": "Sí",
-	"NO": "No"
+	"NO": "No",
+	"RESET_SPACE_DRAG": "Restablecer arrastre del espacio de juego"
 }

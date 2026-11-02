@@ -380,5 +380,6 @@
 		"SUSPEND_ARE_YOU_SURE": "Czy na pewno chcesz uśpić komputer?"
 	},
 	"YES": "Tak",
-	"NO": "Nie"
+	"NO": "Nie",
+	"RESET_SPACE_DRAG": "Resetuj przesunięcie przestrzeni gry"
 }

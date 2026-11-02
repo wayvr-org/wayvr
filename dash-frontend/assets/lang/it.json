@@ -380,5 +380,6 @@
 		"SUSPEND_ARE_YOU_SURE": "Sei sicuro di voler mettere il computer in sospensione?"
 	},
 	"YES": "Sì",
-	"NO": "No"
+	"NO": "No",
+	"RESET_SPACE_DRAG": "Reset trascinamento playspace"
 }

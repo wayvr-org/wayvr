@@ -348,6 +348,7 @@ PROCESS.FORCE_KILL,Force-kill,Tooltip on the kill button in the running games li
 PROCESS.STOP,Stop,Tooltip on the stop button in the running games list.
 PROCESS_LIST,Process list,Tab name and group box title in the Monado runtime process list section.
 REFRESH,Refresh,Tooltip on the refresh button in the running games list.
+RESET_SPACE_DRAG,Reset playspace drag,"Button which resets the user's playspace origin. ""Playspace"" was previously translated as ""${DEFINITIONS.PLAYSPACE}""." 
 REMOVE,Remove,Button label in the skymap already downloaded dialog and Whisper cleanup dialog to remove files.
 APPLY,Apply,Button label in the skymap already downloaded dialog to apply the selected skymap.
 RELOAD_FROM_DISK,Reload from disk,Tooltip on the reload button in the skymap list view.
