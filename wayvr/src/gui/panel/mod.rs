@@ -310,6 +310,8 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
             self.layout.tick()?;
         }
 
+        self.update_layout(app)?;
+
         if self.layout.content_size.x * self.layout.content_size.y == 0.0 {
             log::trace!("Unable to render: content size 0");
             return Ok(ShouldRender::Unable);
