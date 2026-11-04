@@ -4,6 +4,7 @@ use std::{f32::consts::PI, sync::Arc, time::Instant};
 use wlx_common::windowing::{OverlayWindowState, Positioning};
 
 use crate::{
+    overlays::toast::TOAST_NAME,
     state::AppState,
     subsystem::input::InputFocus,
     windowing::{
@@ -213,6 +214,10 @@ impl OverlayWindowConfig {
                 .eye_gaze
                 .as_ref()
                 .is_some_and(|gaze| self.ray_hits_overlay(gaze));
+
+        if self.name == *TOAST_NAME {
+            app.toast_queue.gaze_paused = gaze_paused;
+        }
 
         let now = Instant::now();
         let elapsed = now.duration_since(lifetime.last_tick).as_secs_f32();

@@ -73,6 +73,7 @@ pub struct ToastQueue {
     queue: VecDeque<BakedToast>,
     current: Option<BakedToast>,
     current_remaining: f32,
+    pub gaze_paused: bool,
 }
 
 impl ToastQueue {
@@ -124,6 +125,8 @@ pub fn toast_enqueue(app: &mut AppState, toast: BakedToast) {
 
 pub fn toast_tick(app: &mut AppState, delta: f32) {
     let queue = &mut app.toast_queue;
+    let gaze_paused = queue.gaze_paused;
+    queue.gaze_paused = false;
 
     if queue.current.is_none() {
         // no current toast, try to pop from queue
@@ -141,7 +144,9 @@ pub fn toast_tick(app: &mut AppState, delta: f32) {
         return;
     }
 
-    queue.current_remaining -= delta;
+    if !gaze_paused {
+        queue.current_remaining -= delta;
+    }
 
     if queue.current_remaining <= 0.0 {
         // OverlayWindowManager handles the actual drop
@@ -298,6 +303,9 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
     let (spawn_point, spawn_rotation, positioning) = match current_method {
         ToastDisplayMethod::Hide => {
             log::debug!("Not showing toast: filtered out");
+            if app.toast_queue.current_id() == Some(toast.id) {
+                app.toast_queue.current = None;
+            }
             return None;
         }
         ToastDisplayMethod::Center => (
