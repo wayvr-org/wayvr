@@ -35,9 +35,7 @@ pub struct EmuWindow {
 impl EmuProcess {
 	fn to(&self, handle: EmuProcessHandle) -> WvrProcess {
 		WvrProcess {
-			handle: WvrProcessHandle {
-				user: handle.0.as_ffi(),
-			},
+			handle: WvrProcessHandle(handle.0.as_ffi()),
 			name: self.name.clone(),
 			userdata: Default::default(),
 		}
@@ -50,12 +48,8 @@ impl EmuWindow {
 			size_x: 1280, /* stub */
 			size_y: 720,  /* stub */
 			visible: true,
-			handle: WvrWindowHandle {
-				user: handle.0.as_ffi(),
-			},
-			process_handle: WvrProcessHandle {
-				user: self.process_handle.0.as_ffi(),
-			},
+			handle: WvrWindowHandle(handle.0.as_ffi()),
+			process_handle: WvrProcessHandle(self.process_handle.0.as_ffi()),
 		}
 	}
 }
@@ -150,12 +144,12 @@ impl DashInterface<()> for DashInterfaceEmulated {
 	fn window_request_close(&mut self, _: &mut (), handle: WvrWindowHandle) -> anyhow::Result<()> {
 		self
 			.windows
-			.remove(EmuWindowHandle::from(slotmap::KeyData::from_ffi(handle.user)));
+			.remove(EmuWindowHandle::from(slotmap::KeyData::from_ffi(handle.0)));
 		Ok(())
 	}
 
 	fn process_get(&mut self, _: &mut (), handle: WvrProcessHandle) -> Option<WvrProcess> {
-		let emu_handle = EmuProcessHandle::from(slotmap::KeyData::from_ffi(handle.user));
+		let emu_handle = EmuProcessHandle::from(slotmap::KeyData::from_ffi(handle.0));
 		self.processes.get(emu_handle).map(|process| process.to(emu_handle))
 	}
 
@@ -172,7 +166,7 @@ impl DashInterface<()> for DashInterfaceEmulated {
 			visible: true,
 		});
 
-		Ok(WvrProcessHandle { user: res.0.as_ffi() })
+		Ok(WvrProcessHandle(res.0.as_ffi()))
 	}
 
 	fn process_list(&mut self, _: &mut ()) -> anyhow::Result<Vec<WvrProcess>> {
@@ -189,7 +183,7 @@ impl DashInterface<()> for DashInterfaceEmulated {
 		let mut to_remove = None;
 
 		for (wh, w) in self.windows.iter() {
-			if w.process_handle == EmuProcessHandle::from(slotmap::KeyData::from_ffi(handle.user)) {
+			if w.process_handle == EmuProcessHandle::from(slotmap::KeyData::from_ffi(handle.0)) {
 				to_remove = Some(wh);
 			}
 		}
@@ -200,14 +194,14 @@ impl DashInterface<()> for DashInterfaceEmulated {
 
 		self
 			.processes
-			.remove(EmuProcessHandle::from(slotmap::KeyData::from_ffi(handle.user)));
+			.remove(EmuProcessHandle::from(slotmap::KeyData::from_ffi(handle.0)));
 		Ok(())
 	}
 
 	fn window_set_visible(&mut self, _: &mut (), handle: WvrWindowHandle, visible: bool) -> anyhow::Result<()> {
 		match self
 			.windows
-			.get_mut(EmuWindowHandle::from(slotmap::KeyData::from_ffi(handle.user)))
+			.get_mut(EmuWindowHandle::from(slotmap::KeyData::from_ffi(handle.0)))
 		{
 			Some(w) => {
 				w.visible = visible;

@@ -211,16 +211,14 @@ new_key_type! {
 
 impl WindowHandle {
     pub fn from_packet(handle: packet_server::WvrWindowHandle) -> Self {
-        Self::from(slotmap::KeyData::from_ffi(handle.user))
+        Self::from(slotmap::KeyData::from_ffi(handle.0))
     }
 
     pub fn as_packet(self) -> packet_server::WvrWindowHandle {
-        packet_server::WvrWindowHandle {
-            user: self.0.as_ffi(),
-        }
+        packet_server::WvrWindowHandle(self.0.as_ffi())
     }
 
     pub fn transient_name(self) -> Arc<str> {
-        format!("wayvr/volatile/{}", self.as_packet().user).into()
+        format!("wayvr/volatile/{}", self.as_packet().0).into()
     }
 }
