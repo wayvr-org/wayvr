@@ -1,9 +1,11 @@
+use anyhow::Context;
 use glam::DVec2;
 use idmap::{IdMap, idmap};
 use idmap_derive::IntegerId;
 use libc::{input_event, timeval};
+use regex::Regex;
 use serde::Deserialize;
-use std::sync::LazyLock;
+use std::{cell::LazyCell, sync::LazyLock};
 use strum::{EnumIter, EnumString, FromRepr};
 use xkbcommon::xkb;
 
@@ -315,12 +317,34 @@ pub const fn get_key_type(key: VirtualKey) -> KeyType {
     }
 }
 
+thread_local! {
+    static KEYMAP_NAME_REGEX: LazyCell<Regex> = const { LazyCell::new(||
+        Regex::new(r"^([a-zA-Z][a-zA-Z0-9]*)(?:\(([^)]+)\))?$").unwrap()
+    )};
+}
+
 #[derive(Clone)]
 pub struct XkbKeymap {
     pub inner: xkb::Keymap,
 }
 
+impl Default for XkbKeymap {
+    fn default() -> Self {
+        Self::from_layout_variant("us", "").unwrap()
+    }
+}
+
 impl XkbKeymap {
+    pub fn from_name(name: &str) -> anyhow::Result<Self> {
+        let Some(captures) = KEYMAP_NAME_REGEX.with(|rx| rx.captures(name)) else {
+            anyhow::bail!("invalid layout name for keymap switch: {name}");
+        };
+        let layout = captures.get(1).map_or("", |g| g.as_str());
+        let variant = captures.get(2).map_or("", |g| g.as_str());
+
+        Self::from_layout_variant(layout, variant).context("Invalid keymap layout or variant")
+    }
+
     pub fn from_layout_variant(layout: &str, variant: &str) -> Option<Self> {
         let context = xkb::Context::new(xkb::CONTEXT_NO_FLAGS);
         xkb::Keymap::new_from_names(

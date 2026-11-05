@@ -75,7 +75,7 @@ impl NotificationManager {
     }
 
     pub fn run_dbus(&mut self, dbus: &mut DbusConnector) {
-        match Connection::new_session() {
+        match dbus.session_connection() {
             Ok(connection) => {
                 match connection.request_name("org.freedesktop.Notifications", false, false, true) {
                     Ok(RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner) => {

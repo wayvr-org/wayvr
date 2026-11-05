@@ -32,7 +32,6 @@ use crate::{
         toast::Toast,
     },
     state::{AppState, save_pw_token_config},
-    subsystem::dbus::DbusConnector,
     windowing::{
         OverlaySelector,
         backend::{DummyBackend, OverlayBackend},
@@ -322,7 +321,7 @@ fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
                 log::info!("{}: PipeWire node selected: {}", par.name, node_id);
 
                 if let Some(id) = par.notify_id.take() {
-                    let _ = DbusConnector::notify_close(id);
+                    let _ = par.app.dbus.notify_close(id);
                 }
 
                 let pw_tokens_copy = par.app.session.pw_tokens.clone();
@@ -370,8 +369,11 @@ fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
                                 format!("{} {}", par.name, par.description).as_str(),
                             ),
                         );
-                        par.notify_id =
-                            DbusConnector::notify_send("WayVR", &text, 1, 30000, 0, true).ok();
+                        par.notify_id = par
+                            .app
+                            .dbus
+                            .notify_send("WayVR", &text, 1, 30000, 0, true)
+                            .ok();
                     }
                     1
                 } else {
@@ -412,7 +414,7 @@ fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
             }
             ScreenCastResult::Failed(ref e) => {
                 if let Some(id) = par.notify_id.take() {
-                    let _ = DbusConnector::notify_close(id);
+                    let _ = par.app.dbus.notify_close(id);
                 }
 
                 update_status_hack(&par.name, &par.description, &new_result, par.app);

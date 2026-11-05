@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Context;
 use dbus::{
@@ -15,16 +15,36 @@ use crate::subsystem::dbus::{
 
 mod fcitx5;
 mod notifications;
+pub mod session;
 
 pub type DbusReceiveCallback = Box<dyn FnMut(Message, &Connection) -> bool + Send>;
 pub type DbusMatchCallback = Box<dyn FnMut((), &Connection, &Message) -> bool + Send>;
 
 #[derive(Default)]
 pub struct DbusConnector {
-    pub connection: Option<Connection>,
+    connection: Option<Connection>,
+    session_address: Option<Arc<str>>,
 }
 
 impl DbusConnector {
+    pub fn new(session_address: Arc<str>) -> Self {
+        Self {
+            session_address: Some(session_address),
+            ..Default::default()
+        }
+    }
+
+    pub const fn address(&self) -> Option<&Arc<str>> {
+        self.session_address.as_ref()
+    }
+
+    pub fn session_connection(&self) -> Result<Connection, dbus::Error> {
+        match self.session_address.as_ref() {
+            Some(address) => Connection::new_address(address),
+            None => Connection::new_session(),
+        }
+    }
+
     pub fn tick(&self) {
         if let Some(c) = self.connection.as_ref() {
             let _ = c.process(Duration::ZERO);
@@ -40,7 +60,7 @@ impl DbusConnector {
             .connection
             .take()
             .context("Not connected")
-            .or_else(|_| Connection::new_session())?;
+            .or_else(|_| self.session_connection())?;
 
         let proxy = connection.with_proxy(
             "org.freedesktop.DBus",
@@ -70,15 +90,15 @@ impl DbusConnector {
             .connection
             .take()
             .context("Not connected")
-            .or_else(|_| Connection::new_session())?;
+            .or_else(|_| self.session_connection())?;
 
         let _ = connection.add_match(rule, callback)?;
         self.connection = Some(connection);
         Ok(())
     }
 
-    pub fn fcitx_keymap() -> anyhow::Result<String> {
-        let connection = Connection::new_session()?;
+    pub fn fcitx_keymap(&self) -> anyhow::Result<String> {
+        let connection = self.session_connection()?;
         let proxy = connection.with_proxy(
             "org.fcitx.Fcitx5",
             "/controller",
@@ -91,6 +111,7 @@ impl DbusConnector {
     }
 
     pub fn notify_send(
+        &self,
         summary: &str,
         body: &str,
         urgency: u8,
@@ -98,7 +119,7 @@ impl DbusConnector {
         replaces_id: u32,
         transient: bool,
     ) -> anyhow::Result<u32> {
-        let connection = Connection::new_session()?;
+        let connection = self.session_connection()?;
 
         let proxy = connection.with_proxy(
             "org.freedesktop.Notifications",
@@ -123,8 +144,8 @@ impl DbusConnector {
         Ok(retval)
     }
 
-    pub fn notify_close(id: u32) -> anyhow::Result<()> {
-        let connection = Connection::new_session()?;
+    pub fn notify_close(&self, id: u32) -> anyhow::Result<()> {
+        let connection = self.session_connection()?;
 
         let proxy = connection.with_proxy(
             "org.freedesktop.Notifications",

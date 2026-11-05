@@ -89,7 +89,7 @@ where
         if headless {
             app.screens.clear();
             app.feats.desktop_backend = DesktopBackend::Headless;
-            log::info!("Running in headless mode; keyboard will be en-US");
+            log::info!("Running in headless mode; keyboard layout is read from config.");
         } else {
             // create one window set for each screen.
             // this is the default and would be overwritten by

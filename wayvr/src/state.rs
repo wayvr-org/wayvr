@@ -36,7 +36,10 @@ use crate::{
     graphics::WGfxExtras,
     ipc::{event_queue::SyncEventQueue, ipc_server, signal::WayVRSignal},
     overlays::toast::{ToastQueue, toast_close, toast_tick},
-    subsystem::{dbus::DbusConnector, input::HidWrapper},
+    subsystem::{
+        dbus::{DbusConnector, session::XdgDesktopSession},
+        input::HidWrapper,
+    },
 };
 
 pub struct AppState {
@@ -77,6 +80,7 @@ pub struct AppState {
     pub osc_sender: Option<OscSender>,
 
     pub wvr_server: Option<WvrServerState>,
+    pub _desktop_session: Option<XdgDesktopSession>,
 
     #[cfg(feature = "whisper")]
     pub whisper_sst: Option<WhisperStt>,
@@ -104,7 +108,7 @@ impl AppState {
         let session = AppSession::load(params.config);
         let wvr_signals = SyncEventQueue::new();
 
-        let wvr_server = {
+        let mut wvr_server = {
             let mut maybe_wvr = WvrServerState::new(gfx.clone(), &gfx_extras, &session.config)
                 .log_err("Could not initialize WayVR Server")
                 .ok();
@@ -113,6 +117,27 @@ impl AppState {
             }
             maybe_wvr
         };
+
+        let dbus_session = if params.session
+            && let Some(wvr) = &wvr_server
+        {
+            let wayland_display = wvr.manager.wayland_env.wayland_display_num_string();
+            let display = wvr.manager.wayland_env.display_num_string();
+            XdgDesktopSession::new(&wayland_display, &display)
+                .log_err("Could not initialize WayVR D-Bus session")
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+
+        let dbus = dbus_session
+            .as_ref()
+            .map_or_default(|session| DbusConnector::new(session.bus_address().clone()));
+
+        if let (Some(wvr), Some(dbus_session)) = (&mut wvr_server, &dbus_session) {
+            wvr.dbus_address = Some(dbus_session.bus_address().clone());
+        }
 
         let (hid_provider, mut hid_error) = HidWrapper::new(session.config.input_emulation_method);
 
@@ -175,8 +200,6 @@ impl AppState {
             gradient_intensity: session.config.ui_gradient_intensity,
         };
 
-        let dbus = DbusConnector::default();
-
         let ipc_server = ipc_server::WayVRServer::new()?;
 
         let mut desktop_finder = DesktopFinder::new(params.wgui_globals.i18n().get_locale());
@@ -223,6 +246,7 @@ impl AppState {
             osc_sender,
 
             wvr_server,
+            _desktop_session: dbus_session,
             #[cfg(feature = "whisper")]
             whisper_sst: None,
 
