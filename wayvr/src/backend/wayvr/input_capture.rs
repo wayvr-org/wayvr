@@ -19,7 +19,10 @@ use std::{
     },
     path::{Path, PathBuf},
     rc::Rc,
-    sync::mpsc::{self, Receiver, Sender, SyncSender, TryRecvError},
+    sync::{
+        Arc,
+        mpsc::{self, Receiver, Sender, SyncSender, TryRecvError},
+    },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
@@ -88,14 +91,14 @@ pub struct InputCapture {
 }
 
 impl InputCapture {
-    pub fn new() -> io::Result<Self> {
+    pub fn new(dbus_session_address: Option<Arc<str>>) -> io::Result<Self> {
         let (command_tx, command_rx) = mpsc::sync_channel(8);
         let (event_tx, event_rx) = mpsc::channel();
         let (init_tx, init_rx) = mpsc::sync_channel(1);
 
         let worker = thread::Builder::new()
             .name("wayvr-input-capture".into())
-            .spawn(move || worker_main(command_rx, event_tx, init_tx))?;
+            .spawn(move || worker_main(command_rx, event_tx, init_tx, dbus_session_address))?;
 
         match init_rx.recv() {
             Ok(Ok(())) => Ok(Self {
@@ -328,6 +331,7 @@ fn worker_main(
     command_rx: Receiver<Command>,
     event_tx: Sender<CapturedEvent>,
     init_tx: SyncSender<io::Result<()>>,
+    dbus_session_address: Option<Arc<str>>,
 ) {
     let restricted_state = Rc::new(RefCell::new(RestrictedState::default()));
     let interface = RestrictedInterface {
@@ -345,6 +349,8 @@ fn worker_main(
     }
 
     log::debug!("input capture worker started");
+
+    let dbus = dbus_session_address.map_or_default(|s| DbusConnector::new(s));
 
     let mut grabbed = false;
     let mut pending_grab = false;
@@ -517,7 +523,7 @@ fn worker_main(
                 }
                 Err(error) => {
                     //TODO: we can't easily translate it at this stage, i18n lies on a separate thread
-                    let _ = DbusConnector::notify_send(
+                    let _ = dbus.notify_send(
                         "WayVR",
                         &format!(
                             "Could not capture input! Linux user must be in 'input' group!\n Error: \n{error}"

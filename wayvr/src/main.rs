@@ -103,6 +103,10 @@ struct Args {
     #[arg(long)]
     headless: bool,
 
+    /// Start a XDG desktop session, for when you want WayVR to be your main desktop. Implies --headless.
+    #[arg(long)]
+    session: bool,
+
     /// Do not auto-start registered apps
     #[arg(long)]
     no_autostart: bool,
@@ -122,7 +126,7 @@ fn load_config() -> GeneralConfig {
     load_general_config()
 }
 
-fn init_run_params(no_audio: bool) -> backend::RunParams {
+fn init_run_params(no_audio: bool, session: bool) -> backend::RunParams {
     let assets = Box::new(gui::asset::GuiAsset {});
     let config = load_config();
     let lang_provider = WayVRLangProvider::from_config(&config);
@@ -141,6 +145,7 @@ fn init_run_params(no_audio: bool) -> backend::RunParams {
         wgui_globals,
         config,
         no_audio,
+        session,
     }
 }
 
@@ -204,7 +209,7 @@ fn auto_run(args: &Args, out_backend: &mut Option<XrBackend>) {
         if !args_get_openvr(args) {
             use crate::backend::{BackendError, openxr::openxr_run};
             tried_xr = true;
-            match openxr_run(args, init_run_params(args.no_audio)) {
+            match openxr_run(args, init_run_params(args.no_audio, args.session)) {
                 Ok(()) => {
                     out_backend.replace(XrBackend::OpenXR);
                     return;
@@ -222,7 +227,7 @@ fn auto_run(args: &Args, out_backend: &mut Option<XrBackend>) {
         if !args_get_openxr(args) {
             use crate::backend::{BackendError, openvr::openvr_run};
             tried_vr = true;
-            match openvr_run(args, init_run_params(args.no_audio)) {
+            match openvr_run(args, init_run_params(args.no_audio, args.session)) {
                 Ok(()) => {
                     out_backend.replace(XrBackend::OpenVR);
                     return;
@@ -259,7 +264,7 @@ fn auto_run(args: &Args, out_backend: &mut Option<XrBackend>) {
         _ => "NOTIFICATION.INVALID_ARGS",
     };
 
-    let run_params = init_run_params(args.no_audio);
+    let run_params = init_run_params(args.no_audio, args.session);
 
     let instructions_str = run_params.wgui_globals.i18n().translate(instructions_key);
 
@@ -270,7 +275,7 @@ fn auto_run(args: &Args, out_backend: &mut Option<XrBackend>) {
 
     let instructions = format!("{instructions_title}\n{instructions_str}");
 
-    let _ = DbusConnector::notify_send("WayVR", &instructions, 1, 30000, 0, false);
+    let _ = DbusConnector::default().notify_send("WayVR", &instructions, 1, 30000, 0, false);
 
     #[cfg(not(any(feature = "openvr", feature = "openxr")))]
     compile_error!("No VR support! Enable either openvr or openxr features!");
