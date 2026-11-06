@@ -83,13 +83,9 @@ struct Args {
     #[arg(long)]
     wait: bool,
 
-    /// Uninstall SteamVR manifest and exit
+    /// Do not use SteamVR manifest
     #[arg(long)]
-    uninstall: bool,
-
-    /// Install SteamVR manifest (not recommended; WayVR may have issues when auto-started by SteamVR!)
-    #[arg(long)]
-    install: bool,
+    skip_manifest: bool,
 
     /// Replace running WayVR instance
     #[arg(long)]
@@ -178,7 +174,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("It is {}.", chrono::Local::now().format("%c"));
 
     #[cfg(feature = "openvr")]
-    if args.uninstall {
+    if args.skip_manifest {
         crate::backend::openvr::openvr_uninstall();
         return Ok(());
     }
@@ -315,11 +311,14 @@ fn restart_args(args: &Args, backend: Option<XrBackend>) -> Vec<&'static str> {
     if args.headless {
         flags.push("--headless");
     }
+    if args.session {
+        flags.push("--session");
+    }
+    if args.skip_manifest {
+        flags.push("--skip-manifest");
+    }
     if args.no_autostart {
         flags.push("--no-autostart");
-    }
-    if args.install {
-        flags.push("--install");
     }
     if args.no_audio {
         flags.push("--no-audio");
