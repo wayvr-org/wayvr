@@ -110,7 +110,7 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
 
     app.late_init();
 
-    if args.install {
+    if args.skip_manifest {
         let _ = install_manifest(&mut app_mgr);
     }
 
