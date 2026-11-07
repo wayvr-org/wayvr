@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use wgui::{
+	assets::AssetPathRef,
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::WidgetID,
@@ -15,8 +16,8 @@ use wlx_common::{async_executor::AsyncExecutor, config::GeneralConfig, dash_inte
 use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
-		SettingType, SettingsMountParams, SettingsTab, TabNameEnum, Task as ParentTask, UpdateExtra, horiz_cell,
-		macros::{MacroParams, options_category, options_checkbox, options_range_f32},
+		SettingType, SettingsMountParams, SettingsTab, TabNameEnum, Task, UpdateExtra, horiz_cell,
+		macros::{MacroParams, options_category, options_checkbox, options_dropdown},
 	},
 	util::{
 		popup_manager::PopupHolder,
@@ -30,7 +31,7 @@ use crate::{
 };
 
 #[derive(Clone)]
-enum Task {
+enum LocalTask {
 	WhisperDownloadClosed,
 	WhisperRemoveUnused,
 	WhisperDownload(&'static WhisperModel),
@@ -40,12 +41,12 @@ enum Task {
 }
 
 pub struct State {
+	tasks: Tasks<LocalTask>,
+	parent_tasks: Tasks<Task>,
+	globals: WguiGlobals,
+	frontend_tasks: FrontendTasks,
 	popup_download: PopupHolder<views::download_file::View>,
 	popup_dialog: PopupHolder<views::dialog_box::View>,
-	frontend_tasks: FrontendTasks,
-	globals: WguiGlobals,
-	tasks: Tasks<Task>,
-	parent_tasks: Tasks<ParentTask>,
 	pending_download: Option<&'static WhisperModel>,
 }
 
@@ -56,39 +57,36 @@ impl SettingsTab for State {
 
 		for task in self.tasks.drain() {
 			match task {
-				Task::WhisperDownloadClosed => {
+				LocalTask::WhisperDownloadClosed => {
 					if let Some(model) = self.pending_download.take()
 						&& !whisper_model_path(model.file_name).exists()
 					{
 						// download failed, set to selection to none
 						par.general_config.whisper_model = "".into();
 						par.config_change_kind.replace(ConfigChangeKind::Other);
-						// reload the tab
-						self.parent_tasks.push(ParentTask::SetTab(TabNameEnum::Features));
+						self.tasks.push(LocalTask::ReloadTab);
 					}
 				}
-				Task::WhisperRemoveUnused => {
+				LocalTask::WhisperRemoveUnused => {
 					let _ = whisper_delete_all_models().log_err("could not remove whisper models");
 				}
-				Task::WhisperDownload(model) => {
+				LocalTask::WhisperDownload(model) => {
 					self.pending_download = Some(model);
 					self.show_whisper_download_dialog(model, par.executor.clone());
 				}
-				Task::WhisperDownloadDone => {
+				LocalTask::WhisperDownloadDone => {
 					if let Some(model) = self.pending_download.take() {
 						par.general_config.whisper_model = model.file_name.into();
 						par.config_change_kind.replace(ConfigChangeKind::Other);
-
-						// reload tab so that the downloaded check marks get populated
-						self.parent_tasks.push(ParentTask::SetTab(TabNameEnum::Features));
+						self.tasks.push(LocalTask::ReloadTab);
 					}
 				}
-				Task::CloseDialog => {
+				LocalTask::CloseDialog => {
 					let close_dialog = self.popup_dialog.get_close_callback(par.layout);
 					close_dialog();
 				}
-				Task::ReloadTab => {
-					self.parent_tasks.push(ParentTask::SetTab(TabNameEnum::Features));
+				LocalTask::ReloadTab => {
+					self.parent_tasks.push(Task::SetTab(TabNameEnum::General));
 				}
 			}
 		}
@@ -135,7 +133,8 @@ impl SettingsTab for State {
 					if whisper_any_models_downloaded().unwrap_or_default() {
 						self.show_whisper_model_dialog_box_cleanup()?;
 					} else {
-						self.parent_tasks.push(ParentTask::SetTab(TabNameEnum::Features));
+						self.tasks.push(LocalTask::ReloadTab);
+						self.tasks.push(LocalTask::ReloadTab);
 					}
 				}
 			}
@@ -158,16 +157,14 @@ impl SettingsTab for State {
 
 impl State {
 	pub fn mount(par: SettingsMountParams, vulkan_devices: Vec<String>) -> anyhow::Result<State> {
-		let tasks = Tasks::<Task>::new();
+		let tasks = Tasks::<LocalTask>::new();
 		let popup_download = PopupHolder::<views::download_file::View>::default();
 		let popup_dialog = PopupHolder::<views::dialog_box::View>::default();
+		let c = options_category(par.mp, par.id_parent, "GENERAL_SETTINGS", "@/dashboard/settings.svg")?;
 
-		let c = options_category(
-			par.mp,
-			par.id_parent,
-			"APP_SETTINGS.FEATURES",
-			"@/dashboard/options.svg",
-		)?;
+		options_dropdown::<wlx_common::locale::Language>(par.mp, c, &SettingType::Language)?;
+		options_checkbox(par.mp, c, SettingType::Clock12h)?;
+		options_checkbox(par.mp, c, SettingType::NotificationsEnabled)?;
 
 		if par.feats.whisper {
 			let c = options_category(par.mp, c, "APP_SETTINGS.SPEECH_TO_TEXT", "@/dashboard/stt.svg")?;
@@ -175,35 +172,20 @@ impl State {
 			whisper_gpu_select_dropdown(par.mp, c, vulkan_devices)?;
 		}
 
-		options_checkbox(par.mp, c, SettingType::NotificationsEnabled)?;
-		options_checkbox(par.mp, c, SettingType::NotificationsSoundEnabled)?;
-		options_checkbox(par.mp, c, SettingType::KeyboardSoundEnabled)?;
-		if par.feats.xr_backend.is_open_vr() || par.feats.monado {
-			// monado or openvr
-			options_checkbox(par.mp, c, SettingType::BlockGameInput)?;
-			options_checkbox(par.mp, c, SettingType::BlockGameInputIgnoreWatch)?;
-		}
-		if par.feats.monado {
-			// monado-only
-			options_checkbox(par.mp, c, SettingType::BlockPosesOnKbdInteraction)?;
+		// "Sound" category
+		{
+			let c = options_category(par.mp, c, "APP_SETTINGS.SOUND", "@/dashboard/volume.svg")?;
+			options_checkbox(par.mp, c, SettingType::NotificationsSoundEnabled)?;
+			options_checkbox(par.mp, c, SettingType::KeyboardSoundEnabled)?;
 		}
 
-		options_range_f32(
-			par.mp,
-			c,
-			SettingType::WatchViewAngleMin,
-			SettingType::WatchViewAngleMax,
-			0.1,
-			1.0,
-			0.1,
-		)?;
 		Ok(State {
 			tasks,
 			parent_tasks: par.mp.tasks.clone(),
-			popup_download,
-			popup_dialog,
 			frontend_tasks: par.frontend_tasks.clone(),
 			globals: par.mp.doc_params.globals.clone(),
+			popup_download,
+			popup_dialog,
 			pending_download: None,
 		})
 	}
@@ -212,13 +194,13 @@ impl State {
 		views::download_file::mount_popup(
 			self.popup_download.clone(),
 			self.frontend_tasks.clone(),
-			self.tasks.make_callback_box(Task::WhisperDownloadClosed),
+			self.tasks.make_callback_box(LocalTask::WhisperDownloadClosed),
 			views::download_file::Params {
 				globals: self.globals.clone(),
 				executor,
 				target_path: whisper_model_path(model.file_name),
 				url: model.url.into(),
-				on_downloaded: self.tasks.make_callback_box(Task::WhisperDownloadDone),
+				on_downloaded: self.tasks.make_callback_box(LocalTask::WhisperDownloadDone),
 			},
 		);
 	}
@@ -250,12 +232,12 @@ impl State {
 				],
 				on_action_click: Box::new(move |action| match action {
 					ACTION_DOWNLOAD => {
-						tasks.push(Task::WhisperDownload(model));
+						tasks.push(LocalTask::WhisperDownload(model));
 					}
 					ACTION_CANCEL => {
-						tasks.push(Task::CloseDialog);
+						tasks.push(LocalTask::CloseDialog);
 						// treat as failed download
-						tasks.push(Task::WhisperDownloadClosed);
+						tasks.push(LocalTask::WhisperDownloadClosed);
 					}
 					_ => unreachable!(),
 				}),
@@ -291,13 +273,13 @@ impl State {
 				],
 				on_action_click: Box::new(move |action| match action {
 					ACTION_REMOVE => {
-						tasks.push(Task::WhisperRemoveUnused);
-						tasks.push(Task::CloseDialog);
-						tasks.push(Task::ReloadTab);
+						tasks.push(LocalTask::WhisperRemoveUnused);
+						tasks.push(LocalTask::CloseDialog);
+						tasks.push(LocalTask::ReloadTab);
 					}
 					ACTION_CANCEL => {
-						tasks.push(Task::CloseDialog);
-						tasks.push(Task::ReloadTab);
+						tasks.push(LocalTask::CloseDialog);
+						tasks.push(LocalTask::ReloadTab);
 					}
 					_ => unreachable!(),
 				}),
@@ -306,48 +288,6 @@ impl State {
 
 		Ok(())
 	}
-}
-
-fn whisper_gpu_select_dropdown(
-	mp: &mut MacroParams,
-	parent: WidgetID,
-	vulkan_devices: Vec<String>,
-) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
-
-	let parent = horiz_cell(mp.layout, parent)?;
-
-	let mut params = TemplateParams::new();
-	params.insert("translation", "APP_SETTINGS.WHISPER_GPU_SELECT");
-
-	let current_text = Translation::from_raw_text_string(mp.config.whisper_gpu.to_string());
-
-	let cells = vulkan_devices
-		.iter()
-		.enumerate()
-		.filter(|(_, name)| !name.contains("llvmpipe"))
-		.map(|(idx, name)| {
-			context_menu::Cell::Button(context_menu::Button {
-				action_name: Some(format!(";whisper_gpu;{};{}", id, idx).into()),
-				title: Translation::from_raw_text_string(name.to_string()),
-				..Default::default()
-			})
-		})
-		.collect();
-
-	let tasks = mp.tasks.clone();
-	wgui_simple::mount_dropdown(wgui_simple::MountDropdownParams {
-		layout: mp.layout,
-		parser_state: mp.parser_state,
-		doc_params: mp.doc_params,
-		parent,
-		id,
-		params,
-		current_text,
-		cells,
-		on_open: Box::new(move |pos, cells| tasks.push(ParentTask::OpenContextMenu(pos, cells))),
-	})
 }
 
 fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<()> {
@@ -413,6 +353,49 @@ fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Re
 		params,
 		current_text: current_translation,
 		cells,
-		on_open: Box::new(move |pos, cells| tasks.push(ParentTask::OpenContextMenu(pos, cells))),
+		on_open: Box::new(move |pos, cells| tasks.push(Task::OpenContextMenu(pos, cells))),
+		sprite_src: Some(AssetPathRef::BuiltIn("dashboard/stt.svg")),
+	})
+}
+fn whisper_gpu_select_dropdown(
+	mp: &mut MacroParams,
+	parent: WidgetID,
+	vulkan_devices: Vec<String>,
+) -> anyhow::Result<()> {
+	let id = mp.idx.to_string();
+	mp.idx += 1;
+
+	let parent = horiz_cell(mp.layout, parent)?;
+
+	let mut params = TemplateParams::new();
+	params.insert("translation", "APP_SETTINGS.WHISPER_GPU_SELECT");
+
+	let current_text = Translation::from_raw_text_string(mp.config.whisper_gpu.to_string());
+
+	let cells = vulkan_devices
+		.iter()
+		.enumerate()
+		.filter(|(_, name)| !name.contains("llvmpipe"))
+		.map(|(idx, name)| {
+			context_menu::Cell::Button(context_menu::Button {
+				action_name: Some(format!(";whisper_gpu;{};{}", id, idx).into()),
+				title: Translation::from_raw_text_string(name.to_string()),
+				..Default::default()
+			})
+		})
+		.collect();
+
+	let tasks = mp.tasks.clone();
+	wgui_simple::mount_dropdown(wgui_simple::MountDropdownParams {
+		layout: mp.layout,
+		parser_state: mp.parser_state,
+		doc_params: mp.doc_params,
+		parent,
+		id,
+		params,
+		current_text,
+		cells,
+		on_open: Box::new(move |pos, cells| tasks.push(Task::OpenContextMenu(pos, cells))),
+		sprite_src: Some(AssetPathRef::BuiltIn("dashboard/gpu.svg")),
 	})
 }

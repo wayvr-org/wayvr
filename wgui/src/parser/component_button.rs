@@ -22,7 +22,6 @@ pub fn parse_component_button<'a>(
 	tag_name: &str,
 ) -> anyhow::Result<(ParseChildResult, WidgetID)> {
 	let mut color: Option<WguiColor> = None;
-	let mut sprite_color: Option<WguiColor> = None;
 	let mut border = 2.0;
 	let mut border_color: Option<WguiColor> = None;
 	let mut hover_color: Option<WguiColor> = None;
@@ -33,6 +32,7 @@ pub fn parse_component_button<'a>(
 	let mut tooltip = TooltipAttribs::default();
 	let mut sticky: bool = false;
 	let mut long_press_time = 0.0;
+	let mut sprite_color: Option<WguiColor> = None;
 	let mut sprite_src: Option<AssetPathRc> = None;
 
 	let mut translation: Option<Translation> = None;
@@ -66,9 +66,6 @@ pub fn parse_component_button<'a>(
 			"color" => {
 				parse_color_opt(ctx, tag_name, key, value, &mut color);
 			}
-			"sprite_color" => {
-				parse_color_opt(ctx, tag_name, key, value, &mut sprite_color);
-			}
 			"border" => {
 				ctx.parse_check_f32(tag_name, key, value, &mut border);
 			}
@@ -86,6 +83,9 @@ pub fn parse_component_button<'a>(
 			}
 			"sticky_border_color" => {
 				parse_color_opt(ctx, tag_name, key, value, &mut sticky_border_color);
+			}
+			"sprite_color" => {
+				parse_color_opt(ctx, tag_name, key, value, &mut sprite_color);
 			}
 			"sprite_src" | "sprite_src_ext" | "sprite_src_builtin" | "sprite_src_internal" => {
 				let asset_path = get_asset_path_from_kv(file, "sprite_", key, value);

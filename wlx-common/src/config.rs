@@ -1,8 +1,8 @@
-use std::{collections::HashMap, rc::Rc, sync::Arc};
-
 use chrono::Offset;
+use derive_more::{From, TryInto};
 use idmap::IdMap;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::{collections::HashMap, rc::Rc, sync::Arc};
 use strum::{AsRefStr, EnumProperty, EnumString, VariantArray, VariantNames};
 use wayvr_ipc::packet_client::WvrProcessLaunchParams;
 use wgui::drawing::{self, HsvColor};
@@ -401,8 +401,8 @@ pub struct GeneralConfig {
 	#[serde(default = "def_true")]
 	pub sets_on_watch: bool,
 
-	#[serde(default)]
-	pub hide_grab_help: bool,
+	#[serde(default = "def_true")]
+	pub show_grab_help: bool,
 
 	#[serde(default)]
 	pub custom_panels: AStrSet,
@@ -511,8 +511,8 @@ pub struct GeneralConfig {
 	#[serde(default)]
 	pub last_set: u32,
 
-	#[serde(default)]
-	pub hide_username: bool,
+	#[serde(default = "def_true")]
+	pub show_username: bool,
 
 	#[serde(default)]
 	pub opaque_background: bool,
@@ -579,4 +579,188 @@ pub struct GeneralConfig {
 
 	#[serde(default)]
 	pub config_version: u32,
+}
+
+// Sorted alphabetically
+#[allow(clippy::enum_variant_names)]
+#[derive(Clone, Copy, Eq, PartialEq, AsRefStr, EnumString)]
+pub enum SettingType {
+	AllowSliding,
+	BlockGameInput,
+	BlockGameInputIgnoreWatch,
+	BlockPosesOnKbdInteraction,
+	CaptureMethod,
+	ClickFreezeTimeMs,
+	Clock12h,
+	DefaultCurvature,
+	DefaultOpacity,
+	DefaultOverlayScale,
+	DefaultPositioning,
+	DoubleCursorFix,
+	EnableWatch,
+	FocusFollowsMouseMode,
+	GridOpacity,
+	HandsfreeAltTab,
+	HandsfreePointer,
+	InputCaptureMethod,
+	InputEmulationMethod,
+	InvertScrollDirectionX,
+	InvertScrollDirectionY,
+	KeyboardMiddleClick,
+	KeyboardSoundEnabled,
+	Language,
+	LeftHandedMouse,
+	LongPressDuration,
+	MiddleGrabsSingle,
+	MouseAcceleration,
+	MouseSpeed,
+	NotificationsEnabled,
+	NotificationsSoundEnabled,
+	OpaqueBackground,
+	PointerLerpFactor,
+	ScreenRenderDown,
+	ScrollSpeed,
+	SetsOnWatch,
+	ShowGrabHelp,
+	ShowUsername,
+	SnapAngleDeg,
+	SpaceDragAffectsWorld,
+	SpaceDragMultiplier,
+	SpaceDragUnlocked,
+	SpaceGravityDamping,
+	SpaceGravityEnabled,
+	SpaceGravityFlingStrength,
+	SpaceGravityFloorHeight,
+	SpaceGravityGravity,
+	SpaceGravityGroundFriction,
+	SpaceRotateUnlocked,
+	UiAnimationSpeed,
+	UiGradientIntensity,
+	UiRoundMultiplier,
+	UprightScreenFix,
+	UsePassthrough,
+	UseSkybox,
+	WatchViewAngleMax,
+	WatchViewAngleMin,
+	XwaylandByDefault,
+}
+
+impl SettingType {
+	pub fn mut_var(self, config: &'_ mut GeneralConfig) -> SettingVarRef<'_> {
+		match self {
+			// Bool
+			Self::AllowSliding => SettingVarRef::Bool(&mut config.allow_sliding),
+			Self::BlockGameInput => SettingVarRef::Bool(&mut config.block_game_input),
+			Self::BlockGameInputIgnoreWatch => SettingVarRef::Bool(&mut config.block_game_input_ignore_watch),
+			Self::BlockPosesOnKbdInteraction => SettingVarRef::Bool(&mut config.block_poses_on_kbd_interaction),
+			Self::Clock12h => SettingVarRef::Bool(&mut config.clock_12h),
+			Self::DoubleCursorFix => SettingVarRef::Bool(&mut config.double_cursor_fix),
+			Self::EnableWatch => SettingVarRef::Bool(&mut config.enable_watch),
+			Self::FocusFollowsMouseMode => SettingVarRef::Bool(&mut config.focus_follows_mouse_mode),
+			Self::ShowGrabHelp => SettingVarRef::Bool(&mut config.show_grab_help),
+			Self::InvertScrollDirectionX => SettingVarRef::Bool(&mut config.invert_scroll_direction_x),
+			Self::InvertScrollDirectionY => SettingVarRef::Bool(&mut config.invert_scroll_direction_y),
+			Self::KeyboardSoundEnabled => SettingVarRef::Bool(&mut config.keyboard_sound_enabled),
+			Self::LeftHandedMouse => SettingVarRef::Bool(&mut config.left_handed_mouse),
+			Self::MiddleGrabsSingle => SettingVarRef::Bool(&mut config.middle_grabs_single),
+			Self::MouseAcceleration => SettingVarRef::Bool(&mut config.wvr_mouse_acceleration),
+			Self::NotificationsEnabled => SettingVarRef::Bool(&mut config.notifications_enabled),
+			Self::NotificationsSoundEnabled => SettingVarRef::Bool(&mut config.notifications_sound_enabled),
+			Self::OpaqueBackground => SettingVarRef::Bool(&mut config.opaque_background),
+			Self::ScreenRenderDown => SettingVarRef::Bool(&mut config.screen_render_down),
+			Self::SetsOnWatch => SettingVarRef::Bool(&mut config.sets_on_watch),
+			Self::ShowUsername => SettingVarRef::Bool(&mut config.show_username),
+			Self::SpaceDragAffectsWorld => SettingVarRef::Bool(&mut config.space_drag_affects_world),
+			Self::SpaceDragUnlocked => SettingVarRef::Bool(&mut config.space_drag_unlocked),
+			Self::SpaceGravityEnabled => SettingVarRef::Bool(&mut config.space_gravity_enabled),
+			Self::SpaceRotateUnlocked => SettingVarRef::Bool(&mut config.space_rotate_unlocked),
+			Self::UprightScreenFix => SettingVarRef::Bool(&mut config.upright_screen_fix),
+			Self::UsePassthrough => SettingVarRef::Bool(&mut config.use_passthrough),
+			Self::UseSkybox => SettingVarRef::Bool(&mut config.use_skybox),
+			Self::XwaylandByDefault => SettingVarRef::Bool(&mut config.xwayland_by_default),
+			// F32
+			Self::DefaultCurvature => SettingVarRef::F32(&mut config.default_curvature),
+			Self::DefaultOpacity => SettingVarRef::F32(&mut config.default_opacity),
+			Self::DefaultOverlayScale => SettingVarRef::F32(&mut config.default_overlay_scale),
+			Self::GridOpacity => SettingVarRef::F32(&mut config.grid_opacity),
+			Self::LongPressDuration => SettingVarRef::F32(&mut config.long_press_duration),
+			Self::MouseSpeed => SettingVarRef::F32(&mut config.wvr_mouse_speed),
+			Self::PointerLerpFactor => SettingVarRef::F32(&mut config.pointer_lerp_factor),
+			Self::ScrollSpeed => SettingVarRef::F32(&mut config.scroll_speed),
+			Self::SnapAngleDeg => SettingVarRef::F32(&mut config.snap_angle_deg),
+			Self::SpaceDragMultiplier => SettingVarRef::F32(&mut config.space_drag_multiplier),
+			Self::SpaceGravityDamping => SettingVarRef::F32(&mut config.space_gravity_damping),
+			Self::SpaceGravityFlingStrength => SettingVarRef::F32(&mut config.space_gravity_fling_strength),
+			Self::SpaceGravityFloorHeight => SettingVarRef::F32(&mut config.space_gravity_floor_height),
+			Self::SpaceGravityGravity => SettingVarRef::F32(&mut config.space_gravity_gravity),
+			Self::SpaceGravityGroundFriction => SettingVarRef::F32(&mut config.space_gravity_ground_friction),
+			Self::UiAnimationSpeed => SettingVarRef::F32(&mut config.ui_animation_speed),
+			Self::UiGradientIntensity => SettingVarRef::F32(&mut config.ui_gradient_intensity),
+			Self::UiRoundMultiplier => SettingVarRef::F32(&mut config.ui_round_multiplier),
+			Self::WatchViewAngleMax => SettingVarRef::F32(&mut config.watch_view_angle_max),
+			Self::WatchViewAngleMin => SettingVarRef::F32(&mut config.watch_view_angle_min),
+			// I32
+			Self::ClickFreezeTimeMs => SettingVarRef::I32(&mut config.click_freeze_time_ms),
+			_ => panic!("Requested unsupported SettingType"),
+		}
+	}
+}
+
+#[derive(Debug)]
+pub enum SettingVarRef<'a> {
+	Bool(&'a mut bool),
+	I32(&'a mut i32),
+	F32(&'a mut f32),
+}
+
+impl<'a> TryFrom<SettingVarRef<'a>> for &'a mut bool {
+	type Error = anyhow::Error;
+
+	fn try_from(value: SettingVarRef<'a>) -> Result<Self, Self::Error> {
+		match value {
+			SettingVarRef::Bool(n) => Ok(n),
+			_ => anyhow::bail!("Incorrect setting type, expected bool"),
+		}
+	}
+}
+
+impl<'a> TryFrom<SettingVarRef<'a>> for &'a mut i32 {
+	type Error = anyhow::Error;
+
+	fn try_from(value: SettingVarRef<'a>) -> Result<Self, Self::Error> {
+		match value {
+			SettingVarRef::I32(n) => Ok(n),
+			_ => anyhow::bail!("Incorrect setting type, expected i32"),
+		}
+	}
+}
+
+impl<'a> TryFrom<SettingVarRef<'a>> for &'a mut f32 {
+	type Error = anyhow::Error;
+
+	fn try_from(value: SettingVarRef<'a>) -> Result<Self, Self::Error> {
+		match value {
+			SettingVarRef::F32(n) => Ok(n),
+			_ => anyhow::bail!("Incorrect setting type, expected f32"),
+		}
+	}
+}
+
+impl<'a> SettingVarRef<'a> {
+	pub fn set(&mut self, v: SettingVar) -> anyhow::Result<()> {
+		match self {
+			SettingVarRef::Bool(c) => **c = v.try_into()?,
+			SettingVarRef::I32(c) => **c = v.try_into()?,
+			SettingVarRef::F32(c) => **c = v.try_into()?,
+		}
+		Ok(())
+	}
+}
+
+#[derive(Debug, From, Clone, TryInto)]
+#[try_into(error(anyhow::Error))]
+pub enum SettingVar {
+	Bool(bool),
+	I32(i32),
+	F32(f32),
 }

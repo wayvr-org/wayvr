@@ -18,11 +18,14 @@ use wgui::{
 	taffy::{self, prelude::length},
 	widget::{
 		ConstructEssentials,
+		div::WidgetDiv,
 		label::{WidgetLabel, WidgetLabelParams},
 		sprite::{WidgetSprite, WidgetSpriteParams},
 	},
 	windowing::context_menu,
 };
+
+use crate::util::wgui_simple;
 
 pub struct CreateButtonParams<'a> {
 	pub id_parent: WidgetID,
@@ -182,11 +185,16 @@ pub struct MountDropdownParams<'a> {
 	pub current_text: Translation,
 	pub cells: Vec<context_menu::Cell>,
 	pub on_open: Box<dyn Fn(context_menu::Position, Vec<context_menu::Cell>)>,
+	pub sprite_src: Option<AssetPathRef<'a>>,
 }
 
 pub fn mount_dropdown(par: MountDropdownParams) -> anyhow::Result<()> {
 	let mut params = par.params;
 	params.insert("id", &par.id);
+
+	if let Some(src) = par.sprite_src {
+		wgui_simple::create_icon(par.layout, par.parent, Vec2::splat(24.0), src)?;
+	}
 
 	par
 		.parser_state
@@ -206,4 +214,21 @@ pub fn mount_dropdown(par: MountDropdownParams) -> anyhow::Result<()> {
 	}));
 
 	Ok(())
+}
+
+pub fn create_flex_down(layout: &mut Layout, parent: WidgetID) -> anyhow::Result<WidgetID> {
+	Ok(
+		layout
+			.add_child(
+				parent,
+				WidgetDiv::create(),
+				taffy::Style {
+					flex_direction: taffy::FlexDirection::Column,
+					gap: length(4.0_f32),
+					..Default::default()
+				},
+			)?
+			.0
+			.id,
+	)
 }

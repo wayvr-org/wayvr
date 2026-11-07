@@ -20,6 +20,7 @@ bytes = { version = "1.11.1" }
 chrono = "0.4.42"
 clap = { version = "4.5.53", features = ["derive"] }
 dbus = { version = "0.9.12" }
+derive_more = { version = "2.1.1", features = ["from", "try_into"] }
 glam = { version = "0.30.9", features = ["mint", "serde"] }
 idmap = "0.2.2"
 idmap-derive = "0.2.22"

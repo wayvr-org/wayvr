@@ -1049,6 +1049,7 @@ fn create_dropdown_with_cells(
 		current_text,
 		cells,
 		on_open: Box::new(move |pos, cells| tasks.push(Task::OpenContextMenu(pos, cells))),
+		sprite_src: None,
 	})
 }
 

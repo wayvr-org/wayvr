@@ -1,17 +1,101 @@
 use std::rc::Rc;
 
 use crate::{
-	tab::settings::{self, SettingType, Task, horiz_cell, mount_requires_restart},
+	tab::settings::{self, SettingTypeImpl, Task, horiz_cell, mount_requires_restart},
 	util::wgui_simple,
 };
 use wgui::{
+	assets::AssetPathRef,
 	components::{button::ComponentButton, checkbox::ComponentCheckbox, slider::ComponentSlider},
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
 	task::Tasks,
 	windowing::context_menu,
 };
-use wlx_common::{DesktopBackend, XrBackend, config::GeneralConfig, dash_interface::InterfaceFeats};
+use wlx_common::{
+	DesktopBackend, XrBackend,
+	config::{GeneralConfig, SettingType, SettingVar, SettingVarRef},
+	dash_interface::InterfaceFeats,
+};
+
+// built-in asset path
+fn get_icon_from_setting_type(t: SettingType) -> Option<&'static str> {
+	match t {
+		SettingType::Clock12h => Some("dashboard/hours_12.svg"),
+		SettingType::NotificationsEnabled => Some("dashboard/notification.svg"),
+		SettingType::NotificationsSoundEnabled => Some("dashboard/notification.svg"),
+		SettingType::KeyboardSoundEnabled => Some("dashboard/keyboard.svg"),
+		SettingType::OpaqueBackground => Some("dashboard/translucent.svg"),
+		SettingType::ShowUsername => Some("dashboard/person.svg"),
+		SettingType::UseSkybox => Some("dashboard/globe.svg"),
+		SettingType::UsePassthrough => Some("dashboard/camera.svg"),
+		SettingType::BlockGameInput => Some("dashboard/block.svg"),
+		SettingType::BlockGameInputIgnoreWatch => Some("dashboard/block.svg"),
+		SettingType::BlockPosesOnKbdInteraction => Some("dashboard/block.svg"),
+		SettingType::SpaceRotateUnlocked => Some("dashboard/rotate.svg"),
+		SettingType::SpaceDragUnlocked => Some("dashboard/drag.svg"),
+		SettingType::InvertScrollDirectionX => Some("dashboard/horizontal.svg"),
+		SettingType::InvertScrollDirectionY => Some("dashboard/vertical.svg"),
+		SettingType::EnableWatch => Some("dashboard/watch.svg"),
+		SettingType::SetsOnWatch => Some("dashboard/123.svg"),
+		SettingType::MouseAcceleration => Some("dashboard/mouse.svg"),
+		SettingType::ShowGrabHelp => Some("dashboard/help.svg"),
+		SettingType::LeftHandedMouse => Some("dashboard/tools.svg"),
+		SettingType::XwaylandByDefault => Some("dashboard/tools.svg"),
+		SettingType::UprightScreenFix => Some("dashboard/tools.svg"),
+		SettingType::DoubleCursorFix => Some("dashboard/tools.svg"),
+		SettingType::ScreenRenderDown => Some("dashboard/tools.svg"),
+		SettingType::Language => Some("dashboard/language.svg"),
+		SettingType::DefaultPositioning => Some("dashboard/drag.svg"),
+		SettingType::KeyboardMiddleClick => Some("dashboard/keyboard.svg"),
+		SettingType::InputCaptureMethod => Some("dashboard/input.svg"),
+		SettingType::InputEmulationMethod => Some("dashboard/input.svg"),
+		SettingType::CaptureMethod => Some("dashboard/monitor.svg"),
+		_ => None,
+	}
+}
+
+pub fn options_split_horiz2(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<(WidgetID, WidgetID)> {
+	let id1 = mp.idx.to_string();
+	mp.idx += 1;
+	let id2 = mp.idx.to_string();
+	mp.idx += 1;
+
+	let mut params = TemplateParams::new();
+	params.insert("id1", &id1);
+	params.insert("id2", &id2);
+
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "SettingsSplitHoriz2", mp.layout, parent, params)?;
+
+	Ok((
+		mp.parser_state.get_widget_id(&id1)?,
+		mp.parser_state.get_widget_id(&id2)?,
+	))
+}
+
+pub fn options_split_horiz3(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<(WidgetID, WidgetID, WidgetID)> {
+	let id1 = mp.idx.to_string();
+	mp.idx += 1;
+	let id2 = mp.idx.to_string();
+	mp.idx += 1;
+	let id3 = mp.idx.to_string();
+	mp.idx += 1;
+
+	let mut params = TemplateParams::new();
+	params.insert("id1", &id1);
+	params.insert("id2", &id2);
+	params.insert("id3", &id3);
+
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "SettingsSplitHoriz3", mp.layout, parent, params)?;
+
+	Ok((
+		mp.parser_state.get_widget_id(&id1)?,
+		mp.parser_state.get_widget_id(&id2)?,
+		mp.parser_state.get_widget_id(&id3)?,
+	))
+}
 
 pub fn options_category(
 	mp: &mut MacroParams,
@@ -90,12 +174,16 @@ pub fn options_diagnostics_drm_card(
 	Ok(())
 }
 
-pub fn options_checkbox(mp: &mut MacroParams, parent: WidgetID, setting: SettingType) -> anyhow::Result<()> {
+pub fn options_checkbox<'a>(mp: &'a mut MacroParams, parent: WidgetID, setting: SettingType) -> anyhow::Result<()> {
 	let id = mp.idx.to_string();
 	mp.idx += 1;
 
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
+
+	if let Some(src) = get_icon_from_setting_type(setting) {
+		params.insert_str("sprite_src_builtin", format!("@/{}", src));
+	}
 
 	match setting.get_translation() {
 		Ok(translation) => params.insert("translation", translation),
@@ -106,7 +194,8 @@ pub fn options_checkbox(mp: &mut MacroParams, parent: WidgetID, setting: Setting
 		params.insert("tooltip", tooltip);
 	}
 
-	let checked = if *setting.mut_bool(mp.config) { "1" } else { "0" };
+	let checked_t: &'a mut bool = setting.mut_var(mp.config).try_into()?;
+	let checked = if *checked_t { "1" } else { "0" };
 	params.insert("checked", checked);
 
 	let id_cell = horiz_cell(mp.layout, parent)?;
@@ -122,57 +211,8 @@ pub fn options_checkbox(mp: &mut MacroParams, parent: WidgetID, setting: Setting
 	checkbox.on_toggle(Box::new({
 		let tasks = mp.tasks.clone();
 		move |_common, e| {
-			tasks.push(Task::UpdateBool(setting, e.checked));
+			tasks.push(Task::UpdateVar(setting, SettingVar::Bool(e.checked)));
 			Ok(())
-		}
-	}));
-
-	Ok(())
-}
-
-pub fn options_slider_f32(
-	mp: &mut MacroParams,
-	parent: WidgetID,
-	setting: SettingType,
-	min: f32,
-	max: f32,
-	step: f32,
-) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
-
-	let mut params = TemplateParams::new();
-	params.insert("id", &id);
-
-	match setting.get_translation() {
-		Ok(translation) => params.insert("translation", translation),
-		Err(raw_text) => params.insert("text", raw_text),
-	};
-
-	if let Some(tooltip) = setting.get_tooltip() {
-		params.insert("tooltip", tooltip);
-	}
-
-	let value = setting.mut_f32(mp.config).to_string();
-	params.insert_rc("value", value.into());
-	params.insert_rc("min", min.to_string().into());
-	params.insert_rc("max", max.to_string().into());
-	params.insert_rc("step", step.to_string().into());
-
-	let id_cell = horiz_cell(mp.layout, parent)?;
-
-	mp.parser_state
-		.instantiate_template(mp.doc_params, "SliderSetting", mp.layout, id_cell, params)?;
-
-	if setting.requires_restart() {
-		mount_requires_restart(mp.layout, id_cell)?;
-	}
-
-	let slider = mp.parser_state.fetch_component_as::<ComponentSlider>(&id)?;
-	slider.on_value_changed(Box::new({
-		let tasks = mp.tasks.clone();
-		move |_common, e| {
-			tasks.push(Task::UpdateFloat(setting, e.value));
 		}
 	}));
 
@@ -182,7 +222,7 @@ pub fn options_slider_f32(
 pub fn options_range_f32(
 	mp: &mut MacroParams,
 	parent: WidgetID,
-	setting: SettingType,
+	setting1: SettingType,
 	setting2: SettingType,
 	min: f32,
 	max: f32,
@@ -194,19 +234,22 @@ pub fn options_range_f32(
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
 
-	match setting.get_translation() {
+	match setting1.get_translation() {
 		Ok(translation) => params.insert("translation", translation),
 		Err(raw_text) => params.insert("text", raw_text),
 	};
 
-	if let Some(tooltip) = setting.get_tooltip() {
+	if let Some(tooltip) = setting1.get_tooltip() {
 		params.insert("tooltip", tooltip);
 	}
 
-	let value = setting.mut_f32(mp.config).to_string();
-	let value2 = setting2.mut_f32(mp.config).to_string();
-	params.insert_rc("value", value.into());
-	params.insert_rc("value2", value2.into());
+	let value1_t: &mut f32 = setting1.mut_var(mp.config).try_into()?;
+	let value1 = value1_t.to_string();
+	let value2_t: &mut f32 = setting2.mut_var(mp.config).try_into()?;
+	let value2 = value2_t.to_string();
+
+	params.insert_str("value", value1);
+	params.insert_str("value2", value2);
 	params.insert_rc("min", min.to_string().into());
 	params.insert_rc("max", max.to_string().into());
 	params.insert_rc("step", step.to_string().into());
@@ -216,7 +259,7 @@ pub fn options_range_f32(
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "RangeSetting", mp.layout, id_cell, params)?;
 
-	if setting.requires_restart() {
+	if setting1.requires_restart() {
 		mount_requires_restart(mp.layout, id_cell)?;
 	}
 
@@ -225,9 +268,9 @@ pub fn options_range_f32(
 		let tasks = mp.tasks.clone();
 		move |_common, e| {
 			if matches!(e.index, wgui::components::slider::ValueIndex::Primary) {
-				tasks.push(Task::UpdateFloat(setting, e.value));
+				tasks.push(Task::UpdateVar(setting1, SettingVar::F32(e.value)));
 			} else {
-				tasks.push(Task::UpdateFloat(setting2, e.value));
+				tasks.push(Task::UpdateVar(setting2, SettingVar::F32(e.value)));
 			}
 		}
 	}));
@@ -235,14 +278,18 @@ pub fn options_range_f32(
 	Ok(())
 }
 
-pub fn options_slider_i32(
-	mp: &mut MacroParams,
+pub fn options_slider<'a, NumType>(
+	mp: &'a mut MacroParams,
 	parent: WidgetID,
 	setting: SettingType,
-	min: i32,
-	max: i32,
-	step: i32,
-) -> anyhow::Result<()> {
+	min: NumType,
+	max: NumType,
+	step: NumType,
+) -> anyhow::Result<()>
+where
+	NumType: std::string::ToString + 'static,
+	&'a mut NumType: TryFrom<SettingVarRef<'a>, Error = anyhow::Error>,
+{
 	let id = mp.idx.to_string();
 	mp.idx += 1;
 
@@ -258,13 +305,15 @@ pub fn options_slider_i32(
 		params.insert("tooltip", tooltip);
 	}
 
-	let id_cell = horiz_cell(mp.layout, parent)?;
+	let value_t: &'a mut NumType = setting.mut_var(mp.config).try_into()?;
+	let value = value_t.to_string();
 
-	let value = setting.mut_i32(mp.config).to_string();
 	params.insert_rc("value", value.into());
 	params.insert_rc("min", min.to_string().into());
 	params.insert_rc("max", max.to_string().into());
 	params.insert_rc("step", step.to_string().into());
+
+	let id_cell = horiz_cell(mp.layout, parent)?;
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "SliderSetting", mp.layout, id_cell, params)?;
@@ -277,9 +326,10 @@ pub fn options_slider_i32(
 	slider.on_value_changed(Box::new({
 		let tasks = mp.tasks.clone();
 		move |_common, e| {
-			tasks.push(Task::UpdateInt(setting, e.value as i32));
+			tasks.push(Task::UpdateVar(setting, e.value.into()));
 		}
 	}));
+
 	Ok(())
 }
 
@@ -295,6 +345,8 @@ where
 	mp.idx += 1;
 
 	let mut params = TemplateParams::new();
+
+	let sprite_src = get_icon_from_setting_type(*setting);
 
 	match setting.get_translation() {
 		Ok(translation) => params.insert("translation", translation),
@@ -330,6 +382,10 @@ where
 				return None;
 			}
 
+			let sprite_src_builtin = item
+				.get_str("CountryCode")
+				.map(|code| Rc::from(format!("@/dashboard/flags/{}.svg", code)));
+
 			let value = item.as_ref();
 			let title = SettingType::get_enum_title_inner(*item);
 			let tooltip = SettingType::get_enum_tooltip_inner(*item);
@@ -342,6 +398,7 @@ where
 				action_name: Some(action.into()),
 				title,
 				tooltip,
+				sprite_src_builtin,
 				..Default::default()
 			}))
 		})
@@ -357,6 +414,7 @@ where
 		params,
 		current_text: title,
 		cells,
+		sprite_src: sprite_src.map(AssetPathRef::BuiltIn),
 		on_open: Box::new(move |pos, cells| tasks.push(Task::OpenContextMenu(pos, cells))),
 	})?;
 

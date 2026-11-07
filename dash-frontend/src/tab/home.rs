@@ -127,7 +127,7 @@ async fn config_supporters(btn: Rc<ComponentButton>, tasks: LayoutTasks) {
 fn configure_label_hello(common: &mut CallbackDataCommon, label_hello: Widget, config: &GeneralConfig) {
 	let username = wlx_common::locale::capitalize_string(&various::get_username());
 
-	let translated = if !config.hide_username {
+	let translated = if config.show_username {
 		common.i18n().translate_and_replace("HELLO_USER", ("{USER}", &username))
 	} else {
 		common.i18n().translate("HELLO").to_string()
