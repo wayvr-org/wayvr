@@ -140,7 +140,6 @@
 		"HANDSFREE_ALT_TAB": "Kierowanie przełącznikiem aplikacji",
 		"HANDSFREE_ALT_TAB_HELP": "Przytrzymaj Super+X, wyceluj w wybrane okno, a następnie puść, aby zmienić focus.",
 		"HIDE_GRAB_HELP": "Ukryj pomoc chwytania",
-		"HIDE_USERNAME": "Ukryj nazwę użytkownika",
 		"INPUT_EMULATION_METHOD": "Metoda emulacji wejścia",
 		"INPUT_EMULATION_METHOD_HELP": "Zmień tę opcję, jeśli wejście z myszy lub \nklawiatury nie jest rejestrowane.",
 		"INPUT_CAPTURE_METHOD": "Metoda przechwytywania wejścia",
@@ -156,7 +155,6 @@
 		"LEFT_HANDED_MOUSE": "Mysz dla leworęcznych",
 		"LEFT_HANDED_MOUSE_HELP": "Użyj, jeśli przyciski myszy są zamienione",
 		"LONG_PRESS_DURATION": "Czas przytrzymania",
-		"LOOK_AND_FEEL": "Wygląd i styl",
 		"MISC": "Różnorodne",
 		"NOTIFICATIONS_ENABLED": "Włącz powiadomienia",
 		"NOTIFICATIONS_SOUND_ENABLED": "Dźwięki powiadomień",
@@ -265,7 +263,11 @@
 		"RESTART_WAYVR": "Zrestartuj WayVR",
 		"CLOSE_WAYVR": "Zamknij WayVR",
 		"SPEECH_TO_TEXT": "Zamiana mowy na tekst",
-		"WHISPER_GPU_SELECT": "Wybierz GPU"
+		"WHISPER_GPU_SELECT": "Wybierz GPU",
+		"SHOW_USERNAME": "Pokaż nazwę użytkownika",
+		"SOUND": "Dźwięk",
+		"APPEARANCE": "Wygląd",
+		"OVERLAYS": "Nakładki"
 	},
 	"APPLICATION_LAUNCHER": "Launcher aplikacji",
 	"APPLICATION_STARTED": "Uruchomiono aplikację",

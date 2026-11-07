@@ -130,7 +130,7 @@ APP_SETTINGS.DIAGNOSTICS_REASON.CAGE,"Recommended in case if there's an incompat
 APP_SETTINGS.DIAGNOSTICS_REASON.XWAYLAND_SATELLITE,"Recommended in case if you want to run X11 (Xwayland) applications in native mode","Reason for why the given software is required or recommended"
 APP_SETTINGS.DIAGNOSTICS_REASON.XDG_OPEN,"Required for opening URLs or Steam games","Reason for why the given software is required or recommended"
 APP_SETTINGS.HIDE_GRAB_HELP,Hide grab help,Checkbox label in Settings > Look & Feel tab. Hides the grab help overlay/text.
-APP_SETTINGS.HIDE_USERNAME,Hide username,Checkbox label in Settings > Look & Feel tab. Hides the user's username from the UI.
+APP_SETTINGS.SHOW_USERNAME,Show username,Checkbox label in Settings > Look & Feel tab. Hides the user's username from the UI.
 APP_SETTINGS.INPUT_EMULATION_METHOD,Input emulation method,"Dropdown label in Settings > Miscellaneous tab. Selects how WayVR emulates mouse/keyboard input (uinput, Wayland virtual, none)."
 APP_SETTINGS.INPUT_EMULATION_METHOD_HELP,"Try change this in case mouse or
 keyboard input does not register.",Tooltip for the input emulation method dropdown.
@@ -146,12 +146,13 @@ APP_SETTINGS.LENS_SEPARATION_MM,Lens separation (mm),"Distance between lens, in 
 APP_SETTINGS.KEYBOARD_MIDDLE_CLICK,Keyboard middle click,Dropdown label in Settings > Features tab. Selects the modifier key used for middle-click when typing with the laser pointer.
 APP_SETTINGS.KEYBOARD_MIDDLE_CLICK_HELP,"Modifier to use when typing
 with purple laser",Tooltip for the keyboard middle-click setting.
+APP_SETTINGS.SOUND,Sound,Category name in general settings tab
 APP_SETTINGS.KEYBOARD_SOUND_ENABLED,Keyboard sounds,Checkbox label in Settings > Features tab. Enables or disables typing sounds when using the on-screen keyboard.
 APP_SETTINGS.LANGUAGE,Language,Dropdown label in Settings > Look & Feel tab. Selects the UI language.
 APP_SETTINGS.LEFT_HANDED_MOUSE,Left-handed mouse,Checkbox label in Settings > Features tab. Swaps mouse buttons for left-handed users.
 APP_SETTINGS.LEFT_HANDED_MOUSE_HELP,Use this if mouse buttons are swapped,Tooltip for the left-handed mouse checkbox.
 APP_SETTINGS.LONG_PRESS_DURATION,Long press duration,Setting in Settings > Features tab. Controls how long a press must be held to register as a long press.
-APP_SETTINGS.LOOK_AND_FEEL,Look & Feel,"Category header in Settings. Groups visual/customization settings like language, opacity, animation speed, color palettes."
+APP_SETTINGS.APPEARANCE,Appearance,"Category header in Settings. All options related to GUI visuals."
 APP_SETTINGS.MISC,Miscellaneous,"Category header in Settings. Groups troubleshooting and system-level settings like capture method, input emulation, xwayland."
 APP_SETTINGS.MIDDLE_GRABS_SINGLE,"Middle-click modifier grabs individual","Checkbox label in Settings > Controls tab. When enabled, grabbing with the middle modifier will always grab individual objects, never the entire set of objects. ""Middle-click modifier"" was previously translated as ""${APP_SETTINGS.BINDINGS.ACTION.CLICK_MODIFIER_MIDDLE}"""
 APP_SETTINGS.MIDDLE_GRABS_SINGLE_HELP,"Grabbing with the middle-click modifier (purple laser)
@@ -196,6 +197,7 @@ APP_SETTINGS.OPTION.WL_VIRTUAL_HELP,"Send events to the Wayland compositor using
 zwlr_virtual_pointer and zwp_virtual_keyboard.
 Only works reliably on some desktops.
 Does NOT work on KDE, GNOME or COSMIC.",Tooltip for the Wayland virtual input option.
+APP_SETTINGS.OVERLAYS,Overlays,Setting category name (plural). Previously translated as ${DEFINITIONS.OVERLAY}.
 APP_SETTINGS.POINTER_ACCELERATION,Mouse acceleration,Checkbox/dropdown in Settings > Features tab. Toggles adaptive mouse acceleration (on) or constant speed (off).
 APP_SETTINGS.POINTER_ACCELERATION_HELP,"On: Adaptive mouse acceleration
 Off: Constant speed",Tooltip for the mouse acceleration setting.

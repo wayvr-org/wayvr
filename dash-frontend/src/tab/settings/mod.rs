@@ -32,45 +32,45 @@ use crate::{
 };
 
 mod macros;
+mod tab_appearance;
 mod tab_autostart_apps;
 mod tab_controls;
 mod tab_diagnostics;
-mod tab_features;
-mod tab_look_and_feel;
+mod tab_general;
+mod tab_hid;
 mod tab_misc;
-mod tab_skybox;
-mod tab_space_drag;
+mod tab_overlays;
 mod tab_statistics;
 mod tab_troubleshooting;
 
 #[derive(Clone)]
 pub(crate) enum TabNameEnum {
+	Appearance,
 	AutostartApps,
 	Controls,
-	Features,
-	LookAndFeel,
-	Misc,
-	Skybox,
-	SpaceDrag,
-	Statistics,
 	Diagnostics,
+	General,
+	Hid,
+	Misc,
+	Overlays,
+	Statistics,
 	Troubleshooting,
 }
 
 impl TabNameEnum {
-	fn from_string(s: &str) -> Option<Self> {
+	fn from_string(s: &str) -> Self {
 		match s {
-			"autostart_apps" => Some(TabNameEnum::AutostartApps),
-			"controls" => Some(TabNameEnum::Controls),
-			"features" => Some(TabNameEnum::Features),
-			"look_and_feel" => Some(TabNameEnum::LookAndFeel),
-			"misc" => Some(TabNameEnum::Misc),
-			"skybox" => Some(TabNameEnum::Skybox),
-			"space_drag" => Some(TabNameEnum::SpaceDrag),
-			"statistics" => Some(TabNameEnum::Statistics),
-			"diagnostics" => Some(TabNameEnum::Diagnostics),
-			"troubleshooting" => Some(TabNameEnum::Troubleshooting),
-			_ => None,
+			"general" => TabNameEnum::General,
+			"hid" => TabNameEnum::Hid,
+			"appearance" => TabNameEnum::Appearance,
+			"autostart_apps" => TabNameEnum::AutostartApps,
+			"controls" => TabNameEnum::Controls,
+			"misc" => TabNameEnum::Misc,
+			"overlays" => TabNameEnum::Overlays,
+			"statistics" => TabNameEnum::Statistics,
+			"diagnostics" => TabNameEnum::Diagnostics,
+			"troubleshooting" => TabNameEnum::Troubleshooting,
+			_ => unreachable!(), /* wants panic */
 		}
 	}
 }
@@ -332,7 +332,7 @@ pub(crate) enum SettingType {
 	HandsfreeAltTab,
 	HandsfreePointer,
 	HideGrabHelp,
-	HideUsername,
+	ShowUsername,
 	InputCaptureMethod,
 	InputEmulationMethod,
 	InvertScrollDirectionX,
@@ -394,7 +394,7 @@ impl SettingType {
 			Self::EnableWatch => &mut config.enable_watch,
 			Self::FocusFollowsMouseMode => &mut config.focus_follows_mouse_mode,
 			Self::HideGrabHelp => &mut config.hide_grab_help,
-			Self::HideUsername => &mut config.hide_username,
+			Self::ShowUsername => &mut config.show_username,
 			Self::InvertScrollDirectionX => &mut config.invert_scroll_direction_x,
 			Self::InvertScrollDirectionY => &mut config.invert_scroll_direction_y,
 			Self::KeyboardSoundEnabled => &mut config.keyboard_sound_enabled,
@@ -540,7 +540,7 @@ impl SettingType {
 			Self::HandsfreeAltTab => Ok("APP_SETTINGS.HANDSFREE_ALT_TAB"),
 			Self::HandsfreePointer => Ok("APP_SETTINGS.HANDSFREE_POINTER"),
 			Self::HideGrabHelp => Ok("APP_SETTINGS.HIDE_GRAB_HELP"),
-			Self::HideUsername => Ok("APP_SETTINGS.HIDE_USERNAME"),
+			Self::ShowUsername => Ok("APP_SETTINGS.SHOW_USERNAME"),
 			Self::InputCaptureMethod => Ok("APP_SETTINGS.INPUT_CAPTURE_METHOD"),
 			Self::InputEmulationMethod => Ok("APP_SETTINGS.INPUT_EMULATION_METHOD"),
 			Self::InvertScrollDirectionX => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_X"),
@@ -701,7 +701,7 @@ impl<T> TabSettings<T> {
 		self.current_tab = None;
 		let globals = frontend.layout.state.globals.clone();
 
-		let vulkan_devices = if matches!(name, TabNameEnum::Features) {
+		let vulkan_devices = if matches!(name, TabNameEnum::General) {
 			Some(frontend.interface.enumerate_vulkan_devices(data)?)
 		} else {
 			None
@@ -725,17 +725,20 @@ impl<T> TabSettings<T> {
 		};
 
 		match name {
-			TabNameEnum::LookAndFeel => {
-				self.current_tab = Some(Box::new(tab_look_and_feel::State::mount(settings_mount_params)?));
-			}
-			TabNameEnum::Features => {
-				self.current_tab = Some(Box::new(tab_features::State::mount(
+			TabNameEnum::General => {
+				self.current_tab = Some(Box::new(tab_general::State::mount(
 					settings_mount_params,
 					vulkan_devices.unwrap(), /* safe */
 				)?));
 			}
-			TabNameEnum::SpaceDrag => {
-				self.current_tab = Some(Box::new(tab_space_drag::State::mount(settings_mount_params)?));
+			TabNameEnum::Appearance => {
+				self.current_tab = Some(Box::new(tab_appearance::State::mount(settings_mount_params)?));
+			}
+			TabNameEnum::Hid => {
+				self.current_tab = Some(Box::new(tab_hid::State::mount(settings_mount_params)?));
+			}
+			TabNameEnum::Overlays => {
+				self.current_tab = Some(Box::new(tab_overlays::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Controls => {
 				self.current_tab = Some(Box::new(tab_controls::State::mount(settings_mount_params)?));
@@ -751,9 +754,6 @@ impl<T> TabSettings<T> {
 			}
 			TabNameEnum::Troubleshooting => {
 				self.current_tab = Some(Box::new(tab_troubleshooting::State::mount(settings_mount_params)?));
-			}
-			TabNameEnum::Skybox => {
-				self.current_tab = Some(Box::new(tab_skybox::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Statistics => {
 				self.current_tab = Some(Box::new(tab_statistics::State::mount(settings_mount_params)?));
@@ -789,14 +789,12 @@ impl<T> TabSettings<T> {
 		tabs.on_select({
 			let tasks = tasks.clone();
 			Rc::new(move |_common, evt| {
-				if let Some(tab) = TabNameEnum::from_string(&evt.name) {
-					tasks.push(Task::SetTab(tab));
-				}
+				tasks.push(Task::SetTab(TabNameEnum::from_string(&evt.name)));
 				Ok(())
 			})
 		});
 
-		tasks.push(Task::SetTab(TabNameEnum::LookAndFeel));
+		tasks.push(Task::SetTab(TabNameEnum::General));
 
 		let feats = frontend.interface.get_feats(data);
 

@@ -18,6 +18,7 @@ use wgui::{
 	taffy::{self, prelude::length},
 	widget::{
 		ConstructEssentials,
+		div::WidgetDiv,
 		label::{WidgetLabel, WidgetLabelParams},
 		sprite::{WidgetSprite, WidgetSpriteParams},
 	},
@@ -206,4 +207,21 @@ pub fn mount_dropdown(par: MountDropdownParams) -> anyhow::Result<()> {
 	}));
 
 	Ok(())
+}
+
+pub fn create_flex_down(layout: &mut Layout, parent: WidgetID) -> anyhow::Result<WidgetID> {
+	Ok(
+		layout
+			.add_child(
+				parent,
+				WidgetDiv::create(),
+				taffy::Style {
+					flex_direction: taffy::FlexDirection::Column,
+					gap: length(4.0_f32),
+					..Default::default()
+				},
+			)?
+			.0
+			.id,
+	)
 }

@@ -511,8 +511,8 @@ pub struct GeneralConfig {
 	#[serde(default)]
 	pub last_set: u32,
 
-	#[serde(default)]
-	pub hide_username: bool,
+	#[serde(default = "def_true")]
+	pub show_username: bool,
 
 	#[serde(default)]
 	pub opaque_background: bool,

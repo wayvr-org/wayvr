@@ -140,7 +140,6 @@
 		"HANDSFREE_ALT_TAB": "Ausrichtung des App-Switchers",
 		"HANDSFREE_ALT_TAB_HELP": "Super+X halten, auf das gewünschte Fenster zielen und dann loslassen, um den Fokus zu wechseln.",
 		"HIDE_GRAB_HELP": "Greifhilfe ausblenden",
-		"HIDE_USERNAME": "Benutzernamen ausblenden",
 		"INPUT_EMULATION_METHOD": "Input-Emulationsmethode",
 		"INPUT_EMULATION_METHOD_HELP": "Hier ändern, falls Maus- oder\nTastatureingaben nicht registriert werden.",
 		"INPUT_CAPTURE_METHOD": "Eingabemethode",
@@ -156,7 +155,6 @@
 		"LEFT_HANDED_MOUSE": "Linkshänder-Maus",
 		"LEFT_HANDED_MOUSE_HELP": "Nutze dies, wenn die Maustasten vertauscht sind",
 		"LONG_PRESS_DURATION": "Langpress-Dauer",
-		"LOOK_AND_FEEL": "Aussehen & Gefühl",
 		"MISC": "Verschiedenes",
 		"NOTIFICATIONS_ENABLED": "Benachrichtigungen aktivieren",
 		"NOTIFICATIONS_SOUND_ENABLED": "Benachrichtigungstöne",
@@ -265,7 +263,11 @@
 		"RESTART_WAYVR": "WayVR neu starten",
 		"CLOSE_WAYVR": "WayVR schließen",
 		"SPEECH_TO_TEXT": "Sprache zu Text",
-		"WHISPER_GPU_SELECT": "GPU auswählen"
+		"WHISPER_GPU_SELECT": "GPU auswählen",
+		"SHOW_USERNAME": "Benutzernamen anzeigen",
+		"SOUND": "Sound",
+		"APPEARANCE": "Aussehen",
+		"OVERLAYS": "Overlays"
 	},
 	"APPLICATION_LAUNCHER": "Programmstarter",
 	"APPLICATION_STARTED": "Anwendung gestartet",

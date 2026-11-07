@@ -13,6 +13,48 @@ use wgui::{
 };
 use wlx_common::{DesktopBackend, XrBackend, config::GeneralConfig, dash_interface::InterfaceFeats};
 
+pub fn options_split_horiz2(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<(WidgetID, WidgetID)> {
+	let id1 = mp.idx.to_string();
+	mp.idx += 1;
+	let id2 = mp.idx.to_string();
+	mp.idx += 1;
+
+	let mut params = TemplateParams::new();
+	params.insert("id1", &id1);
+	params.insert("id2", &id2);
+
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "SettingsSplitHoriz2", mp.layout, parent, params)?;
+
+	Ok((
+		mp.parser_state.get_widget_id(&id1)?,
+		mp.parser_state.get_widget_id(&id2)?,
+	))
+}
+
+pub fn options_split_horiz3(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<(WidgetID, WidgetID, WidgetID)> {
+	let id1 = mp.idx.to_string();
+	mp.idx += 1;
+	let id2 = mp.idx.to_string();
+	mp.idx += 1;
+	let id3 = mp.idx.to_string();
+	mp.idx += 1;
+
+	let mut params = TemplateParams::new();
+	params.insert("id1", &id1);
+	params.insert("id2", &id2);
+	params.insert("id3", &id3);
+
+	mp.parser_state
+		.instantiate_template(mp.doc_params, "SettingsSplitHoriz3", mp.layout, parent, params)?;
+
+	Ok((
+		mp.parser_state.get_widget_id(&id1)?,
+		mp.parser_state.get_widget_id(&id2)?,
+		mp.parser_state.get_widget_id(&id3)?,
+	))
+}
+
 pub fn options_category(
 	mp: &mut MacroParams,
 	parent: WidgetID,
