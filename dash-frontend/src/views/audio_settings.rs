@@ -175,6 +175,7 @@ fn does_string_mention_hmd_sink(input: &str) -> bool {
 	lwr.contains("oculus") || // Oculus
 	lwr.contains("rift") || // Also Oculus
 	lwr.contains("beyond") ||  // Bigscreen Beyond
+	lwr.contains("pimax") || // Pimax
 	lwr.contains("wivrn") // WiVRn
 }
 
@@ -184,6 +185,7 @@ fn does_string_mention_hmd_source(input: &str) -> bool {
 	lwr.contains("valve") || // Valve hardware
 	lwr.contains("oculus") || // Oculus
 	lwr.contains("beyond")  || // Bigscreen Beyond
+	lwr.contains("pimax") || // Pimax
 	lwr.contains("wivrn") // WiVRn
 }
 
