@@ -150,8 +150,6 @@
 			"XWAYLAND_SATELLITE": "Rekommenderas om du vill köra X11 (Xwayland)-applikationer i nativt läge",
 			"XDG_OPEN": "Krävs för att öppna URL:er eller Steam-spel"
 		},
-		"HIDE_GRAB_HELP": "Dölj grepphjälp",
-		"HIDE_USERNAME": "Dölj användarnamn",
 		"INPUT_EMULATION_METHOD": "Metod för inmatningssimulering",
 		"INPUT_EMULATION_METHOD_HELP": "Prova att ändra detta om mus- eller\ntangentbordindata inte registreras.",
 		"INPUT_CAPTURE_METHOD": "Metod för inmatningsfångst",
@@ -168,7 +166,6 @@
 		"LEFT_HANDED_MOUSE": "Vänstermus",
 		"LEFT_HANDED_MOUSE_HELP": "Används om musknapparna är ombytta",
 		"LONG_PRESS_DURATION": "Långtryckstid",
-		"LOOK_AND_FEEL": "Utseende och känsla",
 		"MISC": "Övrigt",
 		"MIDDLE_GRABS_SINGLE": "Modifierare för mittklick greppar enskilda objekt",
 		"MIDDLE_GRABS_SINGLE_HELP": "Att greppa med modifieraren för mittklick (lila laser)\ngreppar enskilda overlays istället för hela setet",
@@ -265,7 +262,14 @@
 		"GRID_OPACITY_HELP": "Opacitet för golvgridet när skymap är aktiverat",
 		"XWAYLAND_BY_DEFAULT": "Kör appar i kompatibilitetsläge som standard",
 		"SAVE": "Spara",
-		"CANCEL": "Avbryt"
+		"CANCEL": "Avbryt",
+		"SHOW_USERNAME": "Visa användarnamn",
+		"SOUND": "Ljud",
+		"APPEARANCE": "Utseende",
+		"OVERLAYS": "Overlays",
+		"SHOW_GRAB_HELP": "Visa hjälp för grepp",
+		"WATCH": "Klocka",
+		"VARIOUS": "Övrigt"
 	},
 	"APPLICATION_LAUNCHER": "App-startare",
 	"APPLICATION_STARTED": "Applikationen startades",

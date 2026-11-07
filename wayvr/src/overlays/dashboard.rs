@@ -396,6 +396,10 @@ impl DashInterface<AppState> for DashInterfaceLive {
         data.gfx.enumerate_devices()
     }
 
+    fn get_version_string(&self, _: &mut AppState) -> String {
+        crate::get_version_string()
+    }
+
     fn window_list(&mut self, app: &mut AppState) -> anyhow::Result<Vec<WvrWindow>> {
         let wvr_server = app.wvr_server.as_mut().unwrap();
         Ok(wvr_server

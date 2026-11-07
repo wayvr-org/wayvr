@@ -150,6 +150,19 @@ fn init_run_params(no_audio: bool, session: bool, capture_input: bool) -> backen
     }
 }
 
+pub fn get_version_string() -> String {
+    format!(
+        "{} v. {}{}",
+        env!("CARGO_PKG_NAME"),
+        env!("WLX_BUILD"),
+        if std::env::var("APPDIR").is_ok() {
+            " (AppImage)"
+        } else {
+            ""
+        }
+    )
+}
+
 #[allow(clippy::unnecessary_wraps)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = if std::env::args().skip(1).any(|a| !a.is_empty()) {
@@ -166,16 +179,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     logging_init(&mut args);
 
-    log::info!(
-        "Welcome to {} version {}!{}",
-        env!("CARGO_PKG_NAME"),
-        env!("WLX_BUILD"),
-        if std::env::var("APPDIR").is_ok() {
-            " (AppImage)"
-        } else {
-            ""
-        }
-    );
+    log::info!("Welcome to {}!", get_version_string());
     log::info!("It is {}.", chrono::Local::now().format("%c"));
 
     #[cfg(feature = "openvr")]

@@ -927,7 +927,7 @@ fn start_grab(par: StartGrabParams) {
     )));
 
     if let Some(hand) = pointer.hand()
-        && !app.session.config.hide_grab_help
+        && app.session.config.show_grab_help
         && !pointer.handsfree
     {
         let pos = state.positioning;

@@ -1230,6 +1230,7 @@ fn parse_child<'a>(
 		"CheckBox" => (
 			Default::default(),
 			Some(parse_component_checkbox(
+				file,
 				ctx,
 				parent_id,
 				&attribs,
@@ -1240,6 +1241,7 @@ fn parse_child<'a>(
 		"RadioBox" => (
 			Default::default(),
 			Some(parse_component_checkbox(
+				file,
 				ctx,
 				parent_id,
 				&attribs,

@@ -7,23 +7,23 @@ use crate::config::GeneralConfig;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, AsRefStr, EnumString, EnumProperty, VariantArray)]
 pub enum Language {
-	#[strum(props(Text = "English"))]
+	#[strum(props(CountryCode = "en", Text = "English"))]
 	English,
-	#[strum(props(Text = "English (UK)"))]
+	#[strum(props(CountryCode = "en_uk", Text = "English (UK)"))]
 	British,
-	#[strum(props(Text = "Polski"))]
+	#[strum(props(CountryCode = "pl", Text = "Polski"))]
 	Polish,
-	#[strum(props(Text = "日本語"))]
+	#[strum(props(CountryCode = "ja", Text = "日本語"))]
 	Japanese,
-	#[strum(props(Text = "German"))]
+	#[strum(props(CountryCode = "de", Text = "German"))]
 	German,
-	#[strum(props(Text = "Italiano"))]
+	#[strum(props(CountryCode = "it", Text = "Italiano"))]
 	Italian,
-	#[strum(props(Text = "简体中文"))]
+	#[strum(props(CountryCode = "cn", Text = "简体中文"))]
 	ChineseSimplified,
-	#[strum(props(Text = "Español"))]
+	#[strum(props(CountryCode = "es", Text = "Español"))]
 	Spanish,
-	#[strum(props(Text = "Svenska"))]
+	#[strum(props(CountryCode = "se", Text = "Svenska"))]
 	Swedish,
 }
 

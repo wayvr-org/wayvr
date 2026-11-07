@@ -424,7 +424,8 @@ impl Context {
 	}
 
 	fn free_allocation(&self, allocation: Allocation) {
-		if let Err(e) = self.allocator.lock().free(allocation) {
+		let value = self.allocator.lock().free(allocation);
+		if let Err(e) = value {
 			log::error!("failed to free Vulkan GPU allocation: {e}");
 		}
 	}
