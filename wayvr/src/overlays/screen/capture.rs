@@ -357,10 +357,7 @@ impl ScreenPipeline {
         let size = CURSOR_SIZE * self.extentf[1];
         let (width, height, hotspot_x, hotspot_y, source_uv, transform) =
             if let Some(cursor) = cursor {
-                let scale = size
-                    / cursor.source_size[0]
-                        .max(cursor.source_size[1])
-                        .max(f32::EPSILON);
+                let scale = size / cursor.size[0].max(cursor.size[1]).max(f32::EPSILON);
                 (
                     cursor.size[0] * scale,
                     cursor.size[1] * scale,
