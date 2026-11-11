@@ -39,4 +39,5 @@ pub struct RunParams {
     pub config: GeneralConfig,
     pub no_audio: bool,
     pub session: bool,
+    pub capture_input: bool,
 }

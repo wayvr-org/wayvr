@@ -179,6 +179,7 @@ pub struct WvrServerState {
     process_overlays: HashMap<process::ProcessHandle, Vec<OverlayID>>,
     input_capture: Option<InputCapture>,
     input_capture_init_attempted: bool,
+    capture_input: bool,
     has_input_focus: bool,
     grab_toast_sent: bool,
 }
@@ -205,6 +206,7 @@ impl WvrServerState {
         gfx: Arc<WGfx>,
         gfx_extras: &WGfxExtras,
         config: &GeneralConfig,
+        capture_input: bool,
     ) -> anyhow::Result<Self> {
         const fn filter_allow_any(_: &wayland_server::Client) -> bool {
             true
@@ -369,6 +371,7 @@ impl WvrServerState {
             process_overlays: HashMap::new(),
             input_capture: None,
             input_capture_init_attempted: false,
+            capture_input,
             has_input_focus: false,
             grab_toast_sent: false,
         })
@@ -1192,7 +1195,8 @@ impl WvrServerState {
                 return;
             }
             (None, InputCaptureMethod::Evdev) if !self.input_capture_init_attempted => {
-                self.input_capture = InputCapture::new(dbus.address().cloned())
+                let capture_input = self.capture_input;
+                self.input_capture = InputCapture::new(dbus.address().cloned(), capture_input)
                     .log_err("Could not initialize evdev input capture")
                     .ok();
                 self.input_capture_init_attempted = true;

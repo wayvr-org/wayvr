@@ -91,14 +91,22 @@ pub struct InputCapture {
 }
 
 impl InputCapture {
-    pub fn new(dbus_session_address: Option<Arc<str>>) -> io::Result<Self> {
+    pub fn new(dbus_session_address: Option<Arc<str>>, capture_input: bool) -> io::Result<Self> {
         let (command_tx, command_rx) = mpsc::sync_channel(8);
         let (event_tx, event_rx) = mpsc::channel();
         let (init_tx, init_rx) = mpsc::sync_channel(1);
 
         let worker = thread::Builder::new()
             .name("wayvr-input-capture".into())
-            .spawn(move || worker_main(command_rx, event_tx, init_tx, dbus_session_address))?;
+            .spawn(move || {
+                worker_main(
+                    command_rx,
+                    event_tx,
+                    init_tx,
+                    dbus_session_address,
+                    capture_input,
+                )
+            })?;
 
         match init_rx.recv() {
             Ok(Ok(())) => Ok(Self {
@@ -332,6 +340,7 @@ fn worker_main(
     event_tx: Sender<CapturedEvent>,
     init_tx: SyncSender<io::Result<()>>,
     dbus_session_address: Option<Arc<str>>,
+    capture_input: bool,
 ) {
     let restricted_state = Rc::new(RefCell::new(RestrictedState::default()));
     let interface = RestrictedInterface {
@@ -353,7 +362,8 @@ fn worker_main(
     let dbus = dbus_session_address.map_or_default(|s| DbusConnector::new(s));
 
     let mut grabbed = false;
-    let mut pending_grab = false;
+    // when set, arms a grab as soon as no keys are held
+    let mut pending_grab = capture_input;
     let mut watchdog = Instant::now() + WATCHDOG_TIMEOUT;
     let mut emergency_ungrab = false;
     let mut pointer_accel = PointerAccelConfig::default();

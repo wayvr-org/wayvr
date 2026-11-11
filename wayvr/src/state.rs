@@ -109,9 +109,14 @@ impl AppState {
         let wvr_signals = SyncEventQueue::new();
 
         let mut wvr_server = {
-            let mut maybe_wvr = WvrServerState::new(gfx.clone(), &gfx_extras, &session.config)
-                .log_err("Could not initialize WayVR Server")
-                .ok();
+            let mut maybe_wvr = WvrServerState::new(
+                gfx.clone(),
+                &gfx_extras,
+                &session.config,
+                params.capture_input,
+            )
+            .log_err("Could not initialize WayVR Server")
+            .ok();
             if let Some(wvr) = maybe_wvr.as_mut() {
                 wvr.config_changed(&session.config);
             }
