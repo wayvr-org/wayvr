@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use super::{
 	BufferUsage, Format, Image, ImageCreateInfo, ImageLayout, ImageUsage, ImageView, QueueType, Vertex, WGfx,
 	pass::WGfxPass,
-	raw::{RawClearMode, RawCommandBuffer},
+	raw::{RawClearMode, RawCommandBuffer, RawSubmission},
 };
 
 pub type GfxCommandBufferBuilder = CommandBufferBuilder<CmdBufGfx>;
@@ -23,6 +23,40 @@ pub struct BuiltCommandBuffer {
 impl BuiltCommandBuffer {
 	pub fn submit_and_wait(&self) -> anyhow::Result<()> {
 		self.raw.lock().submit_and_wait()
+	}
+}
+
+pub struct GpuSubmission {
+	raw: RawSubmission,
+	_command_buffers: Vec<Arc<BuiltCommandBuffer>>,
+}
+
+impl GpuSubmission {
+	pub fn submit(command_buffers: Vec<Arc<BuiltCommandBuffer>>) -> anyhow::Result<Self> {
+		let raw = {
+			let guards = command_buffers
+				.iter()
+				.map(|buffer| buffer.raw.lock())
+				.collect::<Vec<_>>();
+			let buffers = guards.iter().map(|guard| &**guard).collect::<Vec<_>>();
+			RawCommandBuffer::submit_group(&buffers)?
+		};
+		Ok(Self {
+			raw,
+			_command_buffers: command_buffers,
+		})
+	}
+
+	pub fn wait(mut self) -> anyhow::Result<()> {
+		Self::wait_all(std::slice::from_mut(&mut self))
+	}
+
+	pub fn wait_all(submissions: &mut [Self]) -> anyhow::Result<()> {
+		let mut raw = submissions
+			.iter_mut()
+			.map(|submission| &mut submission.raw)
+			.collect::<Vec<_>>();
+		RawSubmission::wait_all(&mut raw)
 	}
 }
 

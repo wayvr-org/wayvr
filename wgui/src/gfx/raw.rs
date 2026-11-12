@@ -2732,6 +2732,112 @@ impl RawCommandBuffer {
 	}
 }
 
+impl RawCommandBuffer {
+	pub(super) fn submit_group(command_buffers: &[&Self]) -> anyhow::Result<RawSubmission> {
+		let first = command_buffers
+			.first()
+			.context("cannot submit an empty command buffer group")?;
+		let context = first.context.clone();
+		for buffer in command_buffers {
+			if !Arc::ptr_eq(&context, &buffer.context) || buffer.queue.handle != first.queue.handle {
+				bail!("command buffers must use the same device and queue");
+			}
+			if !buffer.ended {
+				bail!("command buffer has not been finished");
+			}
+		}
+
+		let fence = unsafe { context.device.create_fence(&vk::FenceCreateInfo::default(), None) }
+			.map_err(|e| anyhow!("vkCreateFence failed: {e:?}"))?;
+		let mut submission = RawSubmission {
+			context: context.clone(),
+			fence,
+			semaphores: Vec::new(),
+			completed: true,
+		};
+		for _ in 1..command_buffers.len() {
+			let semaphore = unsafe {
+				context
+					.device
+					.create_semaphore(&vk::SemaphoreCreateInfo::default(), None)
+			}
+			.map_err(|e| anyhow!("vkCreateSemaphore failed: {e:?}"))?;
+			submission.semaphores.push(semaphore);
+		}
+
+		let handles = command_buffers.iter().map(|buffer| buffer.handle).collect::<Vec<_>>();
+		let stages = [vk::PipelineStageFlags::ALL_COMMANDS];
+		let mut submits = Vec::with_capacity(handles.len());
+		for (index, handle) in handles.iter().enumerate() {
+			let mut submit = vk::SubmitInfo::default().command_buffers(std::slice::from_ref(handle));
+			if index > 0 {
+				submit = submit
+					.wait_semaphores(&submission.semaphores[index - 1..index])
+					.wait_dst_stage_mask(&stages);
+			}
+			if index < submission.semaphores.len() {
+				submit = submit.signal_semaphores(&submission.semaphores[index..=index]);
+			}
+			submits.push(submit);
+		}
+
+		unsafe {
+			context
+				.device
+				.queue_submit(first.queue.handle, &submits, submission.fence)
+		}
+		.map_err(|e| anyhow!("vkQueueSubmit failed: {e:?}"))?;
+		submission.completed = false;
+		Ok(submission)
+	}
+}
+
+pub(super) struct RawSubmission {
+	context: Arc<Context>,
+	fence: vk::Fence,
+	semaphores: Vec<vk::Semaphore>,
+	completed: bool,
+}
+
+impl RawSubmission {
+	pub(super) fn wait_all(submissions: &mut [&mut Self]) -> anyhow::Result<()> {
+		let Some(first) = submissions.first() else {
+			return Ok(());
+		};
+		let context = first.context.clone();
+		if submissions
+			.iter()
+			.any(|submission| !Arc::ptr_eq(&context, &submission.context))
+		{
+			bail!("submissions must use the same Vulkan device");
+		}
+		let fences = submissions
+			.iter()
+			.map(|submission| submission.fence)
+			.collect::<Vec<_>>();
+		unsafe { context.device.wait_for_fences(&fences, true, u64::MAX) }
+			.map_err(|e| anyhow!("vkWaitForFences failed: {e:?}"))?;
+		for submission in submissions {
+			submission.completed = true;
+		}
+		Ok(())
+	}
+}
+
+impl Drop for RawSubmission {
+	fn drop(&mut self) {
+		if !self.completed {
+			let _ = unsafe { self.context.device.wait_for_fences(&[self.fence], true, u64::MAX) };
+		}
+		unsafe {
+			for semaphore in self.semaphores.drain(..) {
+				self.context.device.destroy_semaphore(semaphore, None);
+			}
+			self.context.device.destroy_fence(self.fence, None);
+		}
+	}
+}
+
 impl Drop for RawCommandBuffer {
 	fn drop(&mut self) {
 		unsafe { self.context.device.destroy_command_pool(self.pool, None) };

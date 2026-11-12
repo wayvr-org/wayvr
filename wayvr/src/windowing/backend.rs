@@ -2,7 +2,7 @@ use glam::{Affine2, Affine3A, Vec2};
 use smallvec::SmallVec;
 use std::{any::Any, rc::Rc, sync::Arc};
 use wgui::gfx::{
-    BuiltCommandBuffer, CommandBufferUsage, Format, ImageView, WGfx,
+    CommandBufferUsage, Format, GpuSubmission, ImageLayout, ImageView, WGfx,
     cmd::{GfxCommandBufferBuilder, WGfxClearMode},
 };
 use wlx_common::{
@@ -77,6 +77,7 @@ pub struct RenderTarget {
 
 pub struct RenderResources {
     pub cmd_bufs: SmallVec<[GfxCommandBufferBuilder; 2]>,
+    views: SmallVec<[Arc<ImageView>; 2]>,
     pub extent: [u32; 2],
 }
 
@@ -84,15 +85,16 @@ impl RenderResources {
     pub fn new(gfx: Arc<WGfx>, target: RenderTarget, meta: &FrameMeta) -> anyhow::Result<Self> {
         let mut cmd_bufs = SmallVec::new_const();
 
-        for tgt in target.views {
+        for tgt in &target.views {
             let mut cmd_buf = gfx.create_gfx_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
-            cmd_buf.begin_rendering(tgt, meta.clear)?;
+            cmd_buf.begin_rendering(tgt.clone(), meta.clear)?;
             cmd_bufs.push(cmd_buf);
         }
 
         Ok(Self {
             cmd_bufs,
+            views: target.views,
             extent: meta.extent,
         })
     }
@@ -101,15 +103,24 @@ impl RenderResources {
         self.cmd_bufs.first_mut().unwrap() // first must always be populated
     }
 
-    pub fn end(self) -> anyhow::Result<SmallVec<[Arc<BuiltCommandBuffer>; 2]>> {
-        let mut ret_val = SmallVec::new_const();
+    pub fn end(self) -> anyhow::Result<GpuSubmission> {
+        self.finish(None)
+    }
 
-        for mut buf in self.cmd_bufs {
+    pub fn end_with_layout(self, layout: ImageLayout) -> anyhow::Result<GpuSubmission> {
+        self.finish(Some(layout))
+    }
+
+    fn finish(self, layout: Option<ImageLayout>) -> anyhow::Result<GpuSubmission> {
+        let mut buffers = Vec::with_capacity(self.cmd_bufs.len());
+        for (mut buf, view) in self.cmd_bufs.into_iter().zip(self.views) {
             buf.end_rendering()?;
-            ret_val.push(buf.build()?);
+            if let Some(layout) = layout {
+                buf.transition_image(&view.image().clone(), layout)?;
+            }
+            buffers.push(buf.build()?);
         }
-
-        Ok(ret_val)
+        GpuSubmission::submit(buffers)
     }
 }
 

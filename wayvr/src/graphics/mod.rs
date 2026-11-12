@@ -3,9 +3,9 @@ pub mod dmabuf;
 
 use std::{collections::HashMap, sync::Arc};
 
-use smallvec::SmallVec;
 use wgui::gfx::{
-    BufferUsage, BuiltCommandBuffer, Format, ShaderModule, Vert2Buf, Vert2Uv, WGfx, WGfxCreateInfo,
+    BufferUsage, BuiltCommandBuffer, Format, GpuSubmission, ShaderModule, Vert2Buf, Vert2Uv, WGfx,
+    WGfxCreateInfo,
 };
 use wlx_capture::DrmFormat;
 
@@ -187,22 +187,21 @@ pub fn init_openvr_graphics(
 
 #[derive(Default)]
 pub struct GpuFutures {
-    command_buffers: Vec<Arc<BuiltCommandBuffer>>,
+    submissions: Vec<GpuSubmission>,
 }
 
 impl GpuFutures {
-    pub fn execute(&mut self, command_buffer: Arc<BuiltCommandBuffer>) {
-        self.command_buffers.push(command_buffer);
-    }
-
-    pub fn execute_results(&mut self, results: SmallVec<[Arc<BuiltCommandBuffer>; 2]>) {
-        self.command_buffers.extend(results);
-    }
-
-    pub fn wait(self) -> anyhow::Result<()> {
-        for command_buffer in self.command_buffers {
-            command_buffer.submit_and_wait()?;
-        }
+    pub fn execute(&mut self, command_buffer: Arc<BuiltCommandBuffer>) -> anyhow::Result<()> {
+        self.submissions
+            .push(GpuSubmission::submit(vec![command_buffer])?);
         Ok(())
+    }
+
+    pub fn add(&mut self, submission: GpuSubmission) {
+        self.submissions.push(submission);
+    }
+
+    pub fn wait(mut self) -> anyhow::Result<()> {
+        GpuSubmission::wait_all(&mut self.submissions)
     }
 }

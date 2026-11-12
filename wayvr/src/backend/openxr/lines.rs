@@ -175,7 +175,7 @@ impl LinePool {
                 cmd_buffer.run_ref(&line.pass)?;
                 cmd_buffer.end_rendering()?;
 
-                futures.execute(cmd_buffer.build()?);
+                futures.execute(cmd_buffer.build()?)?;
             }
         }
 

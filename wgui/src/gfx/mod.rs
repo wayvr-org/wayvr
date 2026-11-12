@@ -22,7 +22,7 @@ use anyhow::Context as _;
 use parking_lot::Mutex;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
-pub use cmd::{BuiltCommandBuffer, GfxCommandBufferBuilder, WGfxClearMode, XferCommandBufferBuilder};
+pub use cmd::{BuiltCommandBuffer, GfxCommandBufferBuilder, GpuSubmission, WGfxClearMode, XferCommandBufferBuilder};
 pub use dmabuf::{DmabufImportInfo, DmabufPlaneLayout, ExportedDmabufImage};
 pub use pipeline::{DescriptorSet, WGfxPipeline, WPipelineCreateInfo};
 pub use resources::{Buffer, BufferWriteGuard, Image, ImageView, Sampler, ShaderModule, spirv_words};

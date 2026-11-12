@@ -6,7 +6,7 @@ use ovr_overlay::{
     pose::Matrix3x4,
     sys::{ETrackingUniverseOrigin, VRVulkanTextureData_t},
 };
-use wgui::gfx::{ImageLayout, ImageUsage, ImageView, WGfx};
+use wgui::gfx::{ImageUsage, ImageView, WGfx};
 
 use crate::{overlays::toast::TOAST_NAME, state::AppState, windowing::window::OverlayWindowData};
 
@@ -288,14 +288,6 @@ impl OverlayWindowData<OpenVrOverlayData> {
                 self.data.width = new_width;
                 self.upload_width(overlay);
             }
-        }
-
-        if let Err(e) = graphics.transition_image_now(&image, ImageLayout::TransferSrc) {
-            log::error!(
-                "{}: Failed to prepare overlay image: {e:#}",
-                self.config.name
-            );
-            return;
         }
 
         let format = image.format();

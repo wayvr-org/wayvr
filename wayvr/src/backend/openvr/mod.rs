@@ -380,7 +380,7 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 let mut rdr = RenderResources::new(app.gfx.clone(), tgt, &meta)?;
                 o.render(&mut app, &mut rdr)?;
                 o.data.image_dirty = true;
-                futures.execute_results(rdr.end()?);
+                futures.add(rdr.end_with_layout(wgui::gfx::ImageLayout::TransferSrc)?);
             }
         }
 

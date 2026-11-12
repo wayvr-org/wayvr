@@ -453,7 +453,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 let tgt = RenderTarget { views: wsi.views };
                 let mut rdr = RenderResources::new(app.gfx.clone(), tgt, &meta)?;
                 o.render(&mut app, &mut rdr)?;
-                futures.execute_results(rdr.end()?);
+                futures.add(rdr.end()?);
             } else if o.data.swapchain.is_none() {
                 log::trace!("{}: not showing due to missing swapchain", o.config.name);
                 continue;

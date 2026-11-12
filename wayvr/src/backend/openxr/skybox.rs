@@ -192,7 +192,7 @@ impl Skybox {
         cmd_buffer.run_ref(&pass)?;
         cmd_buffer.end_rendering()?;
 
-        futures.execute(cmd_buffer.build()?);
+        futures.execute(cmd_buffer.build()?)?;
 
         self.sky = Some(swapchain);
         Ok(())
@@ -245,7 +245,7 @@ impl Skybox {
         cmd_buffer.run_ref(&pass)?;
         cmd_buffer.end_rendering()?;
 
-        futures.execute(cmd_buffer.build()?);
+        futures.execute(cmd_buffer.build()?)?;
 
         self.grid = Some(swapchain);
         Ok(())
