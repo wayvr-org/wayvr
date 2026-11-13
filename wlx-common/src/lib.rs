@@ -20,6 +20,7 @@ pub mod overlays;
 pub mod palette;
 pub mod timestep;
 pub mod windowing;
+pub mod pactl_wrapper;
 
 #[derive(Clone, Copy, EnumIs, EnumString, PartialEq, Eq)]
 pub enum XrBackend {

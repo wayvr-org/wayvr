@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use crate::
+frontend::{FrontendTask, FrontendTasks};
 use wgui::{
 	assets::{AssetPathRef, AssetPathSource},
 	color::{WguiColor, WguiColorName},
@@ -16,11 +18,7 @@ use wgui::{
 	task::Tasks,
 	widget::{ConstructEssentials, rectangle::WidgetRectangle},
 };
-
-use crate::{
-	frontend::{FrontendTask, FrontendTasks},
-	util::pactl_wrapper::{self},
-};
+use wlx_common::pactl_wrapper::{self};
 
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
