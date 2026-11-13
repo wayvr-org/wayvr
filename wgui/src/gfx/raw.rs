@@ -7,6 +7,7 @@ use std::{
 	mem::ManuallyDrop,
 	os::fd::{AsRawFd, FromRawFd},
 	ptr::NonNull,
+	rc::Rc,
 	sync::Arc,
 };
 
@@ -1687,8 +1688,11 @@ impl Context {
 		Ok(())
 	}
 
-	pub(super) fn submit_graphics_completion_marker(self: &Arc<Self>) -> anyhow::Result<RawQueueCompletionMarker> {
-		let mut command_buffer = self.create_command_buffer(QueueType::Graphics, CommandBufferUsage::OneTimeSubmit)?;
+	pub(super) fn submit_graphics_completion_marker(
+		self: &Arc<Self>,
+		pool: &Rc<RawCommandPool>,
+	) -> anyhow::Result<RawQueueCompletionMarker> {
+		let mut command_buffer = pool.create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 		command_buffer.record_queue_completion_barrier();
 		command_buffer.finish()?;
 
@@ -1696,7 +1700,8 @@ impl Context {
 			.map_err(|e| anyhow!("vkCreateFence failed: {e:?}"))?;
 		let buffers = [command_buffer.handle];
 		let submits = [vk::SubmitInfo::default().command_buffers(&buffers)];
-		if let Err(e) = unsafe { self.device.queue_submit(self.queue_gfx.handle, &submits, fence) } {
+		let submit_result = unsafe { self.device.queue_submit(self.queue_gfx.handle, &submits, fence) };
+		if let Err(e) = submit_result {
 			unsafe { self.device.destroy_fence(fence, None) };
 			return Err(anyhow!("vkQueueSubmit for completion marker failed: {e:?}"));
 		}
@@ -1705,45 +1710,6 @@ impl Context {
 			context: self.clone(),
 			fence,
 			_command_buffer: command_buffer,
-		})
-	}
-
-	pub(super) fn create_command_buffer(
-		self: &Arc<Self>,
-		queue_type: QueueType,
-		usage: CommandBufferUsage,
-	) -> anyhow::Result<RawCommandBuffer> {
-		let queue = self.queue(queue_type);
-		let pool_info = vk::CommandPoolCreateInfo::default()
-			.flags(vk::CommandPoolCreateFlags::TRANSIENT)
-			.queue_family_index(queue.family_index);
-		let pool = unsafe { self.device.create_command_pool(&pool_info, None) }
-			.map_err(|e| anyhow!("vkCreateCommandPool failed: {e:?}"))?;
-		let alloc_info = vk::CommandBufferAllocateInfo::default()
-			.command_pool(pool)
-			.level(vk::CommandBufferLevel::PRIMARY)
-			.command_buffer_count(1);
-		let handle = match unsafe { self.device.allocate_command_buffers(&alloc_info) } {
-			Ok(mut buffers) => buffers.remove(0),
-			Err(e) => {
-				unsafe { self.device.destroy_command_pool(pool, None) };
-				return Err(anyhow!("vkAllocateCommandBuffers failed: {e:?}"));
-			}
-		};
-		let begin_info = vk::CommandBufferBeginInfo::default().flags(command_usage_to_vk(usage));
-		if let Err(e) = unsafe { self.device.begin_command_buffer(handle, &begin_info) } {
-			unsafe { self.device.destroy_command_pool(pool, None) };
-			return Err(anyhow!("vkBeginCommandBuffer failed: {e:?}"));
-		}
-
-		Ok(RawCommandBuffer {
-			context: self.clone(),
-			queue,
-			pool,
-			handle,
-			ended: false,
-			active_rendering: None,
-			external_images: BTreeMap::new(),
 		})
 	}
 
@@ -1874,11 +1840,9 @@ impl RawAcquiredFrame {
 			.finish()
 			.map_err(|e| RawSwapchainError::Other(format!("finishing command buffer: {e:#}")))?;
 
-		let mut present_transition = self
-			.swapchain
-			.owner
-			.context
-			.create_command_buffer(QueueType::Graphics, CommandBufferUsage::OneTimeSubmit)
+		let mut present_transition = command_buffer
+			.pool
+			.create_command_buffer(CommandBufferUsage::OneTimeSubmit)
 			.map_err(|e| RawSwapchainError::Other(format!("creating present transition command buffer: {e:#}")))?;
 		present_transition.transition_image(image, ImageLayout::Present);
 		present_transition
@@ -2192,10 +2156,59 @@ pub(super) struct PipelineSpec {
 	pub(super) updatable_sets: Vec<usize>,
 }
 
+pub(super) struct RawCommandPool {
+	context: Arc<Context>,
+	queue: RawQueue,
+	handle: vk::CommandPool,
+}
+
+impl RawCommandPool {
+	pub(super) fn new(context: Arc<Context>, queue_type: QueueType) -> anyhow::Result<Rc<Self>> {
+		let queue = context.queue(queue_type);
+		let info = vk::CommandPoolCreateInfo::default()
+			.flags(vk::CommandPoolCreateFlags::TRANSIENT)
+			.queue_family_index(queue.family_index);
+		let handle = unsafe { context.device.create_command_pool(&info, None) }
+			.map_err(|e| anyhow!("vkCreateCommandPool failed: {e:?}"))?;
+		Ok(Rc::new(Self { context, queue, handle }))
+	}
+
+	pub(super) fn create_command_buffer(self: &Rc<Self>, usage: CommandBufferUsage) -> anyhow::Result<RawCommandBuffer> {
+		let alloc_info = vk::CommandBufferAllocateInfo::default()
+			.command_pool(self.handle)
+			.level(vk::CommandBufferLevel::PRIMARY)
+			.command_buffer_count(1);
+		let handles = unsafe { self.context.device.allocate_command_buffers(&alloc_info) }
+			.map_err(|e| anyhow!("vkAllocateCommandBuffers failed: {e:?}"))?;
+		let handle = handles[0];
+		let begin_info = vk::CommandBufferBeginInfo::default().flags(command_usage_to_vk(usage));
+		if let Err(e) = unsafe { self.context.device.begin_command_buffer(handle, &begin_info) } {
+			unsafe { self.context.device.free_command_buffers(self.handle, &[handle]) };
+			return Err(anyhow!("vkBeginCommandBuffer failed: {e:?}"));
+		}
+
+		Ok(RawCommandBuffer {
+			context: self.context.clone(),
+			queue: self.queue,
+			pool: self.clone(),
+			handle,
+			ended: false,
+			active_rendering: None,
+			external_images: BTreeMap::new(),
+		})
+	}
+}
+
+impl Drop for RawCommandPool {
+	fn drop(&mut self) {
+		unsafe { self.context.device.destroy_command_pool(self.handle, None) };
+	}
+}
+
 pub(super) struct RawCommandBuffer {
 	context: Arc<Context>,
 	queue: RawQueue,
-	pool: vk::CommandPool,
+	pool: Rc<RawCommandPool>,
 	handle: vk::CommandBuffer,
 	ended: bool,
 	active_rendering: Option<RawRenderingState>,
@@ -2216,7 +2229,10 @@ impl RawQueueCompletionMarker {
 
 impl Drop for RawQueueCompletionMarker {
 	fn drop(&mut self) {
-		unsafe { self.context.device.destroy_fence(self.fence, None) };
+		unsafe {
+			let _ = self.context.device.wait_for_fences(&[self.fence], true, u64::MAX);
+			self.context.device.destroy_fence(self.fence, None);
+		}
 	}
 }
 
@@ -2841,7 +2857,12 @@ impl Drop for RawSubmission {
 
 impl Drop for RawCommandBuffer {
 	fn drop(&mut self) {
-		unsafe { self.context.device.destroy_command_pool(self.pool, None) };
+		unsafe {
+			self
+				.context
+				.device
+				.free_command_buffers(self.pool.handle, &[self.handle])
+		};
 	}
 }
 

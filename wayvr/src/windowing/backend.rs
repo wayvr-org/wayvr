@@ -2,8 +2,8 @@ use glam::{Affine2, Affine3A, Vec2};
 use smallvec::SmallVec;
 use std::{any::Any, rc::Rc, sync::Arc};
 use wgui::gfx::{
-    CommandBufferUsage, Format, GpuSubmission, ImageLayout, ImageView, WGfx,
-    cmd::{GfxCommandBufferBuilder, WGfxClearMode},
+    CommandBufferUsage, CommandPool, Format, GpuSubmission, ImageLayout, ImageView,
+    cmd::{CommandBufferBuilder, WGfxClearMode},
 };
 use wlx_common::{
     overlays::{BackendAttrib, BackendAttribValue, StereoMode},
@@ -76,17 +76,17 @@ pub struct RenderTarget {
 }
 
 pub struct RenderResources {
-    pub cmd_bufs: SmallVec<[GfxCommandBufferBuilder; 2]>,
+    pub cmd_bufs: SmallVec<[CommandBufferBuilder; 2]>,
     views: SmallVec<[Arc<ImageView>; 2]>,
     pub extent: [u32; 2],
 }
 
 impl RenderResources {
-    pub fn new(gfx: Arc<WGfx>, target: RenderTarget, meta: &FrameMeta) -> anyhow::Result<Self> {
+    pub fn new(pool: &CommandPool, target: RenderTarget, meta: &FrameMeta) -> anyhow::Result<Self> {
         let mut cmd_bufs = SmallVec::new_const();
 
         for tgt in &target.views {
-            let mut cmd_buf = gfx.create_gfx_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+            let mut cmd_buf = pool.create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
             cmd_buf.begin_rendering(tgt.clone(), meta.clear)?;
             cmd_bufs.push(cmd_buf);
@@ -99,7 +99,7 @@ impl RenderResources {
         })
     }
 
-    pub fn cmd_buf_single(&mut self) -> &mut GfxCommandBufferBuilder {
+    pub fn cmd_buf_single(&mut self) -> &mut CommandBufferBuilder {
         self.cmd_bufs.first_mut().unwrap() // first must always be populated
     }
 

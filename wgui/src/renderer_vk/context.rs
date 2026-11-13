@@ -7,7 +7,7 @@ use slotmap::{SlotMap, new_key_type};
 use crate::{
 	drawing::{self},
 	font_config,
-	gfx::{Scissor, WGfx, cmd::GfxCommandBufferBuilder},
+	gfx::{CommandPool, Scissor, WGfx, cmd::CommandBufferBuilder},
 	renderer_vk::image::{ImagePipeline, ImageRenderer, ImageViewCache},
 };
 
@@ -59,7 +59,7 @@ impl RendererPass<'_> {
 		font_system: &font_config::WguiFontSystem,
 		gfx: &Arc<WGfx>,
 		viewport: &mut Viewport,
-		cmd_buf: &mut GfxCommandBufferBuilder,
+		cmd_buf: &mut CommandBufferBuilder,
 		text_atlas: &mut TextAtlas,
 		image_view_cache: &mut ImageViewCache,
 	) -> anyhow::Result<()> {
@@ -129,10 +129,11 @@ pub struct SharedContext {
 }
 
 impl SharedContext {
-	pub fn new(gfx: Arc<WGfx>) -> anyhow::Result<Self> {
+	pub fn new(command_pool: CommandPool) -> anyhow::Result<Self> {
+		let gfx = command_pool.gfx().clone();
 		let rect_pipeline = RectPipeline::new(gfx.clone(), gfx.surface_format())?;
-		let text_pipeline = TextPipeline::new(gfx.clone(), gfx.surface_format())?;
-		let image_pipeline = ImagePipeline::new(gfx.clone(), gfx.surface_format())?;
+		let text_pipeline = TextPipeline::new(command_pool.clone(), gfx.surface_format())?;
+		let image_pipeline = ImagePipeline::new(command_pool, gfx.surface_format())?;
 
 		Ok(Self {
 			gfx,
@@ -233,7 +234,7 @@ impl Context {
 		&mut self,
 		font_system: &font_config::WguiFontSystem,
 		shared: &mut SharedContext,
-		cmd_buf: &mut GfxCommandBufferBuilder,
+		cmd_buf: &mut CommandBufferBuilder,
 		primitives: &[drawing::RenderPrimitive],
 	) -> anyhow::Result<ContextDrawResult> {
 		self.dirty = false;

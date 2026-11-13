@@ -109,14 +109,10 @@ impl AppState {
         let wvr_signals = SyncEventQueue::new();
 
         let mut wvr_server = {
-            let mut maybe_wvr = WvrServerState::new(
-                gfx.clone(),
-                &gfx_extras,
-                &session.config,
-                params.capture_input,
-            )
-            .log_err("Could not initialize WayVR Server")
-            .ok();
+            let mut maybe_wvr =
+                WvrServerState::new(&gfx_extras, &session.config, params.capture_input)
+                    .log_err("Could not initialize WayVR Server")
+                    .ok();
             if let Some(wvr) = maybe_wvr.as_mut() {
                 wvr.config_changed(&session.config);
             }
@@ -149,7 +145,7 @@ impl AppState {
         #[cfg(feature = "osc")]
         let osc_sender = crate::subsystem::osc::OscSender::new(session.config.osc_out_port).ok();
 
-        let wgui_shared = WSharedContext::new(gfx.clone())?;
+        let wgui_shared = WSharedContext::new(gfx_extras.gfx_pool.clone())?;
 
         let mut audio: Box<dyn audio::AudioProvider> = if params.no_audio {
             Box::new(audio::DummyAudioProvider::new())

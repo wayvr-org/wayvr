@@ -4,8 +4,8 @@ pub mod dmabuf;
 use std::{collections::HashMap, sync::Arc};
 
 use wgui::gfx::{
-    BufferUsage, BuiltCommandBuffer, Format, GpuSubmission, ShaderModule, Vert2Buf, Vert2Uv, WGfx,
-    WGfxCreateInfo,
+    BufferUsage, BuiltCommandBuffer, CommandPool, Format, GpuSubmission, QueueType, ShaderModule,
+    Vert2Buf, Vert2Uv, WGfx, WGfxCreateInfo,
 };
 use wlx_capture::DrmFormat;
 
@@ -16,6 +16,7 @@ use crate::shaders::{
 use dmabuf::get_drm_formats;
 
 pub struct WGfxExtras {
+    pub gfx_pool: CommandPool,
     pub shaders: HashMap<&'static str, Arc<ShaderModule>>,
     pub drm_formats: Arc<[DrmFormat]>,
     pub quad_verts: Vert2Buf,
@@ -24,6 +25,7 @@ pub struct WGfxExtras {
 
 impl WGfxExtras {
     pub fn new(gfx: &Arc<WGfx>) -> anyhow::Result<Self> {
+        let gfx_pool = gfx.create_command_pool(QueueType::Graphics)?;
         let mut shaders = HashMap::new();
         shaders.insert("vert_quad", vert_quad::load(gfx)?);
         shaders.insert("frag_color", frag_color::load(gfx)?);
@@ -64,6 +66,7 @@ impl WGfxExtras {
         }
 
         Ok(Self {
+            gfx_pool,
             shaders,
             drm_formats,
             quad_verts,

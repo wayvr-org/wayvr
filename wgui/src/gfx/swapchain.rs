@@ -75,7 +75,7 @@ impl SwapchainFrame {
 
 	pub fn present(self, command_buffer: &BuiltCommandBuffer) -> Result<PresentStatus, SwapchainError> {
 		let Self { raw, image_view } = self;
-		let mut command_buffer = command_buffer.raw.lock();
+		let mut command_buffer = command_buffer.raw.borrow_mut();
 		raw
 			.submit_and_present(&mut command_buffer, &image_view.image().raw)
 			.map(PresentStatus::from_raw)

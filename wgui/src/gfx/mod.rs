@@ -13,7 +13,6 @@ mod raw;
 use std::{
 	collections::HashMap,
 	ffi::c_void,
-	marker::PhantomData,
 	mem::size_of,
 	sync::{Arc, Weak},
 };
@@ -22,7 +21,7 @@ use anyhow::Context as _;
 use parking_lot::Mutex;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
-pub use cmd::{BuiltCommandBuffer, GfxCommandBufferBuilder, GpuSubmission, WGfxClearMode, XferCommandBufferBuilder};
+pub use cmd::{BuiltCommandBuffer, CommandBufferBuilder, CommandPool, GpuSubmission, WGfxClearMode};
 pub use dmabuf::{DmabufImportInfo, DmabufPlaneLayout, ExportedDmabufImage};
 pub use pipeline::{DescriptorSet, WGfxPipeline, WPipelineCreateInfo};
 pub use resources::{Buffer, BufferWriteGuard, Image, ImageView, Sampler, ShaderModule, spirv_words};
@@ -216,16 +215,6 @@ impl WGfx {
 		self.raw.wait_idle()
 	}
 
-	/// Submit a non-blocking completion marker to the queue
-	///
-	/// It uses an `ALL_COMMANDS` to `ALL_COMMANDS` barrier, so its fence doesn't
-	/// complete until all earlier work is finished.
-	pub fn submit_graphics_completion_marker(&self) -> anyhow::Result<GpuCompletionMarker> {
-		Ok(GpuCompletionMarker {
-			raw: self.raw.submit_graphics_completion_marker()?,
-		})
-	}
-
 	pub fn raw_instance_handle(&self) -> u64 {
 		self.raw.raw_instance_handle()
 	}
@@ -256,14 +245,6 @@ impl WGfx {
 
 	pub fn create_swapchain(self: &Arc<Self>, extent: [u32; 2]) -> anyhow::Result<Arc<Swapchain>> {
 		self.create_swapchain_inner(extent, None)
-	}
-
-	pub fn transition_image_now(&self, image: &Arc<Image>, new_layout: ImageLayout) -> anyhow::Result<()> {
-		let mut cmd = self
-			.raw
-			.create_command_buffer(QueueType::Graphics, CommandBufferUsage::OneTimeSubmit)?;
-		cmd.transition_image(&image.raw, new_layout);
-		cmd.submit_and_wait()
 	}
 
 	fn create_swapchain_inner(
@@ -434,33 +415,13 @@ impl WGfx {
 		Ok(Arc::new(WGfxPipeline::new(self.clone(), vert, frag, info)?))
 	}
 
-	pub fn create_gfx_command_buffer(
-		self: &Arc<Self>,
-		usage: CommandBufferUsage,
-	) -> anyhow::Result<GfxCommandBufferBuilder> {
-		cmd::CommandBufferBuilder::new(self.clone(), QueueType::Graphics, usage, PhantomData)
-	}
-
-	pub fn create_xfer_command_buffer(
-		self: &Arc<Self>,
-		usage: CommandBufferUsage,
-	) -> anyhow::Result<XferCommandBufferBuilder> {
-		cmd::CommandBufferBuilder::new(self.clone(), QueueType::Graphics, usage, PhantomData)
+	pub fn create_command_pool(self: &Arc<Self>, queue_type: QueueType) -> anyhow::Result<CommandPool> {
+		CommandPool::new(self.clone(), queue_type)
 	}
 
 	/// Whether a second queue was reserved for capture work
 	pub fn has_capture_queue(&self) -> bool {
 		self.raw.has_capture_queue()
-	}
-
-	pub fn create_capture_command_buffer(
-		self: &Arc<Self>,
-		usage: CommandBufferUsage,
-	) -> anyhow::Result<XferCommandBufferBuilder> {
-		if !self.raw.has_capture_queue() {
-			anyhow::bail!("no dedicated capture queue available");
-		}
-		cmd::CommandBufferBuilder::new(self.clone(), QueueType::Transfer, usage, PhantomData)
 	}
 
 	pub fn enumerate_devices(&self) -> anyhow::Result<Vec<String>> {

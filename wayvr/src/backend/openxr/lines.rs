@@ -169,8 +169,9 @@ impl LinePool {
                 line.buf_color.write()?[0..4].copy_from_slice(&COLORS[inner.color]);
 
                 let mut cmd_buffer = app
-                    .gfx
-                    .create_gfx_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+                    .gfx_extras
+                    .gfx_pool
+                    .create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
                 cmd_buffer.begin_rendering(tgt, WGfxClearMode::DontCare)?;
                 cmd_buffer.run_ref(&line.pass)?;
                 cmd_buffer.end_rendering()?;

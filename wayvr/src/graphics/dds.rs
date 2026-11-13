@@ -1,6 +1,6 @@
 use image_dds::{ImageFormat, Surface};
 use std::{io::Read, sync::Arc};
-use wgui::gfx::{Format, Image, cmd::XferCommandBufferBuilder};
+use wgui::gfx::{Format, Image, cmd::CommandBufferBuilder};
 
 pub trait WlxCommandBufferDds {
     fn upload_image_dds<R>(&mut self, r: R) -> anyhow::Result<Arc<Image>>
@@ -8,7 +8,7 @@ pub trait WlxCommandBufferDds {
         R: Read;
 }
 
-impl WlxCommandBufferDds for XferCommandBufferBuilder {
+impl WlxCommandBufferDds for CommandBufferBuilder {
     fn upload_image_dds<R>(&mut self, r: R) -> anyhow::Result<Arc<Image>>
     where
         R: Read,

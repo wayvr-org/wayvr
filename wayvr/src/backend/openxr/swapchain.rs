@@ -4,8 +4,8 @@ use openxr as xr;
 
 use smallvec::SmallVec;
 use wgui::gfx::{
-    GpuCompletionMarker, ImageCreateInfo, ImageLayout, ImageUsage, ImageView, ImageViewCreateInfo,
-    WGfx,
+    CommandPool, GpuCompletionMarker, ImageCreateInfo, ImageLayout, ImageUsage, ImageView,
+    ImageViewCreateInfo, WGfx,
 };
 
 use super::XrState;
@@ -153,40 +153,47 @@ struct RetiredSwapchain {
 }
 
 /// Keeps destroyed xrswapchains alive until work submitted by runtime from has finished
-#[derive(Default)]
 pub(super) struct SwapchainRetirementQueue {
+    pool: CommandPool,
     retired: Vec<RetiredSwapchain>,
 }
 
 impl SwapchainRetirementQueue {
+    pub(super) fn new(pool: CommandPool) -> Self {
+        Self {
+            pool,
+            retired: Vec::with_capacity(8),
+        }
+    }
+
     /// queue the swapchain for non-blocking retirement
-    pub(super) fn retire(&mut self, swapchain: WlxSwapchain, gfx: &Arc<WGfx>) {
+    pub(super) fn retire(&mut self, swapchain: WlxSwapchain) {
         self.retired.push(RetiredSwapchain {
             swapchain,
             completion: None,
         });
 
         let idx = self.retired.len() - 1;
-        if let Err(e) = Self::arm(&mut self.retired[idx], gfx) {
+        if let Err(e) = Self::arm(&mut self.retired[idx], &self.pool) {
             log::warn!("Failed arming retired OpenXR swapchain: {e:#}");
         }
     }
 
-    fn arm(retired: &mut RetiredSwapchain, gfx: &Arc<WGfx>) -> anyhow::Result<()> {
+    fn arm(retired: &mut RetiredSwapchain, pool: &CommandPool) -> anyhow::Result<()> {
         if retired.completion.is_some() {
             return Ok(());
         }
 
         retired.swapchain.ensure_image_released()?;
-        retired.completion = Some(gfx.submit_graphics_completion_marker()?);
+        retired.completion = Some(pool.submit_graphics_completion_marker()?);
         Ok(())
     }
 
-    pub(super) fn collect(&mut self, gfx: &Arc<WGfx>) {
+    pub(super) fn collect(&mut self) {
         let mut idx = 0;
         while idx < self.retired.len() {
             if self.retired[idx].completion.is_none()
-                && let Err(e) = Self::arm(&mut self.retired[idx], gfx)
+                && let Err(e) = Self::arm(&mut self.retired[idx], &self.pool)
             {
                 log::warn!("Failed re-arming retired OpenXR swapchain: {e:#}");
                 idx += 1;

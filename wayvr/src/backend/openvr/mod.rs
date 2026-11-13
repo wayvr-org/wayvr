@@ -144,7 +144,7 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     let mut next_device_update = Instant::now();
     let mut due_tasks = VecDeque::with_capacity(4);
 
-    let mut lines = LinePool::new(app.gfx.clone())?;
+    let mut lines = LinePool::new(&app.gfx_extras.gfx_pool)?;
     let pointer_lines = [lines.allocate(), lines.allocate()];
     let mut current_lines = Vec::with_capacity(2);
     let mut last_frame_time = Instant::now();
@@ -377,7 +377,7 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 let tgt = RenderTarget {
                     views: smallvec![o.ensure_staging_image(&mut app, meta.extent)?],
                 };
-                let mut rdr = RenderResources::new(app.gfx.clone(), tgt, &meta)?;
+                let mut rdr = RenderResources::new(&app.gfx_extras.gfx_pool, tgt, &meta)?;
                 o.render(&mut app, &mut rdr)?;
                 o.data.image_dirty = true;
                 futures.add(rdr.end_with_layout(wgui::gfx::ImageLayout::TransferSrc)?);
@@ -410,6 +410,9 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
 
     log::warn!("OpenVR shutdown");
     unsafe { context.shutdown() };
+
+    // stop capture threads before vulkan shutdown
+    drop(overlays);
 
     Ok(())
 }

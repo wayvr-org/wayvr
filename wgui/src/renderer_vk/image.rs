@@ -9,9 +9,9 @@ use glam::Mat4;
 use crate::{
 	drawing::{Boundary, ImagePrimitive},
 	gfx::{
-		BLEND_ALPHA, BufferUsage, CommandBufferUsage, DescriptorBinding, DescriptorType, Format, ImageView, Scissor,
-		ShaderModule, ShaderStage, Vertex, VertexAttribute, VertexFormat, WGfx,
-		cmd::GfxCommandBufferBuilder,
+		BLEND_ALPHA, BufferUsage, CommandBufferUsage, CommandPool, DescriptorBinding, DescriptorType, Format, ImageView,
+		Scissor, ShaderModule, ShaderStage, Vertex, VertexAttribute, VertexFormat, WGfx,
+		cmd::CommandBufferBuilder,
 		pipeline::{WGfxPipeline, WPipelineCreateInfo},
 	},
 	renderer_vk::{
@@ -58,11 +58,13 @@ impl Vertex for ImageVertex {
 #[derive(Clone)]
 pub struct ImagePipeline {
 	gfx: Arc<WGfx>,
+	command_pool: CommandPool,
 	pub(super) inner: Arc<WGfxPipeline<ImageVertex>>,
 }
 
 impl ImagePipeline {
-	pub fn new(gfx: Arc<WGfx>, format: Format) -> anyhow::Result<Self> {
+	pub fn new(command_pool: CommandPool, format: Format) -> anyhow::Result<Self> {
+		let gfx = command_pool.gfx().clone();
 		let vert = vert_image::load(&gfx)?;
 		let frag = frag_image::load(&gfx)?;
 
@@ -75,7 +77,11 @@ impl ImagePipeline {
 				.use_updatable_descriptors([2]),
 		)?;
 
-		Ok(Self { gfx, inner: pipeline })
+		Ok(Self {
+			gfx,
+			command_pool,
+			inner: pipeline,
+		})
 	}
 }
 
@@ -158,7 +164,7 @@ impl ImageRenderer {
 		gfx: &Arc<WGfx>,
 		viewport: &mut Viewport,
 		gfx_scissor: &Scissor,
-		cmd_buf: &mut GfxCommandBufferBuilder,
+		cmd_buf: &mut CommandBufferBuilder,
 		image_view_cache: &mut ImageViewCache,
 	) -> anyhow::Result<()> {
 		let res = viewport.resolution();
@@ -200,7 +206,10 @@ impl ImageRenderer {
 		let mut uploaded_image_views = vec![None; pending_uploads.len()];
 
 		if !pending_uploads.is_empty() {
-			let mut xfer_cmd_buf = gfx.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+			let mut xfer_cmd_buf = self
+				.pipeline
+				.command_pool
+				.create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
 			for (upload_idx, upload) in pending_uploads.iter().enumerate() {
 				log::trace!("Uploading image {}", upload.content_id);

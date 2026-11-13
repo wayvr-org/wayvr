@@ -57,11 +57,7 @@ use std::{
 };
 use wayland_protocols::xdg::shell::server::xdg_toplevel;
 use wayvr_ipc::packet_client::PositionMode;
-use wgui::{
-    gfx::{ImageView, WGfx},
-    globals::WguiGlobals,
-    log::LogErr,
-};
+use wgui::{gfx::ImageView, globals::WguiGlobals, log::LogErr};
 use wlx_capture::frame::Transform;
 use wlx_common::{
     astr_containers::AStrMapExt,
@@ -203,7 +199,6 @@ const WAYVR_SCREEN_RES: [i32; 2] = [2560, 1440];
 
 impl WvrServerState {
     pub fn new(
-        gfx: Arc<WGfx>,
         gfx_extras: &WGfxExtras,
         config: &GeneralConfig,
         capture_input: bool,
@@ -320,7 +315,7 @@ impl WvrServerState {
 
         let tasks = SyncEventQueue::new();
 
-        let dma_importer = ImageImporter::new(gfx);
+        let dma_importer = ImageImporter::new(gfx_extras.gfx_pool.clone());
 
         let state = Application {
             output,

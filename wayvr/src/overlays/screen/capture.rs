@@ -1,4 +1,5 @@
 use std::{
+    cell::OnceCell,
     os::fd::{AsRawFd, BorrowedFd, OwnedFd, RawFd},
     ptr::NonNull,
     sync::{Arc, Mutex},
@@ -8,8 +9,8 @@ use glam::Affine3A;
 use smallvec::{SmallVec, smallvec};
 use wgui::{
     gfx::{
-        AttachmentBlend, BlendFactor, BlendOp, Buffer, BufferUsage, CommandBufferUsage, Filter,
-        Format, Image, ImageView, Scissor, Vert2Uv, WGfx,
+        AttachmentBlend, BlendFactor, BlendOp, Buffer, BufferUsage, CommandBufferUsage,
+        CommandPool, Filter, Format, Image, ImageView, QueueType, Scissor, Vert2Uv, WGfx,
         cmd::WGfxClearMode,
         pass::WGfxPass,
         pipeline::{WGfxPipeline, WPipelineCreateInfo},
@@ -33,6 +34,10 @@ const CURSOR_SIZE: f32 = 64. / 1440.;
 
 // synchronize queue shared by the WlxCapture worker threads
 static CAPTURE_QUEUE_MUTEX: Mutex<()> = Mutex::new(());
+
+thread_local! {
+    static CAPTURE_XFER_POOL: OnceCell<CommandPool> = const { OnceCell::new() };
+}
 
 struct BufPass {
     pass: WGfxPass<Vert2Uv>,
@@ -125,8 +130,9 @@ impl ScreenPipeline {
         )?;
 
         let mut cmd_xfer = app
-            .gfx
-            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+            .gfx_extras
+            .gfx_pool
+            .create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
         let fallback_image =
             cmd_xfer.upload_image(1, 1, Format::R8G8B8A8_SRGB, &[255, 0, 255, 255])?;
         cmd_xfer.build_and_execute_now()?;
@@ -277,8 +283,9 @@ impl ScreenPipeline {
             image::load_from_memory(include_bytes!("../../res/default_cursor.png"))?.to_rgba8();
 
         let mut cmd_xfer = app
-            .gfx
-            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+            .gfx_extras
+            .gfx_pool
+            .create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
         let image = cmd_xfer.upload_image(
             cursor.width(),
@@ -357,7 +364,10 @@ impl ScreenPipeline {
         let size = CURSOR_SIZE * self.extentf[1];
         let (width, height, hotspot_x, hotspot_y, source_uv, transform) =
             if let Some(cursor) = cursor {
-                let scale = size / cursor.size[0].max(cursor.size[1]).max(f32::EPSILON);
+                let scale = size
+                    / cursor.source_size[0]
+                        .max(cursor.source_size[1])
+                        .max(f32::EPSILON);
                 (
                     cursor.size[0] * scale,
                     cursor.size[1] * scale,
@@ -741,28 +751,40 @@ fn memfd_frame_len(frame: &wlx_frame::MemFdFrame) -> Option<usize> {
 
 fn upload_image(
     me: &WlxCaptureIn,
+    pool: Option<&CommandPool>,
     width: u32,
     height: u32,
     format: Format,
     data: &[u8],
 ) -> Option<Arc<Image>> {
-    upload_image_with_row_length(me, width, height, format, data, 0)
+    upload_image_with_row_length(me, pool, width, height, format, data, 0)
 }
 
 fn upload_image_with_row_length(
     me: &WlxCaptureIn,
+    pool: Option<&CommandPool>,
     width: u32,
     height: u32,
     format: Format,
     data: &[u8],
     buffer_row_length: u32,
 ) -> Option<Arc<Image>> {
-    let cmd_result = if me.use_capture_queue {
-        me.gfx
-            .create_capture_command_buffer(CommandBufferUsage::OneTimeSubmit)
+    let cmd_result = if let Some(pool) = pool {
+        pool.create_command_buffer(CommandBufferUsage::OneTimeSubmit)
+    } else if me.use_capture_queue {
+        CAPTURE_XFER_POOL.with(|cell| {
+            if cell.get().is_none() {
+                let _ = cell.set(me.gfx.create_command_pool(QueueType::Transfer)?);
+            }
+            cell.get()
+                .unwrap()
+                .create_command_buffer(CommandBufferUsage::OneTimeSubmit)
+        })
     } else {
-        me.gfx
-            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)
+        panic!(
+            "{}: CPU capture upload must run on the main thread",
+            me.name
+        );
     };
     let mut cmd_xfer = match cmd_result {
         Ok(x) => x,
@@ -796,6 +818,14 @@ fn upload_image_with_row_length(
 }
 
 pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<WlxCaptureOut> {
+    receive_callback_with_pool(me, frame, None)
+}
+
+fn receive_callback_with_pool(
+    me: &WlxCaptureIn,
+    frame: WlxFrame,
+    pool: Option<&CommandPool>,
+) -> Option<WlxCaptureOut> {
     match frame {
         WlxFrame::Dmabuf(frame) => {
             if !frame.is_valid() {
@@ -834,6 +864,7 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
             let map = MappedMemFd::new(fd, frame.plane.offset, len)?;
             let image = upload_image(
                 me,
+                pool,
                 frame.format.width,
                 frame.format.height,
                 format,
@@ -867,6 +898,7 @@ pub(super) fn receive_callback(me: &WlxCaptureIn, frame: WlxFrame) -> Option<Wlx
             let buffer_row_length = (frame.stride / 4) as u32;
             let image = upload_image_with_row_length(
                 me,
+                pool,
                 frame.format.width,
                 frame.format.height,
                 format,
@@ -942,14 +974,19 @@ where
 {
     inner: T,
     data: Option<WlxCaptureIn>,
+    pool: CommandPool,
 }
 
 impl<T> MainThreadWlxCapture<T>
 where
     T: WlxCapture<DmaExporterProxy, MainThreadFrame>,
 {
-    pub const fn new(inner: T) -> Self {
-        Self { inner, data: None }
+    pub fn new(inner: T, pool: CommandPool) -> Self {
+        Self {
+            inner,
+            data: None,
+            pool,
+        }
     }
 }
 
@@ -998,18 +1035,21 @@ where
                     stride,
                     mouse,
                 };
-                receive_callback(
+                receive_callback_with_pool(
                     self.data.as_ref().expect("capture must be initialized"),
                     WlxFrame::MemPtr(frame),
+                    Some(&self.pool),
                 )
             }
-            MainThreadFrame::Dmabuf { frame, fds: _fds } => receive_callback(
+            MainThreadFrame::Dmabuf { frame, fds: _fds } => receive_callback_with_pool(
                 self.data.as_ref().expect("capture must be initialized"),
                 WlxFrame::Dmabuf(frame),
+                Some(&self.pool),
             ),
-            MainThreadFrame::Implicit(transform) => receive_callback(
+            MainThreadFrame::Implicit(transform) => receive_callback_with_pool(
                 self.data.as_ref().expect("capture must be initialized"),
                 WlxFrame::Implicit(transform),
+                Some(&self.pool),
             ),
         }
     }
@@ -1030,8 +1070,8 @@ fn receive_callback_dummy(_: &DmaExporterProxy, frame: WlxFrame) -> Option<MainT
             Some(MainThreadFrame::Cpu {
                 format: frame.format,
                 data: map.as_slice().to_vec(),
-                offset: frame.plane.offset as _,
-                stride: (frame.format.width as usize).checked_mul(4)?,
+                offset: 0, // MappedMemFd already has offset applied
+                stride: frame.plane.stride as _,
                 mouse: frame.mouse,
             })
         }
@@ -1046,7 +1086,7 @@ fn receive_callback_dummy(_: &DmaExporterProxy, frame: WlxFrame) -> Option<MainT
             Some(MainThreadFrame::Cpu {
                 format: frame.format,
                 data: pixels.to_vec(),
-                offset: frame.offset,
+                offset: 0, // pixels already has offset applied
                 stride: frame.stride,
                 mouse: frame.mouse,
             })
@@ -1102,8 +1142,12 @@ macro_rules! new_wlx_capture {
         if $app.gfx.has_capture_queue() {
             Box::new($capture) as Box<dyn wlx_capture::WlxCapture<_, _>>
         } else {
-            Box::new($crate::overlays::screen::capture::MainThreadWlxCapture::new($capture))
-                as Box<dyn wlx_capture::WlxCapture<_, _>>
+            Box::new(
+                $crate::overlays::screen::capture::MainThreadWlxCapture::new(
+                    $capture,
+                    $app.gfx_extras.gfx_pool.clone(),
+                ),
+            ) as Box<dyn wlx_capture::WlxCapture<_, _>>
         }
     }};
 }

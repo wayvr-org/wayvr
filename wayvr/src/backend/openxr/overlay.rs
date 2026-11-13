@@ -58,7 +58,7 @@ impl OverlayWindowData<OpenXrOverlayData> {
         )?;
         let tgt = swapchain.acquire_wait_image()?;
         if let Some(old_swapchain) = self.data.swapchain.replace(swapchain) {
-            retired_swapchains.retire(old_swapchain, &app.gfx);
+            retired_swapchains.retire(old_swapchain);
         }
         Ok(tgt)
     }

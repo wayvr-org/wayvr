@@ -6,7 +6,7 @@ use glam::{Affine3A, Quat, Vec3, Vec3A, Vec4};
 use idmap::IdMap;
 use ovr_overlay::overlay::OverlayManager;
 use ovr_overlay::sys::ETrackingUniverseOrigin;
-use wgui::gfx::{CommandBufferUsage, Format, ImageLayout, ImageView, WGfx};
+use wgui::gfx::{CommandBufferUsage, CommandPool, Format, ImageLayout, ImageView};
 use wlx_common::overlays::{BackendAttrib, BackendAttribValue};
 
 use crate::backend::input::{HoverResult, PointerHit};
@@ -29,9 +29,8 @@ pub(super) struct LinePool {
 }
 
 impl LinePool {
-    pub fn new(graphics: Arc<WGfx>) -> anyhow::Result<Self> {
-        let mut command_buffer =
-            graphics.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+    pub fn new(pool: &CommandPool) -> anyhow::Result<Self> {
+        let mut command_buffer = pool.create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
         let buf = vec![255; 16];
 
@@ -39,7 +38,7 @@ impl LinePool {
         command_buffer.transition_image(&texture, ImageLayout::TransferSrc)?;
         command_buffer.build_and_execute_now()?;
 
-        let view = graphics.create_image_view(texture)?;
+        let view = pool.gfx().create_image_view(texture)?;
 
         Ok(Self {
             lines: IdMap::new(),
