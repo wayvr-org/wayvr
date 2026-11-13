@@ -308,8 +308,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "Pulsa dos veces B (en Index) o Y (en Meta) para mostrar, recentrar u ocultar tu Set. Pruébalo ahora.",
 		"FEATURES_DOCUMENTATION": "Hay muchas otras funciones que vale la pena personalizar. Para más información, consulta la documentación en",
 		"FINISH_TUTORIAL": "Finalizar tutorial",
-		"GRAB_BOTH_HANDS": "Agarralo con ambas manos si quieres mover un overlay específico de tu set.",
-		"GRAB_ONE_HAND": "Agarralo con una mano para mover tu set.",
 		"GREETING": "¡Hola!",
 		"GUIDE_INTRO": "Déjanos guiarte en tus primeros pasos.",
 		"LASER_COLORS": "Colores del láser",
@@ -324,7 +322,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "Modo clic derecho: Láser naranja",
 		"THANKS_FOR_INSTALLING": "¡Gracias por instalar WayVR!",
 		"WATCH": "Reloj",
-		"WORKING_SET": "Set actual"
+		"WORKING_SET": "Set actual",
+		"SHOWHIDE_TOGGLE_HELP": "Para mostrar, ocultar o recentrar tu espacio de trabajo virtual:\nFrame: View+LB,\nIndex: Pulsa dos veces B,\nMeta: Pulsa dos veces Y.\nPruébalo ahora.",
+		"GRAB_KBD": "Agarra el teclado para mover tu Set.",
+		"GRAB_OVERLAY": "Agarra cualquier otro elemento para moverlo de forma independiente.",
+		"SHOW_HIDE_RECENTER": "Mostrar/Ocultar/Recentrar"
 	},
 	"DOWNLOAD_AGAIN": "Descargar de nuevo",
 	"DOWNLOADING_FILE": "Descargando archivo...",

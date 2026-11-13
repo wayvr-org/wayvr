@@ -308,8 +308,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "Dwukrotnie naciśnij B (na Index) lub Y (na Meta), aby wyświetlić, wycentrować lub ukryć swój zestaw. Wypróbuj teraz.",
 		"FEATURES_DOCUMENTATION": "Istnieje wiele innych funkcji wartych dostosowania. Więcej informacji znajdziesz w dokumentacji pod adresem",
 		"FINISH_TUTORIAL": "Zakończ samouczek",
-		"GRAB_BOTH_HANDS": "Chwyć oburącz, aby przesunąć konkretny element zestawu.",
-		"GRAB_ONE_HAND": "Chwyć go jedną ręką, aby przesunąć zestaw.",
 		"GREETING": "Cześć!",
 		"GUIDE_INTRO": "Przeprowadźmy Cię przez pierwsze kroki.",
 		"LASER_COLORS": "Kolory laserów",
@@ -324,7 +322,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "Tryb prawego kliknięcia: Pomarańczowy laser",
 		"THANKS_FOR_INSTALLING": "Dzięki za zainstalowanie WayVR!",
 		"WATCH": "Zegarek",
-		"WORKING_SET": "Aktywny zestaw"
+		"WORKING_SET": "Aktywny zestaw",
+		"SHOWHIDE_TOGGLE_HELP": "Aby wyświetlić, ukryć lub wycentrować obszar roboczy:\nFrame: View+LB,\nIndex: Dwukrotne naciśnięcie B,\nMeta: Dwukrotne naciśnięcie Y.\nWypróbuj teraz.",
+		"GRAB_KBD": "Chwyć klawiaturę, aby przenieść zestaw.",
+		"GRAB_OVERLAY": "Chwyć dowolny inny element, aby przesuwać go niezależnie.",
+		"SHOW_HIDE_RECENTER": "Pokaż/Ukryj/Wycentruj"
 	},
 	"DOWNLOAD_AGAIN": "Pobierz ponownie",
 	"DOWNLOADING_FILE": "Pobieranie pliku...",

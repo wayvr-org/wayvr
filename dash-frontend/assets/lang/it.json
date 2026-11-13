@@ -308,8 +308,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "Premi due volte B (su Index) o Y (su Meta) per mostrare, ricentrare o nascondere il tuo Set. Prova ora.",
 		"FEATURES_DOCUMENTATION": "Ci sono molte altre funzioni che vale la pena personalizzare. Per maggiori informazioni, consulta la documentazione su",
 		"FINISH_TUTORIAL": "Completa tutorial",
-		"GRAB_BOTH_HANDS": "Afferra con entrambe le mani se vuoi spostare un overlay specifico del tuo set.",
-		"GRAB_ONE_HAND": "Afferra con una mano per spostare il set.",
 		"GREETING": "Ciao!",
 		"GUIDE_INTRO": "Ti guidiamo attraverso i primi passi.",
 		"LASER_COLORS": "Colori del laser",
@@ -324,7 +322,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "Modalità tasto destro: Laser arancione",
 		"THANKS_FOR_INSTALLING": "Grazie per aver installato WayVR!",
 		"WATCH": "Orologio",
-		"WORKING_SET": "Set attivo"
+		"WORKING_SET": "Set attivo",
+		"SHOWHIDE_TOGGLE_HELP": "Per mostrare, nascondere o ricentrare il tuo workspace virtuale:\nFrame: View+LB,\nIndex: Premi due volte B,\nMeta: Premi due volte Y.\nProvaci ora.",
+		"GRAB_KBD": "Afferra la tastiera per spostare il tuo Set.",
+		"GRAB_OVERLAY": "Afferra qualsiasi altra cosa per spostarla indipendentemente.",
+		"SHOW_HIDE_RECENTER": "Mostra/Nascondi/Ricentra"
 	},
 	"DOWNLOAD_AGAIN": "Scarica di nuovo",
 	"DOWNLOADING_FILE": "Download file in corso...",

@@ -3,9 +3,9 @@
   
   <elements>
     <WelcomeVideo src_builtin="@/video/onboarding_double_press.ivf">
-      <PageTitle icon="@/dashboard/panorama.svg" translation="WELCOME.WORKING_SET"/>
+      <PageTitle icon="@/dashboard/panorama.svg" translation="WELCOME.SHOW_HIDE_RECENTER"/>
       <div position="relative" align_self="end" padding="16">
-        <TextDesc translation="WELCOME.DOUBLE_PRESS_TO_TOGGLE"/>
+        <TextDesc translation="WELCOME.SHOWHIDE_TOGGLE_HELP"/>
       </div>
     </WelcomeVideo>
   </elements>

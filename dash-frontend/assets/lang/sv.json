@@ -308,8 +308,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "Dubbeltryck B (på Index) eller Y (på Meta) för att visa, centrera om eller dölja ditt set. Prova nu.",
 		"FEATURES_DOCUMENTATION": "Det finns många andra funktioner värda att anpassa. För mer information, se dokumentationen på",
 		"FINISH_TUTORIAL": "Avsluta handledningen",
-		"GRAB_BOTH_HANDS": "Greppa med båda händerna om du vill flytta ett specifikt overlay i ditt set.",
-		"GRAB_ONE_HAND": "Greppa med en hand för att flytta ditt set.",
 		"GREETING": "Hej!",
 		"GUIDE_INTRO": "Låt oss guida dig genom dina första steg.",
 		"LASER_COLORS": "Laserfärger",
@@ -324,7 +322,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "Högerklicksläge: Orange laser",
 		"THANKS_FOR_INSTALLING": "Tack för att du installerade WayVR!",
 		"WATCH": "Klocka",
-		"WORKING_SET": "Aktivt Set"
+		"WORKING_SET": "Aktivt Set",
+		"SHOWHIDE_TOGGLE_HELP": "För att visa, dölja eller centrera om din virtuella arbetsyta:\nFrame: View+LB,\nIndex: Dubbeltryck B,\nMeta: Dubbeltryck Y.\nProva nu.",
+		"GRAB_KBD": "Greppa tangentbordet för att flytta ditt Set.",
+		"GRAB_OVERLAY": "Greppa vad som helst annat för att flytta det separat.",
+		"SHOW_HIDE_RECENTER": "Visa/Dölj/Centrera om"
 	},
 	"DOWNLOAD_AGAIN": "Ladda ner igen",
 	"DOWNLOADING_FILE": "Laddar ner fil...",
