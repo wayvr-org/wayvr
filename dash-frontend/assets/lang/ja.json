@@ -308,8 +308,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "セットの表示、再中心化、または非表示にするには、Bボタン（Index）またはYボタン（Meta）をダブルプレスして下さい。今すぐ試してみよう。",
 		"FEATURES_DOCUMENTATION": "他にもカスタマイズ次第で多くの機能が活用できます。詳細はドキュメントを確認してください：",
 		"FINISH_TUTORIAL": "チュートリアルを終了",
-		"GRAB_BOTH_HANDS": "セット内の特定のオーバーレイを移動させるには、両手で掴んでください。",
-		"GRAB_ONE_HAND": "片手で掴んでセットを移動させよう。",
 		"GREETING": "ようこそ！",
 		"GUIDE_INTRO": "まずは基本操作から案内する。",
 		"LASER_COLORS": "レーザーの色",
@@ -324,7 +322,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "右クリックモード：オレンジ色のレーザー",
 		"THANKS_FOR_INSTALLING": "WayVRをインストールしてくれてありがとう！",
 		"WATCH": "ウォッチ",
-		"WORKING_SET": "使用中のセット"
+		"WORKING_SET": "使用中のセット",
+		"SHOWHIDE_TOGGLE_HELP": "仮想ワークスペースの表示、非表示、または再中心化を行うには：\nFrame: View+LB,\nIndex: Bボタンを2回押し,\nMeta: Yボタンを2回押し。\n今すぐ試そう。",
+		"GRAB_KBD": "キーボードを掴んでセットを移動させる。",
+		"GRAB_OVERLAY": "他の要素を掴むと、個別に移動できる。",
+		"SHOW_HIDE_RECENTER": "表示/非表示/中心リセット"
 	},
 	"DOWNLOAD_AGAIN": "再ダウンロード",
 	"DOWNLOADING_FILE": "ファイルをダウンロード中...",

@@ -306,10 +306,11 @@
 		"BASICS": "These basics will allow you to start using WayVR with ease.",
 		"CENTER_MARKER": "Center marker is what will appear in front of you when recentering. Place overlays around it!",
 		"DOUBLE_PRESS_TO_TOGGLE": "Double-press B (on Index) or Y (on Meta) to show, recenter or hide your set. Try it now.",
+		"SHOWHIDE_TOGGLE_HELP": "To show, hide or recenter your virtual workspace:\nFrame: View+LB,\nIndex: Double-press B,\nMeta: Double-press Y.\nTry it now.",
 		"FEATURES_DOCUMENTATION": "There are many other features worth customizing. For more information, check the documentation at",
 		"FINISH_TUTORIAL": "Finish tutorial",
-		"GRAB_BOTH_HANDS": "Grab it with both hands if you want to move a specific overlay in your set.",
-		"GRAB_ONE_HAND": "Grab it with one hand to move your set.",
+		"GRAB_KBD": "Grab the keyboard to move your set.",
+		"GRAB_OVERLAY": "Grab anything else to move it independently.",
 		"GREETING": "Hi there!",
 		"GUIDE_INTRO": "Let us guide you through your first steps.",
 		"LASER_COLORS": "Laser Colors",
@@ -324,7 +325,8 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "Right-click Mode: Orange laser",
 		"THANKS_FOR_INSTALLING": "Thank you for installing WayVR!",
 		"WATCH": "Watch",
-		"WORKING_SET": "Working Set"
+		"WORKING_SET": "Working Set",
+		"SHOW_HIDE_RECENTER": "Show/Hide/Recenter"
 	},
 	"DOWNLOAD_AGAIN": "Download again",
 	"DOWNLOADING_FILE": "Downloading file...",

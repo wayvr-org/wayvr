@@ -308,8 +308,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "Drücke B (beim Index) oder Y (bei Meta) doppelt, um dein Set anzuzeigen, neu zu zentrieren oder auszublenden. Probier es jetzt aus.",
 		"FEATURES_DOCUMENTATION": "Es gibt viele weitere anpassbare Funktionen. Weitere Informationen findest du in der Dokumentation unter",
 		"FINISH_TUTORIAL": "Tutorial beenden",
-		"GRAB_BOTH_HANDS": "Greif mit beiden Händen zu, wenn du ein bestimmtes Overlay in deinem Set verschieben willst.",
-		"GRAB_ONE_HAND": "Greife mit einer Hand zu, um dein Set zu bewegen.",
 		"GREETING": "Hallo!",
 		"GUIDE_INTRO": "Lass uns dich durch deine ersten Schritte führen.",
 		"LASER_COLORS": "Laserfarben",
@@ -324,7 +322,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "Rechtsklick-Modus: Oranger Laser",
 		"THANKS_FOR_INSTALLING": "Vielen Dank für die Installation von WayVR!",
 		"WATCH": "Handgelenk-Uhr",
-		"WORKING_SET": "Aktives Set"
+		"WORKING_SET": "Aktives Set",
+		"SHOWHIDE_TOGGLE_HELP": "Um deinen virtuellen Workspace anzuzeigen, auszublenden oder neu zu zentrieren:\nFrame: View+LB,\nIndex: B doppelt drücken,\nMeta: Y doppelt drücken.\nProbier es jetzt aus.",
+		"GRAB_KBD": "Greif die Tastatur, um dein Set zu bewegen.",
+		"GRAB_OVERLAY": "Greife andere Objekte, um sie unabhängig zu bewegen.",
+		"SHOW_HIDE_RECENTER": "Anzeigen/Ausblenden/Recentrieren"
 	},
 	"DOWNLOAD_AGAIN": "Erneut herunterladen",
 	"DOWNLOADING_FILE": "Datei wird heruntergeladen...",

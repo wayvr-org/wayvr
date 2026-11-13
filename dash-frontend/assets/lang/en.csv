@@ -301,10 +301,15 @@ WELCOME.ALL_SET,You're all set!,Main heading on the final welcome/tutorial page.
 WELCOME.BASICS,These basics will allow you to start using WayVR with ease.,Description text on the final welcome page under the You are all set heading.
 WELCOME.CENTER_MARKER,Center marker is what will appear in front of you when recentering. Place overlays around it!,"Description of the center marker on the moving your set tutorial page. ""Overlay"" was previously translated as ""${DEFINITIONS.OVERLAY}""."
 WELCOME.DOUBLE_PRESS_TO_TOGGLE,"Double-press B (on Index) or Y (on Meta) to show, recenter or hide your set. Try it now.","Instruction text on the working set tutorial page explaining the double-press gesture. ""Set"" was previously translated as ""${DEFINITIONS.SET}""."
+WELCOME.SHOWHIDE_TOGGLE_HELP,"To show, hide or recenter your virtual workspace:
+Frame: View+LB,
+Index: Double-press B,
+Meta: Double-press Y.
+Try it now.","Tutorial page explaining the show/hide workspace gesture. Leave strings 'Frame', 'Index', 'Meta' as-is."
 WELCOME.FEATURES_DOCUMENTATION,"There are many other features worth customizing. For more information, check the documentation at",Text on the final welcome page linking to documentation.
 WELCOME.FINISH_TUTORIAL,Finish tutorial,Button text on the final welcome page to complete the tutorial.
-WELCOME.GRAB_BOTH_HANDS,Grab it with both hands if you want to move a specific overlay in your set.,Instruction text on the moving your set tutorial page for two-hand grab.
-WELCOME.GRAB_ONE_HAND,Grab it with one hand to move your set.,Instruction text on the moving your set tutorial page for one-hand grab.
+WELCOME.GRAB_KBD,Grab the keyboard to move your set.,Instruction text on the moving your set tutorial page for keyboard grab. ""Set"" was previously translated as ""${DEFINITIONS.SET}"".
+WELCOME.GRAB_OVERLAY,Grab anything else to move it independently.,Instruction text on the moving your set tutorial page for grabbing any window.
 WELCOME.GREETING,Hi there!,Greeting label on the first welcome page.
 WELCOME.GUIDE_INTRO,Let us guide you through your first steps.,Intro text on the first welcome page below the greeting.
 WELCOME.LASER_COLORS,Laser Colors,Page title on the laser colors tutorial page.
@@ -320,6 +325,7 @@ WELCOME.RIGHT_CLICK_MODE_ORANGE_LASER,Right-click Mode: Orange laser,Laser mode 
 WELCOME.THANKS_FOR_INSTALLING,Thank you for installing WayVR!,Thanks text on the first welcome page below the greeting.
 WELCOME.WATCH,Watch,"Page title on the watch/tutorial page. ""Watch"" was previously translated as ""${DEFINITIONS.WATCH}""."
 WELCOME.WORKING_SET,Working Set,"Page title on the working set tutorial page. ""Set"" was previously translated as ""${DEFINITIONS.SET}"". Working as in ""Current""."
+WELCOME.SHOW_HIDE_RECENTER,Show/Hide/Recenter,"Page title on the tutorial page."
 DOWNLOAD_AGAIN,Download again,Button in the skymap already downloaded dialog to re-download a skymap.
 DOWNLOADING_FILE,Downloading file...,Status label in the download file popup showing download progress.
 FAILED_TO_LAUNCH_APPLICATION,Failed to launch a application:,Error prefix in the toast shown when app launch fails.

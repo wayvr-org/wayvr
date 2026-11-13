@@ -308,8 +308,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "双击 B 键（Index）或 Y 键（Meta）以显示、重置中心或隐藏您的套装。现在试一下吧。",
 		"FEATURES_DOCUMENTATION": "还有许多其他值得自定义的功能。欲了解更多信息，请参阅文档：",
 		"FINISH_TUTORIAL": "完成教程",
-		"GRAB_BOTH_HANDS": "如需移动 Set 中的特定覆盖层，请用双手抓取。",
-		"GRAB_ONE_HAND": "单手抓取以移动你的 Set。",
 		"GREETING": "你好！",
 		"GUIDE_INTRO": "让我们带你快速上手。",
 		"LASER_COLORS": "射线颜色",
@@ -324,7 +322,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "右键模式：橙色激光",
 		"THANKS_FOR_INSTALLING": "感谢安装 WayVR！",
 		"WATCH": "手表",
-		"WORKING_SET": "当前套装"
+		"WORKING_SET": "当前套装",
+		"SHOWHIDE_TOGGLE_HELP": "显示、隐藏或重新中心化虚拟工作区：\nFrame: View+LB,\nIndex: 双击 B,\nMeta: 双击 Y.\n现在尝试一下。",
+		"GRAB_KBD": "抓取键盘来移动你的套装。",
+		"GRAB_OVERLAY": "抓取其他内容即可独立移动。",
+		"SHOW_HIDE_RECENTER": "显示/隐藏/重置中心"
 	},
 	"DOWNLOAD_AGAIN": "重新下载",
 	"DOWNLOADING_FILE": "正在下载文件...",
