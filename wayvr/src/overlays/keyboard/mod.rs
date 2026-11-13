@@ -66,8 +66,13 @@ pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig
 
     let keymap_switch_layouts = keymap_layouts(&app.session.config, &layout);
 
-    let mut maybe_keymap = KeyboardBackend::get_initial_keymap(app, &layout.model)
-        .ok()
+    let mut maybe_keymap = app
+        .session
+        .config
+        .keyboard_layouts
+        .first()
+        .and_then(|name| XkbKeymap::from_name(name, &layout.model).ok())
+        .or_else(|| KeyboardBackend::get_initial_keymap(app, &layout.model).ok())
         .or_else(|| {
             keymap_switch_layouts
                 .first()
