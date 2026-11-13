@@ -1,6 +1,13 @@
+use crate::{
+	frontend::{FrontendTask, FrontendTasks},
+	util::{
+		networking::skymap_catalog::{self, SkymapCatalogEntry, SkymapResolution},
+		popup_manager::{MountPopupOnceParams, PopupHolder},
+	},
+	views::{self, ViewTrait, ViewUpdateParams},
+};
 use anyhow::Context;
 use wgui::{
-	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -10,15 +17,6 @@ use wgui::{
 	task::Tasks,
 };
 use wlx_common::{async_executor::AsyncExecutor, config::GeneralConfig, config_io, dash_interface::ConfigChangeKind};
-
-use crate::{
-	frontend::{FrontendTask, FrontendTasks},
-	util::{
-		networking::skymap_catalog::{self, SkymapCatalogEntry, SkymapResolution},
-		popup_manager::{MountPopupOnceParams, PopupHolder},
-	},
-	views::{self, ViewTrait, ViewUpdateParams},
-};
 
 #[derive(Clone)]
 enum Task {
@@ -87,13 +85,8 @@ impl ViewTrait for View {
 
 impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let doc_params = &ParseDocumentParams {
-			globals: params.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/skymap_list.xml"),
-			extra: Default::default(),
-		};
-
-		let parser_state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
+		let doc_params = ParseDocumentParams::builtin("gui/view/skymap_list.xml");
+		let parser_state = wgui::parser::parse_from_assets(&doc_params, params.layout, params.parent_id)?;
 		let list_parent = parser_state.fetch_widget(&params.layout.state, "list_parent")?.id;
 		let tasks = Tasks::new();
 
@@ -182,7 +175,6 @@ impl View {
 			self.popup_dialog_box.clone(),
 			self.frontend_tasks.clone(),
 			views::dialog_box::Params {
-				globals: self.globals.clone(),
 				entries,
 				message: Translation::from_translation_key("APP_SETTINGS.SELECT_VARIANT"),
 				on_action_click: Box::new(move |action| {

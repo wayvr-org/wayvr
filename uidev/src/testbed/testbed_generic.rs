@@ -6,7 +6,6 @@ use crate::{
 };
 use glam::Vec2;
 use wgui::{
-	assets::AssetPathRef,
 	components::{
 		Component,
 		button::{ButtonClickCallback, ComponentButton},
@@ -77,12 +76,8 @@ fn handle_button_click(button: Rc<ComponentButton>, label: Widget, text: &'stati
 }
 
 impl TestbedGeneric {
-	fn doc_params(globals: &'_ WguiGlobals, extra: ParseDocumentExtra) -> ParseDocumentParams<'_> {
-		ParseDocumentParams {
-			globals: globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/various_widgets.xml"),
-			extra,
-		}
+	fn doc_params<'a>(extra: &'a ParseDocumentExtra) -> ParseDocumentParams<'a> {
+		ParseDocumentParams::builtin_extra("gui/various_widgets.xml", extra)
 	}
 
 	pub fn new(assets: Box<assets::Asset>) -> anyhow::Result<Self> {
@@ -125,7 +120,8 @@ impl TestbedGeneric {
 		};
 
 		let (layout, parser_state) = wgui::parser::new_layout_from_assets(
-			&TestbedGeneric::doc_params(&globals, extra),
+			&globals,
+			&TestbedGeneric::doc_params(&extra),
 			LayoutParams {
 				resize_to_parent: true,
 				theme: Rc::new(WguiTheme::default()),

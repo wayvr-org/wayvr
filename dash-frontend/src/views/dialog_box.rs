@@ -4,9 +4,7 @@ use crate::{
 	views::{ViewTrait, ViewUpdateParams},
 };
 use wgui::{
-	assets::AssetPathRef,
 	components::button::ComponentButton,
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
@@ -21,7 +19,6 @@ pub struct ButtonEntry {
 }
 
 pub struct Params {
-	pub globals: WguiGlobals,
 	pub entries: Vec<ButtonEntry>,
 	pub message: Translation,
 	pub on_action_click: Box<dyn FnOnce(&'static str)>,
@@ -57,13 +54,7 @@ pub struct View {
 	on_close_request: Option<Box<dyn FnOnce()>>,
 }
 
-fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/view/dialog_box.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/view/dialog_box.xml");
 
 impl ViewTrait for View {
 	fn update(&mut self, _par: &mut ViewUpdateParams) -> anyhow::Result<()> {
@@ -97,7 +88,7 @@ impl View {
 	) -> anyhow::Result<Self> {
 		let tasks = Tasks::<Task>::new();
 
-		let mut parser_state = wgui::parser::parse_from_assets(&doc_params(&par.globals), layout, id_parent)?;
+		let mut parser_state = wgui::parser::parse_from_assets(&DOC_PARAMS, layout, id_parent)?;
 		let id_buttons = parser_state.get_widget_id("buttons")?;
 
 		{
@@ -111,8 +102,7 @@ impl View {
 			let mut t_par = TemplateParams::new();
 			t_par.insert("icon", entry.icon);
 
-			let data =
-				parser_state.realize_template(&doc_params(&par.globals), "DialogBoxButton", layout, id_buttons, t_par)?;
+			let data = parser_state.realize_template(&DOC_PARAMS, "DialogBoxButton", layout, id_buttons, t_par)?;
 
 			let button = data.fetch_component_as::<ComponentButton>("btn")?;
 			button.set_text(&mut layout.common(), entry.content.clone());

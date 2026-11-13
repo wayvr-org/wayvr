@@ -10,7 +10,6 @@ use crate::{
 };
 use anyhow::Context;
 use wgui::{
-	assets::AssetPathRef,
 	color::WguiColorName,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
@@ -132,19 +131,13 @@ impl ViewTrait for View {
 	}
 }
 
-fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/view/remote_skymap_downloader.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/view/remote_skymap_downloader.xml");
 
 impl View {
 	pub fn new(par: Params) -> anyhow::Result<Self> {
 		let tasks = Tasks::<Task>::new();
 
-		let parser_state = wgui::parser::parse_from_assets(&doc_params(par.globals), par.layout, par.parent_id)?;
+		let parser_state = wgui::parser::parse_from_assets(&DOC_PARAMS, par.layout, par.parent_id)?;
 		let id_resolution_buttons = parser_state.get_widget_id("resolution_buttons")?;
 
 		let str_version = par.globals.i18n().translate("VERSION");
@@ -220,7 +213,7 @@ impl View {
 			mount_resolution_button(
 				layout,
 				&mut self.parser_state,
-				&doc_params(&self.globals),
+				&DOC_PARAMS,
 				self.id_resolution_buttons,
 				res,
 				&self.tasks,
@@ -259,7 +252,6 @@ impl View {
 			self.popup_dialog_box.clone(),
 			self.frontend_tasks.clone(),
 			views::dialog_box::Params {
-				globals: self.globals.clone(),
 				message: Translation::from_translation_key("APP_SETTINGS.SKYMAP_ALREADY_DOWNLOADED"),
 				entries: vec![
 					views::dialog_box::ButtonEntry {

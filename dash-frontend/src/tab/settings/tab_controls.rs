@@ -2,9 +2,7 @@ use std::rc::Rc;
 use wgui::i18n::Translation;
 use wgui::layout::{Layout, LayoutTask};
 use wgui::parser::TemplateParams;
-use wgui::{
-	components::button::ComponentButton, globals::WguiGlobals, layout::WidgetID, parser::Fetchable, task::Tasks,
-};
+use wgui::{components::button::ComponentButton, layout::WidgetID, parser::Fetchable, task::Tasks};
 use wlx_common::XrBackend;
 use wlx_common::dash_interface::DashBackendTask;
 
@@ -32,7 +30,6 @@ enum LocalTask {
 pub struct State {
 	popup_input_profiles: PopupHolder<input_profiles::View>,
 	frontend_tasks: FrontendTasks,
-	globals: WguiGlobals,
 	tasks: Tasks<LocalTask>,
 	id_space_gravity: Option<WidgetID>,
 }
@@ -52,11 +49,7 @@ impl SettingsTab for State {
 		for task in self.tasks.drain() {
 			match task {
 				LocalTask::OpenInputProfilesDash => {
-					input_profiles::mount_popup(
-						self.frontend_tasks.clone(),
-						self.globals.clone(),
-						self.popup_input_profiles.clone(),
-					);
+					input_profiles::mount_popup(self.frontend_tasks.clone(), self.popup_input_profiles.clone());
 				}
 				LocalTask::OpenInputProfilesBackend => {
 					self
@@ -233,7 +226,6 @@ impl State {
 		Ok(State {
 			popup_input_profiles: popup,
 			frontend_tasks: par.frontend_tasks.clone(),
-			globals: par.mp.doc_params.globals.clone(),
 			tasks,
 			id_space_gravity,
 		})

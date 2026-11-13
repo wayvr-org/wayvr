@@ -1,7 +1,6 @@
 use std::{collections::HashMap, marker::PhantomData, rc::Rc};
 
 use wgui::{
-	assets::AssetPathRef,
 	components::{
 		bar_graph::{ComponentBarGraph, ValueCell},
 		button::ComponentButton,
@@ -11,7 +10,6 @@ use wgui::{
 		tabs::ComponentTabs,
 	},
 	drawing::Color,
-	globals::WguiGlobals,
 	layout::{Layout, WidgetID},
 	parser::{self, Fetchable, ParseDocumentParams, ParserState, TemplateParams},
 	task::Tasks,
@@ -226,37 +224,13 @@ impl<T> Tab<T> for TabMonado<T> {
 	}
 }
 
-fn doc_params_monado(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/tab/monado.xml"),
-		extra: Default::default(),
-	}
-}
-
-fn doc_params_tab_process_list(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/tab/monado_tab_process_list.xml"),
-		extra: Default::default(),
-	}
-}
-
-fn doc_params_tab_general_settings(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/tab/monado_tab_general_settings.xml"),
-		extra: Default::default(),
-	}
-}
-
-fn doc_params_tab_debug_timings(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/tab/monado_tab_debug_timings.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS_MONADO: ParseDocumentParams = ParseDocumentParams::builtin("gui/tab/monado.xml");
+const DOC_PARAMS_TAB_PROCESS_LIST: ParseDocumentParams =
+	ParseDocumentParams::builtin("gui/tab/monado_tab_process_list.xml");
+const DOC_PARAMS_TAB_GENERAL_SETTINGS: ParseDocumentParams =
+	ParseDocumentParams::builtin("gui/tab/monado_tab_general_settings.xml");
+const DOC_PARAMS_TAB_DEBUG_TIMINGS: ParseDocumentParams =
+	ParseDocumentParams::builtin("gui/tab/monado_tab_debug_timings.xml");
 
 fn yesno(n: bool) -> &'static str {
 	match n {
@@ -274,11 +248,7 @@ impl SubtabGeneralSettings {
 		data: &mut T,
 		tasks: &Tasks<Task>,
 	) -> anyhow::Result<Self> {
-		let state = wgui::parser::parse_from_assets(
-			&doc_params_tab_general_settings(&frontend.globals),
-			&mut frontend.layout,
-			parent_id,
-		)?;
+		let state = wgui::parser::parse_from_assets(&DOC_PARAMS_TAB_GENERAL_SETTINGS, &mut frontend.layout, parent_id)?;
 
 		// get brightness
 		let slider_brightness = state.fetch_component_as::<ComponentSlider>("slider_brightness")?;
@@ -379,7 +349,6 @@ fn mount_sessions_list(
 	sessions: &SessionsMap,
 ) -> anyhow::Result<DebugSessionList> {
 	let mut buttons = Vec::new();
-	let globals = layout.state.globals.clone();
 	layout.remove_children(id_parent);
 
 	for (session_id, session) in sessions {
@@ -396,7 +365,7 @@ fn mount_sessions_list(
 		);
 
 		let data = state.realize_template(
-			&doc_params_tab_debug_timings(&globals),
+			&DOC_PARAMS_TAB_DEBUG_TIMINGS,
 			"SessionButton",
 			layout,
 			id_parent,
@@ -427,19 +396,12 @@ fn mount_graph(
 	name: &'static str,
 	limits: (f32, f32),
 ) -> anyhow::Result<DebugGraph> {
-	let globals = layout.state.globals.clone();
 	let mut params = TemplateParams::new();
 	params.insert("name", name);
 	params.insert_rc("limit_min", limits.0.to_string().into());
 	params.insert_rc("limit_max", limits.1.to_string().into());
 
-	let data = state.realize_template(
-		&doc_params_tab_debug_timings(&globals),
-		"DebugGraph",
-		layout,
-		id_parent,
-		params,
-	)?;
+	let data = state.realize_template(&DOC_PARAMS_TAB_DEBUG_TIMINGS, "DebugGraph", layout, id_parent, params)?;
 
 	let graph = data.fetch_component_as::<ComponentBarGraph>("graph")?;
 	Ok(DebugGraph { graph })
@@ -451,11 +413,7 @@ fn ns_to_ms(ns: i64) -> f32 {
 
 impl SubtabDebugTimings {
 	fn new<T>(parent_id: WidgetID, frontend: &mut Frontend<T>, tasks: &Tasks<Task>) -> anyhow::Result<Self> {
-		let mut state = wgui::parser::parse_from_assets(
-			&doc_params_tab_debug_timings(&frontend.globals),
-			&mut frontend.layout,
-			parent_id,
-		)?;
+		let mut state = wgui::parser::parse_from_assets(&DOC_PARAMS_TAB_DEBUG_TIMINGS, &mut frontend.layout, parent_id)?;
 
 		let id_timings_parent = state.get_widget_id("timings_parent")?;
 		let id_sessions_list_parent = state.get_widget_id("session_list_parent")?;
@@ -633,11 +591,7 @@ impl SubtabDebugTimings {
 
 impl SubtabProcessList {
 	fn new<T>(parent_id: WidgetID, frontend: &mut Frontend<T>) -> anyhow::Result<Self> {
-		let state = wgui::parser::parse_from_assets(
-			&doc_params_tab_process_list(&frontend.globals),
-			&mut frontend.layout,
-			parent_id,
-		)?;
+		let state = wgui::parser::parse_from_assets(&DOC_PARAMS_TAB_PROCESS_LIST, &mut frontend.layout, parent_id)?;
 		let id_list_parent = state.get_widget_id("list_parent")?;
 
 		Ok(Self {
@@ -663,15 +617,10 @@ impl SubtabProcessList {
 		par.insert("flag_primary", yesno(client.is_primary));
 		par.insert("flag_visible", yesno(client.is_visible));
 
-		let globals = layout.state.globals.clone();
-
-		let state_cell = self.state.realize_template(
-			&doc_params_tab_process_list(&globals),
-			"Cell",
-			layout,
-			self.id_list_parent,
-			par,
-		)?;
+		let state_cell =
+			self
+				.state
+				.realize_template(&DOC_PARAMS_TAB_PROCESS_LIST, "Cell", layout, self.id_list_parent, par)?;
 
 		let checkbox = state_cell.fetch_component_as::<ComponentCheckbox>("checkbox")?;
 		checkbox.on_toggle({
@@ -720,8 +669,7 @@ impl SubtabProcessList {
 
 impl<T> TabMonado<T> {
 	pub fn new(frontend: &mut Frontend<T>, parent_id: WidgetID) -> anyhow::Result<Self> {
-		let globals = frontend.layout.state.globals.clone();
-		let state = wgui::parser::parse_from_assets(&doc_params_monado(&globals), &mut frontend.layout, parent_id)?;
+		let state = wgui::parser::parse_from_assets(&DOC_PARAMS_MONADO, &mut frontend.layout, parent_id)?;
 		let id_content = state.get_widget_id("content")?;
 		let tabs = state.fetch_component_as::<ComponentTabs>("tabs")?;
 

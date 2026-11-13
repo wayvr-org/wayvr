@@ -1,21 +1,18 @@
-use wgui::{
-	assets::AssetPathRef,
-	components::button::{ButtonClickCallback, ComponentButton},
-	event::EventAlterables,
-	globals::WguiGlobals,
-	i18n::Translation,
-	layout::{Layout, WidgetID},
-	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
-	renderer_vk::text::custom_glyph::CustomGlyphData,
-	widget::{image::WidgetImage, label::WidgetLabel},
-};
-
 use crate::util::{
 	networking::{
 		self,
 		skymap_catalog::{SkymapCatalogEntry, SkymapResolution},
 	},
 	wgui_simple,
+};
+use wgui::{
+	components::button::{ButtonClickCallback, ComponentButton},
+	event::EventAlterables,
+	i18n::Translation,
+	layout::{Layout, WidgetID},
+	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
+	renderer_vk::text::custom_glyph::CustomGlyphData,
+	widget::{image::WidgetImage, label::WidgetLabel},
 };
 
 pub struct Params<'a> {
@@ -34,13 +31,7 @@ pub struct View {
 	image: Option<CustomGlyphData>,
 }
 
-fn doc_params(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/view/skymap_list_cell.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/view/skymap_list_cell.xml");
 
 fn populate_res_pips(
 	layout: &mut Layout,
@@ -48,7 +39,6 @@ fn populate_res_pips(
 	parser_state: &mut ParserState,
 	entry: &SkymapCatalogEntry,
 ) -> anyhow::Result<()> {
-	let globals = layout.state.globals.clone();
 	layout.remove_children(id_parent);
 
 	let mut populate_res_pip = |res: SkymapResolution| -> anyhow::Result<()> {
@@ -56,7 +46,7 @@ fn populate_res_pips(
 		let downloaded = entry.is_downloaded(res).unwrap_or(false);
 		tpar.insert("color", if downloaded { "#11aa40" } else { "#444444" });
 		tpar.insert("text", res.get_display_str_simple());
-		parser_state.realize_template(&doc_params(&globals), "ResolutionPip", layout, id_parent, tpar)?;
+		parser_state.realize_template(&DOC_PARAMS, "ResolutionPip", layout, id_parent, tpar)?;
 
 		Ok(())
 	};
@@ -76,15 +66,9 @@ impl View {
 	pub fn new(par: Params) -> anyhow::Result<Self> {
 		let globals = par.layout.state.globals.clone();
 
-		let mut parser_state = wgui::parser::parse_from_assets(&doc_params(&globals), par.layout, par.id_parent)?;
+		let mut parser_state = wgui::parser::parse_from_assets(&DOC_PARAMS, par.layout, par.id_parent)?;
 
-		let data = parser_state.realize_template(
-			&doc_params(&globals),
-			"Cell",
-			par.layout,
-			par.id_parent,
-			Default::default(),
-		)?;
+		let data = parser_state.realize_template(&DOC_PARAMS, "Cell", par.layout, par.id_parent, Default::default())?;
 
 		let id_image_preview = data.get_widget_id("image_preview")?;
 		let id_resolution_pips = data.get_widget_id("resolution_pips")?;

@@ -129,8 +129,13 @@ impl<S: 'static> GuiPanel<S> {
             }
         });
 
+        let extra = wgui::parser::ParseDocumentExtra {
+            on_custom_attribs: Some(on_custom_attrib_inner.clone()),
+            extra_vars: params.extra_vars,
+            ..Default::default()
+        };
+
         let doc_params = wgui::parser::ParseDocumentParams {
-            globals: app.wgui_globals.clone(),
             path: if params.external_xml {
                 AssetPathRef::File(path)
             } else {
@@ -139,14 +144,11 @@ impl<S: 'static> GuiPanel<S> {
                     fallback: None,
                 }
             },
-            extra: wgui::parser::ParseDocumentExtra {
-                on_custom_attribs: Some(on_custom_attrib_inner.clone()),
-                extra_vars: params.extra_vars,
-                ..Default::default()
-            },
+            extra: Some(&extra),
         };
 
         let (mut layout, mut parser_state) = wgui::parser::new_layout_from_assets(
+            &app.wgui_globals,
             &doc_params,
             LayoutParams {
                 resize_to_parent: params.resize_to_parent,
@@ -187,7 +189,7 @@ impl<S: 'static> GuiPanel<S> {
             initialized: false,
             has_focus: [false, false],
             last_content_size: Vec2::ZERO,
-            doc_extra: Some(doc_params.extra),
+            doc_extra: Some(extra),
             custom_elems,
             extra_attribs: Default::default(),
             context_menu: Default::default(),

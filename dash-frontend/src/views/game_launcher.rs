@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::{
 	frontend::{FrontendTask, FrontendTasks, SoundType},
 	util::{
@@ -9,8 +7,8 @@ use crate::{
 	},
 	views::{ViewTrait, ViewUpdateParams, game_cover},
 };
+use std::rc::Rc;
 use wgui::{
-	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -80,13 +78,8 @@ impl View {
 	}
 
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let doc_params = &ParseDocumentParams {
-			globals: params.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/game_launcher.xml"),
-			extra: Default::default(),
-		};
-
-		let state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
+		let doc_params = ParseDocumentParams::builtin("gui/view/game_launcher.xml");
+		let state = wgui::parser::parse_from_assets(&doc_params, params.layout, params.parent_id)?;
 
 		{
 			let mut label_title = state.fetch_widget_as::<WidgetLabel>(&params.layout.state, "label_title")?;

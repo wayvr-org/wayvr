@@ -1,8 +1,6 @@
 use wgui::{
-	assets::AssetPathRef,
 	components::button::ComponentButton,
 	event::StyleSetRequest,
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, LayoutTask, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState},
@@ -23,7 +21,6 @@ enum Task {
 }
 
 pub struct Params<'a> {
-	pub globals: WguiGlobals,
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
 	pub steam_utils: &'a mut SteamUtils,
@@ -41,17 +38,11 @@ pub struct View {
 	parent_id: WidgetID,
 }
 
-fn doc_params(globals: WguiGlobals) -> ParseDocumentParams<'static> {
-	ParseDocumentParams {
-		globals,
-		path: AssetPathRef::BuiltIn("gui/view/running_games_list.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/view/running_games_list.xml");
 
 impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let state = wgui::parser::parse_from_assets(&doc_params(params.globals.clone()), params.layout, params.parent_id)?;
+		let state = wgui::parser::parse_from_assets(&DOC_PARAMS, params.layout, params.parent_id)?;
 		let btn_refresh = state.fetch_component_as::<ComponentButton>("btn_refresh")?;
 		let id_list_parent = state.get_widget_id("list_parent")?;
 
@@ -120,7 +111,7 @@ impl View {
 			let game_name = View::extract_name_from_appid(&game.app_id, &self.installed_games);
 
 			let t = self.state.realize_template(
-				&doc_params(layout.state.globals.clone()),
+				&DOC_PARAMS,
 				"RunningGameCell",
 				layout,
 				self.id_list_parent,

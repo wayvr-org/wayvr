@@ -130,12 +130,7 @@ pub struct CreateLoadingParams<'a> {
 }
 
 pub fn create_loading(par: CreateLoadingParams) -> anyhow::Result<WidgetID> {
-	let doc_params = ParseDocumentParams {
-		globals: par.layout.state.globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/t_loading.xml"),
-		extra: Default::default(),
-	};
-
+	let doc_params = ParseDocumentParams::builtin("gui/t_loading.xml");
 	let mut parser_state = wgui::parser::parse_from_assets(&doc_params, par.layout, par.parent_id)?;
 
 	let data = parser_state.realize_template(

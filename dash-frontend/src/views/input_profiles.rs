@@ -1,8 +1,6 @@
 use std::rc::Rc;
 use wgui::{
-	assets::AssetPathRef,
 	components::button::ComponentButton,
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, TemplateParams},
@@ -22,7 +20,6 @@ enum Task {
 }
 
 pub struct Params<'a> {
-	pub globals: WguiGlobals,
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
 	pub frontend_tasks: &'a FrontendTasks,
@@ -31,7 +28,6 @@ pub struct Params<'a> {
 pub struct View {
 	tasks: Tasks<Task>,
 	frontend_tasks: FrontendTasks,
-	globals: WguiGlobals,
 	bindings_popup: PopupHolder<bindings::View>,
 }
 
@@ -42,12 +38,7 @@ impl ViewTrait for View {
 		for task in self.tasks.drain() {
 			match task {
 				Task::SelectProfile(profile) => {
-					views::bindings::mount_popup(
-						self.frontend_tasks.clone(),
-						self.globals.clone(),
-						self.bindings_popup.clone(),
-						profile,
-					);
+					views::bindings::mount_popup(self.frontend_tasks.clone(), self.bindings_popup.clone(), profile);
 				}
 			}
 		}
@@ -57,13 +48,9 @@ impl ViewTrait for View {
 
 impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let doc_params = &ParseDocumentParams {
-			globals: params.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/input_profiles.xml"),
-			extra: Default::default(),
-		};
+		let doc_params = ParseDocumentParams::builtin("gui/view/input_profiles.xml");
 
-		let mut parser_state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
+		let mut parser_state = wgui::parser::parse_from_assets(&doc_params, params.layout, params.parent_id)?;
 
 		let list_parent = parser_state.fetch_widget(&params.layout.state, "list_parent")?.id;
 
@@ -77,7 +64,7 @@ impl View {
 			cell_params.insert("text", profile.display_name);
 
 			parser_state.instantiate_template(
-				doc_params,
+				&doc_params,
 				"InputProfileButton",
 				params.layout,
 				list_parent,
@@ -97,20 +84,18 @@ impl View {
 		Ok(Self {
 			tasks,
 			frontend_tasks: params.frontend_tasks.clone(),
-			globals: params.globals.clone(),
 			bindings_popup: Default::default(),
 		})
 	}
 }
 
-pub fn mount_popup(frontend_tasks: FrontendTasks, globals: WguiGlobals, popup: PopupHolder<View>) {
+pub fn mount_popup(frontend_tasks: FrontendTasks, popup: PopupHolder<View>) {
 	frontend_tasks
 		.clone()
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
 			Translation::from_translation_key("APP_SETTINGS.INPUT_PROFILES"),
 			Box::new(move |data| {
 				let view = View::new(Params {
-					globals: globals.clone(),
 					layout: data.layout,
 					parent_id: data.id_content,
 					frontend_tasks: &frontend_tasks,

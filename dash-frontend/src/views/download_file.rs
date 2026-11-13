@@ -39,7 +39,6 @@ enum Task {
 }
 
 pub struct View {
-	globals: WguiGlobals,
 	tasks: Tasks<Task>,
 	executor: AsyncExecutor,
 
@@ -56,13 +55,7 @@ pub struct View {
 	task_downloader: Option<smol::Task<Option<()>>>,
 }
 
-fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/view/download_file.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/view/download_file.xml");
 
 impl ViewTrait for View {
 	fn update(&mut self, par: &mut ViewUpdateParams) -> anyhow::Result<()> {
@@ -99,7 +92,7 @@ impl ViewTrait for View {
 						self
 							.parser_state
 							.realize_template(
-								&doc_params(&self.globals),
+								&DOC_PARAMS,
 								"btn_close",
 								par.layout,
 								self.id_content,
@@ -153,7 +146,7 @@ impl View {
 	) -> anyhow::Result<Self> {
 		let tasks = Tasks::<Task>::new();
 
-		let parser_state = wgui::parser::parse_from_assets(&doc_params(&par.globals), layout, id_parent)?;
+		let parser_state = wgui::parser::parse_from_assets(&DOC_PARAMS, layout, id_parent)?;
 		let id_label_status = parser_state.get_widget_id("label_status")?;
 		let id_content = parser_state.get_widget_id("content")?;
 		let id_loading_parent = parser_state.get_widget_id("loading_parent")?;
@@ -178,7 +171,6 @@ impl View {
 
 		Ok(Self {
 			tasks,
-			globals: par.globals.clone(),
 			executor: par.executor.clone(),
 			parser_state,
 			id_label_status,

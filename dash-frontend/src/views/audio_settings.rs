@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use wgui::{
-	assets::{AssetPathRef, AssetPathSource},
+	assets::AssetPathSource,
 	color::{WguiColor, WguiColorName},
 	components::{
 		self,
@@ -290,13 +290,7 @@ fn get_profile_display_name(profile_name: &str, card: &pactl_wrapper::Card) -> P
 	}
 }
 
-fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/view/audio_settings.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/view/audio_settings.xml");
 
 trait DeviceControl {
 	fn on_volume_request(&self) -> anyhow::Result<f32>;
@@ -624,7 +618,7 @@ impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
 		let tasks = ViewTasks::new();
 
-		let state = wgui::parser::parse_from_assets(&doc_params(&params.globals), params.layout, params.parent_id)?;
+		let state = wgui::parser::parse_from_assets(&DOC_PARAMS, params.layout, params.parent_id)?;
 
 		let id_devices = state.get_widget_id("devices")?;
 
@@ -753,7 +747,7 @@ impl View {
 
 		let data = self
 			.state
-			.realize_template(&doc_params(&self.globals), "Card", params.layout, self.id_devices, par)?;
+			.realize_template(&DOC_PARAMS, "Card", params.layout, self.id_devices, par)?;
 
 		let btn_card = data.fetch_component_as::<ComponentButton>("btn_card")?;
 		btn_card.on_click({
@@ -796,13 +790,9 @@ impl View {
 			},
 		);
 
-		let data = self.state.realize_template(
-			&doc_params(&self.globals),
-			"DeviceSlider",
-			params.layout,
-			self.id_devices,
-			par,
-		)?;
+		let data = self
+			.state
+			.realize_template(&DOC_PARAMS, "DeviceSlider", params.layout, self.id_devices, par)?;
 
 		if params.checked {
 			let rect = data.fetch_widget(&params.layout.state, "rect")?;
@@ -949,7 +939,7 @@ impl View {
 
 		{
 			let data = self.state.realize_template(
-				&doc_params(&self.globals),
+				&DOC_PARAMS,
 				"SelectAudioProfileText",
 				layout,
 				self.id_devices,

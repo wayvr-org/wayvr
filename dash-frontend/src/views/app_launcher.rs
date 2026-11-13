@@ -2,7 +2,6 @@ use std::{collections::HashMap, rc::Rc, str::FromStr};
 use strum::VariantNames;
 use wayvr_ipc::packet_client::{PositionMode, WvrProcessLaunchParams};
 use wgui::{
-	assets::AssetPathRef,
 	components::{
 		ComponentTrait, button::ComponentButton, checkbox::ComponentCheckbox, radio_group::ComponentRadioGroup,
 	},
@@ -100,13 +99,8 @@ impl ViewTrait for View {
 
 impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let doc_params = &ParseDocumentParams {
-			globals: params.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/app_launcher.xml"),
-			extra: Default::default(),
-		};
-
-		let mut state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
+		let doc_params = ParseDocumentParams::builtin("gui/view/app_launcher.xml");
+		let mut state = wgui::parser::parse_from_assets(&doc_params, params.layout, params.parent_id)?;
 
 		let radio_compositor = state.fetch_component_as::<ComponentRadioGroup>("radio_compositor")?;
 		let radio_res = state.fetch_component_as::<ComponentRadioGroup>("radio_res")?;
@@ -146,7 +140,7 @@ impl View {
 			let mut template_params = TemplateParams::new();
 			template_params.insert("path", icon_path);
 			state.instantiate_template(
-				doc_params,
+				&doc_params,
 				"ApplicationIcon",
 				params.layout,
 				id_icon_parent,
