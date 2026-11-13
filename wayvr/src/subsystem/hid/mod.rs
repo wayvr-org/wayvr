@@ -196,6 +196,7 @@ pub enum VirtualKey {
     AbntC2 = 129,
     Hangul,
     Hanja,
+    Yen,
     LSuper = 133,
     RSuper,
     Menu,
