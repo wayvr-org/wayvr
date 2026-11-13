@@ -78,7 +78,7 @@ pub const ALTGR: KeyModifier = 0x80;
 #[allow(non_camel_case_types)]
 #[repr(u16)]
 #[derive(
-    Debug, Deserialize, PartialEq, Eq, Clone, Copy, IntegerId, EnumString, EnumIter, FromRepr,
+    Debug, Deserialize, PartialEq, Eq, Clone, Copy, Hash, IntegerId, EnumString, EnumIter, FromRepr,
 )]
 pub enum VirtualKey {
     Escape = 9,
@@ -197,7 +197,7 @@ pub enum VirtualKey {
     Hangul,
     Hanja,
     Yen,
-    LSuper = 133,
+    LSuper,
     RSuper,
     Menu,
     Help = 146,
@@ -289,6 +289,8 @@ pub const fn get_key_type(key: VirtualKey) -> KeyType {
         || key_between!(key, VirtualKey::A, VirtualKey::Oem3)
         || key_between!(key, VirtualKey::Oem5, VirtualKey::Oem2)
         || key_is!(key, VirtualKey::Oem102)
+        || key_is!(key, VirtualKey::Yen)
+        || key_is!(key, VirtualKey::AbntC1)
     {
         KeyType::Symbol
     } else if key_between!(key, VirtualKey::KP_7, VirtualKey::KP_0)
@@ -324,6 +326,8 @@ thread_local! {
     )};
 }
 
+pub const DEFAULT_XKB_MODEL: &str = "pc105";
+
 #[derive(Clone)]
 pub struct XkbKeymap {
     pub inner: xkb::Keymap,
@@ -331,27 +335,28 @@ pub struct XkbKeymap {
 
 impl Default for XkbKeymap {
     fn default() -> Self {
-        Self::from_layout_variant("us", "").unwrap()
+        Self::from_model_layout_variant(DEFAULT_XKB_MODEL, "us", "").unwrap()
     }
 }
 
 impl XkbKeymap {
-    pub fn from_name(name: &str) -> anyhow::Result<Self> {
+    pub fn from_name(name: &str, model: &str) -> anyhow::Result<Self> {
         let Some(captures) = KEYMAP_NAME_REGEX.with(|rx| rx.captures(name)) else {
             anyhow::bail!("invalid layout name for keymap switch: {name}");
         };
         let layout = captures.get(1).map_or("", |g| g.as_str());
         let variant = captures.get(2).map_or("", |g| g.as_str());
 
-        Self::from_layout_variant(layout, variant).context("Invalid keymap layout or variant")
+        Self::from_model_layout_variant(model, layout, variant)
+            .context("Invalid keymap layout or variant")
     }
 
-    pub fn from_layout_variant(layout: &str, variant: &str) -> Option<Self> {
+    pub fn from_model_layout_variant(model: &str, layout: &str, variant: &str) -> Option<Self> {
         let context = xkb::Context::new(xkb::CONTEXT_NO_FLAGS);
         xkb::Keymap::new_from_names(
             &context,
             "",
-            "",
+            model,
             layout,
             variant,
             None,

@@ -225,7 +225,9 @@ impl WlVirtualProvider {
         let virtual_keyboard = keyboard_manager.create_virtual_keyboard(&seat, &qh, ());
 
         let keymap = hid::get_keymap_wl() // not expected to fail
-            .unwrap_or_else(|_| hid::XkbKeymap::from_layout_variant("us", "").unwrap());
+            .unwrap_or_else(|_| {
+                hid::XkbKeymap::from_model_layout_variant(hid::DEFAULT_XKB_MODEL, "us", "").unwrap()
+            });
 
         let mut result = Self {
             keymap_file: None,

@@ -84,6 +84,8 @@ pub(super) fn create_keyboard_panel(
 
     let has_altgr = keymap.as_ref().is_some_and(|m| XkbKeymap::has_altgr(m));
 
+    let keymap_switch_layouts = super::keymap_layouts(&app.session.config, layout);
+
     for row in 0..layout.key_sizes.len() {
         let (div, _) = panel.layout.add_child(
             root,
@@ -105,13 +107,9 @@ pub(super) fn create_keyboard_panel(
                 height: length(PIXELS_PER_UNIT),
             };
 
-            let Some(key) = layout.get_key_data(
-                keymap,
-                has_altgr,
-                col,
-                row,
-                &app.session.config.keyboard_layouts,
-            ) else {
+            let Some(key) =
+                layout.get_key_data(keymap, has_altgr, col, row, &keymap_switch_layouts)
+            else {
                 let _ = panel.layout.add_child(
                     div.id,
                     WidgetDiv::create(),

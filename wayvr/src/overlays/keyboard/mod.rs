@@ -38,7 +38,7 @@ use wgui::{
 };
 use wlx_common::windowing::{OverlayWindowState, Positioning};
 use wlx_common::{
-    config::AltModifier,
+    config::{AltModifier, GeneralConfig},
     overlays::{BackendAttrib, BackendAttribValue, ToastTopic},
 };
 
@@ -49,6 +49,14 @@ pub const KEYBOARD_NAME: &str = "kbd";
 const AUTO_RELEASE_MODS: [KeyModifier; 5] = [SHIFT, CTRL, ALT, SUPER, ALTGR];
 const SYSTEM_LAYOUT_ALIASES: [&str; 5] = ["mozc", "pinyin", "hangul", "sayura", "unikey"];
 
+fn keymap_layouts(config: &GeneralConfig, layout: &layout::Layout) -> Vec<Arc<str>> {
+    if config.keyboard_layouts.is_empty() {
+        vec![layout.native_layout.as_str().into()]
+    } else {
+        config.keyboard_layouts.clone()
+    }
+}
+
 pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     let layout = layout::Layout::load_from_disk();
 
@@ -56,13 +64,15 @@ pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig
 
     let width = layout.row_size * 0.05 * app.session.config.keyboard_scale;
 
-    let mut maybe_keymap = KeyboardBackend::get_initial_keymap(app).ok().or_else(|| {
-        app.session
-            .config
-            .keyboard_layouts
-            .first()
-            .and_then(|name| XkbKeymap::from_name(name.as_ref()).ok())
-    });
+    let keymap_switch_layouts = keymap_layouts(&app.session.config, &layout);
+
+    let mut maybe_keymap = KeyboardBackend::get_initial_keymap(app, &layout.model)
+        .ok()
+        .or_else(|| {
+            keymap_switch_layouts
+                .first()
+                .and_then(|name| XkbKeymap::from_name(name, &layout.model).ok())
+        });
 
     if let Some(keymap) = maybe_keymap.as_ref() {
         app.hid_provider
@@ -80,7 +90,7 @@ pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig
         overlay_list: OverlayList::default(),
         set_list: SetList::default(),
         clock_12h: app.session.config.clock_12h,
-        keymap_switch_layouts: app.session.config.keyboard_layouts.clone(),
+        keymap_switch_layouts,
         keymap_switch_index: 0,
         keymap_switch_pending: false,
     };
@@ -221,7 +231,8 @@ impl KeyboardBackend {
         };
 
         if let Some(captures) = self.re_fcitx.captures(&fcitx_layout) {
-            XkbKeymap::from_layout_variant(
+            XkbKeymap::from_model_layout_variant(
+                &self.wlx_layout.model,
                 captures.get(1).map_or("", |g| g.as_str()),
                 captures.get(2).map_or("", |g| g.as_str()),
             )
@@ -240,13 +251,13 @@ impl KeyboardBackend {
         keymap_name: &str,
         app: &mut AppState,
     ) -> anyhow::Result<bool> {
-        let keymap = XkbKeymap::from_name(keymap_name)?;
+        let keymap = XkbKeymap::from_name(keymap_name, &self.wlx_layout.model)?;
         app.hid_provider
             .keymap_changed(app.wvr_server.as_mut(), &keymap);
         self.switch_keymap(&keymap, app)
     }
 
-    fn get_initial_keymap(app: &AppState) -> anyhow::Result<XkbKeymap> {
+    fn get_initial_keymap(app: &AppState, model: &str) -> anyhow::Result<XkbKeymap> {
         fn get_system_keymap(wayland: bool) -> anyhow::Result<XkbKeymap> {
             if wayland {
                 get_keymap_wl()
@@ -266,7 +277,8 @@ impl KeyboardBackend {
 
         let re = Regex::new(r"^keyboard-([^-]+)(?:-([^-]+))?$").unwrap();
         if let Some(captures) = re.captures(&fcitx_layout) {
-            XkbKeymap::from_layout_variant(
+            XkbKeymap::from_model_layout_variant(
+                model,
                 captures.get(1).map_or("", |g| g.as_str()),
                 captures.get(2).map_or("", |g| g.as_str()),
             )
