@@ -29,9 +29,9 @@ mod overlays;
 mod shaders;
 mod state;
 mod subsystem;
+pub mod system;
 mod test;
 mod windowing;
-pub mod system;
 
 use std::{
     path::PathBuf,

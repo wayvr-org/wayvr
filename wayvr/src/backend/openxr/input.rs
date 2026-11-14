@@ -16,14 +16,14 @@ use wlx_common::{
     openxr_bindings_schema::DEFAULT_BUTTON_THRESHOLDS,
 };
 
+use super::{XrState, helpers::posef_to_transform};
+use crate::backend::input::HeadInput;
 use crate::{
     backend::input::{
         Haptics, InputState, Pointer, PointerState, TrackedDevice, TrackedDeviceRole,
     },
     state::{AppSession, AppState},
 };
-use crate::backend::input::HeadInput;
-use super::{XrState, helpers::posef_to_transform};
 
 static CLICK_TIMES: [Duration; 3] = [
     Duration::ZERO,
@@ -272,8 +272,12 @@ impl OpenXrInputSource {
         let (physical_inputs, physical_input_map) =
             create_physical_inputs(&action_set, &xr.instance, &profiles)?;
 
-        let mut hands: [&mut OpenXrHandSource; 4] =
-            [&mut left_source, &mut right_source, &mut fallback_source, &mut head_source];
+        let mut hands: [&mut OpenXrHandSource; 4] = [
+            &mut left_source,
+            &mut right_source,
+            &mut fallback_source,
+            &mut head_source,
+        ];
         suggest_bindings(
             &xr.instance,
             &mut hands,
@@ -319,11 +323,8 @@ impl OpenXrInputSource {
         }
         let physical_inputs = &self.physical_inputs;
 
-        self.head.update_head(
-            &mut app.input_state.head,
-            &xr,
-            physical_inputs
-        )?;
+        self.head
+            .update_head(&mut app.input_state.head, &xr, physical_inputs)?;
 
         app.input_state.eye_gaze = if xr.extra_exts.ext_eye_gaze_interaction {
             self.handsfree_pointer.locate_tracked_pose(xr)?
@@ -1094,7 +1095,13 @@ fn suggest_bindings(
         let mut bindings: Vec<xr::Binding> = vec![];
 
         add_direct_bindings!(profile.pose.as_ref(), pose, sources, bindings, instance);
-        add_direct_bindings!(profile.haptic.as_ref(), haptics, sources, bindings, instance);
+        add_direct_bindings!(
+            profile.haptic.as_ref(),
+            haptics,
+            sources,
+            bindings,
+            instance
+        );
         add_direct_bindings!(profile.scroll.as_ref(), scroll, sources, bindings, instance);
 
         // 1 physical source → 1 action per interaction profile

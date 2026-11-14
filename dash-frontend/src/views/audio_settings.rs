@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
-use crate::
-frontend::{FrontendTask, FrontendTasks};
+use crate::frontend::{FrontendTask, FrontendTasks};
 use wgui::{
 	assets::{AssetPathRef, AssetPathSource},
 	color::{WguiColor, WguiColorName},
