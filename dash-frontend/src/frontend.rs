@@ -63,7 +63,6 @@ pub struct Frontend<T> {
 	// single-threaded async runtime executor
 	pub executor: AsyncExecutor,
 
-	#[allow(dead_code)]
 	state: ParserState,
 
 	current_tab: Option<Box<dyn Tab<T>>>,
@@ -159,11 +158,8 @@ impl<T: 'static> Frontend<T> {
 		)?;
 
 		let (layout, state) = wgui::parser::new_layout_from_assets(
-			&ParseDocumentParams {
-				globals: globals.clone(),
-				path: AssetPathRef::BuiltIn("gui/dashboard.xml"),
-				extra: Default::default(),
-			},
+			&globals,
+			&ParseDocumentParams::builtin("gui/dashboard.xml"),
 			LayoutParams {
 				resize_to_parent: true,
 				theme: params.theme,
@@ -298,7 +294,6 @@ impl<T: 'static> Frontend<T> {
 			self.popup_dialog_box.clone(),
 			self.tasks.clone(),
 			views::dialog_box::Params {
-				globals: self.globals.clone(),
 				message: Translation::from_translation_key(translation_key),
 				entries: views::dialog_box::get_entries_yes_no(),
 				on_action_click: Box::new(move |action| {

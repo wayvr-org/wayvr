@@ -14,7 +14,7 @@ use std::time::Duration;
 use wgui::{
     assets::AssetPathRef,
     components::button::ComponentButton,
-    parser::{Fetchable, ParseDocumentParams},
+    parser::{Fetchable, ParseDocumentExtra, ParseDocumentParams},
 };
 use wlx_common::{
     common::LeftRight,
@@ -33,26 +33,28 @@ struct WatchState {
     clock_12h: bool,
 }
 
+const WATCH_XML: &str = "gui/watch.xml";
+
+const fn doc_params(extra: Option<&ParseDocumentExtra>) -> ParseDocumentParams<'_> {
+    ParseDocumentParams {
+        path: AssetPathRef::FileOrBuiltIn {
+            path: WATCH_XML,
+            fallback: None,
+        },
+        extra,
+    }
+}
+
 pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
     let state = WatchState {
         clock_12h: app.session.config.clock_12h,
         ..Default::default()
     };
-    let watch_xml = "gui/watch.xml";
 
     let mut panel =
-        GuiPanel::new_from_template(app, watch_xml, state, NewGuiPanelParams::default())?;
+        GuiPanel::new_from_template(app, WATCH_XML, state, NewGuiPanelParams::default())?;
 
     sets_or_overlays(&mut panel, app);
-
-    let doc_params = ParseDocumentParams {
-        globals: panel.layout.state.globals.clone(),
-        path: AssetPathRef::FileOrBuiltIn {
-            path: watch_xml,
-            fallback: None,
-        },
-        extra: panel.doc_extra.take().unwrap_or_default(),
-    };
 
     panel.on_notify = Some(Box::new({
         let name = WATCH_NAME;
@@ -61,14 +63,14 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &doc_params,
+                &doc_params(panel.doc_extra.as_ref()),
             )?;
 
             elems_changed |= panel.state.set_list.on_notify(
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &doc_params,
+                &doc_params(panel.doc_extra.as_ref()),
             )?;
 
             elems_changed |= panel.state.device_list.on_notify(
@@ -76,7 +78,7 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
                 &mut panel.layout,
                 &mut panel.parser_state,
                 &event_data,
-                &doc_params,
+                &doc_params(panel.doc_extra.as_ref()),
             )?;
 
             match event_data {
@@ -99,7 +101,7 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
                         panel.layout.remove_children(clock_root);
 
                         panel.parser_state.instantiate_template(
-                            &doc_params,
+                            &doc_params(panel.doc_extra.as_ref()),
                             "Clock",
                             &mut panel.layout,
                             clock_root,

@@ -1,21 +1,19 @@
 use std::marker::PhantomData;
 
 use wgui::{
-	assets::AssetPathRef,
 	layout::WidgetID,
 	parser::{Fetchable, ParseDocumentParams, ParserState},
 };
 
 use crate::{
 	frontend::Frontend,
-	tab::{Tab, TabType},
+	tab::Tab,
 	util::steam_utils::SteamUtils,
 	views::{ViewTrait, ViewUpdateParams, game_list, running_games_list},
 };
 
 pub struct TabGames<T> {
-	#[allow(dead_code)]
-	pub state: ParserState,
+	_state: ParserState,
 
 	view_game_list: game_list::View,
 	view_running_games_list: running_games_list::View,
@@ -23,10 +21,6 @@ pub struct TabGames<T> {
 }
 
 impl<T> Tab<T> for TabGames<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Games
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, time_ms: u32, data: &mut T) -> anyhow::Result<()> {
 		let mut config_change_kind = None;
 
@@ -51,11 +45,7 @@ impl<T> TabGames<T> {
 		let globals = frontend.layout.state.globals.clone();
 
 		let state = wgui::parser::parse_from_assets(
-			&ParseDocumentParams {
-				globals: globals.clone(),
-				path: AssetPathRef::BuiltIn("gui/tab/games.xml"),
-				extra: Default::default(),
-			},
+			&ParseDocumentParams::builtin("gui/tab/games.xml"),
 			&mut frontend.layout,
 			parent_id,
 		)?;
@@ -75,7 +65,6 @@ impl<T> TabGames<T> {
 		})?;
 
 		let view_running_games_list = running_games_list::View::new(running_games_list::Params {
-			globals: globals.clone(),
 			layout: &mut frontend.layout,
 			parent_id: id_running_games_list_parent,
 			steam_utils: &mut steam_utils,
@@ -83,7 +72,7 @@ impl<T> TabGames<T> {
 		})?;
 
 		Ok(Self {
-			state,
+			_state: state,
 			view_game_list,
 			view_running_games_list,
 			marker: PhantomData,

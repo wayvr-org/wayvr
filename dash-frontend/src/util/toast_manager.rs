@@ -23,7 +23,6 @@ use wgui::{
 };
 
 struct MountedToast {
-	#[allow(dead_code)]
 	id_root: WidgetID, // decorations of a toast
 	layout_tasks: LayoutTasks,
 }

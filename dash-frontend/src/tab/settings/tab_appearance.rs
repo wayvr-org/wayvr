@@ -13,7 +13,6 @@ use crate::{
 use wgui::{
 	assets::AssetPathRef,
 	components::button::ComponentButton,
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, TemplateParams},
@@ -28,7 +27,6 @@ enum LocalTask {
 
 pub struct State {
 	frontend_tasks: FrontendTasks,
-	globals: WguiGlobals,
 	tasks: Tasks<LocalTask>,
 	popup_color_palettes: PopupHolder<color_palettes::View>,
 	popup_skymap_list: PopupHolder<skymap_list::View>,
@@ -45,7 +43,6 @@ impl SettingsTab for State {
 				LocalTask::OpenColorPalettes => {
 					color_palettes::mount_popup(
 						self.frontend_tasks.clone(),
-						self.globals.clone(),
 						self.popup_color_palettes.clone(),
 						par.general_config.color_palette.clone(),
 					);
@@ -101,7 +98,6 @@ impl State {
 			popup_color_palettes,
 			popup_skymap_list,
 			frontend_tasks: par.frontend_tasks.clone(),
-			globals: par.mp.doc_params.globals.clone(),
 		})
 	}
 
@@ -120,8 +116,7 @@ fn create_color_palettes_button(
 	tasks: Tasks<LocalTask>,
 	_popup: &PopupHolder<color_palettes::View>,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let id_cell = horiz_cell(mp.layout, parent)?;
 

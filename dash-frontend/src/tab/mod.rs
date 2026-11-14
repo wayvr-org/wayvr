@@ -31,9 +31,6 @@ impl TabType {
 }
 
 pub trait Tab<T> {
-	#[allow(dead_code)]
-	fn get_type(&self) -> TabType;
-
 	fn update(&mut self, _frontend: &mut Frontend<T>, _time_ms: u32, _user_data: &mut T) -> anyhow::Result<()> {
 		Ok(())
 	}

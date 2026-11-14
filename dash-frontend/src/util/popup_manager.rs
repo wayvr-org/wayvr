@@ -6,7 +6,6 @@ use std::{
 use glam::Vec2;
 use wgui::{
 	animation::{Animation, AnimationDuration, AnimationEasing},
-	assets::AssetPathRef,
 	components::button::ComponentButton,
 	event::{EventAlterables, StyleSetRequest},
 	globals::WguiGlobals,
@@ -32,8 +31,7 @@ struct State {
 }
 
 pub struct MountedPopup {
-	#[allow(dead_code)]
-	state: ParserState,
+	_state: ParserState,
 	id_root: WidgetID, // decorations of a popup
 	layout_tasks: LayoutTasks,
 	frontend_tasks: FrontendTasks,
@@ -283,12 +281,8 @@ impl PopupManager {
 		popup_title: &Translation,
 		popup_padding: PopupPadding,
 	) -> anyhow::Result<MountPopupPrepareResult> {
-		let doc_params = &ParseDocumentParams {
-			globals: globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/popup_window.xml"),
-			extra: Default::default(),
-		};
-		let state = wgui::parser::parse_from_assets(doc_params, layout, self.parent_id)?;
+		let doc_params = ParseDocumentParams::builtin("gui/view/popup_window.xml");
+		let state = wgui::parser::parse_from_assets(&doc_params, layout, self.parent_id)?;
 
 		let id_root = state.get_widget_id("root")?;
 		let id_content = state.get_widget_id("content")?;
@@ -313,7 +307,7 @@ impl PopupManager {
 		let but_back = state.fetch_component_as::<ComponentButton>("but_back")?;
 
 		let mounted_popup = MountedPopup {
-			state,
+			_state: state,
 			id_root,
 			layout_tasks: layout.tasks.clone(),
 			frontend_tasks: frontend_tasks.clone(),

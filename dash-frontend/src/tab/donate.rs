@@ -1,9 +1,7 @@
 use std::{marker::PhantomData, rc::Rc};
 
 use wgui::{
-	assets::AssetPathRef,
 	components::button::ComponentButton,
-	globals::WguiGlobals,
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
 	taffy::{self, style_helpers::length},
@@ -13,7 +11,7 @@ use wgui::{
 
 use crate::{
 	frontend::{Frontend, FrontendTask},
-	tab::{Tab, TabType},
+	tab::Tab,
 	util::cached_fetcher,
 };
 
@@ -23,20 +21,13 @@ enum Task {
 }
 
 pub struct TabDonate<T> {
-	#[allow(dead_code)]
-	pub state: ParserState,
+	state: ParserState,
 	marker: PhantomData<T>,
-	#[allow(dead_code)]
 	tasks: Tasks<Task>,
-
 	id_current_supporters: WidgetID,
 }
 
 impl<T> Tab<T> for TabDonate<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Donate
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, _user_data: &mut T) -> anyhow::Result<()> {
 		while !self.tasks.is_empty() {
 			for task in self.tasks.drain() {
@@ -50,13 +41,7 @@ impl<T> Tab<T> for TabDonate<T> {
 	}
 }
 
-fn doc_params(globals: &WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/tab/donate.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/tab/donate.xml");
 
 async fn request_supporters(tasks: Tasks<Task>) {
 	if let Some(supporters) = cached_fetcher::request_supporters().await {
@@ -66,7 +51,6 @@ async fn request_supporters(tasks: Tasks<Task>) {
 
 impl<T> TabDonate<T> {
 	fn set_supporters(&mut self, layout: &mut Layout, supporters: cached_fetcher::Supporters) -> anyhow::Result<()> {
-		let globals = layout.state.globals.clone();
 		layout.remove_children(self.id_current_supporters);
 
 		let mut current_tier = None;
@@ -79,13 +63,9 @@ impl<T> TabDonate<T> {
 				let mut params = TemplateParams::new();
 				params.insert_str("text", supporter.tier.pretty_str());
 				params.insert("color", supporter.tier.color_str());
-				self.state.realize_template(
-					&doc_params(&globals),
-					"TierCell",
-					layout,
-					self.id_current_supporters,
-					params,
-				)?;
+				self
+					.state
+					.realize_template(&DOC_PARAMS, "TierCell", layout, self.id_current_supporters, params)?;
 
 				tier_parent = layout
 					.add_child(
@@ -105,14 +85,14 @@ impl<T> TabDonate<T> {
 			params.insert("username", &supporter.username);
 			self
 				.state
-				.realize_template(&doc_params(&globals), "SupporterCell", layout, tier_parent, params)?;
+				.realize_template(&DOC_PARAMS, "SupporterCell", layout, tier_parent, params)?;
 		}
 
 		Ok(())
 	}
 
 	pub fn new(frontend: &mut Frontend<T>, parent_id: WidgetID, _data: &mut T) -> anyhow::Result<Self> {
-		let state = wgui::parser::parse_from_assets(&doc_params(&frontend.globals), &mut frontend.layout, parent_id)?;
+		let state = wgui::parser::parse_from_assets(&DOC_PARAMS, &mut frontend.layout, parent_id)?;
 		let id_current_supporters = state.get_widget_id("current_supporters")?;
 
 		frontend.tasks.handle_button(
