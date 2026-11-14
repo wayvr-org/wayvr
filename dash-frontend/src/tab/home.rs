@@ -20,16 +20,11 @@ use crate::{
 };
 
 pub struct TabHome<T> {
-	#[allow(dead_code)]
-	pub state: ParserState,
+	_state: ParserState,
 	marker: PhantomData<T>,
 }
 
-impl<T> Tab<T> for TabHome<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Home
-	}
-}
+impl<T> Tab<T> for TabHome<T> {}
 
 fn get_supporter_anim(
 	btn: Rc<ComponentButton>,
@@ -177,7 +172,7 @@ impl<T> TabHome<T> {
 			.detach();
 
 		Ok(Self {
-			state,
+			_state: state,
 			marker: PhantomData,
 		})
 	}

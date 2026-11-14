@@ -56,10 +56,8 @@ fn get_icon_from_setting_type(t: SettingType) -> Option<&'static str> {
 }
 
 pub fn options_split_horiz2(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<(WidgetID, WidgetID)> {
-	let id1 = mp.idx.to_string();
-	mp.idx += 1;
-	let id2 = mp.idx.to_string();
-	mp.idx += 1;
+	let id1 = mp.gen_id();
+	let id2 = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id1", &id1);
@@ -75,12 +73,9 @@ pub fn options_split_horiz2(mp: &mut MacroParams, parent: WidgetID) -> anyhow::R
 }
 
 pub fn options_split_horiz3(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<(WidgetID, WidgetID, WidgetID)> {
-	let id1 = mp.idx.to_string();
-	mp.idx += 1;
-	let id2 = mp.idx.to_string();
-	mp.idx += 1;
-	let id3 = mp.idx.to_string();
-	mp.idx += 1;
+	let id1 = mp.gen_id();
+	let id2 = mp.gen_id();
+	let id3 = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id1", &id1);
@@ -103,8 +98,7 @@ pub fn options_category(
 	translation: &str,
 	icon: &str,
 ) -> anyhow::Result<WidgetID> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("translation", translation);
@@ -118,8 +112,7 @@ pub fn options_category(
 }
 
 pub fn options_stat_row(mp: &mut MacroParams, parent: WidgetID, translation: &str) -> anyhow::Result<WidgetID> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
@@ -175,8 +168,7 @@ pub fn options_diagnostics_drm_card(
 }
 
 pub fn options_checkbox<'a>(mp: &'a mut MacroParams, parent: WidgetID, setting: SettingType) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
@@ -228,8 +220,7 @@ pub fn options_range_f32(
 	max: f32,
 	step: f32,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
@@ -290,8 +281,7 @@ where
 	NumType: std::string::ToString + 'static,
 	&'a mut NumType: TryFrom<SettingVarRef<'a>, Error = anyhow::Error>,
 {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
@@ -341,8 +331,7 @@ pub fn options_dropdown<EnumType>(
 where
 	EnumType: strum::VariantArray + strum::EnumProperty + std::convert::AsRef<str> + Copy + 'static,
 {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 
@@ -432,8 +421,7 @@ pub fn options_danger_button(
 	icon: &str,
 	task: Task,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
@@ -462,8 +450,7 @@ pub fn options_button(
 	icon: &str,
 	task: Task,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
@@ -491,8 +478,7 @@ pub fn options_autostart_app(
 	text: &str,
 	ids: &mut Vec<Rc<str>>,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
 	params.insert("id", &id);
@@ -522,6 +508,14 @@ pub struct MacroParams<'a> {
 	pub doc_params: &'a ParseDocumentParams<'a>,
 	pub config: &'a mut GeneralConfig,
 	pub tasks: Tasks<settings::Task>,
-	pub idx: usize,
 	pub feats: InterfaceFeats,
+	pub id_counter: usize,
+}
+
+impl<'ż> MacroParams<'ż> {
+	pub fn gen_id(&mut self) -> String {
+		let id = self.id_counter.to_string();
+		self.id_counter += 1;
+		id
+	}
 }

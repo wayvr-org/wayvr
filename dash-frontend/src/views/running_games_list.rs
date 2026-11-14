@@ -28,7 +28,6 @@ pub struct Params<'a> {
 }
 
 pub struct View {
-	#[allow(dead_code)]
 	state: ParserState,
 	tasks: Tasks<Task>,
 	last_update_ms: u32,

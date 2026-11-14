@@ -289,8 +289,7 @@ impl State {
 }
 
 fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let parent = horiz_cell(mp.layout, parent)?;
 
@@ -355,13 +354,13 @@ fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Re
 		sprite_src: Some(AssetPathRef::BuiltIn("dashboard/stt.svg")),
 	})
 }
+
 fn whisper_gpu_select_dropdown(
 	mp: &mut MacroParams,
 	parent: WidgetID,
 	vulkan_devices: Vec<String>,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let parent = horiz_cell(mp.layout, parent)?;
 

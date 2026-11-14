@@ -63,7 +63,6 @@ pub struct Frontend<T> {
 	// single-threaded async runtime executor
 	pub executor: AsyncExecutor,
 
-	#[allow(dead_code)]
 	state: ParserState,
 
 	current_tab: Option<Box<dyn Tab<T>>>,

@@ -31,8 +31,7 @@ struct State {
 }
 
 pub struct MountedPopup {
-	#[allow(dead_code)]
-	state: ParserState,
+	_state: ParserState,
 	id_root: WidgetID, // decorations of a popup
 	layout_tasks: LayoutTasks,
 	frontend_tasks: FrontendTasks,
@@ -308,7 +307,7 @@ impl PopupManager {
 		let but_back = state.fetch_component_as::<ComponentButton>("but_back")?;
 
 		let mounted_popup = MountedPopup {
-			state,
+			_state: state,
 			id_root,
 			layout_tasks: layout.tasks.clone(),
 			frontend_tasks: frontend_tasks.clone(),

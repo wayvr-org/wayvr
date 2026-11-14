@@ -53,7 +53,6 @@ pub struct View {
 
 	id_resolution_buttons: WidgetID,
 
-	#[allow(dead_code)]
 	parser_state: ParserState,
 
 	popup_download: PopupHolder<views::download_file::View>,

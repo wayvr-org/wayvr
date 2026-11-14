@@ -70,7 +70,6 @@ pub struct View {
 
 	globals: WguiGlobals,
 
-	#[allow(dead_code)]
 	state: ParserState,
 
 	//entry: DesktopEntry,

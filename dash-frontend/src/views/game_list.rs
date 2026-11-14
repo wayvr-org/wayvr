@@ -48,8 +48,7 @@ pub struct GameCoverCell {
 }
 
 pub struct View {
-	#[allow(dead_code)]
-	parser_state: ParserState,
+	_parser_state: ParserState,
 	tasks: Tasks<Task>,
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
@@ -107,7 +106,7 @@ impl View {
 		tasks.push(Task::LoadManifests);
 
 		Ok(Self {
-			parser_state,
+			_parser_state: parser_state,
 			tasks,
 			frontend_tasks: params.frontend_tasks,
 			globals: params.globals.clone(),

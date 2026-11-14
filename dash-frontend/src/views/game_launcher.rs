@@ -37,7 +37,6 @@ pub struct Params<'a> {
 }
 
 pub struct View {
-	#[allow(dead_code)]
 	state: ParserState,
 	tasks: Tasks<Task>,
 	on_launched: Option<Box<dyn FnOnce()>>,

@@ -23,7 +23,6 @@ pub struct Params<'a> {
 }
 
 pub struct View {
-	#[allow(dead_code)]
 	parser_state: ParserState,
 	id_loading: WidgetID,
 	id_image_preview: WidgetID,

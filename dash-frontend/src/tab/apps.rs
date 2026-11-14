@@ -11,13 +11,12 @@ use wlx_common::{config::PinnedApp, desktop_finder::DesktopEntry};
 
 use crate::{
 	frontend::{Frontend, FrontendTasks},
-	tab::{Tab, TabType},
+	tab::Tab,
 	util::{popup_manager::PopupHolder, wgui_simple},
 	views::{self},
 };
 
 struct State {
-	#[allow(dead_code)]
 	parser_state: ParserState,
 	view_launcher: PopupHolder<views::app_launcher::View>,
 }
@@ -38,10 +37,6 @@ pub struct TabApps<T> {
 }
 
 impl<T> Tab<T> for TabApps<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Apps
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, data: &mut T) -> anyhow::Result<()> {
 		let mut state = self.state.borrow_mut();
 

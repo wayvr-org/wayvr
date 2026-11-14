@@ -19,10 +19,7 @@ use wlx_common::{
 	dash_interface::{self, ConfigChangeKind, MonadoDumpSessionFrame},
 };
 
-use crate::{
-	frontend::Frontend,
-	tab::{Tab, TabType},
-};
+use crate::{frontend::Frontend, tab::Tab};
 
 #[derive(Clone)]
 enum TabNameEnum {
@@ -65,8 +62,7 @@ struct SubtabProcessList {
 }
 
 struct SubtabGeneralSettings {
-	#[allow(dead_code)]
-	state: ParserState,
+	_state: ParserState,
 
 	slider_keying_curve: Rc<ComponentSlider>,
 	slider_keying_despill: Rc<ComponentSlider>,
@@ -120,7 +116,6 @@ struct SubtabDebugTimings {
 	sessions: SessionsMap,
 }
 
-#[allow(dead_code)]
 #[allow(clippy::large_enum_variant)]
 enum Subtab {
 	Empty,
@@ -130,8 +125,7 @@ enum Subtab {
 }
 
 pub struct TabMonado<T> {
-	#[allow(dead_code)]
-	state: ParserState,
+	_state: ParserState,
 	tasks: Tasks<Task>,
 
 	marker: PhantomData<T>,
@@ -143,10 +137,6 @@ pub struct TabMonado<T> {
 }
 
 impl<T> Tab<T> for TabMonado<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Games
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, data: &mut T) -> anyhow::Result<()> {
 		for task in self.tasks.drain() {
 			match task {
@@ -312,7 +302,7 @@ impl SubtabGeneralSettings {
 		}
 
 		Ok(Self {
-			state,
+			_state: state,
 			slider_keying_curve,
 			slider_keying_despill,
 			slider_keying_hue_range,
@@ -688,7 +678,7 @@ impl<T> TabMonado<T> {
 		tasks.push(Task::SetTab(TabNameEnum::ProcessList));
 
 		Ok(Self {
-			state,
+			_state: state,
 			marker: PhantomData,
 			tasks,
 			id_content,

@@ -116,8 +116,7 @@ fn create_color_palettes_button(
 	tasks: Tasks<LocalTask>,
 	_popup: &PopupHolder<color_palettes::View>,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let id_cell = horiz_cell(mp.layout, parent)?;
 

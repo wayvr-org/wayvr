@@ -109,8 +109,8 @@ impl ComponentTrait for ComponentTooltip {
 		let rect_size = data.layout.state.get_widget_boundary(self.data.id_rect).size;
 
 		let rect_pos_topleft: Vec2 = match self.data.side {
-			TooltipSide::Left => pin_pos + Vec2::new(-rect_size.x, -rect_size.y / 2.0),
-			TooltipSide::Right => pin_pos + Vec2::new(0.0, -rect_size.y / 2.0),
+			TooltipSide::Left => pin_pos + Vec2::new(-rect_size.x, 0.0),
+			TooltipSide::Right => pin_pos + Vec2::new(0.0, 0.0),
 			TooltipSide::Top => pin_pos + Vec2::new(-rect_size.x / 2.0, -rect_size.y),
 			TooltipSide::Bottom => pin_pos + Vec2::new(-rect_size.x / 2.0, 0.0),
 		};
@@ -137,13 +137,6 @@ impl ComponentTrait for ComponentTooltip {
 		} else if diff_bottom > 0.0 {
 			state.position_shift.y = -diff_bottom;
 		}
-
-		/*log::info!(
-			"layout size {:?}, pin pos {:?}, rect size {:?}",
-			layout_size,
-			pin_pos,
-			rect_size
-		);*/
 	}
 }
 

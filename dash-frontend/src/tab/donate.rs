@@ -11,7 +11,7 @@ use wgui::{
 
 use crate::{
 	frontend::{Frontend, FrontendTask},
-	tab::{Tab, TabType},
+	tab::Tab,
 	util::cached_fetcher,
 };
 
@@ -21,20 +21,13 @@ enum Task {
 }
 
 pub struct TabDonate<T> {
-	#[allow(dead_code)]
-	pub state: ParserState,
+	state: ParserState,
 	marker: PhantomData<T>,
-	#[allow(dead_code)]
 	tasks: Tasks<Task>,
-
 	id_current_supporters: WidgetID,
 }
 
 impl<T> Tab<T> for TabDonate<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Donate
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, _user_data: &mut T) -> anyhow::Result<()> {
 		while !self.tasks.is_empty() {
 			for task in self.tasks.drain() {

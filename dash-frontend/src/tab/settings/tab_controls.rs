@@ -75,8 +75,7 @@ fn create_input_profiles_button(
 	_popup: &PopupHolder<input_profiles::View>,
 	xr_backend: XrBackend,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let id_cell = horiz_cell(mp.layout, parent)?;
 

@@ -47,8 +47,7 @@ pub fn get_entries_yes_no() -> Vec<ButtonEntry> {
 pub struct View {
 	tasks: Tasks<Task>,
 
-	#[allow(dead_code)]
-	parser_state: ParserState,
+	_parser_state: ParserState,
 
 	on_action_click: Option<Box<dyn FnOnce(&'static str)>>,
 	on_close_request: Option<Box<dyn FnOnce()>>,
@@ -111,7 +110,7 @@ impl View {
 
 		Ok(Self {
 			tasks,
-			parser_state,
+			_parser_state: parser_state,
 			on_action_click: Some(par.on_action_click),
 			on_close_request: Some(on_close_request),
 		})

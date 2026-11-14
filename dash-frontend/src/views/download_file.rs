@@ -42,7 +42,6 @@ pub struct View {
 	tasks: Tasks<Task>,
 	executor: AsyncExecutor,
 
-	#[allow(dead_code)]
 	parser_state: ParserState,
 
 	id_label_status: WidgetID,

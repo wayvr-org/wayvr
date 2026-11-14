@@ -35,13 +35,11 @@ pub struct Params<'a> {
 }
 
 struct Cell {
-	#[allow(dead_code)]
-	view: views::skymap_list_cell::View,
+	_view: views::skymap_list_cell::View,
 }
 
 pub struct View {
-	#[allow(dead_code)]
-	parser_state: ParserState,
+	_parser_state: ParserState,
 	tasks: Tasks<Task>,
 	list_parent: WidgetID,
 	frontend_tasks: FrontendTasks,
@@ -103,7 +101,7 @@ impl View {
 		);
 
 		Ok(Self {
-			parser_state,
+			_parser_state: parser_state,
 			tasks,
 			list_parent,
 			frontend_tasks: params.frontend_tasks.clone(),
@@ -211,7 +209,7 @@ impl View {
 			view.set_image(layout, Some(glyph_data))?;
 		}
 
-		self.cells.push(Cell { view });
+		self.cells.push(Cell { _view: view });
 
 		for entry in &entries {
 			let mut view = views::skymap_list_cell::View::new(views::skymap_list_cell::Params {
@@ -230,7 +228,7 @@ impl View {
 				view.set_image(layout, Some(glyph_data))?;
 			}
 
-			self.cells.push(Cell { view });
+			self.cells.push(Cell { _view: view });
 		}
 
 		Ok(())

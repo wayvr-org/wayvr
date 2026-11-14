@@ -21,25 +21,19 @@ enum Task {
 }
 
 pub struct TabWelcome<T> {
-	#[allow(dead_code)]
-	pub state: ParserState,
+	state: ParserState,
 	marker: PhantomData<T>,
 	tasks: Tasks<Task>,
 	current_page: u8,
 	id_pips: WidgetID,
 	id_content: WidgetID,
 	frontend_tasks: FrontendTasks,
-
 	state_tab: Option<ParserState>,
 }
 
 const PAGE_COUNT: u8 = 6; // 0-5 inclusive
 
 impl<T> Tab<T> for TabWelcome<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Welcome
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, _user_data: &mut T) -> anyhow::Result<()> {
 		for task in self.tasks.drain() {
 			match task {

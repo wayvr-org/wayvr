@@ -52,12 +52,16 @@ struct LaunchParams<'a, T> {
 }
 
 pub struct View {
-	#[allow(dead_code)]
-	state: ParserState,
+	_state: ParserState,
 	entry: Rc<DesktopEntry>,
 	tasks: Tasks<Task>,
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
+
+	compositor_mode: AppCompositorMode,
+	pos_mode: AppPosMode,
+	res_mode: AppResMode,
+	orientation_mode: AppOrientationMode,
 
 	#[allow(dead_code)]
 	radio_compositor: Rc<ComponentRadioGroup>,
@@ -65,11 +69,6 @@ pub struct View {
 	radio_res: Rc<ComponentRadioGroup>,
 	#[allow(dead_code)]
 	radio_orientation: Rc<ComponentRadioGroup>,
-
-	compositor_mode: AppCompositorMode,
-	pos_mode: AppPosMode,
-	res_mode: AppResMode,
-	orientation_mode: AppOrientationMode,
 
 	pinned_app: Option<PinnedApp>,
 
@@ -277,11 +276,8 @@ impl View {
 		);
 
 		Ok(Self {
-			state,
+			_state: state,
 			tasks,
-			radio_compositor,
-			radio_res,
-			radio_orientation,
 			compositor_mode,
 			pos_mode,
 			res_mode,
@@ -293,6 +289,9 @@ impl View {
 			on_close_request: Some(params.on_close_request),
 			on_app_pins_changed: Some(params.on_app_pins_changed),
 			pinned_app: params.pinned_app,
+			radio_compositor,
+			radio_res,
+			radio_orientation,
 		})
 	}
 

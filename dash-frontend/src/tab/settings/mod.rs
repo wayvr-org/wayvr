@@ -25,7 +25,7 @@ use wlx_common::{
 
 use crate::{
 	frontend::{Frontend, FrontendTask, FrontendTasks},
-	tab::{Tab, TabType, settings::macros::MacroParams},
+	tab::{Tab, settings::macros::MacroParams},
 	views::ViewUpdateParams,
 };
 
@@ -141,10 +141,6 @@ pub struct TabSettings<T> {
 }
 
 impl<T> Tab<T> for TabSettings<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Settings
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, data: &mut T) -> anyhow::Result<()> {
 		if let Some(tab) = &mut self.current_tab {
 			let mut config_change_kind = None;
@@ -569,7 +565,7 @@ impl<T> TabSettings<T> {
 			doc_params: &DOC_PARAMS,
 			config: frontend.interface.general_config(data),
 			tasks: self.tasks.clone(),
-			idx: 9001,
+			id_counter: 9001,
 			feats: self.feats,
 		};
 

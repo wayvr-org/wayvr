@@ -53,7 +53,6 @@ pub fn create_button(par: CreateButtonParams) -> anyhow::Result<()> {
 	Ok(())
 }
 
-#[allow(dead_code)]
 pub fn create_label(layout: &mut Layout, id_parent: WidgetID, content: Translation) -> anyhow::Result<()> {
 	let label = WidgetLabel::create(
 		&mut layout.state,
