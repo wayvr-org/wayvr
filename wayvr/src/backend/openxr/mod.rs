@@ -15,6 +15,8 @@ use wlx_common::{
     overlays::{StereoMode, ToastTopic},
 };
 
+use crate::backend::task::SystemTask;
+use crate::system::SystemTaskManager;
 use crate::{
     Args, FRAME_COUNTER, RUNNING, XrBackend,
     backend::{
@@ -321,23 +323,23 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
             blocker.update(&mut app);
         }
 
-        if app
-            .input_state
-            .pointers
-            .iter()
-            .any(|p| p.now.show_hide && !p.before.show_hide)
-        {
+        if app.input_state.just_pressed(|s| s.show_hide) {
             overlays.show_hide(&mut app);
         }
 
-        if app
-            .input_state
-            .pointers
-            .iter()
-            .any(|p| p.now.toggle_dashboard && !p.before.toggle_dashboard)
-        {
+        if app.input_state.just_pressed(|s| s.toggle_dashboard) {
             app.tasks
                 .enqueue(TaskType::Overlay(OverlayTask::ToggleDashboard));
+        }
+
+        if app.input_state.just_pressed(|s| s.volume_up) {
+            app.tasks
+                .enqueue(TaskType::System(SystemTask::ChangeVolume(true)));
+        }
+
+        if app.input_state.just_pressed(|s| s.volume_down) {
+            app.tasks
+                .enqueue(TaskType::System(SystemTask::ChangeVolume(false)));
         }
 
         playspace_mover.update(&mut overlays, &mut app);
@@ -533,6 +535,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 TaskType::Input(task) => {
                     app.input_state.handle_task(task);
                 }
+                TaskType::System(task) => SystemTaskManager::handle_task(task)?,
                 TaskType::Overlay(task) => {
                     overlays.handle_task(&mut app, task)?;
                 }
