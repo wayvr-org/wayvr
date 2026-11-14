@@ -30,6 +30,10 @@
 // -- move_mouse --
 // when using `focus_follows_mouse_mode`, you need to hold this for the mouse to move
 //
+// -- volume_up --
+// -- volume_down --
+// raise / lower the volume of the default audio output (e.g. headset volume buttons)
+//
 // -- pose, haptic --
 // do not mess with these, unless you know what you're doing
 //
@@ -37,6 +41,10 @@
 // which side of the controller to drag with, click with, apply the modifier to, etc.
 //
 // for side-agnostic actions like show-hide, the side doesn't matter
+//
+// `handsfree` feeds the head/eye-driven pointer, which is only used while no controller is tracked.
+// `head` is for buttons on the headset itself. it has no pointer, so only side-agnostic actions
+// (show_hide, toggle_dashboard, volume_up, volume_down) do anything there.
 
 [
   // Eye+hand interaction
@@ -54,6 +62,17 @@
     },
     grab: {
       handsfree: "/user/hand/left/input/pinch_ext/value",
+    },
+  },
+
+  // Headset volume buttons
+  {
+    profile: "/interaction_profiles/htc/vive_pro",
+    volume_up: {
+      head: "/user/head/input/volume_up/click",
+    },
+    volume_down: {
+      head: "/user/head/input/volume_down/click",
     },
   },
 

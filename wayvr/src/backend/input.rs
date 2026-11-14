@@ -77,6 +77,13 @@ pub struct InputState {
     disable_lerp_until: Instant,
     pub head_yaw_total: f64,
     head_last_yaw: Option<f64>,
+    pub head: HeadInput,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct HeadInput {
+    pub now: PointerState,
+    pub before: PointerState,
 }
 
 impl InputState {
@@ -93,7 +100,16 @@ impl InputState {
             disable_lerp_until: Instant::now(),
             head_yaw_total: 0.0,
             head_last_yaw: None,
+            head: HeadInput::default(),
         }
+    }
+
+    pub fn just_pressed(&self, action: impl Fn(&PointerState) -> bool) -> bool {
+        self.pointers
+            .iter()
+            .map(|p| (&p.now, &p.before))
+            .chain(std::iter::once((&self.head.now, &self.head.before)))
+            .any(|(now, before)| action(now) && !action(before))
     }
 
     pub fn should_disable_lerp(&self) -> bool {
@@ -190,6 +206,7 @@ impl InputState {
     pub const fn pre_update(&mut self) {
         self.pointers[0].before = self.pointers[0].now;
         self.pointers[1].before = self.pointers[1].now;
+        self.head.before = self.head.now;
     }
 
     pub fn post_update(&mut self, session: &AppSession) {
@@ -396,6 +413,8 @@ pub struct PointerState {
     pub click_modifier_right: bool,
     pub click_modifier_middle: bool,
     pub move_mouse: bool,
+    pub volume_up: bool,
+    pub volume_down: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default)]

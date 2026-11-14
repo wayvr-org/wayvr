@@ -150,10 +150,16 @@ pub enum OverlayTask {
 
 pub type GlobalTask = dyn FnOnce(&mut AppState) + Send;
 
+pub enum SystemTask {
+    /// Change the volume: true = increase; false = decrease
+    ChangeVolume(bool),
+}
+
 #[allow(dead_code)]
 pub enum TaskType {
     Global(Box<GlobalTask>),
     Input(InputTask),
+    System(SystemTask),
     Overlay(OverlayTask),
     Playspace(PlayspaceTask),
     #[cfg(feature = "openvr")]

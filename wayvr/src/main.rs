@@ -31,6 +31,7 @@ mod state;
 mod subsystem;
 mod test;
 mod windowing;
+pub mod system;
 
 use std::{
     path::PathBuf,

@@ -22,7 +22,7 @@ use crate::{
     },
     state::{AppSession, AppState},
 };
-
+use crate::backend::input::HeadInput;
 use super::{XrState, helpers::posef_to_transform};
 
 static CLICK_TIMES: [Duration; 3] = [
@@ -36,6 +36,7 @@ pub(super) struct OpenXrInputSource {
     physical_inputs: Vec<PhysicalInput>,
     pointers: [OpenXrPointer; 2],
     handsfree_pointer: OpenXrPointer,
+    head: OpenXrPointer,
 }
 
 pub(super) struct OpenXrPointer {
@@ -251,6 +252,8 @@ pub(super) struct OpenXrHandSource {
     move_mouse: CustomClickAction,
     scroll: xr::Action<Vector2f>,
     haptics: xr::Action<xr::Haptic>,
+    volume_up: CustomClickAction,
+    volume_down: CustomClickAction,
 }
 
 impl OpenXrInputSource {
@@ -263,13 +266,14 @@ impl OpenXrInputSource {
         let mut left_source = OpenXrHandSource::new(&mut action_set, "left")?;
         let mut right_source = OpenXrHandSource::new(&mut action_set, "right")?;
         let mut fallback_source = OpenXrHandSource::new(&mut action_set, "handsfree")?;
+        let mut head_source = OpenXrHandSource::new(&mut action_set, "head")?;
 
         let profiles = load_xr_input_profiles();
         let (physical_inputs, physical_input_map) =
             create_physical_inputs(&action_set, &xr.instance, &profiles)?;
 
-        let mut hands: [&mut OpenXrHandSource; 3] =
-            [&mut left_source, &mut right_source, &mut fallback_source];
+        let mut hands: [&mut OpenXrHandSource; 4] =
+            [&mut left_source, &mut right_source, &mut fallback_source, &mut head_source];
         suggest_bindings(
             &xr.instance,
             &mut hands,
@@ -288,6 +292,7 @@ impl OpenXrInputSource {
                 OpenXrPointer::new(xr, right_source)?,
             ],
             handsfree_pointer: OpenXrPointer::new(xr, fallback_source)?,
+            head: OpenXrPointer::new(xr, head_source)?,
         })
     }
 
@@ -313,6 +318,12 @@ impl OpenXrInputSource {
             input.update(&xr.session)?;
         }
         let physical_inputs = &self.physical_inputs;
+
+        self.head.update_head(
+            &mut app.input_state.head,
+            &xr,
+            physical_inputs
+        )?;
 
         app.input_state.eye_gaze = if xr.extra_exts.ext_eye_gaze_interaction {
             self.handsfree_pointer.locate_tracked_pose(xr)?
@@ -548,7 +559,7 @@ impl OpenXrPointer {
             return Ok(());
         }
 
-        self.pointer_load_actions(pointer, xr, physical_inputs)?;
+        self.pointer_load_actions(&mut pointer.now, xr, physical_inputs)?;
         pointer.now.click_modifier_right = handsfree_state.click_modifier_right;
         pointer.now.click_modifier_middle = handsfree_state.click_modifier_middle;
         pointer.now.scroll_y = handsfree_state.scroll_y;
@@ -574,8 +585,18 @@ impl OpenXrPointer {
                 None
             },
         )?;
-        self.pointer_load_actions(pointer, xr, physical_inputs)?;
+        self.pointer_load_actions(&mut pointer.now, xr, physical_inputs)?;
 
+        Ok(())
+    }
+
+    pub(super) fn update_head(
+        &mut self,
+        head: &mut HeadInput,
+        xr: &XrState,
+        physical_inputs: &[PhysicalInput],
+    ) -> anyhow::Result<()> {
+        self.pointer_load_actions(&mut head.now, xr, physical_inputs)?;
         Ok(())
     }
 
@@ -618,13 +639,13 @@ impl OpenXrPointer {
 
     fn pointer_load_actions(
         &mut self,
-        pointer: &mut Pointer,
+        pointer_state: &mut PointerState,
         xr: &XrState,
         physical_inputs: &[PhysicalInput],
     ) -> anyhow::Result<()> {
-        pointer.now.click = self.source.click.state(physical_inputs);
+        pointer_state.click = self.source.click.state(physical_inputs);
 
-        pointer.now.grab = self.source.grab.state(physical_inputs);
+        pointer_state.grab = self.source.grab.state(physical_inputs);
 
         let scroll = self
             .source
@@ -632,26 +653,30 @@ impl OpenXrPointer {
             .state(&xr.session, xr::Path::NULL)?
             .current_state;
 
-        pointer.now.scroll_x = scroll.x;
-        pointer.now.scroll_y = scroll.y;
+        pointer_state.scroll_x = scroll.x;
+        pointer_state.scroll_y = scroll.y;
 
-        pointer.now.alt_click = self.source.alt_click.state(physical_inputs);
+        pointer_state.alt_click = self.source.alt_click.state(physical_inputs);
 
-        pointer.now.show_hide = self.source.show_hide.state(physical_inputs);
+        pointer_state.show_hide = self.source.show_hide.state(physical_inputs);
 
-        pointer.now.click_modifier_right = self.source.modifier_right.state(physical_inputs);
+        pointer_state.click_modifier_right = self.source.modifier_right.state(physical_inputs);
 
-        pointer.now.toggle_dashboard = self.source.toggle_dashboard.state(physical_inputs);
+        pointer_state.toggle_dashboard = self.source.toggle_dashboard.state(physical_inputs);
 
-        pointer.now.click_modifier_middle = self.source.modifier_middle.state(physical_inputs);
+        pointer_state.click_modifier_middle = self.source.modifier_middle.state(physical_inputs);
 
-        pointer.now.move_mouse = self.source.move_mouse.state(physical_inputs);
+        pointer_state.move_mouse = self.source.move_mouse.state(physical_inputs);
 
-        pointer.now.space_drag = self.source.space_drag.state(physical_inputs);
+        pointer_state.space_drag = self.source.space_drag.state(physical_inputs);
 
-        pointer.now.space_rotate = self.source.space_rotate.state(physical_inputs);
+        pointer_state.space_rotate = self.source.space_rotate.state(physical_inputs);
 
-        pointer.now.space_reset = self.source.space_reset.state(physical_inputs);
+        pointer_state.space_reset = self.source.space_reset.state(physical_inputs);
+
+        pointer_state.volume_up = self.source.volume_up.state(physical_inputs);
+
+        pointer_state.volume_down = self.source.volume_down.state(physical_inputs);
 
         Ok(())
     }
@@ -692,6 +717,8 @@ impl OpenXrHandSource {
             modifier_middle: CustomClickAction::default(),
             move_mouse: CustomClickAction::default(),
             haptics: action_haptics,
+            volume_up: CustomClickAction::default(),
+            volume_down: CustomClickAction::default(),
         })
     }
 }
@@ -723,7 +750,7 @@ fn for_each_path(spec: Option<&OneOrMany<String>>, mut f: impl FnMut(&str)) {
     }
 }
 
-const fn button_actions(profile: &OpenXrInputProfile) -> [Option<&OpenXrInputAction>; 11] {
+const fn button_actions(profile: &OpenXrInputProfile) -> [Option<&OpenXrInputAction>; 13] {
     [
         profile.click.as_ref(),
         profile.alt_click.as_ref(),
@@ -736,6 +763,8 @@ const fn button_actions(profile: &OpenXrInputProfile) -> [Option<&OpenXrInputAct
         profile.click_modifier_right.as_ref(),
         profile.click_modifier_middle.as_ref(),
         profile.move_mouse.as_ref(),
+        profile.volume_up.as_ref(),
+        profile.volume_down.as_ref(),
     ]
 }
 
@@ -744,6 +773,7 @@ fn action_spec(action: &OpenXrInputAction, side: usize) -> Option<&OneOrMany<Str
         0 => action.left.as_ref(),
         1 => action.right.as_ref(),
         2 => action.handsfree.as_ref(),
+        3 => action.head.as_ref(),
         _ => unreachable!(),
     }
 }
@@ -752,7 +782,7 @@ fn action_chord(action: &OpenXrInputAction, side: usize) -> Option<&[OpenXrInput
     match side {
         0 => action.left_chord.as_deref(),
         1 => action.right_chord.as_deref(),
-        2 => None,
+        2 | 3 => None,
         _ => unreachable!(),
     }
 }
@@ -761,7 +791,7 @@ fn action_threshold(action: &OpenXrInputAction, side: usize) -> [f32; 2] {
     match side {
         0 => action.threshold_left,
         1 => action.threshold_right,
-        2 => None,
+        2 | 3 => None,
         _ => unreachable!(),
     }
     .unwrap_or(DEFAULT_BUTTON_THRESHOLDS)
@@ -809,7 +839,7 @@ fn create_physical_inputs(
         };
 
         for action in button_actions(profile).into_iter().flatten() {
-            for side in 0..3 {
+            for side in 0..4 {
                 for_each_path(action_spec(action, side), &mut add_path);
             }
 
@@ -915,7 +945,7 @@ fn build_button_bindings(
 fn add_button_bindings(
     action: Option<&OpenXrInputAction>,
     profile_index: usize,
-    hands: &mut [&mut OpenXrHandSource; 3],
+    sources: &mut [&mut OpenXrHandSource; 4],
     physical_input_map: &PhysicalInputMap,
     field: fn(&mut OpenXrHandSource) -> &mut CustomClickAction,
 ) {
@@ -923,9 +953,9 @@ fn add_button_bindings(
         return;
     };
 
-    for (side, hand) in hands.iter_mut().enumerate() {
+    for (side, source) in sources.iter_mut().enumerate() {
         for binding in build_button_bindings(action, side, profile_index, physical_input_map) {
-            field(hand).add_binding(binding);
+            field(source).add_binding(binding);
         }
     }
 }
@@ -938,6 +968,7 @@ macro_rules! add_direct_bindings {
                     0 => action.left.as_ref(),
                     1 => action.right.as_ref(),
                     2 => action.handsfree.as_ref(),
+                    3 => action.head.as_ref(),
                     _ => unreachable!(),
                 };
 
@@ -954,7 +985,7 @@ macro_rules! add_direct_bindings {
 #[allow(clippy::too_many_lines)]
 fn suggest_bindings(
     instance: &xr::Instance,
-    hands: &mut [&mut OpenXrHandSource; 3],
+    sources: &mut [&mut OpenXrHandSource; 4],
     profiles: &[OpenXrInputProfile],
     physical_inputs: &[PhysicalInput],
     physical_input_map: &PhysicalInputMap,
@@ -971,86 +1002,100 @@ fn suggest_bindings(
         add_button_bindings(
             profile.click.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.click,
         );
         add_button_bindings(
             profile.alt_click.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.alt_click,
         );
         add_button_bindings(
             profile.grab.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.grab,
         );
         add_button_bindings(
             profile.show_hide.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.show_hide,
         );
         add_button_bindings(
             profile.toggle_dashboard.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.toggle_dashboard,
         );
         add_button_bindings(
             profile.space_drag.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.space_drag,
         );
         add_button_bindings(
             profile.space_rotate.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.space_rotate,
         );
         add_button_bindings(
             profile.space_reset.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.space_reset,
         );
         add_button_bindings(
             profile.click_modifier_right.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.modifier_right,
         );
         add_button_bindings(
             profile.click_modifier_middle.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.modifier_middle,
         );
         add_button_bindings(
             profile.move_mouse.as_ref(),
             profile_index,
-            hands,
+            sources,
             physical_input_map,
             |hand| &mut hand.move_mouse,
+        );
+        add_button_bindings(
+            profile.volume_up.as_ref(),
+            profile_index,
+            sources,
+            physical_input_map,
+            |hand| &mut hand.volume_up,
+        );
+        add_button_bindings(
+            profile.volume_down.as_ref(),
+            profile_index,
+            sources,
+            physical_input_map,
+            |hand| &mut hand.volume_down,
         );
 
         let mut bindings: Vec<xr::Binding> = vec![];
 
-        add_direct_bindings!(profile.pose.as_ref(), pose, hands, bindings, instance);
-        add_direct_bindings!(profile.haptic.as_ref(), haptics, hands, bindings, instance);
-        add_direct_bindings!(profile.scroll.as_ref(), scroll, hands, bindings, instance);
+        add_direct_bindings!(profile.pose.as_ref(), pose, sources, bindings, instance);
+        add_direct_bindings!(profile.haptic.as_ref(), haptics, sources, bindings, instance);
+        add_direct_bindings!(profile.scroll.as_ref(), scroll, sources, bindings, instance);
 
         // 1 physical source → 1 action per interaction profile
         for input in physical_inputs
