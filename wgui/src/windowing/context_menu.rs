@@ -34,7 +34,7 @@ pub enum Blueprint {
 	},
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub enum Position {
 	Unspecified,
 	Absolute(Vec2),

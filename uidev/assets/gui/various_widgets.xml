@@ -18,6 +18,51 @@
     </context_menu>
   </blueprint>
 
+  <blueprint name="my_context_menu_large">
+    <context_menu>
+      <cell text="Item 1"/>
+      <cell text="Item 2"/>
+      <cell text="Item 3"/>
+      <cell text="Item 4"/>
+      <cell text="Item 5"/>
+      <cell text="Item 6"/>
+      <cell text="Item 7"/>
+      <cell text="Item 8"/>
+      <cell text="Item 9"/>
+      <cell text="Item 10"/>
+      <cell text="Item 11"/>
+      <cell text="Item 12"/>
+      <cell text="Item 13"/>
+      <cell text="Item 14"/>
+      <cell text="Item 15"/>
+      <cell text="Item 16"/>
+      <cell text="Item 17"/>
+      <cell text="Item 18"/>
+      <cell text="Item 19"/>
+      <cell text="Item 20"/>
+      <cell text="Item 21"/>
+      <cell text="Item 22"/>
+      <cell text="Item 23"/>
+      <cell text="Item 24"/>
+      <cell text="Item 25"/>
+      <cell text="Item 26"/>
+      <cell text="Item 27"/>
+      <cell text="Item 28"/>
+      <cell text="Item 29"/>
+      <cell text="Item 30"/>
+      <cell text="Item 31"/>
+      <cell text="Item 32"/>
+      <cell text="Item 33"/>
+      <cell text="Item 34"/>
+      <cell text="Item 35"/>
+      <cell text="Item 36"/>
+      <cell text="Item 37"/>
+      <cell text="Item 38"/>
+      <cell text="Item 39"/>
+      <cell text="Item 40"/>
+    </context_menu>
+  </blueprint>
+
   <include src="various_widgets_inc.xml"/>
 
   <elements>
@@ -91,6 +136,7 @@
         <rectangle macro="rect">
           <label text="Context menu test" />
           <Button id="button_context_menu" text="Show context menu" />
+          <Button id="button_context_menu_large" text="Show large context menu" />
         </rectangle>
         <rectangle macro="rect">
           <label text="Editbox test" />

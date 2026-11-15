@@ -349,9 +349,17 @@ impl WguiWindow {
 			content.id
 		} else {
 			// without decorations
-			let (content, _) = params
-				.layout
-				.add_child(topmost_widget.id, WidgetDiv::create(), Default::default())?;
+			let (content, _) = params.layout.add_child(
+				topmost_widget.id,
+				WidgetDiv::create(),
+				taffy::Style {
+					max_size: taffy::Size {
+						width: percent(1.0_f32),
+						height: percent(1.0_f32),
+					},
+					..Default::default()
+				},
+			)?;
 
 			self.0.borrow_mut().opened_window = Some(OpenedWindow {
 				widget: topmost_widget,

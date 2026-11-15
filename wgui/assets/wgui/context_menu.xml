@@ -23,8 +23,10 @@
   </template>
 
   <elements>
-    <rectangle consume_mouse_events="1" color="background(opacity-0.98)" round="8" border="2" border_color="outline" gap="4" padding="8" id="buttons" flex_direction="column">
-
+    <rectangle consume_mouse_events="1" color="background(opacity-0.98)" round="8" border="2" border_color="outline" gap="4" height="100%" padding="4">
+      <div id="buttons" flex_direction="column" overflow_y="scroll" padding="4">
+        <!-- filled-in at runtime -->
+      </div>
     </rectangle>
   </elements>
 </layout>
