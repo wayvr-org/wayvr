@@ -912,7 +912,7 @@ fn receive_callback_with_pool(
                 mouse: frame.mouse,
             })
         }
-        WlxFrame::Implicit(transform) => {
+        WlxFrame::Implicit => {
             log::trace!("{}: New Implicit frame", me.name);
 
             let Some(dma_exporter) = me.dma_exporter.as_ref() else {
@@ -927,7 +927,6 @@ fn receive_callback_with_pool(
                 log::error!("{}: Implicit frame is missing!", me.name);
                 return None;
             };
-            format.transform = transform;
 
             Some(WlxCaptureOut {
                 image,
@@ -965,7 +964,7 @@ pub(super) enum MainThreadFrame {
         frame: wlx_frame::DmabufFrame,
         fds: Vec<OwnedFd>,
     },
-    Implicit(wlx_frame::Transform),
+    Implicit,
 }
 
 pub(super) struct MainThreadWlxCapture<T>
@@ -1046,9 +1045,9 @@ where
                 WlxFrame::Dmabuf(frame),
                 Some(&self.pool),
             ),
-            MainThreadFrame::Implicit(transform) => receive_callback_with_pool(
+            MainThreadFrame::Implicit => receive_callback_with_pool(
                 self.data.as_ref().expect("capture must be initialized"),
-                WlxFrame::Implicit(transform),
+                WlxFrame::Implicit,
                 Some(&self.pool),
             ),
         }
@@ -1112,7 +1111,7 @@ fn receive_callback_dummy(_: &DmaExporterProxy, frame: WlxFrame) -> Option<MainT
             }
             Some(MainThreadFrame::Dmabuf { frame, fds })
         }
-        WlxFrame::Implicit(transform) => Some(MainThreadFrame::Implicit(transform)),
+        WlxFrame::Implicit => Some(MainThreadFrame::Implicit),
     }
 }
 

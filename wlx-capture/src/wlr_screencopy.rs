@@ -209,8 +209,6 @@ where
         return (client, user_data);
     };
 
-    let transform = output.transform;
-
     let (tx, rx) = mpsc::sync_channel::<ScreenCopyEvent>(16);
 
     let proxy =
@@ -268,8 +266,7 @@ where
                         // copy_with_damage seems to not work here
                         proxy.copy(&wl_buffer);
 
-                        frame_buffer =
-                            Some((WlxFrame::Implicit(transform), BufData::Dma { wl_buffer }));
+                        frame_buffer = Some((WlxFrame::Implicit, BufData::Dma { wl_buffer }));
                     } else if let Some(ScreenCopyEvent::Buffer {
                         shm_format,
                         width,
@@ -326,7 +323,7 @@ where
                                     code: fourcc,
                                     modifier: DrmModifier::Invalid,
                                 },
-                                transform,
+                                transform: crate::frame::Transform::Undefined,
                             },
                             plane: FramePlane {
                                 fd: Some(fd),
