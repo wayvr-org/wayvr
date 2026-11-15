@@ -57,15 +57,15 @@ Steam Frame support is experimental. Please report issues.
 It's possible to install and run WayVR on the Steam Frame in headless mode. You will not have access to your KDE desktop, but you will be able to run applications in 3D space around you.
 
 Steps to install on Steam Frame:
-1. Grab the latest aarch64 AppImage
+- Grab the latest aarch64 AppImage
   - For nightly AppImages go [here](https://github.com/wayvr-org/wayvr/actions/workflows/build-appimage.yml) and select the topmost list item a ✅️
   - The downloads will be on the bottom of the page (GitHub login required).
-1. Install the AppImage using GearLever
-1. Edit the desktop file in ~/.local/share/applications/wayvr.desktop
+- Install the AppImage using GearLever
+- Edit the desktop file in ~/.local/share/applications/wayvr.desktop
   - Remove the "Terminal=true" line
   - Add `--session` to the end of Exec
-1. (Recommended) In Frame's SteamVR settings, set overlay quality to High.
-1. Start WayVR from the taskbar (same place where you'd start Destkop)
+- (Recommended) In Frame's SteamVR settings, set overlay quality to High.
+- Start WayVR from the taskbar (same place where you'd start Destkop)
   - We recommend using WayVR instead of Destkop, running both at the same time will get your desktop portals tangled.
 
 ## First Start
