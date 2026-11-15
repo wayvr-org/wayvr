@@ -1,11 +1,9 @@
 use std::{marker::PhantomData, rc::Rc, str::FromStr};
 use strum::EnumProperty;
 use wgui::{
-	assets::AssetPathRef,
 	color::WguiColorName,
 	components::tabs::ComponentTabs,
 	event::StyleSetRequest,
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
 	log::LogErr,
@@ -27,7 +25,7 @@ use wlx_common::{
 
 use crate::{
 	frontend::{Frontend, FrontendTask, FrontendTasks},
-	tab::{Tab, TabType, settings::macros::MacroParams},
+	tab::{Tab, settings::macros::MacroParams},
 	views::ViewUpdateParams,
 };
 
@@ -143,10 +141,6 @@ pub struct TabSettings<T> {
 }
 
 impl<T> Tab<T> for TabSettings<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Settings
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, data: &mut T) -> anyhow::Result<()> {
 		if let Some(tab) = &mut self.current_tab {
 			let mut config_change_kind = None;
@@ -551,20 +545,13 @@ fn mount_requires_restart(layout: &mut Layout, parent: WidgetID) -> anyhow::Resu
 	Ok(())
 }
 
-fn doc_params(globals: &'_ WguiGlobals) -> ParseDocumentParams<'_> {
-	ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::BuiltIn("gui/tab/settings.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/tab/settings.xml");
 
 impl<T> TabSettings<T> {
 	fn set_tab(&mut self, frontend: &mut Frontend<T>, data: &mut T, name: TabNameEnum) -> anyhow::Result<()> {
 		let root = self.state.get_widget_id("settings_root")?;
 		frontend.layout.remove_children(root);
 		self.current_tab = None;
-		let globals = frontend.layout.state.globals.clone();
 
 		let vulkan_devices = if matches!(name, TabNameEnum::General) {
 			Some(frontend.interface.enumerate_vulkan_devices(data)?)
@@ -575,10 +562,10 @@ impl<T> TabSettings<T> {
 		let mut mp = MacroParams {
 			layout: &mut frontend.layout,
 			parser_state: &mut self.state,
-			doc_params: &doc_params(&globals),
+			doc_params: &DOC_PARAMS,
 			config: frontend.interface.general_config(data),
 			tasks: self.tasks.clone(),
-			idx: 9001,
+			id_counter: 9001,
 			feats: self.feats,
 		};
 
@@ -632,11 +619,7 @@ impl<T> TabSettings<T> {
 	}
 
 	pub fn new(frontend: &mut Frontend<T>, parent_id: WidgetID, data: &mut T) -> anyhow::Result<Self> {
-		let doc_params = ParseDocumentParams {
-			globals: frontend.layout.state.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/tab/settings.xml"),
-			extra: Default::default(),
-		};
+		let doc_params = ParseDocumentParams::builtin("gui/tab/settings.xml");
 
 		let parser_state = wgui::parser::parse_from_assets(&doc_params, &mut frontend.layout, parent_id)?;
 		let tasks = Tasks::default();

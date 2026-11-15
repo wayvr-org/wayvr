@@ -22,7 +22,7 @@ use wgui::{
     layout::{LayoutUpdateParams, WidgetID},
     log::LogErr,
     palette::WguiColorPalette,
-    parser::{Fetchable, ParseDocumentParams, TemplateParams},
+    parser::{Fetchable, ParseDocumentExtra, ParseDocumentParams, TemplateParams},
     renderer::util,
     taffy::{self, prelude::length},
     widget::{
@@ -38,14 +38,13 @@ use super::{
 
 const PIXELS_PER_UNIT: f32 = 60.;
 
-fn new_doc_params(panel: &mut GuiPanel<KeyboardState>) -> ParseDocumentParams<'static> {
+const fn doc_params(extra: Option<&ParseDocumentExtra>) -> ParseDocumentParams<'_> {
     ParseDocumentParams {
-        globals: panel.layout.state.globals.clone(),
         path: AssetPathRef::FileOrBuiltIn {
             path: "gui/keyboard.xml",
             fallback: None,
         },
-        extra: panel.doc_extra.take().unwrap_or_default(),
+        extra,
     }
 }
 
@@ -74,8 +73,6 @@ pub(super) fn create_keyboard_panel(
     );
 
     let mut panel = GuiPanel::new_from_template(app, "gui/keyboard.xml", state, params)?;
-
-    let doc_params = new_doc_params(&mut panel);
 
     let root = panel
         .parser_state
@@ -165,7 +162,7 @@ pub(super) fn create_keyboard_panel(
 
             let template_key = format!("Key{:?}", key.cap_type);
             panel.parser_state.instantiate_template(
-                &doc_params,
+                &doc_params(panel.doc_extra.as_ref()),
                 &template_key,
                 &mut panel.layout,
                 div.id,
@@ -278,6 +275,7 @@ pub(super) fn create_keyboard_panel(
     panel.on_notify = Some(Box::new({
         let name = "kbd";
         move |panel, app, event_data| {
+            let doc_params = doc_params(panel.doc_extra.as_ref());
             let mut elems_changed = panel.state.overlay_list.on_notify(
                 &mut panel.layout,
                 &mut panel.parser_state,

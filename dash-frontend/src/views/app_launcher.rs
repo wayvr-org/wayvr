@@ -2,7 +2,6 @@ use std::{collections::HashMap, rc::Rc, str::FromStr};
 use strum::VariantNames;
 use wayvr_ipc::packet_client::{PositionMode, WvrProcessLaunchParams};
 use wgui::{
-	assets::AssetPathRef,
 	components::{
 		ComponentTrait, button::ComponentButton, checkbox::ComponentCheckbox, radio_group::ComponentRadioGroup,
 	},
@@ -53,12 +52,16 @@ struct LaunchParams<'a, T> {
 }
 
 pub struct View {
-	#[allow(dead_code)]
-	state: ParserState,
+	_state: ParserState,
 	entry: Rc<DesktopEntry>,
 	tasks: Tasks<Task>,
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
+
+	compositor_mode: AppCompositorMode,
+	pos_mode: AppPosMode,
+	res_mode: AppResMode,
+	orientation_mode: AppOrientationMode,
 
 	#[allow(dead_code)]
 	radio_compositor: Rc<ComponentRadioGroup>,
@@ -66,11 +69,6 @@ pub struct View {
 	radio_res: Rc<ComponentRadioGroup>,
 	#[allow(dead_code)]
 	radio_orientation: Rc<ComponentRadioGroup>,
-
-	compositor_mode: AppCompositorMode,
-	pos_mode: AppPosMode,
-	res_mode: AppResMode,
-	orientation_mode: AppOrientationMode,
 
 	pinned_app: Option<PinnedApp>,
 
@@ -100,13 +98,8 @@ impl ViewTrait for View {
 
 impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let doc_params = &ParseDocumentParams {
-			globals: params.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/app_launcher.xml"),
-			extra: Default::default(),
-		};
-
-		let mut state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
+		let doc_params = ParseDocumentParams::builtin("gui/view/app_launcher.xml");
+		let mut state = wgui::parser::parse_from_assets(&doc_params, params.layout, params.parent_id)?;
 
 		let radio_compositor = state.fetch_component_as::<ComponentRadioGroup>("radio_compositor")?;
 		let radio_res = state.fetch_component_as::<ComponentRadioGroup>("radio_res")?;
@@ -146,7 +139,7 @@ impl View {
 			let mut template_params = TemplateParams::new();
 			template_params.insert("path", icon_path);
 			state.instantiate_template(
-				doc_params,
+				&doc_params,
 				"ApplicationIcon",
 				params.layout,
 				id_icon_parent,
@@ -283,11 +276,8 @@ impl View {
 		);
 
 		Ok(Self {
-			state,
+			_state: state,
 			tasks,
-			radio_compositor,
-			radio_res,
-			radio_orientation,
 			compositor_mode,
 			pos_mode,
 			res_mode,
@@ -299,6 +289,9 @@ impl View {
 			on_close_request: Some(params.on_close_request),
 			on_app_pins_changed: Some(params.on_app_pins_changed),
 			pinned_app: params.pinned_app,
+			radio_compositor,
+			radio_res,
+			radio_orientation,
 		})
 	}
 

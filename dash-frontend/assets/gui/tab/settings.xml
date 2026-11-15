@@ -118,7 +118,7 @@
           <Tab macro="tab_style" name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="@/dashboard/cpu.svg" />
         </Tabs>
         <!-- wayvr version, filled-in at runtime -->
-        <label id="label_version"/>
+        <label id="label_version" size="9" shadow="shadow"/>
       </div>
       <div position="relative" width="100%" height="100%" overflow_y="scroll">
         <div gap="4" id="settings_root" position="absolute" width="100%">

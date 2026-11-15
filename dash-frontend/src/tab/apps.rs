@@ -1,6 +1,5 @@
 use std::{cell::RefCell, collections::VecDeque, marker::PhantomData, rc::Rc};
 use wgui::{
-	assets::AssetPathRef,
 	components::button::{ButtonClickCallback, ComponentButton},
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -12,13 +11,12 @@ use wlx_common::{config::PinnedApp, desktop_finder::DesktopEntry};
 
 use crate::{
 	frontend::{Frontend, FrontendTasks},
-	tab::{Tab, TabType},
+	tab::Tab,
 	util::{popup_manager::PopupHolder, wgui_simple},
 	views::{self},
 };
 
 struct State {
-	#[allow(dead_code)]
 	parser_state: ParserState,
 	view_launcher: PopupHolder<views::app_launcher::View>,
 }
@@ -39,10 +37,6 @@ pub struct TabApps<T> {
 }
 
 impl<T> Tab<T> for TabApps<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Apps
-	}
-
 	fn update(&mut self, frontend: &mut Frontend<T>, _time_ms: u32, data: &mut T) -> anyhow::Result<()> {
 		let mut state = self.state.borrow_mut();
 
@@ -117,7 +111,7 @@ impl<T> TabApps<T> {
 			let button = mount_entry(
 				frontend,
 				&mut state.parser_state,
-				&doc_params(frontend.globals.clone()),
+				&DOC_PARAMS,
 				self.pinned_apps_parent,
 				desktop_entry.as_ref(),
 				Some(tooltip_string),
@@ -167,18 +161,11 @@ fn on_app_click(
 	})
 }
 
-fn doc_params(globals: WguiGlobals) -> ParseDocumentParams<'static> {
-	ParseDocumentParams {
-		globals,
-		path: AssetPathRef::BuiltIn("gui/tab/apps.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams::builtin("gui/tab/apps.xml");
 
 impl<T> TabApps<T> {
 	pub fn new(frontend: &mut Frontend<T>, parent_id: WidgetID, data: &mut T) -> anyhow::Result<Self> {
-		let globals = frontend.layout.state.globals.clone();
-		let parser_state = wgui::parser::parse_from_assets(&doc_params(globals.clone()), &mut frontend.layout, parent_id)?;
+		let parser_state = wgui::parser::parse_from_assets(&DOC_PARAMS, &mut frontend.layout, parent_id)?;
 
 		let app_list_parent = parser_state.fetch_widget(&frontend.layout.state, "app_list_parent")?;
 		let pinned_apps_parent = parser_state.fetch_widget(&frontend.layout.state, "pinned_apps_parent")?;
@@ -397,7 +384,7 @@ impl AppList {
 					params.insert("text", category_name);
 
 					parser_state.realize_template(
-						&doc_params(globals.clone()),
+						&DOC_PARAMS,
 						"CategoryText",
 						&mut frontend.layout,
 						self.list_parent.id,
@@ -405,14 +392,7 @@ impl AppList {
 					)?;
 				}
 
-				let button = mount_entry(
-					frontend,
-					parser_state,
-					&doc_params(globals.clone()),
-					self.list_parent.id,
-					&entry,
-					None,
-				)?;
+				let button = mount_entry(frontend, parser_state, &DOC_PARAMS, self.list_parent.id, &entry, None)?;
 
 				button.on_click(on_app_click(
 					frontend.tasks.clone(),

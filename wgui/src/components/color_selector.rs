@@ -153,9 +153,8 @@ impl ComponentColorSelector {
 
 		let parser_state = parser::parse_from_assets(
 			&ParseDocumentParams {
-				globals: layout.state.globals.clone(),
 				path: AssetPathRef::WguiInternal("wgui/color_selector.xml"),
-				extra: Default::default(),
+				extra: None,
 			},
 			layout,
 			id_content,

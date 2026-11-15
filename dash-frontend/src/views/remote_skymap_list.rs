@@ -1,17 +1,3 @@
-use std::rc::Rc;
-
-use uuid::Uuid;
-use wgui::{
-	assets::AssetPathRef,
-	globals::WguiGlobals,
-	i18n::Translation,
-	layout::{Layout, WidgetID},
-	parser::{Fetchable, ParseDocumentParams},
-	renderer_vk::text::custom_glyph::CustomGlyphData,
-	task::Tasks,
-};
-use wlx_common::async_executor::AsyncExecutor;
-
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
 	util::{
@@ -24,6 +10,17 @@ use crate::{
 	},
 	views::{self, ViewTrait, ViewUpdateParams},
 };
+use std::rc::Rc;
+use uuid::Uuid;
+use wgui::{
+	globals::WguiGlobals,
+	i18n::Translation,
+	layout::{Layout, WidgetID},
+	parser::{Fetchable, ParseDocumentParams},
+	renderer_vk::text::custom_glyph::CustomGlyphData,
+	task::Tasks,
+};
+use wlx_common::async_executor::AsyncExecutor;
 
 pub struct Params<'a> {
 	pub globals: &'a WguiGlobals,
@@ -176,13 +173,9 @@ impl View {
 		layout: &mut Layout,
 		catalog: &networking::skymap_catalog::SkymapCatalog,
 	) -> anyhow::Result<()> {
-		let doc_params = &ParseDocumentParams {
-			globals: self.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/remote_skymap_list.xml"),
-			extra: Default::default(),
-		};
+		let doc_params = ParseDocumentParams::builtin("gui/view/remote_skymap_list.xml");
 
-		let parser_state = wgui::parser::parse_from_assets(doc_params, layout, self.id_parent)?;
+		let parser_state = wgui::parser::parse_from_assets(&doc_params, layout, self.id_parent)?;
 
 		let id_list = parser_state.fetch_widget(&layout.state, "list")?.id;
 

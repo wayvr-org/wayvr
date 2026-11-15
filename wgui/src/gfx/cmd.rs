@@ -32,7 +32,7 @@ impl CommandPool {
 		})
 	}
 
-	pub fn gfx(&self) -> &Arc<WGfx> {
+	pub const fn gfx(&self) -> &Arc<WGfx> {
 		&self.graphics
 	}
 

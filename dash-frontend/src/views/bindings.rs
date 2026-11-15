@@ -4,7 +4,6 @@ use strum::EnumProperty;
 use wgui::{
 	assets::AssetPathRef,
 	components::{button::ComponentButton, slider::ComponentSlider},
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
 	log::LogErr,
@@ -43,7 +42,6 @@ enum Task {
 }
 
 pub struct Params<'a> {
-	pub globals: WguiGlobals,
 	pub layout: &'a mut Layout,
 	pub parent_id: WidgetID,
 	pub controller_profile: &'static XrControllerProfile,
@@ -54,7 +52,6 @@ pub struct View {
 	parser_state: ParserState,
 	tasks: Tasks<Task>,
 	list_parent: WidgetID,
-	globals: WguiGlobals,
 	profiles: Vec<OpenXrInputProfile>,
 	cur_profile_idx: usize,
 	context_menu: context_menu::ContextMenu,
@@ -215,11 +212,7 @@ impl ViewTrait for View {
 
 impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let doc_params = &ParseDocumentParams {
-			globals: params.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/bindings.xml"),
-			extra: Default::default(),
-		};
+		let doc_params = ParseDocumentParams::builtin("gui/view/bindings.xml");
 
 		let mut profiles = load_xr_input_profiles();
 
@@ -235,7 +228,7 @@ impl View {
 				idx
 			});
 
-		let parser_state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
+		let parser_state = wgui::parser::parse_from_assets(&doc_params, params.layout, params.parent_id)?;
 		let list_parent = parser_state.fetch_widget(&params.layout.state, "list_parent")?.id;
 		let tasks = Tasks::new();
 
@@ -253,7 +246,6 @@ impl View {
 			parser_state,
 			tasks,
 			list_parent,
-			globals: params.globals.clone(),
 			profiles,
 			cur_profile_idx,
 			context_menu: context_menu::ContextMenu::default(),
@@ -286,11 +278,7 @@ impl View {
 
 		let mut mp = MacroParams {
 			parser_state: &mut self.parser_state,
-			doc_params: &ParseDocumentParams {
-				globals: self.globals.clone(),
-				path: AssetPathRef::BuiltIn("gui/view/bindings.xml"),
-				extra: Default::default(),
-			},
+			doc_params: &ParseDocumentParams::builtin("gui/view/bindings.xml"),
 			layout,
 			tasks: self.tasks.clone(),
 			idx: 0,
@@ -372,7 +360,6 @@ fn get_action_mut<'a>(profile: &'a mut OpenXrInputProfile, action_name: &str) ->
 
 pub fn mount_popup(
 	frontend_tasks: FrontendTasks,
-	globals: WguiGlobals,
 	popup: PopupHolder<View>,
 	controller_profile: &'static XrControllerProfile,
 ) {
@@ -383,7 +370,6 @@ pub fn mount_popup(
 			Box::new(move |data| {
 				let close_callback = popup.get_close_callback(data.layout);
 				let view = View::new(Params {
-					globals: globals.clone(),
 					layout: data.layout,
 					parent_id: data.id_content,
 					controller_profile,

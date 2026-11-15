@@ -1,7 +1,14 @@
+use crate::{
+	frontend::FrontendTasks,
+	util::{
+		cached_fetcher::CoverArt,
+		popup_manager::PopupHolder,
+		steam_utils::{self, AppID, SteamUtils},
+	},
+	views::{self, ViewTrait, ViewUpdateParams, game_cover},
+};
 use std::{collections::HashMap, rc::Rc};
-
 use wgui::{
-	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -14,16 +21,6 @@ use wgui::{
 	},
 };
 use wlx_common::async_executor::AsyncExecutor;
-
-use crate::{
-	frontend::FrontendTasks,
-	util::{
-		cached_fetcher::CoverArt,
-		popup_manager::PopupHolder,
-		steam_utils::{self, AppID, SteamUtils},
-	},
-	views::{self, ViewTrait, ViewUpdateParams, game_cover},
-};
 
 #[derive(Clone)]
 enum Task {
@@ -51,8 +48,7 @@ pub struct GameCoverCell {
 }
 
 pub struct View {
-	#[allow(dead_code)]
-	parser_state: ParserState,
+	_parser_state: ParserState,
 	tasks: Tasks<Task>,
 	frontend_tasks: FrontendTasks,
 	globals: WguiGlobals,
@@ -90,13 +86,8 @@ impl ViewTrait for View {
 
 impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let doc_params = &ParseDocumentParams {
-			globals: params.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/game_list.xml"),
-			extra: Default::default(),
-		};
-
-		let parser_state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
+		let doc_params = ParseDocumentParams::builtin("gui/view/game_list.xml");
+		let parser_state = wgui::parser::parse_from_assets(&doc_params, params.layout, params.parent_id)?;
 		let list_parent = parser_state.fetch_widget(&params.layout.state, "list_parent")?;
 		let id_label_page = parser_state.get_widget_id("label_page")?;
 
@@ -115,7 +106,7 @@ impl View {
 		tasks.push(Task::LoadManifests);
 
 		Ok(Self {
-			parser_state,
+			_parser_state: parser_state,
 			tasks,
 			frontend_tasks: params.frontend_tasks,
 			globals: params.globals.clone(),

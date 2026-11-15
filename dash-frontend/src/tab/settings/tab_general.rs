@@ -183,7 +183,7 @@ impl State {
 			tasks,
 			parent_tasks: par.mp.tasks.clone(),
 			frontend_tasks: par.frontend_tasks.clone(),
-			globals: par.mp.doc_params.globals.clone(),
+			globals: par.mp.layout.state.globals.clone(),
 			popup_download,
 			popup_dialog,
 			pending_download: None,
@@ -216,7 +216,6 @@ impl State {
 			self.popup_dialog.clone(),
 			self.frontend_tasks.clone(),
 			views::dialog_box::Params {
-				globals: self.globals.clone(),
 				message: Translation::from_translation_key("APP_SETTINGS.WHISPER.NEED_TO_DOWNLOAD_MODEL"),
 				entries: vec![
 					views::dialog_box::ButtonEntry {
@@ -257,7 +256,6 @@ impl State {
 			self.popup_dialog.clone(),
 			self.frontend_tasks.clone(),
 			views::dialog_box::Params {
-				globals: self.globals.clone(),
 				message: Translation::from_translation_key("APP_SETTINGS.WHISPER.REMOVE_UNUSED_MODELS"),
 				entries: vec![
 					views::dialog_box::ButtonEntry {
@@ -291,8 +289,7 @@ impl State {
 }
 
 fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let parent = horiz_cell(mp.layout, parent)?;
 
@@ -357,13 +354,13 @@ fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Re
 		sprite_src: Some(AssetPathRef::BuiltIn("dashboard/stt.svg")),
 	})
 }
+
 fn whisper_gpu_select_dropdown(
 	mp: &mut MacroParams,
 	parent: WidgetID,
 	vulkan_devices: Vec<String>,
 ) -> anyhow::Result<()> {
-	let id = mp.idx.to_string();
-	mp.idx += 1;
+	let id = mp.gen_id();
 
 	let parent = horiz_cell(mp.layout, parent)?;
 

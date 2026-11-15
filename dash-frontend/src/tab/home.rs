@@ -2,7 +2,6 @@ use std::{marker::PhantomData, rc::Rc};
 
 use wgui::{
 	animation::{Animation, AnimationDuration, AnimationEasing},
-	assets::AssetPathRef,
 	color::{WguiColor, WguiColorName, WguiNamedColor},
 	components::{ComponentTrait, button::ComponentButton},
 	event::CallbackDataCommon,
@@ -21,16 +20,11 @@ use crate::{
 };
 
 pub struct TabHome<T> {
-	#[allow(dead_code)]
-	pub state: ParserState,
+	_state: ParserState,
 	marker: PhantomData<T>,
 }
 
-impl<T> Tab<T> for TabHome<T> {
-	fn get_type(&self) -> TabType {
-		TabType::Home
-	}
-}
+impl<T> Tab<T> for TabHome<T> {}
 
 fn get_supporter_anim(
 	btn: Rc<ComponentButton>,
@@ -140,11 +134,7 @@ fn configure_label_hello(common: &mut CallbackDataCommon, label_hello: Widget, c
 impl<T> TabHome<T> {
 	pub fn new(frontend: &mut Frontend<T>, parent_id: WidgetID, data: &mut T) -> anyhow::Result<Self> {
 		let state = wgui::parser::parse_from_assets(
-			&ParseDocumentParams {
-				globals: frontend.layout.state.globals.clone(),
-				path: AssetPathRef::BuiltIn("gui/tab/home.xml"),
-				extra: Default::default(),
-			},
+			&ParseDocumentParams::builtin("gui/tab/home.xml"),
 			&mut frontend.layout,
 			parent_id,
 		)?;
@@ -182,7 +172,7 @@ impl<T> TabHome<T> {
 			.detach();
 
 		Ok(Self {
-			state,
+			_state: state,
 			marker: PhantomData,
 		})
 	}

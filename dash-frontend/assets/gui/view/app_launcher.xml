@@ -17,7 +17,7 @@
     <div flex_direction="row" gap="16" flex_grow="1">
       <rectangle macro="group_box" id="icon_parent" padding="16" color="background_variant(opacity-0.5)" color2="background(opacity-0.5)" gradient="vertical" justify_content="center"/>
       <div flex_direction="column" gap="8" flex_grow="1">
-        <label id="label_title" weight="bold" size="32" overflow="hidden" />
+        <label id="label_title" weight="bold" size="32" overflow_x="hidden" />
         <Subtext label_id="label_exec"/>
         <Separator />
         <RadioGroup id="radio_compositor" flex_direction="row" gap="16">

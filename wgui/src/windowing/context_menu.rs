@@ -2,10 +2,9 @@ use crate::{
 	assets::AssetPathRef,
 	components::{ComponentTrait, button::ComponentButton},
 	drawing::Boundary,
-	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
-	parser::{self, Fetchable, ParserState, TemplateParams},
+	parser::{self, Fetchable, ParseDocumentParams, ParserState, TemplateParams},
 	task::Tasks,
 	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra, WguiWindowPlacement},
 };
@@ -91,13 +90,10 @@ pub struct ContextMenu {
 	tasks: Tasks<Task>,
 }
 
-fn doc_params<'a>(globals: &WguiGlobals) -> parser::ParseDocumentParams<'a> {
-	parser::ParseDocumentParams {
-		globals: globals.clone(),
-		path: AssetPathRef::WguiInternal("wgui/context_menu.xml"),
-		extra: Default::default(),
-	}
-}
+const DOC_PARAMS: ParseDocumentParams = ParseDocumentParams {
+	path: AssetPathRef::WguiInternal("wgui/context_menu.xml"),
+	extra: None,
+};
 
 #[derive(Default)]
 pub enum TickResult {
@@ -171,9 +167,8 @@ impl ContextMenu {
 		})?;
 
 		let content = self.window.get_content();
-		let doc_params = doc_params(&globals);
 
-		let mut inner_parser = parser::parse_from_assets(&doc_params, layout, content.id)?;
+		let mut inner_parser = parser::parse_from_assets(&DOC_PARAMS, layout, content.id)?;
 
 		let id_buttons = inner_parser.get_widget_id("buttons")?;
 
@@ -207,7 +202,7 @@ impl ContextMenu {
 					}
 
 					let mut data_cell = inner_parser.parse_template_only(
-						&doc_params,
+						&DOC_PARAMS,
 						if has_sprites { "CellButtonSprite" } else { "CellButton" },
 						layout,
 						id_buttons,
@@ -231,7 +226,7 @@ impl ContextMenu {
 					}
 				}
 				Cell::Separator => {
-					inner_parser.realize_template(&doc_params, "Separator", layout, id_buttons, Default::default())?;
+					inner_parser.realize_template(&DOC_PARAMS, "Separator", layout, id_buttons, Default::default())?;
 				}
 			}
 		}

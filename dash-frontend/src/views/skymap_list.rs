@@ -1,6 +1,13 @@
+use crate::{
+	frontend::{FrontendTask, FrontendTasks},
+	util::{
+		networking::skymap_catalog::{self, SkymapCatalogEntry, SkymapResolution},
+		popup_manager::{MountPopupOnceParams, PopupHolder},
+	},
+	views::{self, ViewTrait, ViewUpdateParams},
+};
 use anyhow::Context;
 use wgui::{
-	assets::AssetPathRef,
 	components::button::ComponentButton,
 	globals::WguiGlobals,
 	i18n::Translation,
@@ -10,15 +17,6 @@ use wgui::{
 	task::Tasks,
 };
 use wlx_common::{async_executor::AsyncExecutor, config::GeneralConfig, config_io, dash_interface::ConfigChangeKind};
-
-use crate::{
-	frontend::{FrontendTask, FrontendTasks},
-	util::{
-		networking::skymap_catalog::{self, SkymapCatalogEntry, SkymapResolution},
-		popup_manager::{MountPopupOnceParams, PopupHolder},
-	},
-	views::{self, ViewTrait, ViewUpdateParams},
-};
 
 #[derive(Clone)]
 enum Task {
@@ -37,13 +35,11 @@ pub struct Params<'a> {
 }
 
 struct Cell {
-	#[allow(dead_code)]
-	view: views::skymap_list_cell::View,
+	_view: views::skymap_list_cell::View,
 }
 
 pub struct View {
-	#[allow(dead_code)]
-	parser_state: ParserState,
+	_parser_state: ParserState,
 	tasks: Tasks<Task>,
 	list_parent: WidgetID,
 	frontend_tasks: FrontendTasks,
@@ -87,13 +83,8 @@ impl ViewTrait for View {
 
 impl View {
 	pub fn new(params: Params) -> anyhow::Result<Self> {
-		let doc_params = &ParseDocumentParams {
-			globals: params.globals.clone(),
-			path: AssetPathRef::BuiltIn("gui/view/skymap_list.xml"),
-			extra: Default::default(),
-		};
-
-		let parser_state = wgui::parser::parse_from_assets(doc_params, params.layout, params.parent_id)?;
+		let doc_params = ParseDocumentParams::builtin("gui/view/skymap_list.xml");
+		let parser_state = wgui::parser::parse_from_assets(&doc_params, params.layout, params.parent_id)?;
 		let list_parent = parser_state.fetch_widget(&params.layout.state, "list_parent")?.id;
 		let tasks = Tasks::new();
 
@@ -110,7 +101,7 @@ impl View {
 		);
 
 		Ok(Self {
-			parser_state,
+			_parser_state: parser_state,
 			tasks,
 			list_parent,
 			frontend_tasks: params.frontend_tasks.clone(),
@@ -182,7 +173,6 @@ impl View {
 			self.popup_dialog_box.clone(),
 			self.frontend_tasks.clone(),
 			views::dialog_box::Params {
-				globals: self.globals.clone(),
 				entries,
 				message: Translation::from_translation_key("APP_SETTINGS.SELECT_VARIANT"),
 				on_action_click: Box::new(move |action| {
@@ -219,7 +209,7 @@ impl View {
 			view.set_image(layout, Some(glyph_data))?;
 		}
 
-		self.cells.push(Cell { view });
+		self.cells.push(Cell { _view: view });
 
 		for entry in &entries {
 			let mut view = views::skymap_list_cell::View::new(views::skymap_list_cell::Params {
@@ -238,7 +228,7 @@ impl View {
 				view.set_image(layout, Some(glyph_data))?;
 			}
 
-			self.cells.push(Cell { view });
+			self.cells.push(Cell { _view: view });
 		}
 
 		Ok(())

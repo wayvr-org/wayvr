@@ -315,9 +315,8 @@ impl WguiWindow {
 
 			let state = parser::parse_from_assets(
 				&parser::ParseDocumentParams {
-					globals: globals.clone(),
 					path: xml_path,
-					extra: Default::default(),
+					extra: None,
 				},
 				params.layout,
 				topmost_widget.id,
