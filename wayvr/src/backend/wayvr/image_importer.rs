@@ -130,6 +130,7 @@ impl ImageImporter {
             num_planes: dmabuf.num_planes(),
             planes: Default::default(),
             mouse: None,
+            lease: None,
         };
 
         for (i, handle) in dmabuf.handles().enumerate() {
