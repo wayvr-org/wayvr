@@ -646,6 +646,7 @@ pub(super) struct WlxCaptureOut {
     pub(super) image: Arc<ImageView>,
     pub(super) format: FrameFormat,
     pub(super) mouse: Option<MouseMeta>,
+    pub(super) _lease: Option<wlx_frame::FrameLease>,
 }
 
 impl WlxCaptureOut {
@@ -834,11 +835,12 @@ fn receive_callback_with_pool(
             }
             log::trace!("{}: New DMA-buf frame", me.name);
             let format = frame.format;
-            match me.gfx.dmabuf_texture(frame) {
+            match me.gfx.dmabuf_texture(&frame) {
                 Ok(image) => Some(WlxCaptureOut {
                     image: me.gfx.create_image_view(image).ok()?,
                     format,
                     mouse: None,
+                    _lease: frame.lease,
                 }),
                 Err(e) => {
                     log::error!("{}: Failed to create DMA-buf vkImage: {}", me.name, e);
@@ -875,6 +877,7 @@ fn receive_callback_with_pool(
                 image: me.gfx.create_image_view(image).ok()?,
                 format: frame.format,
                 mouse: None,
+                _lease: None,
             })
         }
         WlxFrame::MemPtr(frame) => {
@@ -910,6 +913,7 @@ fn receive_callback_with_pool(
                 image: me.gfx.create_image_view(image).ok()?,
                 format: frame.format,
                 mouse: frame.mouse,
+                _lease: None,
             })
         }
         WlxFrame::Implicit => {
@@ -923,7 +927,7 @@ fn receive_callback_with_pool(
                 log::error!("{}: DMA exporter lock is poisoned", me.name);
                 return None;
             };
-            let Some((image, mut format)) = dma_exporter.get_current() else {
+            let Some((image, format)) = dma_exporter.get_current() else {
                 log::error!("{}: Implicit frame is missing!", me.name);
                 return None;
             };
@@ -932,6 +936,7 @@ fn receive_callback_with_pool(
                 image,
                 format,
                 mouse: None,
+                _lease: None,
             })
         }
     }

@@ -10,9 +10,6 @@ pub mod frame;
 pub mod wayland;
 
 #[cfg(feature = "wlr")]
-pub mod wlr_dmabuf;
-
-#[cfg(feature = "wlr")]
 pub mod wlr_screencopy;
 
 #[cfg(feature = "pipewire")]

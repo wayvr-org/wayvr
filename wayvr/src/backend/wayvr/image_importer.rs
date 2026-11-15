@@ -145,7 +145,7 @@ impl ImageImporter {
             frame.planes[i].stride = stride as _;
         }
 
-        let image = self.command_pool.gfx().dmabuf_texture(frame)?;
+        let image = self.command_pool.gfx().dmabuf_texture(&frame)?;
         log::info!("DMA-buf import: creating image view");
         let image_view = self.command_pool.gfx().create_image_view(image)?;
         log::info!("DMA-buf import: image view created");

@@ -1,4 +1,4 @@
-use std::os::fd::RawFd;
+use std::{os::fd::RawFd, sync::Arc};
 
 use drm_fourcc::{DrmFormat, DrmFourcc, DrmModifier};
 
@@ -69,6 +69,7 @@ pub struct DmabufFrame {
     pub num_planes: usize,
     pub planes: [FramePlane; 4],
     pub mouse: Option<MouseMeta>,
+    pub lease: Option<FrameLease>,
 }
 
 impl DmabufFrame {
@@ -146,4 +147,21 @@ pub trait DmaExporter {
         height: u32,
         fourcc: DrmFourcc,
     ) -> Option<(FramePlane, DrmModifier)>;
+}
+
+#[derive(Clone)]
+pub struct FrameLease(Arc<FrameLeaseInner>);
+
+struct FrameLeaseInner(Box<dyn Fn() + Send + Sync>);
+
+impl FrameLease {
+    pub fn new(f: impl Fn() + Send + Sync + 'static) -> Self {
+        Self(Arc::new(FrameLeaseInner(Box::new(f))))
+    }
+}
+
+impl Drop for FrameLeaseInner {
+    fn drop(&mut self) {
+        (self.0)();
+    }
 }
