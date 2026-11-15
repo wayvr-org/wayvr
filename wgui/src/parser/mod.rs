@@ -1141,24 +1141,21 @@ fn parse_widget_universal(ctx: &mut ParserContext, widget: &WidgetPair, attribs:
 				ctx.insert_id(&pair.value, widget.id);
 			}
 			"new_pass" => {
-				if let Some(num) = parse_i32(&pair.value) {
-					widget.widget.state().flags.new_pass = num != 0;
-				} else {
-					ctx.print_invalid_attrib(tag_name, &pair.attrib, &pair.value);
+				let mut b = false;
+				if ctx.parse_check_bool(tag_name, &pair.attrib, &pair.value, &mut b) {
+					widget.widget.state().flags.new_pass = b;
 				}
 			}
 			"interactable" => {
-				if let Some(num) = parse_i32(&pair.value) {
-					widget.widget.state().flags.interactable = num != 0;
-				} else {
-					ctx.print_invalid_attrib(tag_name, &pair.attrib, &pair.value);
+				let mut b = false;
+				if ctx.parse_check_bool(tag_name, &pair.attrib, &pair.value, &mut b) {
+					widget.widget.state().flags.interactable = b;
 				}
 			}
 			"consume_mouse_events" => {
-				if let Some(num) = parse_i32(&pair.value) {
-					widget.widget.state().flags.consume_mouse_events = num != 0;
-				} else {
-					ctx.print_invalid_attrib(tag_name, &pair.attrib, &pair.value);
+				let mut b = false;
+				if ctx.parse_check_bool(tag_name, &pair.attrib, &pair.value, &mut b) {
+					widget.widget.state().flags.consume_mouse_events = b;
 				}
 			}
 			_ => {}

@@ -33,6 +33,7 @@ pub fn parse_component_checkbox(
 	let mut tooltip = TooltipAttribs::default();
 	let mut sprite_color: Option<WguiColor> = None;
 	let mut sprite_src: Option<AssetPathRc> = None;
+	let mut color_checked: Option<WguiColor> = None;
 
 	let style = parse_style(ctx, attribs, tag_name);
 
@@ -60,6 +61,9 @@ pub fn parse_component_checkbox(
 			}
 			"sprite_color" => {
 				parse_color_opt(ctx, tag_name, key, value, &mut sprite_color);
+			}
+			"color_checked" => {
+				parse_color_opt(ctx, tag_name, key, value, &mut color_checked);
 			}
 			"sprite_src" | "sprite_src_ext" | "sprite_src_builtin" | "sprite_src_internal" => {
 				let asset_path = get_asset_path_from_kv(file, "sprite_", key, value);
@@ -107,7 +111,7 @@ pub fn parse_component_checkbox(
 			radio_group,
 			value: component_value,
 			tooltip: tooltip.get_info(),
-			color_checked: None,
+			color_checked,
 			sprite_src: sprite_src.as_ref().map(|s| s.as_ref()),
 			sprite_color,
 		},

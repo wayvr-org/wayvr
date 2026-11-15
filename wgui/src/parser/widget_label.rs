@@ -26,10 +26,9 @@ pub fn parse_widget_label<'a>(
 		let (key, value) = (pair.attrib.as_ref(), pair.value.as_ref());
 		match key {
 			"wrap" => {
-				if let Some(num) = parse_i32(value) {
-					params.style.wrap = num == 1;
-				} else {
-					ctx.print_invalid_attrib(tag_name, key, value);
+				let mut b = false;
+				if ctx.parse_check_bool(tag_name, key, value, &mut b) {
+					params.style.wrap = b;
 				}
 			}
 			"text" => {
