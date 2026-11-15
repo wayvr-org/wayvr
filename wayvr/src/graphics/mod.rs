@@ -8,6 +8,8 @@ use wgui::gfx::{
     Vert2Buf, Vert2Uv, WGfx, WGfxCreateInfo,
 };
 use wlx_capture::DrmFormat;
+#[cfg(feature = "pipewire")]
+use wlx_capture::syncobj::DrmRenderNode;
 
 use crate::shaders::{
     frag_color, frag_grid, frag_screen, frag_simple, frag_sky, frag_srgb, frag_wayland, vert_quad,
@@ -21,6 +23,8 @@ pub struct WGfxExtras {
     pub drm_formats: Arc<[DrmFormat]>,
     pub quad_verts: Vert2Buf,
     pub drm_device: Option<(i64, i64)>,
+    #[cfg(feature = "pipewire")]
+    pub drm_render_node: Option<DrmRenderNode>,
 }
 
 impl WGfxExtras {
@@ -57,13 +61,24 @@ impl WGfxExtras {
         ];
         let quad_verts = gfx.new_buffer(BufferUsage::VERTEX_BUFFER, &vertices)?;
 
+        #[cfg(feature = "pipewire")]
         let drm_device = gfx.device_info().drm_render_node.map(|(major, minor)| {
             log::info!("DRM render device: {major} {minor}");
             (i64::from(major), i64::from(minor))
         });
+        #[cfg(feature = "pipewire")]
         if drm_device.is_none() {
             log::warn!("No DRM device.");
         }
+        #[cfg(feature = "pipewire")]
+        let drm_render_node = drm_device.and_then(|(maj, min)| {
+            use wgui::log::LogErr;
+            use wlx_capture::syncobj::open_render_node;
+
+            open_render_node(maj as u32, min as u32)
+                .log_err("Could not open DRM render node")
+                .ok()
+        });
 
         Ok(Self {
             gfx_pool,
@@ -71,6 +86,8 @@ impl WGfxExtras {
             drm_formats,
             quad_verts,
             drm_device,
+            #[cfg(feature = "pipewire")]
+            drm_render_node,
         })
     }
 }

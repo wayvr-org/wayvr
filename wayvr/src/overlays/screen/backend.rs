@@ -48,10 +48,12 @@ pub(super) enum CaptureType {
 
 pub struct ScreenBackend {
     name: Arc<str>,
+    // frames mut come before `capture` to maintain drop order
+    cur_frame: Option<WlxCaptureOut>,
+    pending_frame: Option<WlxCaptureOut>,
     capture_type: CaptureType,
     capture: Box<dyn WlxCapture<WlxCaptureIn, WlxCaptureOut>>,
     pipeline: Option<ScreenPipeline>,
-    cur_frame: Option<WlxCaptureOut>,
     meta: Option<FrameMeta>,
     mouse_transform: Affine2,
     interaction_transform: Option<Affine2>,
@@ -77,6 +79,7 @@ impl ScreenBackend {
             capture,
             pipeline: None,
             cur_frame: None,
+            pending_frame: None,
             meta: None,
             mouse_transform: Affine2::ZERO,
             interaction_transform: None,
@@ -204,7 +207,26 @@ impl OverlayBackend for ScreenBackend {
             return Ok(ShouldRender::Unable);
         }
 
-        if let Some(frame) = self.capture.receive() {
+        // don't submit the new image until the producer signaled
+        if let Some(mut frame) = self.capture.receive()
+            && (self.pending_frame.is_none() || matches!(frame.is_ready(), Ok(true)))
+        {
+            self.pending_frame = Some(frame);
+        }
+        let pending_ready = match self.pending_frame.as_mut() {
+            Some(frame) => match frame.is_ready() {
+                Ok(ready) => ready,
+                Err(e) => {
+                    log::warn!("{}: failed to check DMA-buf acquire fence: {e}", self.name);
+                    self.pending_frame = None;
+                    false
+                }
+            },
+            None => false,
+        };
+
+        if pending_ready {
+            let frame = self.pending_frame.take().unwrap();
             let stereo = self.stereo.unwrap_or(StereoMode::None);
             let mut meta = frame.get_frame_meta(&app.session.config, stereo);
 
