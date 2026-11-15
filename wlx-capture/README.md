@@ -30,17 +30,6 @@ let capture = PipewireCapture::new(
 );
 ```
 
-### Wlr-Dmabuf Setup
-```rust
-let wl = WlxClient::new();
-
-// select desired screen
-let output_id = wl.outputs.keys().first().unwrap();
-
-let mut capture = WlrDmabufCapture::new(wl, *output_id).unwrap();
-```
-
-
 ### XSHM Setup
 ```rust
 let monitors = XshmCapture::get_monitors();
