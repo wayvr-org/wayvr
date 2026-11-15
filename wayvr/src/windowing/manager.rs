@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, VecDeque},
     rc::Rc,
+    sync::Arc,
     sync::atomic::Ordering,
 };
 
@@ -9,9 +10,11 @@ use glam::{Affine3A, Vec3, Vec3A};
 use slotmap::{Key, SecondaryMap, SlotMap};
 use wgui::{i18n::Translation, log::LogErr};
 use wlx_common::{
+    DesktopBackend,
     astr_containers::{AStrMap, AStrMapExt},
     config::SerializedWindowSet,
     overlays::{BackendAttrib, BackendAttribValue, ToastTopic},
+    windowing::{OverlayWindowState, Positioning},
 };
 
 use crate::{
@@ -84,7 +87,9 @@ where
         };
 
         if headless {
-            log::info!("Running in headless mode; keyboard will be en-US");
+            app.screens.clear();
+            app.feats.desktop_backend = DesktopBackend::Headless;
+            log::info!("Running in headless mode; keyboard layout is read from config.");
         } else {
             // create one window set for each screen.
             // this is the default and would be overwritten by
@@ -92,12 +97,12 @@ where
             match create_screens(app) {
                 Ok((data, backend)) => {
                     app.feats.desktop_backend = backend;
-                    let last_idx = data.screens.len() - 1;
+                    let screen_count = data.screens.len();
                     for (idx, (meta, mut config)) in data.screens.into_iter().enumerate() {
                         config.show_on_spawn = true;
                         me.add(OverlayWindowData::from_config(config), app);
 
-                        if idx < last_idx {
+                        if idx + 1 < screen_count {
                             me.sets.push(OverlayWindowSet::default());
                             me.switch_to_set(app, Some(me.current_set.unwrap() + 1), false);
                         }
@@ -243,6 +248,7 @@ where
                     _ => {}
                 }
 
+                let key = o.config.name.clone();
                 let parent_set = if o.config.global {
                     &mut self.global_set
                 } else {
@@ -254,8 +260,8 @@ where
 
                     parent_set
                         .hidden_overlays
-                        .arc_set(o.config.name.clone(), active_state);
-                } else if let Some(state) = parent_set.hidden_overlays.arc_rm(&o.config.name) {
+                        .arc_set(key.clone(), active_state);
+                } else if let Some(state) = parent_set.hidden_overlays.arc_rm(&key) {
                     let o = &mut self.overlays[id];
                     log::debug!("{}: toggle on", o.config.name);
                     o.config.dirty = true;
@@ -387,9 +393,23 @@ where
             OverlayTask::Modify(sel, f) => {
                 if let Some(o) = self.mut_by_selector(&sel) {
                     let was_visible = o.config.is_active();
+                    let old_title = o.config.title.clone();
+                    let old_icon = match o.config.backend.get_attrib(BackendAttrib::Icon) {
+                        Some(BackendAttribValue::Icon(icon)) => Some(icon),
+                        _ => None,
+                    };
                     f(app, &mut o.config);
+                    let new_icon = match o.config.backend.get_attrib(BackendAttrib::Icon) {
+                        Some(BackendAttribValue::Icon(icon)) => Some(icon),
+                        _ => None,
+                    };
+                    let title_changed = old_title != o.config.title || old_icon != new_icon;
+                    let visibility_changed = was_visible != o.config.is_active();
 
-                    if was_visible != o.config.is_active() {
+                    if title_changed {
+                        self.overlays_changed(app)?;
+                    }
+                    if visibility_changed {
                         let _ = self.visible_overlays_changed(app);
                     }
                 } else {
@@ -400,65 +420,52 @@ where
                 self.spawn_overlay(app, sel, spawn_pos, f);
             }
             OverlayTask::Drop(sel) => {
-                let (id, name) = match &sel {
-                    OverlaySelector::Id(id) => {
-                        let id = *id;
-                        let name = self.overlays.get(id).map(|o| o.config.name.clone());
-                        (Some(id), name)
-                    }
-                    OverlaySelector::Name(name) => {
-                        let id = self.lookup(name);
-                        (id, Some(name.clone()))
-                    }
-                    _ => (None, None),
-                };
-
+                let id = self.id_by_selector(&sel);
                 if let Some(o) = self.mut_by_selector(&sel)
                     && o.birthframe < FRAME_COUNTER.load(Ordering::Relaxed)
                     && let Some(o) = self.remove_by_selector(&sel, app)
                 {
                     log::debug!("Dropping overlay {}", o.config.name);
-                    if let (Some(id), Some(name)) = (id, name) {
-                        self.remove_saved_state(id, &name);
+                    if let Some(id) = id {
+                        self.on_overlay_dropped(app, id, &o);
                     }
                     self.dropped_overlays.push_back(o);
                 }
             }
             OverlayTask::DropImmediate(sel) => {
-                let (id, name) = match &sel {
-                    OverlaySelector::Id(id) => {
-                        let id = *id;
-                        let name = self.overlays.get(id).map(|o| o.config.name.clone());
-                        (Some(id), name)
-                    }
-                    OverlaySelector::Name(name) => {
-                        let id = self.lookup(name);
-                        (id, Some(name.clone()))
-                    }
-                    _ => (None, None),
-                };
-
+                let id = self.id_by_selector(&sel);
                 if let Some(o) = self.remove_by_selector(&sel, app) {
                     log::debug!("Dropping overlay {} immediately", o.config.name);
-                    if let (Some(id), Some(name)) = (id, name) {
-                        self.remove_saved_state(id, &name);
+                    if let Some(id) = id {
+                        self.on_overlay_dropped(app, id, &o);
                     }
                     self.dropped_overlays.push_back(o);
                 }
+            }
+            OverlayTask::SetOverlayName(id, name, persistent, restore_on_spawn) => {
+                self.set_window_name(app, id, name, persistent, restore_on_spawn);
+            }
+            OverlayTask::ForgetWindowState(id, key) => {
+                self.freeze_window_state(app, id, &key);
+            }
+            OverlayTask::RenameWindowState(old, new) => {
+                self.rename_window_state(app, &old, &new);
+            }
+            OverlayTask::ClearWindowState(key) => {
+                self.clear_window_state(app, &key);
             }
             OverlayTask::DropExpired(id) => {
                 let should_drop = self
                     .overlays
                     .get(id)
                     .and_then(|overlay| overlay.config.lifetime.as_ref())
-                    .is_some_and(|lifetime| lifetime.is_expired());
+                    .is_some_and(super::window::OverlayLifetime::is_expired);
 
                 if should_drop
                     && let Some(o) = self.remove_by_selector(&OverlaySelector::Id(id), app)
                 {
                     log::debug!("Dropping expired overlay {}", o.config.name);
-                    let name = o.config.name.clone();
-                    self.remove_saved_state(id, &name);
+                    self.on_overlay_dropped(app, id, &o);
                     self.dropped_overlays.push_back(o);
                 }
             }
@@ -532,14 +539,229 @@ impl<T> OverlayWindowManager<T> {
         self.dropped_overlays.pop_front()
     }
 
-    fn remove_saved_state(&mut self, id: OverlayID, name: &str) {
+    fn save_window_size(app: &mut AppState, overlay: &OverlayWindowData<T>, name: &Arc<str>) {
+        if overlay.config.category != OverlayCategory::WayVR || !overlay.config.can_persist() {
+            return;
+        }
+        let Some(BackendAttribValue::WindowSize(size)) =
+            overlay.config.backend.get_attrib(BackendAttrib::WindowSize)
+        else {
+            return;
+        };
+        let mut attrs = app
+            .session
+            .config
+            .attribs
+            .arc_get(name)
+            .cloned()
+            .unwrap_or_default();
+        attrs.retain(|attr| !matches!(attr, BackendAttribValue::WindowSize(_)));
+        attrs.push(BackendAttribValue::WindowSize(size));
+        app.session.config.attribs.arc_set(name.clone(), attrs);
+    }
+
+    fn on_overlay_dropped(
+        &mut self,
+        app: &mut AppState,
+        id: OverlayID,
+        overlay: &OverlayWindowData<T>,
+    ) {
+        let name = &overlay.config.name;
+        Self::save_window_size(app, overlay, name);
+        let remember_position =
+            overlay.config.category == OverlayCategory::WayVR && overlay.config.can_persist();
+
+        // keep removed overlays by name
         for set in &mut self.sets {
-            set.overlays.retain(|k, _| k != id);
+            let state = set.overlays.remove(id);
+            let hidden_state = set.hidden_overlays.arc_rm(name);
+            if remember_position {
+                if let Some(state) = state.or(hidden_state) {
+                    set.inactive_overlays.arc_set(name.clone(), state);
+                }
+            } else {
+                set.inactive_overlays.arc_rm(name);
+            }
+        }
+
+        let state = self.global_set.overlays.remove(id);
+        let hidden_state = self.global_set.hidden_overlays.arc_rm(name);
+        if remember_position {
+            if let Some(state) = state.or(hidden_state) {
+                self.global_set
+                    .inactive_overlays
+                    .arc_set(name.clone(), state);
+            }
+
+            if let Some(state) = &overlay.config.active_state {
+                let set = if overlay.config.global {
+                    &mut self.global_set
+                } else {
+                    &mut self.sets[self.current_set.unwrap_or(self.restore_set)]
+                };
+                set.inactive_overlays.arc_set(name.clone(), state.clone());
+            }
+        } else {
+            // transient overlays (toasts, etc)
+            self.global_set.inactive_overlays.arc_rm(name);
+        }
+    }
+
+    /// Set the name of an existing window, restoring the state associated with the new name
+    fn set_window_name(
+        &mut self,
+        app: &mut AppState,
+        id: OverlayID,
+        name: Arc<str>,
+        persistent: bool,
+        restore_on_spawn: bool,
+    ) {
+        let Some(overlay) = self.overlays.get(id) else {
+            return;
+        };
+        if overlay.config.category != OverlayCategory::WayVR
+            || (overlay.config.name == name
+                && overlay.config.persistent == persistent
+                && overlay.config.restore_on_spawn == restore_on_spawn)
+        {
+            return;
+        }
+        if self
+            .overlays
+            .iter()
+            .any(|(other_id, other)| other_id != id && other.config.name == name)
+        {
+            log::debug!("Ignoring duplicate WayVR window name {name}");
+            return;
+        }
+
+        let old_name = overlay.config.name.clone();
+        let global = overlay.config.global;
+        if old_name != name {
+            for set in &mut self.sets {
+                if let Some(state) = set.hidden_overlays.arc_rm(&old_name) {
+                    set.hidden_overlays.arc_set(name.clone(), state);
+                }
+            }
+            if let Some(state) = self.global_set.hidden_overlays.arc_rm(&old_name) {
+                self.global_set.hidden_overlays.arc_set(name.clone(), state);
+            }
+        }
+        {
+            let config = &mut self.overlays[id].config;
+            config.name = name.clone();
+            config.persistent = persistent;
+            config.restore_on_spawn = restore_on_spawn;
+        }
+        if let Err(err) = self.overlays_changed(app) {
+            log::error!("Unable to update overlay name: {err:?}");
+        }
+        if !persistent || !restore_on_spawn {
+            return;
+        }
+
+        if let Some(attrs) = app.session.config.attribs.arc_get(&name).cloned() {
+            for value in attrs {
+                self.overlays[id].config.backend.set_attrib(app, value);
+            }
+        }
+
+        // apply to all saved states
+        if global {
+            if let Some(state) = self.global_set.inactive_overlays.arc_rm(&name) {
+                let o = &mut self.overlays[id];
+                o.config.active_state = Some(state);
+                o.config.reset(app, false);
+                o.config.dirty = true;
+            }
+        } else {
+            for (i, set) in self.sets.iter_mut().enumerate() {
+                let Some(state) = set.inactive_overlays.arc_rm(&name) else {
+                    continue;
+                };
+                if self.current_set == Some(i) {
+                    let o = &mut self.overlays[id];
+                    o.config.active_state = Some(state);
+                    o.config.reset(app, false);
+                    o.config.dirty = true;
+                } else {
+                    set.overlays.insert(id, state);
+                }
+            }
+        }
+    }
+
+    fn freeze_window_state(&mut self, app: &mut AppState, id: OverlayID, name: &Arc<str>) {
+        let Some(overlay) = self.overlays.get(id) else {
+            return;
+        };
+        Self::save_window_size(app, overlay, name);
+        if let Some(state) = overlay.config.active_state.clone() {
+            let set = if overlay.config.global {
+                &mut self.global_set
+            } else {
+                &mut self.sets[self.current_set.unwrap_or(self.restore_set)]
+            };
+            set.inactive_overlays.arc_set(name.clone(), state);
+        } else {
+            for set in &mut self.sets {
+                if let Some(state) = set.overlays.get(id) {
+                    set.inactive_overlays.arc_set(name.clone(), state.clone());
+                }
+            }
+            if let Some(state) = self.global_set.overlays.get(id) {
+                self.global_set
+                    .inactive_overlays
+                    .arc_set(name.clone(), state.clone());
+            }
+        }
+    }
+
+    fn rename_window_state(&mut self, app: &mut AppState, old: &Arc<str>, new: &Arc<str>) {
+        if old == new {
+            return;
+        }
+        for set in &mut self.sets {
+            if let Some(state) = set.inactive_overlays.arc_rm(old) {
+                set.inactive_overlays.arc_set(new.clone(), state);
+            }
+            if let Some(state) = set.hidden_overlays.arc_rm(old) {
+                set.hidden_overlays.arc_set(new.clone(), state);
+            }
+        }
+        if let Some(state) = self.global_set.inactive_overlays.arc_rm(old) {
+            self.global_set
+                .inactive_overlays
+                .arc_set(new.clone(), state);
+        }
+        if let Some(state) = self.global_set.hidden_overlays.arc_rm(old) {
+            self.global_set.hidden_overlays.arc_set(new.clone(), state);
+        }
+        if let Some(attrs) = app.session.config.attribs.arc_rm(old) {
+            app.session.config.attribs.arc_set(new.clone(), attrs);
+        }
+        for set in &mut app.session.config.sets {
+            if let Some(state) = set.overlays.remove(old.as_ref()) {
+                set.overlays.insert(new.clone(), state);
+            }
+            if let Some(state) = set.hidden_overlays.remove(old.as_ref()) {
+                set.hidden_overlays.insert(new.clone(), state);
+            }
+        }
+    }
+
+    fn clear_window_state(&mut self, app: &mut AppState, name: &str) {
+        for set in &mut self.sets {
             set.inactive_overlays.arc_rm(name);
             set.hidden_overlays.arc_rm(name);
         }
         self.global_set.inactive_overlays.arc_rm(name);
         self.global_set.hidden_overlays.arc_rm(name);
+        app.session.config.attribs.arc_rm(name);
+        for set in &mut app.session.config.sets {
+            set.overlays.remove(name);
+            set.hidden_overlays.remove(name);
+        }
     }
 
     pub fn persist_layout(&mut self, app: &mut AppState) {
@@ -561,7 +783,11 @@ impl<T> OverlayWindowManager<T> {
                 .overlays
                 .iter()
                 .filter_map(|(k, v)| {
-                    let n = self.overlays.get(k).map(|o| o.config.name.clone())?;
+                    let o = self.overlays.get(k)?;
+                    if !o.config.can_persist() {
+                        return None;
+                    }
+                    let n = o.config.name.clone();
                     Some((n, v.clone()))
                 })
                 .collect();
@@ -604,6 +830,7 @@ impl<T> OverlayWindowManager<T> {
         for o in self.overlays.values() {
             if o.config.global
                 && let Some(state) = &o.config.active_state
+                && o.config.can_persist()
             {
                 global_overlays.insert(o.config.name.clone(), state.clone());
             }
@@ -628,7 +855,7 @@ impl<T> OverlayWindowManager<T> {
                 .filter_map(|a| o.config.backend.get_attrib(*a))
                 .filter(|val| !val.is_default())
                 .collect();
-            if !attrs.is_empty() {
+            if !attrs.is_empty() && o.config.can_persist() {
                 app.session
                     .config
                     .attribs
@@ -645,6 +872,29 @@ impl<T> OverlayWindowManager<T> {
         if app.session.config.sets.is_empty() {
             // keep defaults
             return;
+        }
+
+        // floating transforms in older states are relative to hmd, not anchor
+        if app.session.config.state_version < 1 {
+            let clear_legacy_floating = |state: &mut OverlayWindowState| {
+                if matches!(state.positioning, Positioning::Floating) {
+                    state.saved_transform = None;
+                }
+            };
+
+            for set in &mut app.session.config.sets {
+                for state in set
+                    .overlays
+                    .values_mut()
+                    .chain(set.hidden_overlays.values_mut())
+                {
+                    clear_legacy_floating(state);
+                }
+            }
+            for state in app.session.config.global_set.values_mut() {
+                clear_legacy_floating(state);
+            }
+            app.session.config.state_version = 1;
         }
 
         // only safe to load when current_set is None
@@ -973,9 +1223,13 @@ impl<T> OverlayWindowManager<T> {
                 overlay.config.name
             );
             overlay.config.name = format!("{}_2", overlay.config.name).into();
+            if overlay.config.category == OverlayCategory::WayVR {
+                overlay.config.persistent = false;
+            }
         }
 
         let name = overlay.config.name.clone();
+        let restore = overlay.config.can_persist() && overlay.config.restore_on_spawn;
         let global = overlay.config.global;
         let internal = matches!(overlay.config.category, OverlayCategory::Internal);
         let show_on_spawn = overlay.config.show_on_spawn;
@@ -985,6 +1239,14 @@ impl<T> OverlayWindowManager<T> {
 
         if !global {
             for (i, set) in self.sets.iter_mut().enumerate() {
+                if !restore {
+                    // Explicitly new session window: replace any old slot instead of
+                    // accidentally restoring it on a later relaunch.
+                    if self.overlays[oid].config.can_persist() {
+                        set.inactive_overlays.arc_rm(&name);
+                    }
+                    continue;
+                }
                 let Some(state) = set.inactive_overlays.arc_rm(&name) else {
                     continue;
                 };
@@ -999,7 +1261,7 @@ impl<T> OverlayWindowManager<T> {
                     log::debug!("loaded state for {name} to set {i}");
                 }
             }
-        } else if let Some(state) = self.global_set.inactive_overlays.arc_rm(&name) {
+        } else if restore && let Some(state) = self.global_set.inactive_overlays.arc_rm(&name) {
             let o = &mut self.overlays[oid];
             o.config.active_state = Some(state);
             o.config.reset(app, false);
@@ -1007,7 +1269,11 @@ impl<T> OverlayWindowManager<T> {
             log::debug!("loaded state for {name} from global_set!");
         }
 
-        let saved_attribs = app.session.config.attribs.arc_get(&name).cloned();
+        let saved_attribs = if restore {
+            app.session.config.attribs.arc_get(&name).cloned()
+        } else {
+            None
+        };
         if let Some(attribs) = saved_attribs {
             for value in attribs {
                 self.overlays[oid].config.backend.set_attrib(app, value);
@@ -1048,6 +1314,38 @@ impl<T> OverlayWindowManager<T> {
             }
             SpawnPos::Parent(parent) => {
                 let _ = self.offset_spawn_from_parent(app, oid, &parent);
+            }
+            SpawnPos::WlDefault(window, fallback_pid) => {
+                let Some((parent, has_app_id)) = app.wvr_server.as_ref().and_then(|wvr| {
+                    wvr.wm.windows.get(window).map(|w| {
+                        (
+                            w.parent.and_then(|p| wvr.get_overlay_id(p)),
+                            w.app_id.is_some(),
+                        )
+                    })
+                }) else {
+                    return;
+                };
+
+                let parent_id = parent.or_else(|| {
+                    if has_app_id {
+                        None
+                    } else {
+                        // legacy pid-based matching
+                        fallback_pid.filter(|candidate| *candidate != oid)
+                    }
+                });
+                if let Some(parent_id) = parent_id
+                    && self
+                        .offset_spawn_from_parent(app, oid, &OverlaySelector::Id(parent_id))
+                        .is_some()
+                {
+                    return;
+                }
+                if let Some(parent_id) = self.spread_parent_for(oid) {
+                    let _ =
+                        self.offset_spawn_from_parent(app, oid, &OverlaySelector::Id(parent_id));
+                }
             }
         }
     }
@@ -1213,6 +1511,7 @@ impl<T> OverlayWindowManager<T> {
             meta.push(OverlayMeta {
                 id,
                 name: data.config.name.clone(),
+                title: data.config.title.clone(),
                 category: data.config.category,
                 visible: data.config.is_active(),
                 icon,

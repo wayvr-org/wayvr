@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc, sync::LazyLock};
+use std::{collections::HashMap, collections::HashSet, str::FromStr, sync::Arc, sync::LazyLock};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     config::{ConfigType, load_known_yaml},
     subsystem::hid::{
-        ALTGR, KEYS_TO_MODS, KeyType, NUM_LOCK, SHIFT, VirtualKey, XkbKeymap, get_key_type,
+        ALTGR, DEFAULT_XKB_MODEL, KEYS_TO_MODS, KeyModifier, KeyType, NUM_LOCK, SHIFT, VirtualKey,
+        XkbKeymap, get_key_type,
     },
 };
 
@@ -25,6 +26,22 @@ pub struct Layout {
     pub(super) macros: HashMap<String, Vec<String>>,
     pub(super) labels: HashMap<String, Vec<String>>,
     pub(super) auto_labels: Option<bool>,
+    #[serde(default = "default_model")]
+    pub(super) model: String,
+    #[serde(default = "default_native_layout")]
+    pub(super) native_layout: String,
+    #[serde(default)]
+    pub(super) non_modifiers: Vec<String>,
+    #[serde(skip, default)]
+    non_modifier_keys: HashSet<VirtualKey>,
+}
+
+fn default_model() -> String {
+    DEFAULT_XKB_MODEL.into()
+}
+
+fn default_native_layout() -> String {
+    "us".into()
 }
 
 impl Layout {
@@ -35,6 +52,18 @@ impl Layout {
     }
 
     fn post_load(&mut self) {
+        self.non_modifier_keys = self
+            .non_modifiers
+            .iter()
+            .filter_map(|key| match VirtualKey::from_str(key) {
+                Ok(vk) => Some(vk),
+                Err(_) => {
+                    log::error!("keyboard.yaml: Unknown non-modifier key '{key}'");
+                    None
+                }
+            })
+            .collect();
+
         for i in 0..self.key_sizes.len() {
             let row = &self.key_sizes[i];
             let width: f32 = row.iter().sum();
@@ -92,14 +121,14 @@ impl Layout {
             if let Some(keymap) = keymap.as_ref() {
                 match get_key_type(vk) {
                     KeyType::Symbol => {
-                        let label0 = keymap.label_for_key(vk, 0);
-                        let label1 = keymap.label_for_key(vk, SHIFT);
+                        let label0 = self.keymap_label(keymap, key, vk, 0);
+                        let label1 = self.keymap_label(keymap, key, vk, SHIFT);
 
                         if label0.chars().next().is_some_and(char::is_alphabetic) {
                             label.push(label1);
                             if has_altgr {
                                 cap_type = KeyCapType::LetterAltGr;
-                                label.push(keymap.label_for_key(vk, ALTGR));
+                                label.push(self.keymap_label(keymap, key, vk, ALTGR));
                             } else {
                                 cap_type = KeyCapType::Letter;
                             }
@@ -107,7 +136,7 @@ impl Layout {
                             label.push(label0);
                             label.push(label1);
                             if has_altgr {
-                                label.push(keymap.label_for_key(vk, ALTGR));
+                                label.push(self.keymap_label(keymap, key, vk, ALTGR));
                                 cap_type = KeyCapType::SymbolAltGr;
                             } else {
                                 cap_type = KeyCapType::Symbol;
@@ -115,7 +144,7 @@ impl Layout {
                         }
                     }
                     KeyType::NumPad => {
-                        label.push(keymap.label_for_key(vk, NUM_LOCK));
+                        label.push(self.keymap_label(keymap, key, vk, NUM_LOCK));
                     }
                     KeyType::Special => {
                         cap_type = KeyCapType::Special;
@@ -138,7 +167,8 @@ impl Layout {
                 }
             }
 
-            if let Some(mods) = KEYS_TO_MODS.get(vk) {
+            let is_non_modifier = self.non_modifier_keys.contains(&vk);
+            if !is_non_modifier && let Some(mods) = KEYS_TO_MODS.get(vk) {
                 button_state = KeyButtonData::Modifier {
                     modifier: *mods,
                     sticky: false.into(),
@@ -180,6 +210,29 @@ impl Layout {
             button_state,
             cap_type,
         })
+    }
+
+    fn keymap_label(
+        &self,
+        keymap: &XkbKeymap,
+        key: &str,
+        vk: VirtualKey,
+        modifier: KeyModifier,
+    ) -> String {
+        let label = keymap.label_for_key(vk, modifier);
+        if label.is_empty() {
+            let index = match modifier {
+                SHIFT => 1,
+                ALTGR => 2,
+                _ => 0,
+            };
+            self.label_for_key(key)
+                .into_iter()
+                .nth(index)
+                .unwrap_or_default()
+        } else {
+            label
+        }
     }
 
     fn label_for_key(&self, key: &str) -> Vec<String> {

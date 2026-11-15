@@ -179,6 +179,16 @@ pub fn set_sink_volume(sink_index: u32, volume: f32) -> anyhow::Result<()> {
 	Ok(())
 }
 
+pub fn add_default_sink_volume(delta: f32) -> anyhow::Result<()> {
+	std::process::Command::new("pactl")
+		.arg("set-sink-volume")
+		.arg("@DEFAULT_SINK@")
+		.arg(format!("{:+}%", delta * 100.))
+		.output()?;
+
+	Ok(())
+}
+
 pub fn set_sink_mute(sink_index: u32, mute: bool) -> anyhow::Result<()> {
 	std::process::Command::new("pactl")
 		.arg("set-sink-mute")

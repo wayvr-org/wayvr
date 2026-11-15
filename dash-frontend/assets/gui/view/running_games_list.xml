@@ -15,6 +15,6 @@
       <sprite src_builtin="@/dashboard/cpu.svg" width="24" height="24" />
       <label translation="GAME_LIST.RUNNING_GAMES_LIST" />
     </div>
-    <div id="list_parent" gap="8" />
+    <div id="list_parent" gap="8" flex_direction="column" />
   </elements>
 </layout>

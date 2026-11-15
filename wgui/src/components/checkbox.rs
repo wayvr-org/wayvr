@@ -9,6 +9,7 @@ use taffy::{
 
 use crate::{
 	animation::{Animation, AnimationDuration, AnimationEasing},
+	assets::AssetPathRef,
 	color::{WguiColor, WguiColorName},
 	components::{
 		Component, ComponentBase, ComponentTrait, DestroyData, RefreshData,
@@ -19,18 +20,21 @@ use crate::{
 	event::{CallbackDataCommon, EventListenerCollection, EventListenerID, EventListenerKind},
 	i18n::Translation,
 	layout::{self, WidgetID, WidgetPair},
-	renderer_vk::text::{FontWeight, TextStyle},
+	renderer_vk::text::{FontWeight, TextStyle, custom_glyph::CustomGlyphData},
 	sound::WguiSoundType,
 	widget::{
 		ConstructEssentials, EventResult,
 		label::{WidgetLabel, WidgetLabelParams},
 		rectangle::{WidgetRectangle, WidgetRectangleParams},
+		sprite::{WidgetSprite, WidgetSpriteParams},
 		util::WLength,
 	},
 };
 
-pub struct Params {
+pub struct Params<'a> {
 	pub text: Translation,
+	pub sprite_src: Option<AssetPathRef<'a>>,
+	pub sprite_color: Option<WguiColor>,
 	pub style: taffy::Style,
 	pub color_checked: Option<WguiColor>,
 	pub box_size: f32,
@@ -40,10 +44,12 @@ pub struct Params {
 	pub tooltip: Option<tooltip::TooltipInfo>,
 }
 
-impl Default for Params {
+impl Default for Params<'_> {
 	fn default() -> Self {
 		Self {
 			text: Translation::from_raw_text(""),
+			sprite_src: None,
+			sprite_color: None,
 			style: Default::default(),
 			color_checked: None,
 			box_size: 24.0,
@@ -97,7 +103,8 @@ pub struct ComponentCheckbox {
 }
 
 const COLOR_UNCHECKED: WguiColor = WguiColor::Raw(drawing::Color::new(0., 0., 0., 0.));
-const COLOR_HOVERED: WguiColor = WguiColorName::Tertiary.to_wgui_color();
+const COLOR_HOVERED: WguiColor = WguiColorName::Tertiary.to_wgui_color().with_alpha(1.0);
+const COLOR_UNHOVERED: WguiColor = WguiColorName::OnBackground.to_wgui_color().with_alpha(0.7);
 
 impl ComponentTrait for ComponentCheckbox {
 	fn base(&self) -> &ComponentBase {
@@ -174,20 +181,16 @@ impl ComponentCheckbox {
 
 fn anim_hover(anim_data: &mut crate::animation::CallbackData<'_>, pos: f32, _pressed: bool) {
 	let rect = anim_data.obj.as_any_mut().downcast_mut::<WidgetRectangle>().unwrap();
-	rect.params.border = 2.0;
-	rect.params.border_color = if pos > 0.0 {
-		COLOR_HOVERED
-	} else {
-		WguiColorName::OnBackground.into()
-	};
+	rect.params.border = 1.5 + pos * 2.0;
+	rect.params.border_color = if pos > 0.0 { COLOR_HOVERED } else { COLOR_UNHOVERED };
 }
 
 fn anim_hover_in(state: &Rc<RefCell<State>>, data: &Rc<Data>) -> Animation {
 	let down = state.borrow().down;
 	Animation::new(
 		data.id_outer_box,
-		AnimationDuration::Seconds(0.0833),
-		AnimationEasing::OutQuad,
+		AnimationDuration::Seconds(0.15),
+		AnimationEasing::OutBack,
 		Box::new(move |common, anim_data| {
 			anim_hover(anim_data, anim_data.pos, down);
 			common.alterables.mark_redraw();
@@ -199,7 +202,7 @@ fn anim_hover_out(state: &Rc<RefCell<State>>, data: &Rc<Data>) -> Animation {
 	let down = state.borrow().down;
 	Animation::new(
 		data.id_outer_box,
-		AnimationDuration::Seconds(0.0833),
+		AnimationDuration::Seconds(0.15),
 		AnimationEasing::OutQuad,
 		Box::new(move |common, anim_data| {
 			anim_hover(anim_data, 1.0 - anim_data.pos, down);
@@ -394,27 +397,29 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 	style.flex_wrap = taffy::FlexWrap::NoWrap;
 	style.align_items = Some(AlignItems::CENTER);
 
+	const MARGIN: f32 = 4.0;
+
 	// make checkbox interaction box larger by setting padding and negative margin
 	style.padding = taffy::Rect {
-		left: length(4.0_f32),
-		right: length(8.0_f32),
-		top: length(4.0_f32),
-		bottom: length(4.0_f32),
+		left: length(MARGIN),
+		right: length(MARGIN),
+		top: length(MARGIN),
+		bottom: length(MARGIN),
 	};
 
 	style.margin = taffy::Rect {
-		left: length(-4.0_f32),
-		right: length(-8.0_f32),
-		top: length(-4.0_f32),
-		bottom: length(-4.0_f32),
+		left: length(-MARGIN),
+		right: length(-MARGIN),
+		top: length(-MARGIN),
+		bottom: length(-MARGIN),
 	};
-	//style.align_self = Some(taffy::AlignSelf::Start); // do not stretch self to the parent
+
 	style.gap = length(4.0_f32);
 
-	let (round_5, round_8) = if params.radio_group.is_some() {
+	let (round_3, round_5) = if params.radio_group.is_some() {
 		(WLength::Percent(1.0), WLength::Percent(1.0))
 	} else {
-		(WLength::Units(5.0), WLength::Units(8.0))
+		(WLength::Units(3.0), WLength::Units(5.0))
 	};
 
 	let color_checked = params.color_checked.unwrap_or_else(|| WguiColorName::Primary.into());
@@ -423,7 +428,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		ess.parent,
 		WidgetRectangle::create(WidgetRectangleParams {
 			color: WguiColor::from(WguiColorName::OnPrimary).with_alpha(0.0),
-			round: round_5,
+			round: round_3,
 			..Default::default()
 		}),
 		style,
@@ -440,16 +445,17 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id_container,
 		WidgetRectangle::create(WidgetRectangleParams {
 			border: 2.0,
-			border_color: WguiColorName::OnBackground.into(),
-			round: round_8,
+			border_color: COLOR_UNHOVERED,
+			round: round_5,
 			color: WguiColor::from(WguiColorName::OnPrimary).with_alpha(0.0),
 			..Default::default()
 		}),
 		taffy::Style {
 			size: box_size,
-			padding: taffy::Rect::length(4.0_f32),
 			min_size: box_size,
 			max_size: box_size,
+			margin: length(2.0_f32),
+			padding: length(4.0_f32),
 			..Default::default()
 		},
 	)?;
@@ -457,7 +463,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 	let (inner_box, _) = ess.layout.add_child(
 		outer_box.id,
 		WidgetRectangle::create(WidgetRectangleParams {
-			round: round_5,
+			round: round_3,
 			color: if params.checked { color_checked } else { COLOR_UNCHECKED },
 			..Default::default()
 		}),
@@ -469,6 +475,25 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 			..Default::default()
 		},
 	)?;
+
+	// sprite
+	if let Some(sprite_src) = params.sprite_src {
+		ess.layout.add_child(
+			id_container,
+			WidgetSprite::create(WidgetSpriteParams {
+				color: params.sprite_color,
+				glyph_data: Some(CustomGlyphData::from_assets(&ess.layout.state.globals, sprite_src)?),
+				..Default::default()
+			}),
+			taffy::Style {
+				min_size: taffy::Size {
+					width: length(20.0_f32),
+					height: length(20.0_f32),
+				},
+				..Default::default()
+			},
+		)?;
+	}
 
 	let widget_label = WidgetLabel::create(
 		&mut ess.layout.state,
@@ -482,7 +507,8 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 			..Default::default()
 		},
 	);
-	let (label, _node_label) = ess.layout.add_child(id_container, widget_label, Default::default())?;
+
+	let (label, _) = ess.layout.add_child(id_container, widget_label, Default::default())?;
 
 	let data = Rc::new(Data {
 		id_container,

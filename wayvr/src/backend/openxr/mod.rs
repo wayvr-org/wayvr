@@ -15,6 +15,8 @@ use wlx_common::{
     overlays::{StereoMode, ToastTopic},
 };
 
+use crate::backend::task::SystemTask;
+use crate::system::SystemTaskManager;
 use crate::{
     Args, FRAME_COUNTER, RUNNING, XrBackend,
     backend::{
@@ -107,7 +109,6 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
         );
     }
 
-    let mut overlays = OverlayWindowManager::<OpenXrOverlayData>::new(&mut app, args.headless)?;
     let mut lines = LinePool::new(&app)?;
     let mut current_lines = Vec::with_capacity(2);
 
@@ -159,8 +160,6 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
         lines.allocate(&xr_state, &app)?,
     ];
 
-    let watch_id = overlays.lookup(WATCH_NAME).unwrap(); // want panic
-
     let mut input_source = input::OpenXrInputSource::new(&xr_state)?;
 
     let mut session_running = false;
@@ -174,10 +173,14 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
     let mut main_session_visible = false;
     let mut environment_blend_mode = modes[0];
     let mut last_frame_time = Instant::now();
-    let mut retired_swapchains = SwapchainRetirementQueue::default();
+    let mut retired_swapchains = SwapchainRetirementQueue::new(app.gfx_extras.gfx_pool.clone());
 
-    // declared last so rust drops this before all long-lived XR objects
+    // declared here so rust drops this before all long-lived XR objects
     let _gpu_idle_before_xr_drop = OpenXrGpuIdleGuard(app.gfx.clone());
+
+    // overlays are dropped first on shutdown
+    let mut overlays = OverlayWindowManager::<OpenXrOverlayData>::new(&mut app, args.headless)?;
+    let watch_id = overlays.lookup(WATCH_NAME).unwrap(); // want panic
 
     if !args.show {
         Toast::new(
@@ -276,7 +279,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
         }
 
         // poll only, never wait for GPU
-        retired_swapchains.collect(&app.gfx);
+        retired_swapchains.collect();
 
         log::trace!("xrWaitFrame");
         let xr_frame_state = frame_wait.wait()?;
@@ -320,23 +323,23 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
             blocker.update(&mut app);
         }
 
-        if app
-            .input_state
-            .pointers
-            .iter()
-            .any(|p| p.now.show_hide && !p.before.show_hide)
-        {
+        if app.input_state.just_pressed(|s| s.show_hide) {
             overlays.show_hide(&mut app);
         }
 
-        if app
-            .input_state
-            .pointers
-            .iter()
-            .any(|p| p.now.toggle_dashboard && !p.before.toggle_dashboard)
-        {
+        if app.input_state.just_pressed(|s| s.toggle_dashboard) {
             app.tasks
                 .enqueue(TaskType::Overlay(OverlayTask::ToggleDashboard));
+        }
+
+        if app.input_state.just_pressed(|s| s.volume_up) {
+            app.tasks
+                .enqueue(TaskType::System(SystemTask::ChangeVolume(true)));
+        }
+
+        if app.input_state.just_pressed(|s| s.volume_down) {
+            app.tasks
+                .enqueue(TaskType::System(SystemTask::ChangeVolume(false)));
         }
 
         playspace_mover.update(&mut overlays, &mut app);
@@ -451,9 +454,9 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                     stereo,
                 )?;
                 let tgt = RenderTarget { views: wsi.views };
-                let mut rdr = RenderResources::new(app.gfx.clone(), tgt, &meta)?;
+                let mut rdr = RenderResources::new(&app.gfx_extras.gfx_pool, tgt, &meta)?;
                 o.render(&mut app, &mut rdr)?;
-                futures.execute_results(rdr.end()?);
+                futures.add(rdr.end()?);
             } else if o.data.swapchain.is_none() {
                 log::trace!("{}: not showing due to missing swapchain", o.config.name);
                 continue;
@@ -532,6 +535,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 TaskType::Input(task) => {
                     app.input_state.handle_task(task);
                 }
+                TaskType::System(task) => SystemTaskManager::handle_task(task)?,
                 TaskType::Overlay(task) => {
                     overlays.handle_task(&mut app, task)?;
                 }
@@ -558,12 +562,12 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
 
         while let Some(mut o) = overlays.pop_dropped() {
             if let Some(swapchain) = o.data.swapchain.take() {
-                retired_swapchains.retire(swapchain, &app.gfx);
+                retired_swapchains.retire(swapchain);
             }
             delete_queue.push((o, cur_frame + 5));
         }
 
-        retired_swapchains.collect(&app.gfx);
+        retired_swapchains.collect();
         delete_queue.retain(|(_, frame)| *frame > cur_frame);
 
         //FIXME: Temporary workaround for Monado bug
@@ -589,6 +593,8 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
         save_settings(&app.session.config)?;
         app.session.config_dirty = false;
     }
+
+    drop(overlays);
 
     Ok(())
 }
@@ -633,7 +639,7 @@ fn reconfigure_environment_blend(
             .is_some_and(|curr_skybox| curr_skybox.needs_recreate(app))
         {
             if let Some(old_skybox) = skybox.take() {
-                old_skybox.retire(retired_swapchains, app);
+                old_skybox.retire(retired_swapchains);
             }
             log::debug!("Allocating skybox.");
             *skybox = create_skybox(xr_state, app);
@@ -643,6 +649,6 @@ fn reconfigure_environment_blend(
         }
     } else if let Some(old_skybox) = skybox.take() {
         log::debug!("Destroying skybox.");
-        old_skybox.retire(retired_swapchains, app);
+        old_skybox.retire(retired_swapchains);
     }
 }

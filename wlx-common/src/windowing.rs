@@ -6,7 +6,7 @@ use crate::{common::LeftRight, config::DefaultPositioning};
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub enum Positioning {
-	/// Stays in place, recenters relative to HMD
+	/// Freely grabbed, but stored relative to the anchor and moves with it.
 	#[default]
 	Floating,
 	/// Stays in place, recenters relative to anchor. Follows anchor during anchor grab.

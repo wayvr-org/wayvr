@@ -107,26 +107,22 @@
             },
             {
                "inputs" : {
-                  "scroll" : {
+                  "position" : {
                      "output" : "/actions/default/in/scroll"
                   }
                },
-               "mode" : "scroll",
-               "parameters" : {
-                  "scroll_mode" : "smooth"
-               },
+               "mode" : "joystick",
+               "parameters" : {},
                "path" : "/user/hand/left/input/joystick"
             },
             {
                "inputs" : {
-                  "scroll" : {
+                  "position" : {
                      "output" : "/actions/default/in/scroll"
                   }
                },
-               "mode" : "scroll",
-               "parameters" : {
-                  "scroll_mode" : "smooth"
-               },
+               "mode" : "joystick",
+               "parameters" : {},
                "path" : "/user/hand/right/input/joystick"
             }
          ]

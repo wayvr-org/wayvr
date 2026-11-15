@@ -9,9 +9,9 @@ use wayvr_ipc::packet_client::WvrProcessLaunchParams;
 use wlx_common::{
     astr_containers::AStrMap,
     config::{
-        AltModifier, CaptureMethod, ChromaKeyParams, DefaultPositioning, GeneralConfig,
-        HandsfreeAltTab, HandsfreePointer, InputCaptureMethod, InputEmulationMethod, PinnedApp,
-        SerializedWindowSet,
+        AltModifier, CONFIG_VERSION, CaptureMethod, ChromaKeyParams, DefaultPositioning,
+        GeneralConfig, HandsfreeAltTab, HandsfreePointer, InputCaptureMethod, InputEmulationMethod,
+        PinnedApp, SerializedWindowSet,
     },
     config_io,
     locale::Language,
@@ -148,7 +148,7 @@ pub struct AutoSettings {
     pub double_cursor_fix: bool,
     pub enable_watch: bool,
     pub sets_on_watch: bool,
-    pub hide_grab_help: bool,
+    pub show_grab_help: bool,
     pub allow_sliding: bool,
     pub focus_follows_mouse_mode: bool,
     pub left_handed_mouse: bool,
@@ -174,7 +174,7 @@ pub struct AutoSettings {
     pub space_gravity_floor_height: f32,
     pub space_rotate_unlocked: bool,
     pub clock_12h: bool,
-    pub hide_username: bool,
+    pub show_username: bool,
     pub opaque_background: bool,
     pub xwayland_by_default: bool,
     pub context_menu_hold_and_release: bool,
@@ -200,6 +200,7 @@ pub struct AutoSettings {
     pub default_opacity: f32,
     pub default_positioning: DefaultPositioning,
     pub middle_grabs_single: bool,
+    pub config_version: u32,
 }
 
 fn get_settings_path() -> PathBuf {
@@ -225,7 +226,7 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         double_cursor_fix: config.double_cursor_fix,
         enable_watch: config.enable_watch,
         sets_on_watch: config.sets_on_watch,
-        hide_grab_help: config.hide_grab_help,
+        show_grab_help: config.show_grab_help,
         allow_sliding: config.allow_sliding,
         focus_follows_mouse_mode: config.focus_follows_mouse_mode,
         left_handed_mouse: config.left_handed_mouse,
@@ -251,7 +252,7 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         space_gravity_floor_height: config.space_gravity_floor_height,
         space_rotate_unlocked: config.space_rotate_unlocked,
         clock_12h: config.clock_12h,
-        hide_username: config.hide_username,
+        show_username: config.show_username,
         opaque_background: config.opaque_background,
         xwayland_by_default: config.xwayland_by_default,
         context_menu_hold_and_release: config.context_menu_hold_and_release,
@@ -277,6 +278,7 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         default_opacity: config.default_opacity,
         default_positioning: config.default_positioning,
         middle_grabs_single: config.middle_grabs_single,
+        config_version: CONFIG_VERSION,
     };
 
     let json = serde_json::to_string_pretty(&conf).unwrap(); // want panic
@@ -294,6 +296,7 @@ pub struct AutoState {
     pub spawn_overlays: Vec<Arc<str>>,
     pub last_set: u32,
     pub attribs: AStrMap<Vec<BackendAttribValue>>,
+    pub state_version: u32,
 }
 
 fn get_state_path() -> PathBuf {
@@ -308,6 +311,7 @@ pub fn save_state(config: &GeneralConfig) -> anyhow::Result<()> {
         last_set: config.last_set,
         spawn_overlays: config.spawn_overlays.clone(),
         attribs: config.attribs.clone(),
+        state_version: CONFIG_VERSION,
     };
 
     let json = serde_json::to_string_pretty(&conf).unwrap(); // want panic

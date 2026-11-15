@@ -8,7 +8,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use vulkan::init_window;
 use wgui::{
 	event::{MouseButtonEvent, MouseButtonIndex, MouseMotionEvent, MouseWheelEvent},
-	gfx::{CommandBufferUsage, PresentStatus, SwapchainError, WGfx, WGfxClearMode},
+	gfx::{CommandBufferUsage, PresentStatus, QueueType, SwapchainError, WGfx, WGfxClearMode},
 	renderer_vk::{self},
 };
 use winit::{
@@ -82,7 +82,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	let mut mouse = Vec2::ZERO;
 
-	let mut shared_context = renderer_vk::context::SharedContext::new(gfx.clone())?;
+	let gfx_pool = gfx.create_command_pool(QueueType::Graphics)?;
+	let mut shared_context = renderer_vk::context::SharedContext::new(gfx_pool.clone())?;
 	let mut render_context = renderer_vk::context::Context::new(&mut shared_context, scale)?;
 
 	render_context.update_viewport(&mut shared_context, swapchain_size, scale)?;
@@ -316,8 +317,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 					let tgt = frame.image_view().clone();
 
-					let mut cmd_buf = gfx
-						.create_gfx_command_buffer(CommandBufferUsage::OneTimeSubmit)
+					let mut cmd_buf = gfx_pool
+						.create_command_buffer(CommandBufferUsage::OneTimeSubmit)
 						.unwrap();
 					cmd_buf
 						.begin_rendering(tgt, WGfxClearMode::Clear([0.0, 0.0, 0.0, 0.1]))

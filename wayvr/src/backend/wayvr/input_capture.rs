@@ -19,7 +19,10 @@ use std::{
     },
     path::{Path, PathBuf},
     rc::Rc,
-    sync::mpsc::{self, Receiver, Sender, SyncSender, TryRecvError},
+    sync::{
+        Arc,
+        mpsc::{self, Receiver, Sender, SyncSender, TryRecvError},
+    },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
@@ -88,14 +91,22 @@ pub struct InputCapture {
 }
 
 impl InputCapture {
-    pub fn new() -> io::Result<Self> {
+    pub fn new(dbus_session_address: Option<Arc<str>>, capture_input: bool) -> io::Result<Self> {
         let (command_tx, command_rx) = mpsc::sync_channel(8);
         let (event_tx, event_rx) = mpsc::channel();
         let (init_tx, init_rx) = mpsc::sync_channel(1);
 
         let worker = thread::Builder::new()
             .name("wayvr-input-capture".into())
-            .spawn(move || worker_main(command_rx, event_tx, init_tx))?;
+            .spawn(move || {
+                worker_main(
+                    command_rx,
+                    event_tx,
+                    init_tx,
+                    dbus_session_address,
+                    capture_input,
+                )
+            })?;
 
         match init_rx.recv() {
             Ok(Ok(())) => Ok(Self {
@@ -171,6 +182,10 @@ struct RestrictedState {
 impl RestrictedState {
     fn set_grabbed(&mut self, grabbed: bool) -> io::Result<()> {
         if grabbed {
+            if self.devices.is_empty() {
+                return Err(io::Error::other("no input devices have been opened"));
+            }
+
             let fds = self.devices.keys().copied().collect::<Vec<_>>();
             let mut grabbed_now = Vec::new();
 
@@ -253,12 +268,21 @@ struct RestrictedInterface {
 impl LibinputInterface for RestrictedInterface {
     fn open_restricted(&mut self, path: &Path, flags: i32) -> Result<OwnedFd, i32> {
         let access = flags & libc::O_ACCMODE;
-        let file = OpenOptions::new()
+        let file = match OpenOptions::new()
             .custom_flags(flags)
             .read(access == libc::O_RDONLY || access == libc::O_RDWR)
             .write(access == libc::O_WRONLY || access == libc::O_RDWR)
             .open(path)
-            .map_err(io_errno)?;
+        {
+            Ok(file) => file,
+            Err(error) => {
+                log::warn!(
+                    "Could not open input device {} ({error}). Is the user a member of the 'input' group?",
+                    path.display()
+                );
+                return Err(io_errno(error));
+            }
+        };
 
         // duplicate fd used for capability inspection and EVIOCGRAB
         let control_file = file.try_clone().map_err(io_errno)?;
@@ -328,6 +352,8 @@ fn worker_main(
     command_rx: Receiver<Command>,
     event_tx: Sender<CapturedEvent>,
     init_tx: SyncSender<io::Result<()>>,
+    dbus_session_address: Option<Arc<str>>,
+    capture_input: bool,
 ) {
     let restricted_state = Rc::new(RefCell::new(RestrictedState::default()));
     let interface = RestrictedInterface {
@@ -346,13 +372,41 @@ fn worker_main(
 
     log::debug!("input capture worker started");
 
+    let dbus = dbus_session_address.map_or_default(|s| DbusConnector::new(s));
+
     let mut grabbed = false;
-    let mut pending_grab = false;
+    // when set, arms a grab as soon as no keys are held
+    let mut pending_grab = capture_input;
     let mut watchdog = Instant::now() + WATCHDOG_TIMEOUT;
     let mut emergency_ungrab = false;
     let mut pointer_accel = PointerAccelConfig::default();
     let mut runtime_devices = HashMap::<LibinputDevice, RuntimeDeviceState>::new();
     let mut pointer_devices = HashSet::<LibinputDevice>::new();
+
+    drain_pending_libinput_events(
+        &mut libinput,
+        &mut runtime_devices,
+        &mut pointer_devices,
+        pointer_accel,
+        &event_tx,
+    );
+
+    let open_devices = restricted_state.borrow().devices.len();
+    if open_devices == 0 {
+        log::error!(
+            "Captured 0 input devices. Input capture will not work. Is the user a member of the 'input' group?"
+        );
+        let _ = dbus.notify_send(
+            "WayVR",
+            "Could not open any input device!\nLinux user must be in 'input' group!",
+            1,
+            5000,
+            0,
+            true,
+        );
+    } else {
+        log::debug!("captured {open_devices} input devices");
+    }
 
     'worker: loop {
         loop {
@@ -460,43 +514,41 @@ fn worker_main(
             continue;
         }
 
-        if poll_result == 0 {
-            continue;
-        }
-
-        if poll_fd.revents & (libc::POLLERR | libc::POLLHUP | libc::POLLNVAL) != 0 {
-            log::error!("libinput poll fd became invalid; input worker is exiting");
-            break 'worker;
-        }
-
-        if poll_fd.revents & libc::POLLIN == 0 {
-            continue;
-        }
-
-        if let Err(error) = libinput.dispatch() {
-            if error.kind() != io::ErrorKind::WouldBlock {
-                log::warn!("libinput dispatch failed: {error}");
+        if poll_result > 0 {
+            if poll_fd.revents & (libc::POLLERR | libc::POLLHUP | libc::POLLNVAL) != 0 {
+                log::error!("libinput poll fd became invalid; input worker is exiting");
+                break 'worker;
             }
-            continue;
-        }
 
-        for event in &mut libinput {
-            match process_libinput_event(ProcessLibinputEventParams {
-                event,
-                grabbed,
-                allow_deferred_grab: true,
-                pending_grab: &mut pending_grab,
-                event_tx: &event_tx,
-                runtime_devices: &mut runtime_devices,
-                pointer_devices: &mut pointer_devices,
-                pointer_accel,
-            }) {
-                ProcessResult::Continue => {}
-                ProcessResult::ForceUngrab => {
-                    emergency_ungrab = true;
-                    break;
+            if poll_fd.revents & libc::POLLIN == 0 {
+                continue;
+            }
+
+            if let Err(error) = libinput.dispatch() {
+                if error.kind() != io::ErrorKind::WouldBlock {
+                    log::warn!("libinput dispatch failed: {error}");
                 }
-                ProcessResult::ReceiverGone => break 'worker,
+                continue;
+            }
+
+            for event in &mut libinput {
+                match process_libinput_event(ProcessLibinputEventParams {
+                    event,
+                    grabbed,
+                    allow_deferred_grab: true,
+                    pending_grab: &mut pending_grab,
+                    event_tx: &event_tx,
+                    runtime_devices: &mut runtime_devices,
+                    pointer_devices: &mut pointer_devices,
+                    pointer_accel,
+                }) {
+                    ProcessResult::Continue => {}
+                    ProcessResult::ForceUngrab => {
+                        emergency_ungrab = true;
+                        break;
+                    }
+                    ProcessResult::ReceiverGone => break 'worker,
+                }
             }
         }
 
@@ -517,7 +569,7 @@ fn worker_main(
                 }
                 Err(error) => {
                     //TODO: we can't easily translate it at this stage, i18n lies on a separate thread
-                    let _ = DbusConnector::notify_send(
+                    let _ = dbus.notify_send(
                         "WayVR",
                         &format!(
                             "Could not capture input! Linux user must be in 'input' group!\n Error: \n{error}"

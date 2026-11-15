@@ -25,7 +25,10 @@ pub struct TestbedAny {
 impl TestbedAny {
 	pub fn new(assets: Box<assets::Asset>, name: &str) -> anyhow::Result<Self> {
 		let path = if name.ends_with(".xml") {
-			AssetPathRef::FileOrBuiltIn(name)
+			AssetPathRef::FileOrBuiltIn {
+				path: name,
+				fallback: None,
+			}
 		} else {
 			AssetPathRef::BuiltIn(&format!("gui/{name}.xml"))
 		};

@@ -22,7 +22,7 @@ pub enum WlxFrame {
     Dmabuf(DmabufFrame),
     MemFd(MemFdFrame),
     MemPtr(MemPtrFrame),
-    Implicit(Transform),
+    Implicit,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]

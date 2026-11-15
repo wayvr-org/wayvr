@@ -16,6 +16,13 @@
     </context_menu>
   </blueprint>
 
+  <!-- id, tooltip, src_builtin -->
+  <template name="BottomButton">
+    <Button color="background(transparent)" border_color="background(transparent)" tooltip_side="top" id="${id}" tooltip="${tooltip}">
+      <sprite src_builtin="${src_builtin}" width="24" height="24" margin="8" />
+    </Button>
+  </template>
+
   <template name="SideButton">
     <Button
       id="${id}"
@@ -145,16 +152,12 @@
           </div>
 
           <!-- Left bottom side -->
-          <div margin_left="8">
-            <Button id="btn_power" color="background(transparent)" border_color="background(transparent)" tooltip="POWER_OPTIONS.TITLE" tooltip_side="top">
-              <sprite src_builtin="@/dashboard/power.svg" width="24" height="24" margin="8" />
-            </Button>
-            <Button id="btn_audio" color="background(transparent)" border_color="background(transparent)" tooltip="AUDIO.VOLUME" tooltip_side="top">
-              <sprite src_builtin="@/dashboard/volume.svg" width="24" height="24" margin="8" />
-            </Button>
-            <Button id="btn_recenter" color="background(transparent)" border_color="background(transparent)" tooltip="ACTIONS.RECENTER_PLAYSPACE" tooltip_side="top">
-              <sprite src_builtin="@/dashboard/recenter.svg" width="24" height="24" margin="8" />
-            </Button>
+          <div margin_left="8" align_items="center">
+            <BottomButton id="btn_power" tooltip="POWER_OPTIONS.TITLE" src_builtin="@/dashboard/power.svg"/>
+            <rectangle width="2" height="70%" color="outline" margin_left="4" margin_right="4"/> 
+            <BottomButton id="btn_audio" tooltip="AUDIO.VOLUME" src_builtin="@/dashboard/volume.svg"/>
+            <BottomButton id="btn_recenter" tooltip="ACTIONS.RECENTER_PLAYSPACE" src_builtin="@/dashboard/recenter.svg"/>
+            <BottomButton id="btn_reset_space_drag" tooltip="RESET_SPACE_DRAG" src_builtin="@/dashboard/drag.svg"/>
           </div>
 
           <!-- Right bottom side -->

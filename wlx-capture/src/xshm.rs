@@ -6,6 +6,7 @@ use std::{
         Arc,
         mpsc::{self},
     },
+    thread::JoinHandle,
 };
 
 use drm_fourcc::{DrmFormat, DrmFourcc, DrmModifier};
@@ -29,6 +30,7 @@ where
     pub screen: Arc<XshmScreen>,
     sender: Option<mpsc::SyncSender<()>>,
     receiver: Option<mpsc::Receiver<R>>,
+    handle: Option<JoinHandle<()>>,
     _dummy: Option<Box<U>>,
 }
 
@@ -42,6 +44,7 @@ where
             screen,
             sender: None,
             receiver: None,
+            handle: None,
             _dummy: None,
         }
     }
@@ -80,7 +83,7 @@ where
         self.sender = Some(tx_cmd);
         self.receiver = Some(rx_frame);
 
-        std::thread::spawn({
+        self.handle = Some(std::thread::spawn({
             let monitor = self.screen.monitor.clone();
             move || {
                 let display = env::var("DISPLAY").expect("DISPLAY not set");
@@ -149,7 +152,7 @@ where
                 }
                 log::warn!("{}: capture thread stopped", monitor.name());
             }
-        });
+        }));
     }
     fn is_ready(&self) -> bool {
         self.receiver.is_some()
@@ -179,6 +182,20 @@ where
             && let Err(e) = sender.send(())
         {
             log::debug!("Failed to send frame request: {}", e);
+        }
+    }
+}
+
+impl<U, R> Drop for XshmCapture<U, R>
+where
+    U: Any + Send,
+    R: Any + Send,
+{
+    fn drop(&mut self) {
+        self.sender.take();
+
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
         }
     }
 }

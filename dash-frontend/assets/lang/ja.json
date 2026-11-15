@@ -139,8 +139,6 @@
 		"HANDSFREE_POINTER_HELP": "コントローラーがない時に使用する入力方式。\n左手のピンチで掴み、右手のピンチでクリック。",
 		"HANDSFREE_ALT_TAB": "アプリ切替の方向",
 		"HANDSFREE_ALT_TAB_HELP": "Super+Xを押しながら目的のウィンドウに向け、離すとフォーカスが切り替わる。",
-		"HIDE_GRAB_HELP": "掴み方のヒントを隠す",
-		"HIDE_USERNAME": "ユーザー名を隠す",
 		"INPUT_EMULATION_METHOD": "入力エミュレーション方式",
 		"INPUT_EMULATION_METHOD_HELP": "マウスやキーボードの入力が\n反応しない場合はここを変更してください。",
 		"INPUT_CAPTURE_METHOD": "入力キャプチャ方式",
@@ -156,7 +154,6 @@
 		"LEFT_HANDED_MOUSE": "左利きマウス",
 		"LEFT_HANDED_MOUSE_HELP": "マウスボタンを入れ替えて使用する場合にチェック",
 		"LONG_PRESS_DURATION": "長押し時間",
-		"LOOK_AND_FEEL": "外観と操作感",
 		"MISC": "その他",
 		"NOTIFICATIONS_ENABLED": "通知を有効にする",
 		"NOTIFICATIONS_SOUND_ENABLED": "通知音",
@@ -265,7 +262,14 @@
 		"RESTART_WAYVR": "WayVRを再起動",
 		"CLOSE_WAYVR": "WayVRを閉じる",
 		"SPEECH_TO_TEXT": "音声入力",
-		"WHISPER_GPU_SELECT": "GPUを選択"
+		"WHISPER_GPU_SELECT": "GPUを選択",
+		"SHOW_USERNAME": "ユーザー名を表示",
+		"SOUND": "サウンド",
+		"APPEARANCE": "外観",
+		"OVERLAYS": "オーバーレイ",
+		"SHOW_GRAB_HELP": "掴み方のヘルプを表示",
+		"WATCH": "ウォッチ",
+		"VARIOUS": "その他"
 	},
 	"APPLICATION_LAUNCHER": "アプリランチャー",
 	"APPLICATION_STARTED": "アプリが起動しました",
@@ -308,8 +312,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "セットの表示、再中心化、または非表示にするには、Bボタン（Index）またはYボタン（Meta）をダブルプレスして下さい。今すぐ試してみよう。",
 		"FEATURES_DOCUMENTATION": "他にもカスタマイズ次第で多くの機能が活用できます。詳細はドキュメントを確認してください：",
 		"FINISH_TUTORIAL": "チュートリアルを終了",
-		"GRAB_BOTH_HANDS": "セット内の特定のオーバーレイを移動させるには、両手で掴んでください。",
-		"GRAB_ONE_HAND": "片手で掴んでセットを移動させよう。",
 		"GREETING": "ようこそ！",
 		"GUIDE_INTRO": "まずは基本操作から案内する。",
 		"LASER_COLORS": "レーザーの色",
@@ -324,7 +326,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "右クリックモード：オレンジ色のレーザー",
 		"THANKS_FOR_INSTALLING": "WayVRをインストールしてくれてありがとう！",
 		"WATCH": "ウォッチ",
-		"WORKING_SET": "使用中のセット"
+		"WORKING_SET": "使用中のセット",
+		"SHOWHIDE_TOGGLE_HELP": "仮想ワークスペースの表示、非表示、または再中心化を行うには：\nFrame: View+LB,\nIndex: Bボタンを2回押し,\nMeta: Yボタンを2回押し。\n今すぐ試そう。",
+		"GRAB_KBD": "キーボードを掴んでセットを移動させる。",
+		"GRAB_OVERLAY": "他の要素を掴むと、個別に移動できる。",
+		"SHOW_HIDE_RECENTER": "表示/非表示/中心リセット"
 	},
 	"DOWNLOAD_AGAIN": "再ダウンロード",
 	"DOWNLOADING_FILE": "ファイルをダウンロード中...",
@@ -380,5 +386,6 @@
 		"SUSPEND_ARE_YOU_SURE": "コンピューターをスリープ状態にしますか？"
 	},
 	"YES": "はい",
-	"NO": "いいえ"
+	"NO": "いいえ",
+	"RESET_SPACE_DRAG": "プレイスペースのドラッグをリセット"
 }

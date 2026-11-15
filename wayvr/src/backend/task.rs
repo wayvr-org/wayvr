@@ -1,6 +1,7 @@
 use std::{
     cmp,
     collections::{BinaryHeap, VecDeque},
+    sync::Arc,
     sync::atomic::{self, AtomicUsize},
     time::Instant,
 };
@@ -10,6 +11,7 @@ use strum::EnumIs;
 
 use crate::{
     backend::input,
+    backend::wayvr as wvr,
     state::AppState,
     windowing::{
         OverlayID, OverlaySelector,
@@ -109,6 +111,8 @@ pub enum SpawnPos {
     Spread,
     /// Spawn relative to a different overlay
     Parent(OverlaySelector),
+    /// Resolve parent or app-id at the point of spawn
+    WlDefault(wvr::window::WindowHandle, Option<OverlayID>),
 }
 
 pub enum GlobalChange {
@@ -138,14 +142,24 @@ pub enum OverlayTask {
     Drop(OverlaySelector),
     DropImmediate(OverlaySelector),
     DropExpired(OverlayID),
+    SetOverlayName(OverlayID, Arc<str>, bool, bool),
+    ForgetWindowState(OverlayID, Arc<str>),
+    RenameWindowState(Arc<str>, Arc<str>),
+    ClearWindowState(Arc<str>),
 }
 
 pub type GlobalTask = dyn FnOnce(&mut AppState) + Send;
+
+pub enum SystemTask {
+    /// Change the volume: true = increase; false = decrease
+    ChangeVolume(bool),
+}
 
 #[allow(dead_code)]
 pub enum TaskType {
     Global(Box<GlobalTask>),
     Input(InputTask),
+    System(SystemTask),
     Overlay(OverlayTask),
     Playspace(PlayspaceTask),
     #[cfg(feature = "openvr")]

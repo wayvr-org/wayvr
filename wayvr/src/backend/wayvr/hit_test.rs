@@ -1,25 +1,22 @@
 use glam::{Affine2, Vec2};
 use smithay::{
-    desktop::PopupManager,
+    desktop::{PopupKind, PopupManager},
     reexports::wayland_server::{Resource, backend::ObjectId, protocol::wl_surface::WlSurface},
     utils::{Logical, Point},
-    wayland::{
-        compositor::{
-            SUBSURFACE_ROLE, SubsurfaceCachedState, SurfaceAttributes, TraversalAction,
-            with_states, with_surface_tree_upward,
-        },
-        shell::xdg::XdgPopupSurfaceData,
+    wayland::compositor::{
+        SUBSURFACE_ROLE, SubsurfaceCachedState, SurfaceAttributes, TraversalAction, with_states,
+        with_surface_tree_upward,
     },
 };
 use std::{ops::RangeInclusive, rc::Rc, sync::Arc};
 use wgui::gfx::ImageView;
 
-use crate::backend::input::PointerHit;
+use crate::{
+    backend::input::PointerHit,
+    windowing::{BAR_SIZE, BORDER_SIZE},
+};
 
 use super::SurfaceBufWithImage;
-
-pub const BORDER_SIZE: u32 = 5;
-pub const BAR_SIZE: u32 = 48;
 
 #[derive(Clone)]
 pub struct PopupRoot {
@@ -240,7 +237,6 @@ fn surface_accepts_input(surface: &RenderedSurface, global_pos: Vec2) -> bool {
         return false;
     }
 
-    #[allow(clippy::significant_drop_tightening)]
     with_states(&surface.surface, |states| {
         let mut guard = states.cached_state.get::<SurfaceAttributes>();
         let attrs = guard.current();
@@ -256,7 +252,6 @@ fn surface_accepts_input(surface: &RenderedSurface, global_pos: Vec2) -> bool {
     })
 }
 
-#[allow(clippy::significant_drop_tightening)]
 fn surface_accepts_input_states(
     states: &smithay::wayland::compositor::SurfaceData,
     local: Vec2,
@@ -383,17 +378,9 @@ pub fn build_hit_context(
     let mut popup_roots = Vec::new();
 
     for (popup, point) in PopupManager::popups_for_surface(toplevel) {
-        let configured = with_states(popup.wl_surface(), |states| {
-            states
-                .data_map
-                .get::<XdgPopupSurfaceData>()
-                .unwrap()
-                .lock()
-                .unwrap()
-                .configured
-        });
-
-        if !configured {
+        if let PopupKind::Xdg(popup) = &popup
+            && popup.with_committed_state(|state| state.is_none())
+        {
             continue;
         }
 

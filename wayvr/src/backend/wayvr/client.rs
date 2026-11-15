@@ -10,7 +10,7 @@ use anyhow::Context;
 use glam::{DVec2, Vec2};
 use slotmap::DenseSlotMap;
 use smithay::{
-    backend::input::{Axis, AxisSource, ButtonState, Keycode},
+    backend::input::{Axis, AxisSource, ButtonState, InputTime, Keycode},
     input::{
         keyboard::KeyboardHandle,
         pointer::{AxisFrame, ButtonEvent, MotionEvent, PointerHandle, RelativeMotionEvent},
@@ -21,8 +21,6 @@ use smithay::{
 use wgui::log::LogErr;
 use xkbcommon::xkb;
 
-use crate::backend::wayvr::{ExternalProcessRequest, WayVRTask};
-
 use super::{
     ProcessWayVREnv,
     comp::{self, ClientState},
@@ -32,6 +30,7 @@ use super::{
 pub struct WayVRClient {
     pub client: wayland_server::Client,
     pub pid: u32,
+    pub process: process::ProcessHandle,
 }
 
 pub struct WayVRCompositor {
@@ -160,16 +159,17 @@ impl WayVRCompositor {
         let process_env = get_wayvr_env_from_pid(credentials.pid)?;
 
         // Find suitable auth key from the process list
-        for (_, process) in processes {
-            if let process::Process::Managed(process) = &process
+        for (handle, process) in processes.iter() {
+            if let process::Process::Managed(process) = process
                 && let Some(auth_key) = &process_env.display_auth
             {
                 // Find process with matching auth key
                 if process.auth_key.as_str() == auth_key {
-                    // Add client
+                    // Associate client now, instead of trying to match env later
                     self.add_client(WayVRClient {
                         client,
                         pid: credentials.pid as u32,
+                        process: handle,
                     });
                     return Ok(());
                 }
@@ -178,18 +178,15 @@ impl WayVRCompositor {
 
         // This is a new process which we didn't met before.
         // Treat external processes exclusively (spawned by the user or external program)
-        log::warn!(
-            "External process ID {} connected to this Wayland server",
-            credentials.pid
-        );
-
-        self.state
-            .wayvr_tasks
-            .send(WayVRTask::NewExternalProcess(ExternalProcessRequest {
-                env: process_env,
-                client,
-                pid: credentials.pid as u32,
-            }));
+        let pid = credentials.pid as u32;
+        log::warn!("External process ID {pid} connected to this Wayland server");
+        let process =
+            processes.insert(process::Process::External(process::ExternalProcess { pid }));
+        self.add_client(WayVRClient {
+            client,
+            pid,
+            process,
+        });
 
         Ok(())
     }
@@ -239,7 +236,7 @@ impl WayVRCompositor {
             Keycode::new(virtual_key),
             state,
             self.serial_counter.next_serial(),
-            super::time::get_millis() as u32,
+            InputTime::from_millis(super::time::get_millis() as u32),
             |_, _, _| smithay::input::keyboard::FilterResult::Forward,
         );
     }
@@ -253,7 +250,7 @@ impl WayVRCompositor {
                 keycode,
                 smithay::backend::input::KeyState::Released,
                 self.serial_counter.next_serial(),
-                super::time::get_millis() as u32,
+                InputTime::from_millis(super::time::get_millis() as u32),
                 |_, _, _| smithay::input::keyboard::FilterResult::Forward,
             );
         }
@@ -286,13 +283,14 @@ impl WayVRCompositor {
             (surface, focus_location)
         });
 
+        let time = InputTime::from_millis(super::time::get_millis() as u32);
         self.seat_pointer.motion(
             &mut self.state,
             focus.clone(),
             &MotionEvent {
                 location,
                 serial: self.serial_counter.next_serial(),
-                time: super::time::get_millis() as u32,
+                time,
             },
         );
         self.seat_pointer.relative_motion(
@@ -301,7 +299,7 @@ impl WayVRCompositor {
             &RelativeMotionEvent {
                 delta,
                 delta_unaccel,
-                utime: super::time::get_millis(),
+                time,
             },
         );
 
@@ -316,7 +314,7 @@ impl WayVRCompositor {
         };
 
         let serial = self.serial_counter.next_serial();
-        let time = super::time::get_millis() as u32;
+        let time = InputTime::from_millis(super::time::get_millis() as u32);
         let button = match index {
             super::MouseIndex::Left => 0x110,
             super::MouseIndex::Center => 0x112,
@@ -340,7 +338,7 @@ impl WayVRCompositor {
         // 15 logical axis units for one wheel detent of 120 v120 units
         const AXIS_VALUE_PER_DETENT: f64 = 15.0;
 
-        let time = super::time::get_millis() as u32;
+        let time = InputTime::from_millis(super::time::get_millis() as u32);
 
         let v120_x = delta.x as i32;
         let v120_y = delta.y as i32;
@@ -374,7 +372,7 @@ impl WayVRCompositor {
     }
 
     pub fn send_pointer_axis_wheel_accumulated(&mut self, delta: super::WheelDelta) {
-        let time = super::time::get_millis() as u32;
+        let time = InputTime::from_millis(super::time::get_millis() as u32);
 
         let multiplier = 32.0;
         let delta_x = (delta.x * multiplier) as i32;

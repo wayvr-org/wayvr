@@ -1,5 +1,5 @@
 use crate::{
-	gfx::{Buffer, BufferUsage, CommandBufferUsage, Scissor, cmd::GfxCommandBufferBuilder},
+	gfx::{Buffer, BufferUsage, CommandBufferUsage, Scissor, cmd::CommandBufferBuilder},
 	renderer_vk::{model_buffer::ModelBuffer, text::text_atlas::TEXT_ATLAS_ISLAND_PADDING_PX, viewport::Viewport},
 };
 
@@ -267,7 +267,7 @@ impl TextRenderer {
 		atlas: &TextAtlas,
 		viewport: &mut Viewport,
 		gfx_scissor: &Scissor,
-		cmd_buf: &mut GfxCommandBufferBuilder,
+		cmd_buf: &mut CommandBufferBuilder,
 	) -> anyhow::Result<()> {
 		if self.glyph_vertices.is_empty() {
 			return Ok(());
@@ -413,7 +413,6 @@ fn upload_missing_glyphs(
 		return Ok(());
 	}
 
-	let gfx = atlas.common.gfx.clone();
 	let mut rasterized_uploads = Vec::new();
 	let mut skipped_uploads = Vec::new();
 
@@ -475,7 +474,10 @@ fn upload_missing_glyphs(
 			break;
 		}
 
-		let mut cmd_buf = gfx.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+		let mut cmd_buf = atlas
+			.common
+			.command_pool
+			.create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
 		for upload in &atlas_uploads {
 			let rasterized = &rasterized_uploads[upload.upload_index];

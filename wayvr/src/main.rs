@@ -13,6 +13,7 @@
     clippy::needless_pass_by_ref_mut,
     clippy::needless_pass_by_value,
     clippy::option_if_let_else,
+    clippy::significant_drop_tightening,
     clippy::struct_excessive_bools,
     clippy::suboptimal_flops,
     clippy::too_many_lines,
@@ -28,6 +29,7 @@ mod overlays;
 mod shaders;
 mod state;
 mod subsystem;
+pub mod system;
 mod test;
 mod windowing;
 
@@ -82,13 +84,9 @@ struct Args {
     #[arg(long)]
     wait: bool,
 
-    /// Uninstall SteamVR manifest and exit
+    /// Do not use SteamVR manifest
     #[arg(long)]
-    uninstall: bool,
-
-    /// Install SteamVR manifest (not recommended; WayVR may have issues when auto-started by SteamVR!)
-    #[arg(long)]
-    install: bool,
+    skip_manifest: bool,
 
     /// Replace running WayVR instance
     #[arg(long)]
@@ -102,6 +100,10 @@ struct Args {
     #[arg(long)]
     headless: bool,
 
+    /// Start a XDG desktop session, for when you want WayVR to be your main desktop. Implies --headless.
+    #[arg(long)]
+    session: bool,
+
     /// Do not auto-start registered apps
     #[arg(long)]
     no_autostart: bool,
@@ -113,6 +115,10 @@ struct Args {
     /// Disable audio output
     #[arg(long)]
     no_audio: bool,
+
+    /// Captre keyboard and mouse input on startup (like Super+Z)
+    #[arg(long)]
+    capture_input: bool,
 }
 
 fn load_config() -> GeneralConfig {
@@ -121,7 +127,7 @@ fn load_config() -> GeneralConfig {
     load_general_config()
 }
 
-fn init_run_params(no_audio: bool) -> backend::RunParams {
+fn init_run_params(no_audio: bool, session: bool, capture_input: bool) -> backend::RunParams {
     let assets = Box::new(gui::asset::GuiAsset {});
     let config = load_config();
     let lang_provider = WayVRLangProvider::from_config(&config);
@@ -140,7 +146,22 @@ fn init_run_params(no_audio: bool) -> backend::RunParams {
         wgui_globals,
         config,
         no_audio,
+        session,
+        capture_input,
     }
+}
+
+pub fn get_version_string() -> String {
+    format!(
+        "{} v. {}{}",
+        env!("CARGO_PKG_NAME"),
+        env!("WLX_BUILD"),
+        if std::env::var("APPDIR").is_ok() {
+            " (AppImage)"
+        } else {
+            ""
+        }
+    )
 }
 
 #[allow(clippy::unnecessary_wraps)]
@@ -159,20 +180,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     logging_init(&mut args);
 
-    log::info!(
-        "Welcome to {} version {}!{}",
-        env!("CARGO_PKG_NAME"),
-        env!("WLX_BUILD"),
-        if std::env::var("APPDIR").is_ok() {
-            " (AppImage)"
-        } else {
-            ""
-        }
-    );
+    log::info!("Welcome to {}!", get_version_string());
     log::info!("It is {}.", chrono::Local::now().format("%c"));
 
     #[cfg(feature = "openvr")]
-    if args.uninstall {
+    if args.skip_manifest {
         crate::backend::openvr::openvr_uninstall();
         return Ok(());
     }
@@ -180,43 +192,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_signal_hooks()?;
 
     let mut used_backend = None;
-    auto_run(args, &mut used_backend);
+    auto_run(&args, &mut used_backend);
 
     if RESTART.load(Ordering::Relaxed) {
         log::warn!("Restarting...");
         let exe = std::env::current_exe()?;
-        let mut args = vec!["--replace", "--show"];
-
-        match used_backend {
-            Some(XrBackend::OpenXR) => args.push("--openxr"),
-            Some(XrBackend::OpenVR) => args.push("--openvr"),
-            _ => {}
-        }
-
-        let _ = Command::new(exe).args(args).spawn();
+        let _ = Command::new(exe)
+            .args(restart_args(&args, used_backend))
+            .spawn();
     }
 
     Ok(())
 }
 
 #[allow(unused_mut, clippy::similar_names)]
-fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
+fn auto_run(args: &Args, out_backend: &mut Option<XrBackend>) {
     let mut tried_xr = false;
     let mut tried_vr = false;
 
     loop {
         #[cfg(feature = "openxr")]
-        if !args_get_openvr(&args) {
+        if !args_get_openvr(args) {
             use crate::backend::{BackendError, openxr::openxr_run};
             tried_xr = true;
-            match openxr_run(&args, init_run_params(args.no_audio)) {
+            match openxr_run(
+                args,
+                init_run_params(args.no_audio, args.session, args.capture_input),
+            ) {
                 Ok(()) => {
-                    used_backend.replace(XrBackend::OpenXR);
+                    out_backend.replace(XrBackend::OpenXR);
                     return;
                 }
                 Err(BackendError::NotSupported) => (),
                 Err(e) => {
-                    used_backend.replace(XrBackend::OpenXR);
+                    out_backend.replace(XrBackend::OpenXR);
                     log::error!("{e:?}");
                     return;
                 }
@@ -224,17 +233,20 @@ fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
         }
 
         #[cfg(feature = "openvr")]
-        if !args_get_openxr(&args) {
+        if !args_get_openxr(args) {
             use crate::backend::{BackendError, openvr::openvr_run};
             tried_vr = true;
-            match openvr_run(&args, init_run_params(args.no_audio)) {
+            match openvr_run(
+                args,
+                init_run_params(args.no_audio, args.session, args.capture_input),
+            ) {
                 Ok(()) => {
-                    used_backend.replace(XrBackend::OpenVR);
+                    out_backend.replace(XrBackend::OpenVR);
                     return;
                 }
                 Err(BackendError::NotSupported) => (),
                 Err(e) => {
-                    used_backend.replace(XrBackend::OpenVR);
+                    out_backend.replace(XrBackend::OpenVR);
                     log::error!("{e:?}");
                     return;
                 }
@@ -264,7 +276,7 @@ fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
         _ => "NOTIFICATION.INVALID_ARGS",
     };
 
-    let run_params = init_run_params(args.no_audio);
+    let run_params = init_run_params(args.no_audio, args.session, args.capture_input);
 
     let instructions_str = run_params.wgui_globals.i18n().translate(instructions_key);
 
@@ -275,7 +287,7 @@ fn auto_run(args: Args, used_backend: &mut Option<XrBackend>) {
 
     let instructions = format!("{instructions_title}\n{instructions_str}");
 
-    let _ = DbusConnector::notify_send("WayVR", &instructions, 1, 30000, 0, false);
+    let _ = DbusConnector::default().notify_send("WayVR", &instructions, 1, 30000, 0, false);
 
     #[cfg(not(any(feature = "openvr", feature = "openxr")))]
     compile_error!("No VR support! Enable either openvr or openxr features!");
@@ -301,6 +313,37 @@ const fn args_get_openxr(args: &Args) -> bool {
     let ret = false;
 
     ret
+}
+
+fn restart_args(args: &Args, backend: Option<XrBackend>) -> Vec<&'static str> {
+    let mut flags = vec!["--replace", "--show"];
+
+    match backend {
+        Some(XrBackend::OpenXR) => flags.push("--openxr"),
+        Some(XrBackend::OpenVR) => flags.push("--openvr"),
+        None => {}
+    }
+
+    if args.headless {
+        flags.push("--headless");
+    }
+    if args.session {
+        flags.push("--session");
+    }
+    if args.skip_manifest {
+        flags.push("--skip-manifest");
+    }
+    if args.no_autostart {
+        flags.push("--no-autostart");
+    }
+    if args.no_audio {
+        flags.push("--no-audio");
+    }
+    if args.capture_input {
+        flags.push("--capture-input");
+    }
+
+    flags
 }
 
 #[allow(clippy::single_match_else)]

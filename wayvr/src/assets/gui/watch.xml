@@ -34,7 +34,7 @@
   </template>
 
   <template name="Screen">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _press="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_builtin="@/edit/screen.svg" />
       <div position="absolute" margin_top="-7" margin_left="-1">
         <label text="${display}" size="18" weight="bold" parent_color="background" />
@@ -42,12 +42,12 @@
     </Button>
   </template>
   <template name="Panel">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _press="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_builtin="@/edit/panel.svg" />
     </Button>
   </template>
   <template name="Mirror">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _press="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_builtin="@/edit/mirror.svg" />
       <div position="absolute" margin_top="5" margin_left="13">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
@@ -55,7 +55,7 @@
     </Button>
   </template>
   <template name="Passthru">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _press="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_builtin="@/icons/landscape.svg" />
       <div position="absolute" margin_top="5" margin_left="13">
         <label text="${display}" size="20" weight="bold" parent_color="background" />
@@ -63,7 +63,7 @@
     </Button>
   </template>
   <template name="App">
-    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${name}" _press="::OverlayToggle ${name}">  
+    <Button macro="button_style" id="overlay_${idx}" tooltip_str="${title}" _press="::OverlayToggle ${name}">
       <sprite width="38" height="38" src_ext="${icon}" />
     </Button>
   </template>

@@ -1,5 +1,6 @@
 use glam::{Affine3A, Vec2, Vec3A, Vec3Swizzles};
 use slotmap::new_key_type;
+use smithay::utils::{Logical, Size};
 use std::{f32::consts::PI, sync::Arc};
 
 use crate::windowing::window::scalar_scale;
@@ -30,6 +31,9 @@ pub const Z_ORDER_WATCH: u32 = 68;
 pub const Z_ORDER_ANCHOR: u32 = 67;
 pub const Z_ORDER_DEFAULT: u32 = 0;
 pub const Z_ORDER_DASHBOARD: u32 = Z_ORDER_DEFAULT;
+
+pub const BORDER_SIZE: u32 = 5;
+pub const BAR_SIZE: u32 = 48;
 
 pub fn raycast_overlay(
     source: &Affine3A,
@@ -170,4 +174,36 @@ pub fn overlay_scale_from_extent(size: [u32; 2]) -> (f32, f32) {
     let h = size[1].max(1) as f32;
 
     ((w * h).sqrt() / RELATIVE_SIZE, w / 1920.0)
+}
+
+pub(crate) fn client_size_from_overlay_size(
+    size: [u32; 2],
+    server_side_decorations: bool,
+) -> Size<i32, Logical> {
+    let [w, h] = if server_side_decorations {
+        [
+            size[0].saturating_sub(BORDER_SIZE * 2),
+            size[1].saturating_sub(BORDER_SIZE * 2 + BAR_SIZE),
+        ]
+    } else {
+        size
+    };
+    Size::new(
+        w.clamp(1, i32::MAX as u32) as i32,
+        h.clamp(1, i32::MAX as u32) as i32,
+    )
+}
+
+pub(crate) fn overlay_size_from_client_size(
+    size: [u32; 2],
+    server_side_decorations: bool,
+) -> [u32; 2] {
+    if server_side_decorations {
+        [
+            size[0].saturating_add(BORDER_SIZE * 2),
+            size[1].saturating_add(BORDER_SIZE * 2 + BAR_SIZE),
+        ]
+    } else {
+        size
+    }
 }

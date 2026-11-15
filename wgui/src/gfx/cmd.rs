@@ -1,58 +1,116 @@
-use std::{any::Any, marker::PhantomData, sync::Arc};
-
-use parking_lot::Mutex;
+use std::{any::Any, cell::RefCell, rc::Rc, sync::Arc};
 
 use super::{
 	BufferUsage, Format, Image, ImageCreateInfo, ImageLayout, ImageUsage, ImageView, QueueType, Vertex, WGfx,
 	pass::WGfxPass,
-	raw::{RawClearMode, RawCommandBuffer},
+	raw::{RawClearMode, RawCommandBuffer, RawCommandPool, RawSubmission},
 };
 
-pub type GfxCommandBufferBuilder = CommandBufferBuilder<CmdBufGfx>;
-pub type XferCommandBufferBuilder = CommandBufferBuilder<CmdBufXfer>;
+#[derive(Clone)]
+pub struct CommandPool {
+	graphics: Arc<WGfx>,
+	raw: Rc<RawCommandPool>,
+	queue_type: QueueType,
+}
 
-pub struct CmdBufGfx;
-pub struct CmdBufXfer;
+impl CommandPool {
+	pub(super) fn new(graphics: Arc<WGfx>, queue_type: QueueType) -> anyhow::Result<Self> {
+		let raw = RawCommandPool::new(graphics.raw.clone(), queue_type)?;
+		Ok(Self {
+			graphics,
+			raw,
+			queue_type,
+		})
+	}
+
+	pub fn submit_graphics_completion_marker(&self) -> anyhow::Result<super::GpuCompletionMarker> {
+		if self.queue_type != QueueType::Graphics {
+			anyhow::bail!("completion marker requires a graphics command pool");
+		}
+		Ok(super::GpuCompletionMarker {
+			raw: self.graphics.raw.submit_graphics_completion_marker(&self.raw)?,
+		})
+	}
+
+	pub fn gfx(&self) -> &Arc<WGfx> {
+		&self.graphics
+	}
+
+	pub fn create_command_buffer(&self, usage: super::CommandBufferUsage) -> anyhow::Result<CommandBufferBuilder> {
+		CommandBufferBuilder::new(self.graphics.clone(), &self.raw, usage)
+	}
+}
 
 // A built primary command buffer
 pub struct BuiltCommandBuffer {
-	pub(super) raw: Mutex<RawCommandBuffer>,
+	pub(super) raw: RefCell<RawCommandBuffer>,
 	_keepalive: Vec<Box<dyn Any + Send + Sync>>,
 }
 
 impl BuiltCommandBuffer {
 	pub fn submit_and_wait(&self) -> anyhow::Result<()> {
-		self.raw.lock().submit_and_wait()
+		self.raw.borrow_mut().submit_and_wait()
 	}
 }
 
-pub struct CommandBufferBuilder<T> {
+pub struct GpuSubmission {
+	raw: RawSubmission,
+	_command_buffers: Vec<Arc<BuiltCommandBuffer>>,
+}
+
+impl GpuSubmission {
+	pub fn submit(command_buffers: Vec<Arc<BuiltCommandBuffer>>) -> anyhow::Result<Self> {
+		let raw = {
+			let guards = command_buffers
+				.iter()
+				.map(|buffer| buffer.raw.borrow())
+				.collect::<Vec<_>>();
+			let buffers = guards.iter().map(|guard| &**guard).collect::<Vec<_>>();
+			RawCommandBuffer::submit_group(&buffers)?
+		};
+		Ok(Self {
+			raw,
+			_command_buffers: command_buffers,
+		})
+	}
+
+	pub fn wait(mut self) -> anyhow::Result<()> {
+		Self::wait_all(std::slice::from_mut(&mut self))
+	}
+
+	pub fn wait_all(submissions: &mut [Self]) -> anyhow::Result<()> {
+		let mut raw = submissions
+			.iter_mut()
+			.map(|submission| &mut submission.raw)
+			.collect::<Vec<_>>();
+		RawSubmission::wait_all(&mut raw)
+	}
+}
+
+pub struct CommandBufferBuilder {
 	pub(super) graphics: Arc<WGfx>,
 	raw: RawCommandBuffer,
 	keepalive: Vec<Box<dyn Any + Send + Sync>>,
-	_dummy: PhantomData<T>,
 }
 
-impl<T> CommandBufferBuilder<T> {
+impl CommandBufferBuilder {
 	pub(super) fn new(
 		graphics: Arc<WGfx>,
-		queue_type: QueueType,
+		pool: &Rc<RawCommandPool>,
 		usage: super::CommandBufferUsage,
-		dummy: PhantomData<T>,
 	) -> anyhow::Result<Self> {
-		let raw = graphics.raw.create_command_buffer(queue_type, usage)?;
+		let raw = pool.create_command_buffer(usage)?;
 		Ok(Self {
 			graphics,
 			raw,
 			keepalive: Vec::new(),
-			_dummy: dummy,
 		})
 	}
 
 	pub fn build(mut self) -> anyhow::Result<Arc<BuiltCommandBuffer>> {
 		self.raw.finish()?;
 		Ok(Arc::new(BuiltCommandBuffer {
-			raw: Mutex::new(self.raw),
+			raw: RefCell::new(self.raw),
 			_keepalive: std::mem::take(&mut self.keepalive),
 		}))
 	}
@@ -98,7 +156,7 @@ impl WGfxClearMode {
 	}
 }
 
-impl CommandBufferBuilder<CmdBufGfx> {
+impl CommandBufferBuilder {
 	pub fn begin_rendering(&mut self, render_target: Arc<ImageView>, clear_mode: WGfxClearMode) -> anyhow::Result<()> {
 		self
 			.raw
@@ -137,7 +195,7 @@ impl CommandBufferBuilder<CmdBufGfx> {
 	}
 }
 
-impl CommandBufferBuilder<CmdBufXfer> {
+impl CommandBufferBuilder {
 	pub fn upload_image(&mut self, width: u32, height: u32, format: Format, data: &[u8]) -> anyhow::Result<Arc<Image>> {
 		self.upload_image_with_row_length(width, height, format, data, 0)
 	}

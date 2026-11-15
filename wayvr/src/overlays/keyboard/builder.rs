@@ -41,7 +41,10 @@ const PIXELS_PER_UNIT: f32 = 60.;
 fn new_doc_params(panel: &mut GuiPanel<KeyboardState>) -> ParseDocumentParams<'static> {
     ParseDocumentParams {
         globals: panel.layout.state.globals.clone(),
-        path: AssetPathRef::FileOrBuiltIn("gui/keyboard.xml"),
+        path: AssetPathRef::FileOrBuiltIn {
+            path: "gui/keyboard.xml",
+            fallback: None,
+        },
         extra: panel.doc_extra.take().unwrap_or_default(),
     }
 }
@@ -50,7 +53,7 @@ fn bool_to_rc_str(val: bool) -> Rc<str> {
     if val { "1" } else { "0" }.into()
 }
 
-#[allow(clippy::too_many_lines, clippy::significant_drop_tightening)]
+#[allow(clippy::too_many_lines)]
 pub(super) fn create_keyboard_panel(
     app: &mut AppState,
     keymap: Option<&XkbKeymap>,
@@ -81,6 +84,8 @@ pub(super) fn create_keyboard_panel(
 
     let has_altgr = keymap.as_ref().is_some_and(|m| XkbKeymap::has_altgr(m));
 
+    let keymap_switch_layouts = super::keymap_layouts(&app.session.config, layout);
+
     for row in 0..layout.key_sizes.len() {
         let (div, _) = panel.layout.add_child(
             root,
@@ -102,13 +107,9 @@ pub(super) fn create_keyboard_panel(
                 height: length(PIXELS_PER_UNIT),
             };
 
-            let Some(key) = layout.get_key_data(
-                keymap,
-                has_altgr,
-                col,
-                row,
-                &app.session.config.keyboard_layouts,
-            ) else {
+            let Some(key) =
+                layout.get_key_data(keymap, has_altgr, col, row, &keymap_switch_layouts)
+            else {
                 let _ = panel.layout.add_child(
                     div.id,
                     WidgetDiv::create(),

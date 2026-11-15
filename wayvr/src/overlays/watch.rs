@@ -47,7 +47,10 @@ pub fn create_watch(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
 
     let doc_params = ParseDocumentParams {
         globals: panel.layout.state.globals.clone(),
-        path: AssetPathRef::FileOrBuiltIn(watch_xml),
+        path: AssetPathRef::FileOrBuiltIn {
+            path: watch_xml,
+            fallback: None,
+        },
         extra: panel.doc_extra.take().unwrap_or_default(),
     };
 

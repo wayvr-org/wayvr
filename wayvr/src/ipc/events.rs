@@ -1,37 +1,16 @@
 use std::sync::Arc;
 
-use crate::backend::wayvr::{self, WayVRTask, WvrServerState};
+use crate::backend::wayvr::{WayVRTask, WvrServerState};
 use wayvr_ipc::packet_client::{HandsfreeMode, HandsfreeParams};
 use wayvr_ipc::packet_server::PacketServer;
 use wlx_common::config::HandsfreePointer;
 
 use crate::{
-    backend::{
-        self,
-        task::{InputTask, OverlayTask, TaskType, ToggleMode},
-    },
+    backend::task::{InputTask, OverlayTask, TaskType, ToggleMode},
     ipc::{signal::WayVRSignal, window_attrib, window_state},
     state::AppState,
     windowing::{OverlaySelector, manager::OverlayWindowManager},
 };
-
-fn process_tick_tasks(
-    tick_tasks: Vec<backend::wayvr::TickTask>,
-    server_state: &mut WvrServerState,
-) {
-    for tick_task in tick_tasks {
-        match tick_task {
-            backend::wayvr::TickTask::NewExternalProcess(request) => {
-                log::info!("Registering external process with PID {}", request.pid);
-                server_state.add_external_process(request.pid);
-                server_state.manager.add_client(wayvr::client::WayVRClient {
-                    client: request.client,
-                    pid: request.pid,
-                });
-            }
-        }
-    }
-}
 
 pub fn tick_events<O>(
     app: &mut AppState,
@@ -135,10 +114,7 @@ where
         }
     }
 
-    let tick_tasks = WvrServerState::tick_events(app)?;
-    if let Some(wayvr_server) = app.wvr_server.as_mut() {
-        process_tick_tasks(tick_tasks, wayvr_server);
-    }
+    WvrServerState::tick_events(app)?;
 
     Ok(())
 }

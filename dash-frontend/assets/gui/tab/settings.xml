@@ -3,13 +3,28 @@
   <include src="@/gui/t_dropdown_button.xml" />
 
   <template name="SettingsGroupBox">
-    <rectangle macro="group_box" id="${id}" flex_grow="1">
+    <rectangle macro="group_box" id="${id}" width="100%" max_width="100%" flex_direction="column">
       <GroupBoxTitle translation="${translation}" src_builtin="${icon}" />
     </rectangle>
   </template>
 
+  <template name="SettingsSplitHoriz2">
+    <div gap="8" width="100%" max_width="100%" flex_wrap="wrap" >
+      <div id="${id1}" flex_basis="10%" flex_grow="1"/>
+      <div id="${id2}" flex_basis="10%" flex_grow="1"/>
+    </div>
+  </template>
+
+  <template name="SettingsSplitHoriz3">
+    <div gap="8" width="100%" max_width="100%" flex_wrap="wrap" >
+      <div id="${id1}" flex_basis="10%" flex_grow="1"/>
+      <div id="${id2}" flex_basis="10%" flex_grow="1"/>
+      <div id="${id3}" flex_basis="10%" flex_grow="1"/>
+    </div>
+  </template>
+
   <template name="CheckBoxSetting">
-    <CheckBox id="${id}" text="${text}" translation="${translation}" checked="${checked}" tooltip="${tooltip}" />
+    <CheckBox id="${id}" text="${text}" translation="${translation}" checked="${checked}" tooltip="${tooltip}" sprite_src_builtin="${sprite_src_builtin}" />
   </template>
 
   <template name="SliderSetting">
@@ -60,9 +75,9 @@
   </template>
 
   <template name="ButtonText">
-    <Button id="${id}" height="32" tooltip="${translation}_HELP" padding="4" gap="8">
-      <sprite src_builtin="${icon}" height="24" width="24" />
-      <label align="left" translation="${translation}" weight="bold" min_width="200" />
+    <Button id="${id}" height="32" tooltip="${translation}_HELP" padding="4" gap="8" width="100%">
+      <sprite src_builtin="${icon}" min_height="24" min_width="24" />
+      <label align="left" translation="${translation}" weight="bold"/>
     </Button>
   </template>
 
@@ -88,21 +103,27 @@
   <macro name="tab_style" color="background" />
 
   <elements>
-    <div gap="4">
-      <Tabs id="tabs">
-        <Tab macro="tab_style" name="look_and_feel" translation="APP_SETTINGS.LOOK_AND_FEEL" sprite_src_builtin="@/dashboard/palette.svg" />
-        <Tab macro="tab_style" name="skybox" translation="APP_SETTINGS.SKYBOX" sprite_src_builtin="@/dashboard/globe.svg" />
-        <Tab macro="tab_style" name="features" translation="APP_SETTINGS.FEATURES" sprite_src_builtin="@/dashboard/options.svg" />
-        <Tab macro="tab_style" name="controls" translation="APP_SETTINGS.CONTROLS" sprite_src_builtin="@/dashboard/controller.svg" />
-        <Tab macro="tab_style" name="space_drag" translation="APP_SETTINGS.SPACE_DRAG" sprite_src_builtin="@/dashboard/drag.svg" />
-        <Tab macro="tab_style" name="misc" translation="APP_SETTINGS.MISC" sprite_src_builtin="@/dashboard/blocks.svg" />
-        <Tab macro="tab_style" name="autostart_apps" translation="APP_SETTINGS.AUTOSTART_APPS" sprite_src_builtin="@/dashboard/apps.svg" />
-        <Tab macro="tab_style" name="statistics" translation="APP_SETTINGS.STATISTICS" sprite_src_builtin="@/dashboard/barchart.svg" />
-        <Tab macro="tab_style" name="diagnostics" translation="APP_SETTINGS.DIAGNOSTICS.TITLE" sprite_src_builtin="@/dashboard/diagnostics.svg" />
-        <Tab macro="tab_style" name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="@/dashboard/cpu.svg" />
-      </Tabs>
-      <div flex_wrap="wrap" justify_content="stretch" gap="4" id="settings_root" width="100%">
-        <!-- filled-in at runtime -->
+    <div gap="4" width="100%" height="100%" overflow_x="hidden">
+      <div flex_direction="column" gap="8">
+        <Tabs id="tabs">
+          <Tab macro="tab_style" name="general" translation="GENERAL_SETTINGS" sprite_src_builtin="@/dashboard/settings.svg" />
+          <Tab macro="tab_style" name="appearance" translation="APP_SETTINGS.APPEARANCE" sprite_src_builtin="@/dashboard/palette.svg" />
+          <Tab macro="tab_style" name="controls" translation="APP_SETTINGS.CONTROLS" sprite_src_builtin="@/dashboard/controller.svg" />
+          <Tab macro="tab_style" name="overlays" translation="APP_SETTINGS.OVERLAYS" sprite_src_builtin="@/dashboard/window.svg" />
+          <Tab macro="tab_style" name="hid" text="HID" sprite_src_builtin="@/dashboard/mouse.svg" />
+          <Tab macro="tab_style" name="misc" translation="APP_SETTINGS.MISC" sprite_src_builtin="@/dashboard/blocks.svg" />
+          <Tab macro="tab_style" name="autostart_apps" translation="APP_SETTINGS.AUTOSTART_APPS" sprite_src_builtin="@/dashboard/apps.svg" />
+          <Tab macro="tab_style" name="statistics" translation="APP_SETTINGS.STATISTICS" sprite_src_builtin="@/dashboard/barchart.svg" />
+          <Tab macro="tab_style" name="diagnostics" translation="APP_SETTINGS.DIAGNOSTICS.TITLE" sprite_src_builtin="@/dashboard/diagnostics.svg" />
+          <Tab macro="tab_style" name="troubleshooting" translation="APP_SETTINGS.TROUBLESHOOTING" sprite_src_builtin="@/dashboard/cpu.svg" />
+        </Tabs>
+        <!-- wayvr version, filled-in at runtime -->
+        <label id="label_version"/>
+      </div>
+      <div position="relative" width="100%" height="100%" overflow_y="scroll">
+        <div gap="4" id="settings_root" position="absolute" width="100%">
+          <!-- filled-in at runtime -->
+        </div>
       </div>
     </div>
   </elements>

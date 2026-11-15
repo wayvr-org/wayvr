@@ -14,7 +14,9 @@ use wgui::{
 	widget::label::WidgetLabel,
 };
 use wlx_common::{
-	config::{AppCompositorMode, AppOrientationMode, AppPosMode, AppResMode, GeneralConfig, PinnedApp},
+	config::{
+		AppCompositorMode, AppOrientationMode, AppPosMode, AppResMode, DefaultPositioning, GeneralConfig, PinnedApp,
+	},
 	dash_interface::BoxDashInterface,
 	desktop_finder::DesktopEntry,
 };
@@ -166,7 +168,12 @@ impl View {
 		// TODO: configurable defaults ?
 		let mut res_mode = AppResMode::Res1080;
 		let mut orientation_mode = AppOrientationMode::Wide;
-		let pos_mode = AppPosMode::Anchored;
+
+		let pos_mode = match params.config.default_positioning {
+			DefaultPositioning::Floating => AppPosMode::Floating,
+			DefaultPositioning::Anchored => AppPosMode::Anchored,
+			DefaultPositioning::Static => AppPosMode::Static,
+		};
 
 		if let Some(pinned_app) = &params.pinned_app {
 			res_mode = pinned_app.res_mode;

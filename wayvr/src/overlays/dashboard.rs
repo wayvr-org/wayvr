@@ -159,7 +159,7 @@ impl OverlayBackend for DashFrontend {
     }
 
     fn resume(&mut self, _app: &mut AppState) -> anyhow::Result<()> {
-        self.inner.layout.needs_redraw = true;
+        self.inner.layout.mark_redraw();
         self.timestep.reset();
         Ok(())
     }
@@ -332,7 +332,7 @@ fn tutorial_spawn_effect(app: &mut AppState) {
                 realign(&mut transform, hmd, 1.0, app.session.config.snap_angle_deg);
 
                 owc.active_state = Some(OverlayWindowState {
-                    saved_transform: Some(Affine3A::from_translation(vec3(0., -0.1, -0.9))),
+                    saved_transform: Some(Affine3A::from_translation(vec3(0., -0.1, -0.1))),
                     transform,
                     grabbable: true,
                     interactable: true,
@@ -370,7 +370,7 @@ pub fn create_dash_frontend(app: &mut AppState) -> anyhow::Result<OverlayWindowC
     Ok(OverlayWindowConfig {
         name: DASH_NAME.into(),
         default_state: OverlayWindowState {
-            transform: Affine3A::from_translation(vec3(0., 0., -0.9)),
+            transform: Affine3A::from_translation(vec3(0., 0., -0.1)),
             grabbable: true,
             interactable: true,
             positioning: Positioning::Floating,
@@ -394,6 +394,10 @@ impl DashInterfaceLive {
 impl DashInterface<AppState> for DashInterfaceLive {
     fn enumerate_vulkan_devices(&mut self, data: &mut AppState) -> anyhow::Result<Vec<String>> {
         data.gfx.enumerate_devices()
+    }
+
+    fn get_version_string(&self, _: &mut AppState) -> String {
+        crate::get_version_string()
     }
 
     fn window_list(&mut self, app: &mut AppState) -> anyhow::Result<Vec<WvrWindow>> {

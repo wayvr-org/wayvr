@@ -58,11 +58,15 @@ impl WguiGlobals {
 			AssetPathRef::WguiInternal(path) => Ok((self.assets_internal().load_from_path(path)?, AssetPathSource::Internal)),
 			AssetPathRef::BuiltIn(path) => Ok((self.assets_builtin().load_from_path(path)?, AssetPathSource::BuiltIn)),
 			AssetPathRef::File(path) => Ok((self.load_asset_from_fs(path)?, AssetPathSource::Filesystem)),
-			AssetPathRef::FileOrBuiltIn(path) => match self.load_asset_from_fs(path) {
+			AssetPathRef::FileOrBuiltIn { path, fallback } => match self.load_asset_from_fs(path) {
 				Ok(data) => Ok((data, AssetPathSource::Filesystem)),
 				Err(e) => {
 					log::debug!("{e:?}");
-					Ok((self.assets_builtin().load_from_path(path)?, AssetPathSource::BuiltIn))
+					// fallback to builtin
+					Ok((
+						self.assets_builtin().load_from_path(fallback.unwrap_or(path))?,
+						AssetPathSource::BuiltIn,
+					))
 				}
 			},
 		}

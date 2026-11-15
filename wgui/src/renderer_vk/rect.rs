@@ -7,7 +7,7 @@ use crate::{
 	gfx::{
 		BLEND_ALPHA, Buffer, BufferUsage, DescriptorBinding, DescriptorType, Format, Scissor, ShaderModule, ShaderStage,
 		Vertex, VertexAttribute, VertexFormat, WGfx,
-		cmd::GfxCommandBufferBuilder,
+		cmd::CommandBufferBuilder,
 		pipeline::{WGfxPipeline, WPipelineCreateInfo},
 	},
 	renderer_vk::model_buffer::ModelBuffer,
@@ -137,7 +137,7 @@ impl RectRenderer {
 		gfx: &Arc<WGfx>,
 		viewport: &mut Viewport,
 		gfx_scissor: &Scissor,
-		cmd_buf: &mut GfxCommandBufferBuilder,
+		cmd_buf: &mut CommandBufferBuilder,
 	) -> anyhow::Result<()> {
 		let res = viewport.resolution();
 

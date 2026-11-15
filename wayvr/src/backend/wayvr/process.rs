@@ -1,6 +1,6 @@
-use std::{collections::HashMap, io::Read, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-use slotmap::{DenseSlotMap, new_key_type};
+use slotmap::new_key_type;
 use wayvr_ipc::{packet_client, packet_server};
 
 #[derive(Debug)]
@@ -87,30 +87,15 @@ impl Process {
 
 impl Drop for WayVRProcess {
     fn drop(&mut self) {
-        log::info!(
-            "Sending SIGTERM (graceful exit) to process {} ({})",
-            self.child.id(),
-            self.exec_path.as_str()
-        );
-        self.kill(libc::SIGTERM);
-    }
-}
-
-fn get_process_env_value(pid: i32, key: &str) -> anyhow::Result<Option<String>> {
-    let path = format!("/proc/{pid}/environ");
-    let mut env_data = String::new();
-    std::fs::File::open(path)?.read_to_string(&mut env_data)?;
-    let lines: Vec<&str> = env_data.split('\0').filter(|s| !s.is_empty()).collect();
-
-    for line in lines {
-        if let Some(cell) = line.split_once('=')
-            && cell.0 == key
-        {
-            return Ok(Some(String::from(cell.1)));
+        if self.is_running() {
+            log::info!(
+                "Sending SIGTERM (graceful exit) to process {} ({})",
+                self.child.id(),
+                self.exec_path.as_str()
+            );
+            self.kill(libc::SIGTERM);
         }
     }
-
-    Ok(None)
 }
 
 impl WayVRProcess {
@@ -127,9 +112,11 @@ impl WayVRProcess {
     }
 
     fn kill(&mut self, signal: i32) {
-        unsafe {
-            // Gracefully stop process
-            libc::kill(self.child.id() as i32, signal);
+        if self.is_running() {
+            unsafe {
+                // Gracefully stop process
+                libc::kill(self.child.id() as i32, signal);
+            }
         }
     }
 
@@ -179,51 +166,12 @@ new_key_type! {
     pub struct ProcessHandle;
 }
 
-pub fn find_by_pid(
-    processes: &DenseSlotMap<ProcessHandle, Process>,
-    pid: u32,
-) -> Option<ProcessHandle> {
-    log::debug!("Finding process with PID {pid}");
-
-    for (handle, process) in processes {
-        match &process {
-            Process::Managed(wayvr_process) => {
-                if wayvr_process.child.id() == pid {
-                    return Some(handle);
-                }
-            }
-            Process::External(external_process) => {
-                if external_process.pid == pid {
-                    return Some(handle);
-                }
-            }
-        }
-    }
-
-    log::debug!("Finding by PID failed, trying WAYVR_DISPLAY_AUTH...");
-
-    if let Ok(Some(value)) = get_process_env_value(pid as i32, "WAYVR_DISPLAY_AUTH") {
-        for (handle, process) in processes {
-            if let Process::Managed(wayvr_process) = &process
-                && wayvr_process.auth_key == value
-            {
-                return Some(handle);
-            }
-        }
-    }
-
-    log::debug!("Process find with PID {pid} failed");
-    None
-}
-
 impl ProcessHandle {
     pub fn from_packet(handle: packet_server::WvrProcessHandle) -> Self {
-        Self::from(slotmap::KeyData::from_ffi(handle.user))
+        Self::from(slotmap::KeyData::from_ffi(handle.0))
     }
 
     pub fn as_packet(self) -> packet_server::WvrProcessHandle {
-        packet_server::WvrProcessHandle {
-            user: self.0.as_ffi(),
-        }
+        packet_server::WvrProcessHandle(self.0.as_ffi())
     }
 }

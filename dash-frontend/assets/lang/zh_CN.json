@@ -139,8 +139,6 @@
 		"HANDSFREE_POINTER_HELP": "无手柄时的输入方式。\n左手捏合为抓取，右手捏合为点击。",
 		"HANDSFREE_ALT_TAB": "应用切换器瞄准方式",
 		"HANDSFREE_ALT_TAB_HELP": "按住 Super+X，对准目标窗口，然后松开以切换焦点。",
-		"HIDE_GRAB_HELP": "隐藏抓取提示",
-		"HIDE_USERNAME": "隐藏用户名",
 		"INPUT_EMULATION_METHOD": "输入模拟方式",
 		"INPUT_EMULATION_METHOD_HELP": "如果鼠标或键盘输入没有反应，请尝试更改此项。",
 		"INPUT_CAPTURE_METHOD": "输入捕获方式",
@@ -156,7 +154,6 @@
 		"LEFT_HANDED_MOUSE": "左手鼠标模式",
 		"LEFT_HANDED_MOUSE_HELP": "若鼠标按键已互换，请启用此项",
 		"LONG_PRESS_DURATION": "长按时间",
-		"LOOK_AND_FEEL": "外观与体感",
 		"MISC": "其他",
 		"NOTIFICATIONS_ENABLED": "开启通知",
 		"NOTIFICATIONS_SOUND_ENABLED": "通知音效",
@@ -265,7 +262,14 @@
 		"RESTART_WAYVR": "重启 WayVR",
 		"CLOSE_WAYVR": "关闭 WayVR",
 		"SPEECH_TO_TEXT": "语音转文本",
-		"WHISPER_GPU_SELECT": "选择 GPU"
+		"WHISPER_GPU_SELECT": "选择 GPU",
+		"SHOW_USERNAME": "显示用户名",
+		"SOUND": "声音",
+		"APPEARANCE": "外观",
+		"OVERLAYS": "叠加层",
+		"SHOW_GRAB_HELP": "显示抓取帮助",
+		"WATCH": "手表",
+		"VARIOUS": "杂项"
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",
 	"APPLICATION_STARTED": "应用程序已启动",
@@ -308,8 +312,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "双击 B 键（Index）或 Y 键（Meta）以显示、重置中心或隐藏您的套装。现在试一下吧。",
 		"FEATURES_DOCUMENTATION": "还有许多其他值得自定义的功能。欲了解更多信息，请参阅文档：",
 		"FINISH_TUTORIAL": "完成教程",
-		"GRAB_BOTH_HANDS": "如需移动 Set 中的特定覆盖层，请用双手抓取。",
-		"GRAB_ONE_HAND": "单手抓取以移动你的 Set。",
 		"GREETING": "你好！",
 		"GUIDE_INTRO": "让我们带你快速上手。",
 		"LASER_COLORS": "射线颜色",
@@ -324,7 +326,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "右键模式：橙色激光",
 		"THANKS_FOR_INSTALLING": "感谢安装 WayVR！",
 		"WATCH": "手表",
-		"WORKING_SET": "当前套装"
+		"WORKING_SET": "当前套装",
+		"SHOWHIDE_TOGGLE_HELP": "显示、隐藏或重新中心化虚拟工作区：\nFrame: View+LB,\nIndex: 双击 B,\nMeta: 双击 Y.\n现在尝试一下。",
+		"GRAB_KBD": "抓取键盘来移动你的套装。",
+		"GRAB_OVERLAY": "抓取其他内容即可独立移动。",
+		"SHOW_HIDE_RECENTER": "显示/隐藏/重置中心"
 	},
 	"DOWNLOAD_AGAIN": "重新下载",
 	"DOWNLOADING_FILE": "正在下载文件...",
@@ -380,5 +386,6 @@
 		"SUSPEND_ARE_YOU_SURE": "确定要让计算机进入睡眠状态吗？"
 	},
 	"YES": "确定",
-	"NO": "否"
+	"NO": "否",
+	"RESET_SPACE_DRAG": "重置活动空间拖拽"
 }

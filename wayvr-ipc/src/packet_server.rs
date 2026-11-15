@@ -20,14 +20,10 @@ pub struct Disconnect {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WvrProcessHandle {
-	pub user: u64,
-}
+pub struct WvrProcessHandle(pub u64);
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WvrWindowHandle {
-	pub user: u64,
-}
+pub struct WvrWindowHandle(pub u64);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WvrWindow {

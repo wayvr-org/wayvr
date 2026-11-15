@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=WayVR (Session)
+Comment=Start WayVR as a full desktop environment.
+Exec=wayvr --session
+Icon=wayvr
+Terminal=false
+Categories=Utility;X-WiVRn-VR;
+X-XR-Plugin=true
+X-XR-Plugin-Exec=wayvr --openxr --session

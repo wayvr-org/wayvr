@@ -35,8 +35,9 @@ pub(super) struct Skybox {
 impl Skybox {
     pub fn new(xr: &XrState, app: &AppState) -> anyhow::Result<Self> {
         let mut command_buffer = app
-            .gfx
-            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+            .gfx_extras
+            .gfx_pool
+            .create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
         let mut maybe_image = None;
 
@@ -112,16 +113,12 @@ impl Skybox {
         *self.current_skybox != *app.session.config.skybox_texture
     }
 
-    pub(super) fn retire(
-        mut self,
-        retired_swapchains: &mut SwapchainRetirementQueue,
-        app: &AppState,
-    ) {
+    pub(super) fn retire(mut self, retired_swapchains: &mut SwapchainRetirementQueue) {
         if let Some(swapchain) = self.sky.take() {
-            retired_swapchains.retire(swapchain, &app.gfx);
+            retired_swapchains.retire(swapchain);
         }
         if let Some(swapchain) = self.grid.take() {
-            retired_swapchains.retire(swapchain, &app.gfx);
+            retired_swapchains.retire(swapchain);
         }
     }
 
@@ -186,13 +183,14 @@ impl Skybox {
         };
 
         let mut cmd_buffer = app
-            .gfx
-            .create_gfx_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+            .gfx_extras
+            .gfx_pool
+            .create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
         cmd_buffer.begin_rendering(tgt, WGfxClearMode::DontCare)?;
         cmd_buffer.run_ref(&pass)?;
         cmd_buffer.end_rendering()?;
 
-        futures.execute(cmd_buffer.build()?);
+        futures.execute(cmd_buffer.build()?)?;
 
         self.sky = Some(swapchain);
         Ok(())
@@ -239,13 +237,14 @@ impl Skybox {
         )?;
 
         let mut cmd_buffer = app
-            .gfx
-            .create_gfx_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+            .gfx_extras
+            .gfx_pool
+            .create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
         cmd_buffer.begin_rendering(tgt, WGfxClearMode::Clear([0.0, 0.0, 0.0, 0.0]))?;
         cmd_buffer.run_ref(&pass)?;
         cmd_buffer.end_rendering()?;
 
-        futures.execute(cmd_buffer.build()?);
+        futures.execute(cmd_buffer.build()?)?;
 
         self.grid = Some(swapchain);
         Ok(())

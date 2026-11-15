@@ -150,8 +150,6 @@
 			"XWAYLAND_SATELLITE": "Rekommenderas om du vill köra X11 (Xwayland)-applikationer i nativt läge",
 			"XDG_OPEN": "Krävs för att öppna URL:er eller Steam-spel"
 		},
-		"HIDE_GRAB_HELP": "Dölj grepphjälp",
-		"HIDE_USERNAME": "Dölj användarnamn",
 		"INPUT_EMULATION_METHOD": "Metod för inmatningssimulering",
 		"INPUT_EMULATION_METHOD_HELP": "Prova att ändra detta om mus- eller\ntangentbordindata inte registreras.",
 		"INPUT_CAPTURE_METHOD": "Metod för inmatningsfångst",
@@ -168,7 +166,6 @@
 		"LEFT_HANDED_MOUSE": "Vänstermus",
 		"LEFT_HANDED_MOUSE_HELP": "Används om musknapparna är ombytta",
 		"LONG_PRESS_DURATION": "Långtryckstid",
-		"LOOK_AND_FEEL": "Utseende och känsla",
 		"MISC": "Övrigt",
 		"MIDDLE_GRABS_SINGLE": "Modifierare för mittklick greppar enskilda objekt",
 		"MIDDLE_GRABS_SINGLE_HELP": "Att greppa med modifieraren för mittklick (lila laser)\ngreppar enskilda overlays istället för hela setet",
@@ -265,7 +262,14 @@
 		"GRID_OPACITY_HELP": "Opacitet för golvgridet när skymap är aktiverat",
 		"XWAYLAND_BY_DEFAULT": "Kör appar i kompatibilitetsläge som standard",
 		"SAVE": "Spara",
-		"CANCEL": "Avbryt"
+		"CANCEL": "Avbryt",
+		"SHOW_USERNAME": "Visa användarnamn",
+		"SOUND": "Ljud",
+		"APPEARANCE": "Utseende",
+		"OVERLAYS": "Overlays",
+		"SHOW_GRAB_HELP": "Visa hjälp för grepp",
+		"WATCH": "Klocka",
+		"VARIOUS": "Övrigt"
 	},
 	"APPLICATION_LAUNCHER": "App-startare",
 	"APPLICATION_STARTED": "Applikationen startades",
@@ -308,8 +312,6 @@
 		"DOUBLE_PRESS_TO_TOGGLE": "Dubbeltryck B (på Index) eller Y (på Meta) för att visa, centrera om eller dölja ditt set. Prova nu.",
 		"FEATURES_DOCUMENTATION": "Det finns många andra funktioner värda att anpassa. För mer information, se dokumentationen på",
 		"FINISH_TUTORIAL": "Avsluta handledningen",
-		"GRAB_BOTH_HANDS": "Greppa med båda händerna om du vill flytta ett specifikt overlay i ditt set.",
-		"GRAB_ONE_HAND": "Greppa med en hand för att flytta ditt set.",
 		"GREETING": "Hej!",
 		"GUIDE_INTRO": "Låt oss guida dig genom dina första steg.",
 		"LASER_COLORS": "Laserfärger",
@@ -324,7 +326,11 @@
 		"RIGHT_CLICK_MODE_ORANGE_LASER": "Högerklicksläge: Orange laser",
 		"THANKS_FOR_INSTALLING": "Tack för att du installerade WayVR!",
 		"WATCH": "Klocka",
-		"WORKING_SET": "Aktivt Set"
+		"WORKING_SET": "Aktivt Set",
+		"SHOWHIDE_TOGGLE_HELP": "För att visa, dölja eller centrera om din virtuella arbetsyta:\nFrame: View+LB,\nIndex: Dubbeltryck B,\nMeta: Dubbeltryck Y.\nProva nu.",
+		"GRAB_KBD": "Greppa tangentbordet för att flytta ditt Set.",
+		"GRAB_OVERLAY": "Greppa vad som helst annat för att flytta det separat.",
+		"SHOW_HIDE_RECENTER": "Visa/Dölj/Centrera om"
 	},
 	"DOWNLOAD_AGAIN": "Ladda ner igen",
 	"DOWNLOADING_FILE": "Laddar ner fil...",
@@ -380,5 +386,6 @@
 	"INSTALLED": "Installerad",
 	"NOT_INSTALLED": "Ej installerad",
 	"YES": "Ja",
-	"NO": "Nej"
+	"NO": "Nej",
+	"RESET_SPACE_DRAG": "Återställ playspace-drag"
 }

@@ -6,20 +6,20 @@ use smithay::desktop::{
     PopupKeyboardGrab, PopupKind, PopupManager, PopupPointerGrab, PopupUngrabStrategy,
     find_popup_root_surface, get_popup_toplevel_coords,
 };
+use smithay::input::dnd::{DnDGrab, DndGrabHandler, DndTarget, GrabType, Source};
 use smithay::input::pointer::{CursorImageStatus, Focus};
 use smithay::input::{Seat, SeatHandler, SeatState};
 use smithay::output::Output;
 use smithay::reexports::rustix::fs::{OFlags, fcntl_setfl};
 use smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1;
 use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel;
+use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel::XdgToplevel;
 use smithay::reexports::wayland_protocols_misc::server_decoration::server::org_kde_kwin_server_decoration;
 use smithay::reexports::wayland_server::Resource;
 use smithay::reexports::wayland_server::backend::ObjectId;
-use smithay::reexports::wayland_server::protocol::{
-    wl_buffer, wl_callback, wl_data_source, wl_output, wl_seat,
-};
+use smithay::reexports::wayland_server::protocol::{wl_buffer, wl_callback, wl_output, wl_seat};
 use smithay::reexports::wayland_server::{self, DisplayHandle};
-use smithay::utils::{Logical, Rectangle, Serial, Size};
+use smithay::utils::{Logical, Point, Rectangle, Serial, Size};
 use smithay::wayland::buffer::BufferHandler;
 use smithay::wayland::compositor::{self, BufferAssignment, SurfaceAttributes, send_surface_state};
 use smithay::wayland::dmabuf::{
@@ -27,10 +27,11 @@ use smithay::wayland::dmabuf::{
 };
 use smithay::wayland::fractional_scale::with_fractional_scale;
 use smithay::wayland::output::OutputHandler;
+use smithay::wayland::pointer_constraints::PointerConstraintsHandler;
 use smithay::wayland::relative_pointer::RelativePointerManagerState;
 use smithay::wayland::selection::data_device::{
-    ClientDndGrabHandler, DataDeviceHandler, DataDeviceState, ServerDndGrabHandler,
-    set_data_device_focus, set_data_device_selection,
+    DataDeviceHandler, DataDeviceState, WaylandDndGrabHandler, set_data_device_focus,
+    set_data_device_selection,
 };
 use smithay::wayland::selection::{self, SelectionHandler};
 use smithay::wayland::selection::{
@@ -46,12 +47,8 @@ use smithay::wayland::shell::xdg::{
 use smithay::wayland::shm::{ShmHandler, ShmState, shm_format_to_fourcc, with_buffer_contents};
 use smithay::wayland::single_pixel_buffer::get_single_pixel_buffer;
 use smithay::wayland::viewporter::ViewporterState;
-use smithay::{
-    delegate_compositor, delegate_data_control, delegate_data_device, delegate_dmabuf,
-    delegate_ext_data_control, delegate_kde_decoration, delegate_output,
-    delegate_primary_selection, delegate_relative_pointer, delegate_seat, delegate_shm,
-    delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_decoration, delegate_xdg_shell,
-};
+use smithay::wayland::xdg_toplevel_icon::{XdgToplevelIconHandler, XdgToplevelIconManager};
+use smithay::wayland::xdg_toplevel_tag::{XdgToplevelTagHandler, XdgToplevelTagManager};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Write;
@@ -62,6 +59,8 @@ use wayland_server::backend::{ClientData, ClientId, DisconnectReason};
 use wayland_server::protocol::wl_surface::WlSurface;
 use wlx_capture::DrmFourcc;
 
+use super::icon::{self, ToplevelIconSnapshot};
+use super::session::SessionRegistry;
 use crate::backend::wayvr::image_importer::ImageImporter;
 use crate::backend::wayvr::{SurfaceBufWithImage, WAYVR_SCREEN_RES, time};
 use crate::ipc::event_queue::SyncEventQueue;
@@ -74,6 +73,14 @@ pub struct Application {
     pub dmabuf_state: (DmabufState, DmabufGlobal, Option<DmabufFeedback>),
     pub compositor: compositor::CompositorState,
     pub xdg_shell: XdgShellState,
+    #[allow(dead_code)]
+    pub xdg_toplevel_tags: XdgToplevelTagManager,
+    #[allow(dead_code)]
+    pub xdg_toplevel_icons: XdgToplevelIconManager,
+    pub pending_icon_changes: HashMap<ObjectId, ToplevelIconSnapshot>,
+    pub current_icons: HashMap<ObjectId, ToplevelIconSnapshot>,
+    pub sessions: SessionRegistry,
+    pub toplevel_tags: HashMap<ObjectId, Arc<str>>,
     pub seat: Seat<Application>,
     pub seat_state: SeatState<Application>,
     pub shm: ShmState,
@@ -235,7 +242,7 @@ impl Application {
     }
 }
 
-fn drm_format_has_alpha(format: DrmFourcc) -> bool {
+const fn drm_format_has_alpha(format: DrmFourcc) -> bool {
     matches!(
         format,
         DrmFourcc::Abgr8888 | DrmFourcc::Argb8888 | DrmFourcc::Abgr2101010
@@ -254,8 +261,44 @@ impl compositor::CompositorHandler for Application {
         &client.get_data::<ClientState>().unwrap().compositor_state
     }
 
-    #[allow(clippy::significant_drop_tightening)]
     fn commit(&mut self, surface: &WlSurface) {
+        if let Some(icon) = self.pending_icon_changes.remove(&surface.id()) {
+            if icon.is_empty() {
+                self.current_icons.remove(&surface.id());
+            } else {
+                self.current_icons.insert(surface.id(), icon);
+            }
+            if let Some(toplevel) = self
+                .xdg_shell
+                .toplevel_surfaces()
+                .iter()
+                .find(|t| t.wl_surface() == surface)
+            {
+                self.wayvr_tasks
+                    .send(WayVRTask::IconChange(toplevel.clone()));
+            }
+        }
+        if let Some(toplevel) = self
+            .xdg_shell
+            .toplevel_surfaces()
+            .iter()
+            .find(|toplevel| toplevel.wl_surface() == surface)
+        {
+            // first commit is special in terms of restoring session
+            if self
+                .sessions
+                .committed_toplevels
+                .insert(toplevel.xdg_toplevel().id())
+            {
+                log::debug!(
+                    "first toplevel commit, surface: {:?}, toplevel: {:?}",
+                    surface.id(),
+                    toplevel.xdg_toplevel().id()
+                );
+                self.wayvr_tasks
+                    .send(WayVRTask::FirstToplevelCommit(toplevel.clone()));
+            }
+        }
         self.popups_commit(surface);
 
         smithay::wayland::compositor::with_states(surface, |states| {
@@ -313,7 +356,9 @@ impl compositor::CompositorHandler for Application {
                                         has_alpha: shm_format_to_fourcc(buf.format)
                                             .is_some_and(drm_format_has_alpha),
                                     };
-                                    sbwi.apply_to_surface(states, None);
+                                    if let Some(old_buffer) = sbwi.apply_to_surface(states, None) {
+                                        old_buffer.release();
+                                    }
                                 }
                             });
                             buffer.release();
@@ -335,7 +380,9 @@ impl compositor::CompositorHandler for Application {
                                     dmabuf: false,
                                     has_alpha: true,
                                 };
-                                sbwi.apply_to_surface(states, None);
+                                if let Some(old_buffer) = sbwi.apply_to_surface(states, None) {
+                                    old_buffer.release();
+                                }
                             }
                             buffer.release();
                         }
@@ -343,7 +390,12 @@ impl compositor::CompositorHandler for Application {
                         None => { /* don't draw anything */ }
                     }
                 }
-                Some(BufferAssignment::Removed) | None => {}
+                Some(BufferAssignment::Removed) => {
+                    if let Some(old_buffer) = SurfaceBufWithImage::remove_from_surface(states) {
+                        old_buffer.release();
+                    }
+                }
+                None => {}
             }
 
             let callbacks = std::mem::take(&mut attrs.frame_callbacks);
@@ -359,11 +411,25 @@ impl compositor::CompositorHandler for Application {
         smithay::wayland::compositor::with_states(surface, |states| {
             if let Some(buf) = SurfaceBufWithImage::get_from_surface(states) {
                 let extent = buf.image.extent_2d();
-                let scale = buf.scale.max(1) as u32;
+                let mut attributes = states.cached_state.get::<SurfaceAttributes>();
+                let attrs = attributes.current();
+                let scale = attrs.buffer_scale.max(1) as u32;
+                let (width, height) = if matches!(
+                    attrs.buffer_transform,
+                    wl_output::Transform::_90
+                        | wl_output::Transform::_270
+                        | wl_output::Transform::Flipped90
+                        | wl_output::Transform::Flipped270
+                ) {
+                    (extent[1], extent[0])
+                } else {
+                    (extent[0], extent[1])
+                };
                 let buffer_size = Size::new(
-                    (extent[0] / scale).max(1) as i32,
-                    (extent[1] / scale).max(1) as i32,
+                    (width / scale).max(1) as i32,
+                    (height / scale).max(1) as i32,
                 );
+                drop(attributes);
                 smithay::wayland::viewporter::ensure_viewport_valid(states, buffer_size);
             }
         });
@@ -397,33 +463,75 @@ impl BufferHandler for Application {
     fn buffer_destroyed(&mut self, _buffer: &wl_buffer::WlBuffer) {}
 }
 
-impl ClientDndGrabHandler for Application {
-    fn started(
+impl PointerConstraintsHandler for Application {}
+
+impl WaylandDndGrabHandler for Application {
+    fn dnd_requested<S: Source>(
         &mut self,
-        _source: Option<wl_data_source::WlDataSource>,
+        source: S,
         icon: Option<WlSurface>,
-        _seat: Seat<Self>,
+        seat: Seat<Self>,
+        serial: Serial,
+        type_: GrabType,
     ) {
         let pointer = self.pointer_button_owner.unwrap_or(self.vr_pointer);
         self.dnd_pointer = Some(pointer);
         self.wayvr_tasks
             .send(WayVRTask::DndStarted { icon, pointer });
-    }
 
-    fn dropped(&mut self, _target: Option<WlSurface>, _validated: bool, _seat: Seat<Self>) {
+        match type_ {
+            GrabType::Pointer => {
+                let Some(pointer) = seat.get_pointer() else {
+                    log::warn!("dnd_requested: seat has no pointer");
+                    return;
+                };
+                let Some(start_data) = pointer.grab_start_data() else {
+                    log::warn!("dnd_requested: no pointer grab start data");
+                    return;
+                };
+                pointer.set_grab(
+                    self,
+                    DnDGrab::new_pointer(&self.display_handle, start_data, source, seat),
+                    serial,
+                    Focus::Keep,
+                );
+            }
+            GrabType::Touch => {
+                let Some(touch) = seat.get_touch() else {
+                    log::warn!("dnd_requested: seat has no touch");
+                    return;
+                };
+                let Some(start_data) = touch.grab_start_data() else {
+                    log::warn!("dnd_requested: no touch grab start data");
+                    return;
+                };
+                touch.set_grab(
+                    self,
+                    DnDGrab::new_touch(&self.display_handle, start_data, source, seat),
+                    serial,
+                );
+            }
+        }
+    }
+}
+
+impl DndGrabHandler for Application {
+    fn dropped(
+        &mut self,
+        _target: Option<DndTarget<'_, Self>>,
+        _validated: bool,
+        _seat: Seat<Self>,
+        _location: Point<f64, Logical>,
+    ) {
         self.dnd_pointer = None;
         self.pointer_button_owner = None;
         self.wayvr_tasks.send(WayVRTask::DndDropped);
     }
 }
 
-impl ServerDndGrabHandler for Application {
-    fn send(&mut self, _mime_type: String, _fd: OwnedFd, _seat: Seat<Self>) {}
-}
-
 impl DataDeviceHandler for Application {
-    fn data_device_state(&self) -> &DataDeviceState {
-        &self.data_device
+    fn data_device_state(&mut self) -> &mut DataDeviceState {
+        &mut self.data_device
     }
 }
 
@@ -489,6 +597,11 @@ impl XdgShellHandler for Application {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let wl_surface = surface.wl_surface();
+        log::debug!(
+            "new_toplevel:, surface: {:?}, toplevel: {:?}",
+            wl_surface.id(),
+            surface.xdg_toplevel().id()
+        );
         self.send_initial_surface_state(wl_surface);
         if let Some(client) = wl_surface.client() {
             self.wayvr_tasks
@@ -497,6 +610,10 @@ impl XdgShellHandler for Application {
     }
 
     fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
+        self.pending_icon_changes.remove(&surface.wl_surface().id());
+        self.current_icons.remove(&surface.wl_surface().id());
+        self.toplevel_tags.remove(&surface.xdg_toplevel().id());
+        self.sessions.forget_toplevel(&surface);
         self.output.leave(surface.wl_surface());
         self.no_server_decorations
             .remove(&surface.wl_surface().id());
@@ -653,10 +770,46 @@ impl XdgShellHandler for Application {
         }
     }
 
+    fn app_id_changed(&mut self, surface: ToplevelSurface) {
+        self.wayvr_tasks
+            .send(WayVRTask::WindowIdentityChanged(surface));
+    }
+
+    fn parent_changed(&mut self, surface: ToplevelSurface) {
+        self.wayvr_tasks
+            .send(WayVRTask::WindowIdentityChanged(surface));
+    }
+
     fn title_changed(&mut self, surface: ToplevelSurface) {
         if let Some(client) = surface.wl_surface().client() {
             self.wayvr_tasks
                 .send(WayVRTask::TitleChange(client.id(), surface.clone()));
+        }
+    }
+}
+
+impl XdgToplevelIconHandler for Application {
+    fn set_icon(&mut self, toplevel: XdgToplevel, surface: WlSurface) {
+        log::debug!(
+            "set_icon, surface: {:?}, toplevel: {:?}",
+            surface.id(),
+            toplevel.id()
+        );
+        let icon = icon::snapshot_pending_icon(&surface);
+        self.pending_icon_changes.insert(surface.id(), icon);
+    }
+}
+
+impl XdgToplevelTagHandler for Application {
+    fn set_tag(&mut self, toplevel: XdgToplevel, tag: String) {
+        if tag.is_empty() {
+            self.toplevel_tags.remove(&toplevel.id());
+        } else {
+            self.toplevel_tags.insert(toplevel.id(), tag.into());
+        }
+        if let Some(surface) = self.xdg_shell.get_toplevel(&toplevel) {
+            self.wayvr_tasks
+                .send(WayVRTask::WindowIdentityChanged(surface));
         }
     }
 }
@@ -695,20 +848,20 @@ impl DmabufHandler for Application {
 }
 
 impl PrimarySelectionHandler for Application {
-    fn primary_selection_state(&self) -> &PrimarySelectionState {
-        &self.primary_selection_state
+    fn primary_selection_state(&mut self) -> &mut PrimarySelectionState {
+        &mut self.primary_selection_state
     }
 }
 
 impl selection_wlr::DataControlHandler for Application {
-    fn data_control_state(&self) -> &selection_wlr::DataControlState {
-        &self.wlr_data_control_state
+    fn data_control_state(&mut self) -> &mut selection_wlr::DataControlState {
+        &mut self.wlr_data_control_state
     }
 }
 
 impl selection_ext::DataControlHandler for Application {
-    fn data_control_state(&self) -> &selection_ext::DataControlState {
-        &self.ext_data_control_state
+    fn data_control_state(&mut self) -> &mut selection_ext::DataControlState {
+        &mut self.ext_data_control_state
     }
 }
 impl XdgDecorationHandler for Application {
@@ -717,7 +870,9 @@ impl XdgDecorationHandler for Application {
         toplevel.with_pending_state(|state| {
             state.decoration_mode = Some(zxdg_toplevel_decoration_v1::Mode::ServerSide);
         });
-        toplevel.send_configure();
+        if toplevel.is_initial_configure_sent() {
+            toplevel.send_configure();
+        }
     }
 
     fn request_mode(&mut self, toplevel: ToplevelSurface, mode: zxdg_toplevel_decoration_v1::Mode) {
@@ -728,7 +883,9 @@ impl XdgDecorationHandler for Application {
         toplevel.with_pending_state(|state| {
             state.decoration_mode = Some(mode);
         });
-        toplevel.send_configure();
+        if toplevel.is_initial_configure_sent() {
+            toplevel.send_configure();
+        }
     }
 
     fn unset_mode(&mut self, toplevel: ToplevelSurface) {
@@ -736,7 +893,9 @@ impl XdgDecorationHandler for Application {
         toplevel.with_pending_state(|state| {
             state.decoration_mode = Some(zxdg_toplevel_decoration_v1::Mode::ServerSide);
         });
-        toplevel.send_configure();
+        if toplevel.is_initial_configure_sent() {
+            toplevel.send_configure();
+        }
     }
 }
 
@@ -763,21 +922,7 @@ impl KdeDecorationHandler for Application {
     }
 }
 
-delegate_dmabuf!(Application);
-delegate_xdg_shell!(Application);
-delegate_compositor!(Application);
-delegate_viewporter!(Application);
-delegate_shm!(Application);
-delegate_seat!(Application);
-delegate_data_device!(Application);
-delegate_output!(Application);
-delegate_primary_selection!(Application);
-delegate_data_control!(Application);
-delegate_ext_data_control!(Application);
-delegate_xdg_decoration!(Application);
-delegate_kde_decoration!(Application);
-delegate_single_pixel_buffer!(Application);
-delegate_relative_pointer!(Application);
+smithay::delegate_dispatch2!(Application);
 
 const fn wl_transform_to_frame_transform(
     transform: wl_output::Transform,

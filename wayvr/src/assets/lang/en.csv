@@ -63,7 +63,7 @@ the screens were likely selected wrong. See readme.",Tooltip to explain possible
 EDIT_MODE.MOVE_PRESS_AND_DRAG,Move (press & drag),Tooltip hinting to move the window by pressing and dragging with the pointer
 EDIT_MODE.OPACITY,Opacity,Title. Adjust transparency of the window
 EDIT_MODE.POS_ANCHORED,Anchored: Moves together with set. Default.,"Tooltip for a an option that changes movement/positioning behavior. “Anchored” was previously translated as “${DEFINITIONS.ANCHORED}”, “Set” was previously translated as “${DEFINITIONS.SET}”"
-EDIT_MODE.POS_FLOATING,"Floating: Moves independently, recenters when shown.",Tooltip for a an option that changes movement/positioning behavior. “Floating” was previously translated as “${DEFINITIONS.FLOATING}”
+EDIT_MODE.POS_FLOATING,"Floating: Moves independently, Saves with the anchor.",Tooltip for a an option that changes movement/positioning behavior. “Floating” was previously translated as “${DEFINITIONS.FLOATING}”
 EDIT_MODE.POS_HAND_L,Follow the left hand.,Tooltip for a an option that changes movement/positioning behavior.
 EDIT_MODE.POS_HAND_R,Follow the right hand.,Tooltip for a an option that changes movement/positioning behavior.
 EDIT_MODE.POS_HMD,Follow the HMD.,Tooltip for a an option that changes movement/positioning behavior.

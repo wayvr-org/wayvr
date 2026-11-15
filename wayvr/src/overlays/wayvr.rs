@@ -3,13 +3,17 @@ use std::{mem, ops::RangeInclusive, rc::Rc, sync::Arc};
 use glam::{Affine2, Affine3A, Quat, Vec3, vec2, vec3};
 use slotmap::Key;
 use smithay::{
-    desktop::PopupManager,
-    input::pointer::CursorImageStatus,
-    reexports::wayland_server::Resource,
-    utils::{Logical, Size},
+    desktop::{PopupKind, PopupManager},
+    input::pointer::{CursorImageStatus, CursorImageSurfaceData},
+    reexports::wayland_server::{
+        Resource,
+        protocol::{wl_output, wl_surface::WlSurface},
+    },
+    utils::{IsAlive, Logical, Size},
     wayland::{
-        compositor::with_states,
-        shell::xdg::{SurfaceCachedState, XdgPopupSurfaceData, XdgToplevelSurfaceData},
+        compositor::{SurfaceAttributes, with_states},
+        shell::xdg::{SurfaceCachedState, XdgToplevelSurfaceData},
+        viewporter::ViewportCachedState,
     },
 };
 use wayvr_ipc::packet_client::PositionMode;
@@ -53,16 +57,16 @@ use crate::{
         GuiPanel, NewGuiPanelParams, OnCustomAttribFunc,
         button::{BUTTON_EVENT_SUFFIX, BUTTON_EVENTS},
     },
-    overlays::screen::capture::ScreenPipeline,
+    overlays::screen::capture::{CursorSurface, ScreenPipeline},
     state::{self, AppState},
     subsystem::{hid::WheelDelta, input::InputFocus},
     windowing::{
-        OverlayID, OverlaySelector,
+        BAR_SIZE, BORDER_SIZE, OverlayID, OverlaySelector,
         backend::{
             FrameMeta, OverlayBackend, OverlayEventData, RenderResources, ShouldRender,
             ui_transform,
         },
-        overlay_scale_from_extent,
+        client_size_from_overlay_size, overlay_scale_from_extent, overlay_size_from_client_size,
         window::{OverlayCategory, OverlayWindowConfig},
     },
 };
@@ -70,12 +74,79 @@ use crate::{
 #[derive(Clone)]
 pub enum WvrCommand {
     ReloadTitle,
+    SetIcon(Arc<str>),
     CloseWindow,
     KillProcess(KillSignal),
 }
 
-const BORDER_SIZE: u32 = 5;
-const BAR_SIZE: u32 = 48;
+fn cursor_surface(surface: &WlSurface) -> Option<CursorSurface> {
+    with_states(surface, |states| {
+        let image = SurfaceBufWithImage::get_from_surface(states)?;
+        let extent = image.image.extent_2d();
+
+        let mut attributes = states.cached_state.get::<SurfaceAttributes>();
+        let attrs = attributes.current();
+        let scale = attrs.buffer_scale.max(1) as f32;
+        let transform = match attrs.buffer_transform {
+            wl_output::Transform::_90 => Transform::Rotated90,
+            wl_output::Transform::_180 => Transform::Rotated180,
+            wl_output::Transform::_270 => Transform::Rotated270,
+            wl_output::Transform::Flipped => Transform::Flipped,
+            wl_output::Transform::Flipped90 => Transform::Flipped90,
+            wl_output::Transform::Flipped180 => Transform::Flipped180,
+            wl_output::Transform::Flipped270 => Transform::Flipped270,
+            _ => Transform::Normal,
+        };
+        drop(attributes);
+
+        let (width, height) = if matches!(
+            transform,
+            Transform::Rotated90
+                | Transform::Rotated270
+                | Transform::Flipped90
+                | Transform::Flipped270
+        ) {
+            (extent[1] as f32 / scale, extent[0] as f32 / scale)
+        } else {
+            (extent[0] as f32 / scale, extent[1] as f32 / scale)
+        };
+
+        let mut viewports = states.cached_state.get::<ViewportCachedState>();
+        let viewport = *viewports.current();
+        drop(viewports);
+        let (source_uv, source_size) = if let Some(source) = viewport.src {
+            (
+                [
+                    (source.loc.x as f32 / width).clamp(0.0, 1.0),
+                    (source.loc.y as f32 / height).clamp(0.0, 1.0),
+                    ((source.loc.x + source.size.w) as f32 / width).clamp(0.0, 1.0),
+                    ((source.loc.y + source.size.h) as f32 / height).clamp(0.0, 1.0),
+                ],
+                [source.size.w as f32, source.size.h as f32],
+            )
+        } else {
+            ([0.0, 0.0, 1.0, 1.0], [width, height])
+        };
+        let size = viewport
+            .size()
+            .map_or(source_size, |size| [size.w as f32, size.h as f32]);
+        let hotspot = states
+            .data_map
+            .get::<CursorImageSurfaceData>()?
+            .lock()
+            .ok()?
+            .hotspot;
+
+        Some(CursorSurface {
+            image: image.image,
+            source_size,
+            size,
+            hotspot: [hotspot.x as f32, hotspot.y as f32],
+            source_uv,
+            transform,
+        })
+    })
+}
 
 const BLEND_WAYLAND_ALPHA: AttachmentBlend = AttachmentBlend {
     src_color_blend_factor: BlendFactor::One,
@@ -88,6 +159,9 @@ const BLEND_WAYLAND_ALPHA: AttachmentBlend = AttachmentBlend {
 
 pub fn create_wl_window_overlay(
     name: Arc<str>,
+    title: Arc<str>,
+    persistent: bool,
+    restore_on_spawn: bool,
     app: &mut AppState,
     window: wayvr::window::WindowHandle,
     icon: Arc<str>,
@@ -109,7 +183,10 @@ pub fn create_wl_window_overlay(
         .is_some_and(Window::resizable);
 
     Ok(OverlayWindowConfig {
-        name: name.clone(),
+        name,
+        title: Some(title.clone()),
+        persistent,
+        restore_on_spawn,
         default_state: OverlayWindowState {
             grabbable: true,
             interactable: true,
@@ -131,7 +208,7 @@ pub fn create_wl_window_overlay(
         category: OverlayCategory::WayVR,
         show_on_spawn: true,
         ..OverlayWindowConfig::from_backend(Box::new(WvrWindowBackend::new(
-            name,
+            title,
             app,
             window,
             icon,
@@ -142,7 +219,7 @@ pub fn create_wl_window_overlay(
 }
 
 pub struct WvrWindowBackend {
-    name: Arc<str>,
+    title: Arc<str>,
     icon: Arc<str>,
     pipeline: Option<ScreenPipeline>,
     subsurface_pipeline_opaque: Arc<WGfxPipeline<Vert2Uv>>,
@@ -156,12 +233,15 @@ pub struct WvrWindowBackend {
     just_resumed: bool,
     meta: Option<FrameMeta>,
     mouse: Option<MouseMeta>,
+    cursor_revision: Option<CursorSurface>,
+    cursor_status: CursorImageStatus,
     stereo: Option<StereoMode>,
     stereo_full_frame: bool,
     stereo_adjust_mouse: bool,
     cur_image: Option<Arc<ImageView>>,
     panel: GuiPanel<WindowHandle>,
     inner_extent: [u32; 2],
+    window_size: Option<[u32; 2]>,
     mouse_transform: Affine2,
     uv_range: RangeInclusive<f32>,
     panel_hovered: bool,
@@ -176,7 +256,7 @@ pub struct WvrWindowBackend {
 
 impl WvrWindowBackend {
     fn new(
-        name: Arc<str>,
+        title: Arc<str>,
         app: &mut AppState,
         window: wayvr::window::WindowHandle,
         icon: Arc<str>,
@@ -243,7 +323,7 @@ impl WvrWindowBackend {
             NewGuiPanelParams {
                 resize_to_parent: true,
                 on_custom_attrib: Some(on_custom_attrib),
-                extra_vars: [("title".into(), name.as_ref().into())].into(),
+                extra_vars: [("title".into(), title.as_ref().into())].into(),
                 ..Default::default()
             },
         )?;
@@ -251,7 +331,7 @@ impl WvrWindowBackend {
         panel.update_layout(app)?;
 
         Ok(Self {
-            name,
+            title,
             icon,
             pipeline: None,
             window,
@@ -265,6 +345,8 @@ impl WvrWindowBackend {
             just_resumed: false,
             meta: None,
             mouse: None,
+            cursor_revision: None,
+            cursor_status: CursorImageStatus::default_named(),
             stereo: app
                 .feats
                 .xr_backend
@@ -274,6 +356,7 @@ impl WvrWindowBackend {
             stereo_adjust_mouse: false,
             cur_image: None,
             inner_extent: [0, 0],
+            window_size: None,
             panel,
             mouse_transform: Affine2::ZERO,
             uv_range: 0.0..=1.0,
@@ -390,6 +473,7 @@ impl WvrWindowBackend {
     }
 
     fn update_title(&mut self, new_title: Rc<str>) {
+        self.title = new_title.as_ref().into();
         let mut common = CallbackDataCommon {
             state: &self.panel.layout.state,
             alterables: &mut self.panel.layout.alterables,
@@ -527,7 +611,11 @@ impl WvrWindowBackend {
             states
                 .data_map
                 .get::<XdgToplevelSurfaceData>()
-                .and_then(|data| data.lock().ok().and_then(|data| data.current_serial))
+                .and_then(|data| {
+                    data.lock()
+                        .ok()
+                        .and_then(|data| data.last_acked.as_ref().map(|c| c.serial))
+                })
         });
 
         if committed == clamped {
@@ -568,7 +656,7 @@ impl OverlayBackend for WvrWindowBackend {
         else {
             log::debug!(
                 "{:?}: WayVR overlay without matching window entry",
-                self.name
+                self.title
             );
             return Ok(ShouldRender::Unable);
         };
@@ -585,20 +673,12 @@ impl OverlayBackend for WvrWindowBackend {
         let surfaces = collect_rendered_surface_tree(toplevel.wl_surface());
 
         let mut popup_roots = Vec::new();
-        let mut popups = Vec::new();
+        let mut popup_trees = Vec::new();
 
         for (popup, point) in PopupManager::popups_for_surface(toplevel.wl_surface()) {
-            let configured = with_states(popup.wl_surface(), |states| {
-                states
-                    .data_map
-                    .get::<XdgPopupSurfaceData>()
-                    .unwrap()
-                    .lock()
-                    .unwrap()
-                    .configured
-            });
-
-            if !configured {
+            if let PopupKind::Xdg(popup) = &popup
+                && popup.with_committed_state(|state| state.is_none())
+            {
                 continue;
             }
 
@@ -609,12 +689,14 @@ impl OverlayBackend for WvrWindowBackend {
                 surface_origin: vec2(popup_origin.x as f32, popup_origin.y as f32),
             });
 
-            popups.extend(collect_rendered_surface_tree_at(
+            popup_trees.push(collect_rendered_surface_tree_at(
                 popup.wl_surface(),
                 popup_origin,
                 true,
             ));
         }
+
+        let popups: Vec<RenderedSurface> = popup_trees.into_iter().rev().flatten().collect();
 
         let mut tree_dirty = false;
 
@@ -653,10 +735,11 @@ impl OverlayBackend for WvrWindowBackend {
                 let source_uv = surf.source_uv(states);
                 let mut xdg_state = states.cached_state.get::<SurfaceCachedState>();
                 let window_geometry = xdg_state.current().geometry;
+                drop(xdg_state);
                 Some((surf, surface_size, source_uv, window_geometry))
             })
         else {
-            log::trace!("{}: no buffer for wl_surface", self.name);
+            log::trace!("{}: no buffer for wl_surface", self.title);
             return Ok(ShouldRender::Unable);
         };
 
@@ -691,9 +774,14 @@ impl OverlayBackend for WvrWindowBackend {
         }
 
         let inner_extent = meta.extent;
-        let committed_window_extent = window_geometry
-            .map(|geometry| [geometry.size.w.max(1) as u32, geometry.size.h.max(1) as u32])
-            .unwrap_or(inner_extent);
+        let committed_window_extent = window_geometry.map_or(
+            [surface_size.w.max(1) as u32, surface_size.h.max(1) as u32],
+            |geometry| [geometry.size.w.max(1) as u32, geometry.size.h.max(1) as u32],
+        );
+        self.window_size = Some(overlay_size_from_client_size(
+            committed_window_extent,
+            self.server_side_decorations,
+        ));
         self.sync_committed_toplevel_size(app, committed_window_extent);
 
         if self.server_side_decorations {
@@ -752,10 +840,45 @@ impl OverlayBackend for WvrWindowBackend {
                 y: (m.pos.y as f32) / (inner_extent[1] as f32),
             });
 
-        let dirty = self.mouse != mouse || rendered_surfaces_dirty(&self.popups, &popups);
-        if !self.scrolling {
-            self.mouse = mouse;
-        }
+        let cursor_status = {
+            let state = &mut app.wvr_server.as_mut().unwrap().manager.state;
+            if matches!(
+                &state.cursor_image,
+                CursorImageStatus::Surface(surface) if !surface.alive()
+            ) {
+                state.cursor_image = CursorImageStatus::default_named();
+            }
+            if mouse.is_some() {
+                state.cursor_image.clone()
+            } else {
+                CursorImageStatus::default_named()
+            }
+        };
+        let cursor_revision = match &cursor_status {
+            CursorImageStatus::Surface(surface) if surface.alive() => cursor_surface(surface),
+            _ => None,
+        };
+        let cursor_dirty = self.cursor_status != cursor_status
+            || match (&self.cursor_revision, &cursor_revision) {
+                (Some(a), Some(b)) => !a.same_revision(b),
+                (None, None) => false,
+                _ => true,
+            };
+        self.cursor_status = cursor_status;
+        self.cursor_revision = cursor_revision;
+        let cursor_redraw = match &self.cursor_status {
+            CursorImageStatus::Surface(surface) if surface.alive() => {
+                let state = &mut app.wvr_server.as_mut().unwrap().manager.state;
+                state.take_redraw_request(&surface.id())
+                    || state.has_pending_frame_callbacks(&surface.id())
+            }
+            _ => false,
+        };
+        let dirty = cursor_dirty
+            || cursor_redraw
+            || self.mouse != mouse
+            || rendered_surfaces_dirty(&self.popups, &popups);
+        self.mouse = mouse;
         self.popups = popups.into();
         self.meta = Some(meta);
 
@@ -771,7 +894,7 @@ impl OverlayBackend for WvrWindowBackend {
         {
             log::trace!(
                 "{}: new {} image",
-                self.name,
+                self.title,
                 if surf.dmabuf { "DMA-buf" } else { "SHM" }
             );
             self.cur_image = Some(surf.image);
@@ -817,12 +940,24 @@ impl OverlayBackend for WvrWindowBackend {
         if let Some(wvr_server) = app.wvr_server.as_mut() {
             let state = &mut wvr_server.manager.state;
 
-            match state.cursor_image {
-                CursorImageStatus::Hidden => {}
-                CursorImageStatus::Named(_) | CursorImageStatus::Surface(_) => {
-                    // TODO: properly render surface?
-                    if let Some(mouse) = self.mouse.as_ref() {
-                        self.pipeline.as_mut().unwrap().render_mouse(mouse, rdr)?;
+            if let Some(mouse) = self.mouse.as_ref() {
+                match self.cursor_status.clone() {
+                    CursorImageStatus::Hidden => {}
+                    CursorImageStatus::Surface(surface) if surface.alive() => {
+                        if let Some(cursor) = self.cursor_revision.as_ref() {
+                            self.pipeline.as_mut().unwrap().render_mouse(
+                                mouse,
+                                rdr,
+                                Some(cursor),
+                            )?;
+                        }
+                        state.send_frame_callbacks_for_surface_id(&surface.id());
+                    }
+                    CursorImageStatus::Named(_) | CursorImageStatus::Surface(_) => {
+                        self.pipeline
+                            .as_mut()
+                            .unwrap()
+                            .render_mouse(mouse, rdr, None)?;
                     }
                 }
             }
@@ -856,6 +991,9 @@ impl OverlayBackend for WvrWindowBackend {
                 self.overlay_id = oid;
                 let wvr_server = app.wvr_server.as_mut().unwrap(); //never None
                 wvr_server.overlay_added(oid, self.window);
+            }
+            OverlayEventData::WvrCommand(WvrCommand::SetIcon(icon)) => {
+                self.icon = icon;
             }
             OverlayEventData::WvrCommand(WvrCommand::ReloadTitle) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap(); //never None
@@ -906,6 +1044,15 @@ impl OverlayBackend for WvrWindowBackend {
     }
 
     fn on_hover(&mut self, app: &mut state::AppState, hit: &input::PointerHit) -> HoverResult {
+        let is_scrolling = |idx: usize| {
+            let pointer = &app.input_state.pointers[idx];
+            pointer.tracked
+                && (pointer.now.scroll_x.abs() > 0.1 || pointer.now.scroll_y.abs() > 0.1)
+        };
+        if is_scrolling(1 - hit.pointer) && !is_scrolling(hit.pointer) {
+            return HoverResult::consume();
+        }
+
         if std::mem::take(&mut self.scrolling) {
             // we scrolled on previous frame so don't send mouse move events in case the user wants to scroll on this frame as well
             return HoverResult::consume();
@@ -926,6 +1073,12 @@ impl OverlayBackend for WvrWindowBackend {
             Some(WvrHitTarget::Panel(hit2)) => {
                 if let Some(wvr_server) = app.wvr_server.as_mut() {
                     wvr_server.clear_dnd_focus(hit.pointer);
+                    wvr_server.send_mouse_move(
+                        PointerFocusTarget::None,
+                        ctx.unclamped_client_pos_from_hit(hit),
+                        self.window,
+                        false,
+                    );
                 }
                 self.panel_hovered = true;
                 self.panel.on_hover(app, &hit2)
@@ -995,6 +1148,9 @@ impl OverlayBackend for WvrWindowBackend {
         if self.panel_hovered {
             self.panel.on_left(app, pointer);
             self.panel_hovered = false;
+        }
+        if let Some(wvr_server) = app.wvr_server.as_mut() {
+            wvr_server.leave_overlay(self.window, pointer);
         }
     }
 
@@ -1125,14 +1281,30 @@ impl OverlayBackend for WvrWindowBackend {
                 let _ = hit2;
             }
             Some(
-                WvrHitTarget::Popup { global_pos, .. } | WvrHitTarget::Surface { global_pos, .. },
+                WvrHitTarget::Popup {
+                    surface,
+                    global_pos,
+                    origin,
+                }
+                | WvrHitTarget::Surface {
+                    surface,
+                    global_pos,
+                    origin,
+                },
             ) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap();
-                wvr_server.send_mouse_scroll(self.window, global_pos, delta);
+                wvr_server.set_vr_pointer(hit.pointer);
+                wvr_server.send_mouse_scroll(
+                    PointerFocusTarget::Surface { surface, origin },
+                    self.window,
+                    global_pos,
+                    delta,
+                );
             }
             Some(WvrHitTarget::Toplevel { pos }) => {
                 let wvr_server = app.wvr_server.as_mut().unwrap();
-                wvr_server.send_mouse_scroll(self.window, pos, delta);
+                wvr_server.set_vr_pointer(hit.pointer);
+                wvr_server.send_mouse_scroll(PointerFocusTarget::Toplevel, self.window, pos, delta);
             }
             None => {}
         }
@@ -1153,6 +1325,7 @@ impl OverlayBackend for WvrWindowBackend {
                 self.stereo_adjust_mouse,
             )),
             BackendAttrib::Resizable => Some(BackendAttribValue::Resizable(self.resizable)),
+            BackendAttrib::WindowSize => self.window_size.map(BackendAttribValue::WindowSize),
 
             _ => None,
         }
@@ -1161,7 +1334,7 @@ impl OverlayBackend for WvrWindowBackend {
         match value {
             BackendAttribValue::Stereo(new) => {
                 if let Some(stereo) = self.stereo.as_mut() {
-                    log::debug!("{}: stereo: {stereo:?} → {new:?}", self.name);
+                    log::debug!("{}: stereo: {stereo:?} → {new:?}", self.title);
                     *stereo = new;
                     if let Some(meta) = self.meta {
                         let _ = self.apply_extent(app, &meta);
@@ -1195,13 +1368,22 @@ impl OverlayBackend for WvrWindowBackend {
                     log::warn!("Could not process resize request: window not found");
                     return true;
                 };
-                // xdg_toplevel.configure has client window geometry, exclude decorations
-                let client_width = new_size[0].saturating_sub(BORDER_SIZE * 2).max(1);
-                let client_height = new_size[1]
-                    .saturating_sub(BORDER_SIZE * 2 + BAR_SIZE)
-                    .max(1);
-                let size: Size<i32, Logical> = Size::new(client_width as i32, client_height as i32);
-                win.checked_configure_size(size);
+                let ssd = wvr_server
+                    .manager
+                    .state
+                    .has_server_side_decorations(win.toplevel.wl_surface());
+                let size = win
+                    .clamp_configure_size(client_size_from_overlay_size(new_size, ssd), win.bounds);
+                if !win.toplevel.is_initial_configure_sent() {
+                    win.toplevel
+                        .with_pending_state(|state| state.size = Some(size));
+                    win.remember_committed_size(size, None);
+                } else if win.size_x != size.w as u32
+                    || win.size_y != size.h as u32
+                    || win.pending_configure.is_some()
+                {
+                    win.checked_configure_size(size);
+                }
                 true
             }
             _ => false,

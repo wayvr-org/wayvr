@@ -11,8 +11,8 @@ use super::{
 	text_renderer::GlyphonCacheKey,
 };
 use crate::gfx::{
-	BLEND_ALPHA, CommandBufferUsage, DescriptorSet, Format, ImageUsage, ImageView, Vertex, VertexAttribute, VertexFormat,
-	WGfx,
+	BLEND_ALPHA, CommandBufferUsage, CommandPool, DescriptorSet, Format, ImageUsage, ImageView, Vertex, VertexAttribute,
+	VertexFormat, WGfx,
 	pipeline::{WGfxPipeline, WPipelineCreateInfo},
 };
 
@@ -20,11 +20,13 @@ use crate::gfx::{
 #[derive(Clone)]
 pub struct TextPipeline {
 	pub(super) gfx: Arc<WGfx>,
+	pub(super) command_pool: CommandPool,
 	pub(in super::super) inner: Arc<WGfxPipeline<GlyphVertex>>,
 }
 
 impl TextPipeline {
-	pub fn new(gfx: Arc<WGfx>, format: Format) -> anyhow::Result<Self> {
+	pub fn new(command_pool: CommandPool, format: Format) -> anyhow::Result<Self> {
+		let gfx = command_pool.gfx().clone();
 		let vert = vert_atlas::load(&gfx)?;
 		let frag = frag_atlas::load(&gfx)?;
 
@@ -34,7 +36,11 @@ impl TextPipeline {
 			WPipelineCreateInfo::new(format).use_blend(BLEND_ALPHA).use_instanced(),
 		)?;
 
-		Ok(Self { gfx, inner: pipeline })
+		Ok(Self {
+			gfx,
+			command_pool,
+			inner: pipeline,
+		})
 	}
 }
 
@@ -205,8 +211,8 @@ impl InnerAtlas {
 
 		let mut cmd_buf = self
 			.common
-			.gfx
-			.create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+			.command_pool
+			.create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
 		// clear newly allocated image with zeros
 		cmd_buf.clear_image(&image)?;

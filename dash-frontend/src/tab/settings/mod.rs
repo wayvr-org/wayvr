@@ -1,5 +1,5 @@
 use std::{marker::PhantomData, rc::Rc, str::FromStr};
-use strum::{AsRefStr, EnumProperty, EnumString};
+use strum::EnumProperty;
 use wgui::{
 	assets::AssetPathRef,
 	color::WguiColorName,
@@ -20,7 +20,7 @@ use wgui::{
 	windowing::context_menu::{self, Blueprint, ContextMenu, TickResult},
 };
 use wlx_common::{
-	config::GeneralConfig,
+	config::{GeneralConfig, SettingType, SettingVar},
 	config_io::ConfigRoot,
 	dash_interface::{ConfigChangeKind, DashPlayspaceTask, HmdStats, InterfaceFeats},
 };
@@ -32,45 +32,45 @@ use crate::{
 };
 
 mod macros;
+mod tab_appearance;
 mod tab_autostart_apps;
 mod tab_controls;
 mod tab_diagnostics;
-mod tab_features;
-mod tab_look_and_feel;
+mod tab_general;
+mod tab_hid;
 mod tab_misc;
-mod tab_skybox;
-mod tab_space_drag;
+mod tab_overlays;
 mod tab_statistics;
 mod tab_troubleshooting;
 
 #[derive(Clone)]
 pub(crate) enum TabNameEnum {
+	Appearance,
 	AutostartApps,
 	Controls,
-	Features,
-	LookAndFeel,
-	Misc,
-	Skybox,
-	SpaceDrag,
-	Statistics,
 	Diagnostics,
+	General,
+	Hid,
+	Misc,
+	Overlays,
+	Statistics,
 	Troubleshooting,
 }
 
 impl TabNameEnum {
-	fn from_string(s: &str) -> Option<Self> {
+	fn from_string(s: &str) -> Self {
 		match s {
-			"autostart_apps" => Some(TabNameEnum::AutostartApps),
-			"controls" => Some(TabNameEnum::Controls),
-			"features" => Some(TabNameEnum::Features),
-			"look_and_feel" => Some(TabNameEnum::LookAndFeel),
-			"misc" => Some(TabNameEnum::Misc),
-			"skybox" => Some(TabNameEnum::Skybox),
-			"space_drag" => Some(TabNameEnum::SpaceDrag),
-			"statistics" => Some(TabNameEnum::Statistics),
-			"diagnostics" => Some(TabNameEnum::Diagnostics),
-			"troubleshooting" => Some(TabNameEnum::Troubleshooting),
-			_ => None,
+			"general" => TabNameEnum::General,
+			"hid" => TabNameEnum::Hid,
+			"appearance" => TabNameEnum::Appearance,
+			"autostart_apps" => TabNameEnum::AutostartApps,
+			"controls" => TabNameEnum::Controls,
+			"misc" => TabNameEnum::Misc,
+			"overlays" => TabNameEnum::Overlays,
+			"statistics" => TabNameEnum::Statistics,
+			"diagnostics" => TabNameEnum::Diagnostics,
+			"troubleshooting" => TabNameEnum::Troubleshooting,
+			_ => unreachable!(), /* wants panic */
 		}
 	}
 }
@@ -87,9 +87,7 @@ pub(crate) enum Task {
 	SavePlayspaceCenter,
 	SetTab(TabNameEnum),
 	SettingUpdated(SettingType),
-	UpdateBool(SettingType, bool),
-	UpdateFloat(SettingType, f32),
-	UpdateInt(SettingType, i32),
+	UpdateVar(SettingType, SettingVar),
 }
 
 struct SettingsMountParams<'a> {
@@ -176,31 +174,13 @@ impl<T> Tab<T> for TabSettings<T> {
 				Task::SetTab(tab) => {
 					self.set_tab(frontend, data, tab)?;
 				}
-				Task::UpdateBool(setting, n) => {
+				Task::UpdateVar(setting, var) => {
 					self.tasks.push(Task::SettingUpdated(setting));
 					if let Some(task) = setting.get_frontend_task() {
 						frontend.tasks.push(task)
 					}
 					let config = frontend.interface.general_config(data);
-					*setting.mut_bool(config) = n;
-					changed = Some(setting.change_kind());
-				}
-				Task::UpdateFloat(setting, n) => {
-					self.tasks.push(Task::SettingUpdated(setting));
-					if let Some(task) = setting.get_frontend_task() {
-						frontend.tasks.push(task)
-					}
-					let config = frontend.interface.general_config(data);
-					*setting.mut_f32(config) = n;
-					changed = Some(setting.change_kind());
-				}
-				Task::UpdateInt(setting, n) => {
-					self.tasks.push(Task::SettingUpdated(setting));
-					if let Some(task) = setting.get_frontend_task() {
-						frontend.tasks.push(task)
-					}
-					let config = frontend.interface.general_config(data);
-					*setting.mut_i32(config) = n;
+					setting.mut_var(config).set(var)?;
 					changed = Some(setting.change_kind());
 				}
 				Task::ClearPipewireTokens => {
@@ -310,72 +290,28 @@ impl<T> Tab<T> for TabSettings<T> {
 	}
 }
 
-// Sorted alphabetically
-#[allow(clippy::enum_variant_names)]
-#[derive(Clone, Copy, Eq, PartialEq, AsRefStr, EnumString)]
-pub(crate) enum SettingType {
-	AllowSliding,
-	BlockGameInput,
-	BlockGameInputIgnoreWatch,
-	BlockPosesOnKbdInteraction,
-	CaptureMethod,
-	ClickFreezeTimeMs,
-	Clock12h,
-	DefaultCurvature,
-	DefaultOpacity,
-	DefaultOverlayScale,
-	DefaultPositioning,
-	DoubleCursorFix,
-	EnableWatch,
-	FocusFollowsMouseMode,
-	GridOpacity,
-	HandsfreeAltTab,
-	HandsfreePointer,
-	HideGrabHelp,
-	HideUsername,
-	InputCaptureMethod,
-	InputEmulationMethod,
-	InvertScrollDirectionX,
-	InvertScrollDirectionY,
-	KeyboardMiddleClick,
-	KeyboardSoundEnabled,
-	Language,
-	LeftHandedMouse,
-	LongPressDuration,
-	NotificationsEnabled,
-	NotificationsSoundEnabled,
-	OpaqueBackground,
-	MiddleGrabsSingle,
-	MouseAcceleration,
-	PointerLerpFactor,
-	MouseSpeed,
-	ScreenRenderDown,
-	ScrollSpeed,
-	SnapAngleDeg,
-	SetsOnWatch,
-	SpaceDragAffectsWorld,
-	SpaceDragMultiplier,
-	SpaceDragUnlocked,
-	SpaceGravityDamping,
-	SpaceGravityEnabled,
-	SpaceGravityFlingStrength,
-	SpaceGravityGravity,
-	SpaceGravityGroundFriction,
-	SpaceGravityFloorHeight,
-	SpaceRotateUnlocked,
-	UiAnimationSpeed,
-	UiGradientIntensity,
-	UiRoundMultiplier,
-	UprightScreenFix,
-	UsePassthrough,
-	UseSkybox,
-	WatchViewAngleMax,
-	WatchViewAngleMin,
-	XwaylandByDefault,
+trait SettingTypeImpl {
+	fn get_translation(&self) -> Result<&'static str, &'static str>;
+	fn get_enum_title(&self, config: &mut GeneralConfig) -> Translation;
+	fn change_kind(self) -> ConfigChangeKind;
+	fn set_enum(self, config: &mut GeneralConfig, value: &str);
+	fn get_tooltip(self) -> Option<&'static str>;
+	fn requires_restart(self) -> bool;
+	fn get_frontend_task(self) -> Option<FrontendTask>;
+
+	fn get_enum_title_inner<E>(value: E) -> Translation
+	where
+		E: EnumProperty + AsRef<str>;
+
+	fn get_enum_tooltip_inner<E>(value: E) -> Option<Translation>
+	where
+		E: EnumProperty + AsRef<str>;
 }
 
-impl SettingType {
-	pub fn change_kind(self) -> ConfigChangeKind {
+/// Ok is translation, Err is raw text
+/// `match` sorted alphabetically
+impl SettingTypeImpl for SettingType {
+	fn change_kind(self) -> ConfigChangeKind {
 		match self {
 			Self::MouseAcceleration | Self::MouseSpeed => ConfigChangeKind::WvrServerConfig,
 			Self::UseSkybox | Self::UsePassthrough => ConfigChangeKind::EnvironmentBlend,
@@ -383,75 +319,7 @@ impl SettingType {
 		}
 	}
 
-	pub fn mut_bool(self, config: &mut GeneralConfig) -> &mut bool {
-		match self {
-			Self::AllowSliding => &mut config.allow_sliding,
-			Self::BlockGameInput => &mut config.block_game_input,
-			Self::BlockGameInputIgnoreWatch => &mut config.block_game_input_ignore_watch,
-			Self::BlockPosesOnKbdInteraction => &mut config.block_poses_on_kbd_interaction,
-			Self::Clock12h => &mut config.clock_12h,
-			Self::DoubleCursorFix => &mut config.double_cursor_fix,
-			Self::EnableWatch => &mut config.enable_watch,
-			Self::FocusFollowsMouseMode => &mut config.focus_follows_mouse_mode,
-			Self::HideGrabHelp => &mut config.hide_grab_help,
-			Self::HideUsername => &mut config.hide_username,
-			Self::InvertScrollDirectionX => &mut config.invert_scroll_direction_x,
-			Self::InvertScrollDirectionY => &mut config.invert_scroll_direction_y,
-			Self::KeyboardSoundEnabled => &mut config.keyboard_sound_enabled,
-			Self::LeftHandedMouse => &mut config.left_handed_mouse,
-			Self::NotificationsEnabled => &mut config.notifications_enabled,
-			Self::NotificationsSoundEnabled => &mut config.notifications_sound_enabled,
-			Self::OpaqueBackground => &mut config.opaque_background,
-			Self::MiddleGrabsSingle => &mut config.middle_grabs_single,
-			Self::MouseAcceleration => &mut config.wvr_mouse_acceleration,
-			Self::ScreenRenderDown => &mut config.screen_render_down,
-			Self::SetsOnWatch => &mut config.sets_on_watch,
-			Self::SpaceDragAffectsWorld => &mut config.space_drag_affects_world,
-			Self::SpaceDragUnlocked => &mut config.space_drag_unlocked,
-			Self::SpaceGravityEnabled => &mut config.space_gravity_enabled,
-			Self::SpaceRotateUnlocked => &mut config.space_rotate_unlocked,
-			Self::UprightScreenFix => &mut config.upright_screen_fix,
-			Self::UsePassthrough => &mut config.use_passthrough,
-			Self::UseSkybox => &mut config.use_skybox,
-			Self::XwaylandByDefault => &mut config.xwayland_by_default,
-			_ => panic!("Requested bool for non-bool SettingType"),
-		}
-	}
-
-	pub fn mut_f32(self, config: &mut GeneralConfig) -> &mut f32 {
-		match self {
-			Self::DefaultCurvature => &mut config.default_curvature,
-			Self::DefaultOpacity => &mut config.default_opacity,
-			Self::DefaultOverlayScale => &mut config.default_overlay_scale,
-			Self::GridOpacity => &mut config.grid_opacity,
-			Self::LongPressDuration => &mut config.long_press_duration,
-			Self::PointerLerpFactor => &mut config.pointer_lerp_factor,
-			Self::MouseSpeed => &mut config.wvr_mouse_speed,
-			Self::ScrollSpeed => &mut config.scroll_speed,
-			Self::SnapAngleDeg => &mut config.snap_angle_deg,
-			Self::SpaceDragMultiplier => &mut config.space_drag_multiplier,
-			Self::SpaceGravityDamping => &mut config.space_gravity_damping,
-			Self::SpaceGravityFlingStrength => &mut config.space_gravity_fling_strength,
-			Self::SpaceGravityGravity => &mut config.space_gravity_gravity,
-			Self::SpaceGravityGroundFriction => &mut config.space_gravity_ground_friction,
-			Self::SpaceGravityFloorHeight => &mut config.space_gravity_floor_height,
-			Self::UiAnimationSpeed => &mut config.ui_animation_speed,
-			Self::UiGradientIntensity => &mut config.ui_gradient_intensity,
-			Self::UiRoundMultiplier => &mut config.ui_round_multiplier,
-			Self::WatchViewAngleMax => &mut config.watch_view_angle_max,
-			Self::WatchViewAngleMin => &mut config.watch_view_angle_min,
-			_ => panic!("Requested f32 for non-f32 SettingType"),
-		}
-	}
-
-	pub fn mut_i32(self, config: &mut GeneralConfig) -> &mut i32 {
-		match self {
-			Self::ClickFreezeTimeMs => &mut config.click_freeze_time_ms,
-			_ => panic!("Requested i32 for non-i32 SettingType"),
-		}
-	}
-
-	pub fn set_enum(self, config: &mut GeneralConfig, value: &str) {
+	fn set_enum(self, config: &mut GeneralConfig, value: &str) {
 		match self {
 			Self::CaptureMethod => {
 				config.capture_method = wlx_common::config::CaptureMethod::from_str(value).expect("Invalid enum value!")
@@ -484,34 +352,6 @@ impl SettingType {
 		}
 	}
 
-	fn get_enum_title(self, config: &mut GeneralConfig) -> Translation {
-		match self {
-			Self::CaptureMethod => Self::get_enum_title_inner(config.capture_method),
-			Self::DefaultPositioning => Self::get_enum_title_inner(config.default_positioning),
-			Self::InputCaptureMethod => Self::get_enum_title_inner(config.wvr_input_capture),
-			Self::InputEmulationMethod => Self::get_enum_title_inner(config.input_emulation_method),
-			Self::KeyboardMiddleClick => Self::get_enum_title_inner(config.keyboard_middle_click_mode),
-			Self::HandsfreePointer => Self::get_enum_title_inner(config.handsfree_pointer),
-			Self::HandsfreeAltTab => Self::get_enum_title_inner(config.handsfree_alt_tab),
-			Self::Language => match &config.language {
-				Some(lang) => Self::get_enum_title_inner(*lang),
-				None => Translation::from_translation_key("APP_SETTINGS.OPTION.AUTO"),
-			},
-			_ => panic!("Requested enum for non-enum SettingType"),
-		}
-	}
-
-	fn get_enum_title_inner<E>(value: E) -> Translation
-	where
-		E: EnumProperty + AsRef<str>,
-	{
-		value
-			.get_str("Translation")
-			.map(Translation::from_translation_key)
-			.or_else(|| value.get_str("Text").map(Translation::from_raw_text))
-			.unwrap_or_else(|| Translation::from_raw_text(value.as_ref()))
-	}
-
 	fn get_enum_tooltip_inner<E>(value: E) -> Option<Translation>
 	where
 		E: EnumProperty + AsRef<str>,
@@ -519,75 +359,9 @@ impl SettingType {
 		value.get_str("Tooltip").map(Translation::from_translation_key)
 	}
 
-	/// Ok is translation, Err is raw text
-	/// `match` sorted alphabetically
-	fn get_translation(self) -> Result<&'static str, &'static str> {
-		match self {
-			Self::AllowSliding => Ok("APP_SETTINGS.ALLOW_SLIDING"),
-			Self::BlockGameInput => Ok("APP_SETTINGS.BLOCK_GAME_INPUT"),
-			Self::BlockGameInputIgnoreWatch => Ok("APP_SETTINGS.BLOCK_GAME_INPUT_IGNORE_WATCH"),
-			Self::BlockPosesOnKbdInteraction => Ok("APP_SETTINGS.BLOCK_POSES_ON_KBD_INTERACTION"),
-			Self::CaptureMethod => Ok("APP_SETTINGS.CAPTURE_METHOD"),
-			Self::ClickFreezeTimeMs => Ok("APP_SETTINGS.CLICK_FREEZE_TIME_MS"),
-			Self::Clock12h => Ok("APP_SETTINGS.CLOCK_12H"),
-			Self::DefaultCurvature => Ok("APP_SETTINGS.DEFAULT_CURVATURE"),
-			Self::DefaultOpacity => Ok("APP_SETTINGS.DEFAULT_OPACITY"),
-			Self::DefaultOverlayScale => Ok("APP_SETTINGS.DEFAULT_OVERLAY_SCALE"),
-			Self::DefaultPositioning => Ok("APP_SETTINGS.DEFAULT_POSITIONING"),
-			Self::DoubleCursorFix => Ok("APP_SETTINGS.DOUBLE_CURSOR_FIX"),
-			Self::FocusFollowsMouseMode => Ok("APP_SETTINGS.FOCUS_FOLLOWS_MOUSE_MODE"),
-			Self::GridOpacity => Ok("APP_SETTINGS.GRID_OPACITY"),
-			Self::HandsfreeAltTab => Ok("APP_SETTINGS.HANDSFREE_ALT_TAB"),
-			Self::HandsfreePointer => Ok("APP_SETTINGS.HANDSFREE_POINTER"),
-			Self::HideGrabHelp => Ok("APP_SETTINGS.HIDE_GRAB_HELP"),
-			Self::HideUsername => Ok("APP_SETTINGS.HIDE_USERNAME"),
-			Self::InputCaptureMethod => Ok("APP_SETTINGS.INPUT_CAPTURE_METHOD"),
-			Self::InputEmulationMethod => Ok("APP_SETTINGS.INPUT_EMULATION_METHOD"),
-			Self::InvertScrollDirectionX => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_X"),
-			Self::InvertScrollDirectionY => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_Y"),
-			Self::KeyboardMiddleClick => Ok("APP_SETTINGS.KEYBOARD_MIDDLE_CLICK"),
-			Self::KeyboardSoundEnabled => Ok("APP_SETTINGS.KEYBOARD_SOUND_ENABLED"),
-			Self::Language => Ok("APP_SETTINGS.LANGUAGE"),
-			Self::LeftHandedMouse => Ok("APP_SETTINGS.LEFT_HANDED_MOUSE"),
-			Self::LongPressDuration => Ok("APP_SETTINGS.LONG_PRESS_DURATION"),
-			Self::NotificationsEnabled => Ok("APP_SETTINGS.NOTIFICATIONS_ENABLED"),
-			Self::NotificationsSoundEnabled => Ok("APP_SETTINGS.NOTIFICATIONS_SOUND_ENABLED"),
-			Self::OpaqueBackground => Ok("APP_SETTINGS.OPAQUE_BACKGROUND"),
-			Self::MiddleGrabsSingle => Ok("APP_SETTINGS.MIDDLE_GRABS_SINGLE"),
-			Self::MouseSpeed => Ok("APP_SETTINGS.POINTER_SPEED"),
-			Self::MouseAcceleration => Ok("APP_SETTINGS.POINTER_ACCELERATION"),
-			Self::PointerLerpFactor => Ok("APP_SETTINGS.POINTER_LERP_FACTOR"),
-			Self::ScreenRenderDown => Ok("APP_SETTINGS.SCREEN_RENDER_DOWN"),
-			Self::ScrollSpeed => Ok("APP_SETTINGS.SCROLL_SPEED"),
-			Self::EnableWatch => Ok("APP_SETTINGS.ENABLE_WATCH"),
-			Self::SetsOnWatch => Ok("APP_SETTINGS.SETS_ON_WATCH"),
-			Self::SnapAngleDeg => Ok("APP_SETTINGS.SNAP_ANGLE_DEG"),
-			Self::SpaceDragAffectsWorld => Ok("APP_SETTINGS.SPACE_DRAG_AFFECTS_WORLD"),
-			Self::SpaceDragMultiplier => Ok("APP_SETTINGS.SPACE_DRAG_MULTIPLIER"),
-			Self::SpaceDragUnlocked => Ok("APP_SETTINGS.SPACE_DRAG_UNLOCKED"),
-			Self::SpaceGravityDamping => Ok("APP_SETTINGS.SPACE_GRAVITY_DAMPING"),
-			Self::SpaceGravityEnabled => Ok("APP_SETTINGS.ENABLED"),
-			Self::SpaceGravityFlingStrength => Ok("APP_SETTINGS.SPACE_GRAVITY_FLING_STRENGTH"),
-			Self::SpaceGravityGravity => Ok("APP_SETTINGS.SPACE_GRAVITY_GRAVITY"),
-			Self::SpaceGravityGroundFriction => Ok("APP_SETTINGS.SPACE_GRAVITY_GROUND_FRICTION"),
-			Self::SpaceGravityFloorHeight => Ok("APP_SETTINGS.SPACE_GRAVITY_FLOOR_HEIGHT"),
-			Self::SpaceRotateUnlocked => Ok("APP_SETTINGS.SPACE_ROTATE_UNLOCKED"),
-			Self::UiAnimationSpeed => Ok("APP_SETTINGS.ANIMATION_SPEED"),
-			Self::UiGradientIntensity => Ok("APP_SETTINGS.UI_GRADIENT_INTENSITY"),
-			Self::UiRoundMultiplier => Ok("APP_SETTINGS.ROUND_MULTIPLIER"),
-			Self::UprightScreenFix => Ok("APP_SETTINGS.UPRIGHT_SCREEN_FIX"),
-			Self::UsePassthrough => Ok("APP_SETTINGS.USE_PASSTHROUGH"),
-			Self::UseSkybox => Ok("APP_SETTINGS.USE_SKYBOX"),
-			Self::WatchViewAngleMax => Ok("APP_SETTINGS.WATCH_VIEW_ANGLE"),
-			Self::WatchViewAngleMin => Ok("APP_SETTINGS.WATCH_VIEW_ANGLE"),
-			Self::XwaylandByDefault => Ok("APP_SETTINGS.XWAYLAND_BY_DEFAULT"),
-		}
-	}
-
 	/// `match` sorted alphabetically
 	fn get_tooltip(self) -> Option<&'static str> {
 		match self {
-			Self::BlockGameInput => Some("APP_SETTINGS.BLOCK_GAME_INPUT_HELP"),
 			Self::BlockGameInputIgnoreWatch => Some("APP_SETTINGS.BLOCK_GAME_INPUT_IGNORE_WATCH_HELP"),
 			Self::BlockPosesOnKbdInteraction => Some("APP_SETTINGS.BLOCK_POSES_ON_KBD_INTERACTION_HELP"),
 			Self::CaptureMethod => Some("APP_SETTINGS.CAPTURE_METHOD_HELP"),
@@ -617,6 +391,7 @@ impl SettingType {
 			Self::UseSkybox => Some("APP_SETTINGS.USE_SKYBOX_HELP"),
 			Self::WatchViewAngleMax => Some("APP_SETTINGS.WATCH_VIEW_ANGLE_HELP"),
 			Self::WatchViewAngleMin => Some("APP_SETTINGS.WATCH_VIEW_ANGLE_HELP"),
+			Self::BlockGameInput => Some("APP_SETTINGS.BLOCK_GAME_INPUT_HELP"),
 			_ => None,
 		}
 	}
@@ -640,6 +415,96 @@ impl SettingType {
 			Self::Clock12h => Some(FrontendTask::RefreshClock),
 			Self::OpaqueBackground => Some(FrontendTask::RefreshBackground),
 			_ => None,
+		}
+	}
+
+	fn get_enum_title_inner<E>(value: E) -> Translation
+	where
+		E: EnumProperty + AsRef<str>,
+	{
+		value
+			.get_str("Translation")
+			.map(Translation::from_translation_key)
+			.or_else(|| value.get_str("Text").map(Translation::from_raw_text))
+			.unwrap_or_else(|| Translation::from_raw_text(value.as_ref()))
+	}
+
+	fn get_enum_title(&self, config: &mut GeneralConfig) -> Translation {
+		match self {
+			Self::CaptureMethod => Self::get_enum_title_inner(config.capture_method),
+			Self::DefaultPositioning => Self::get_enum_title_inner(config.default_positioning),
+			Self::InputCaptureMethod => Self::get_enum_title_inner(config.wvr_input_capture),
+			Self::InputEmulationMethod => Self::get_enum_title_inner(config.input_emulation_method),
+			Self::KeyboardMiddleClick => Self::get_enum_title_inner(config.keyboard_middle_click_mode),
+			Self::HandsfreePointer => Self::get_enum_title_inner(config.handsfree_pointer),
+			Self::HandsfreeAltTab => Self::get_enum_title_inner(config.handsfree_alt_tab),
+			Self::Language => match &config.language {
+				Some(lang) => Self::get_enum_title_inner(*lang),
+				None => Translation::from_translation_key("APP_SETTINGS.OPTION.AUTO"),
+			},
+			_ => panic!("Requested enum for non-enum SettingType"),
+		}
+	}
+	fn get_translation(&self) -> Result<&'static str, &'static str> {
+		match self {
+			Self::AllowSliding => Ok("APP_SETTINGS.ALLOW_SLIDING"),
+			Self::BlockGameInput => Ok("APP_SETTINGS.BLOCK_GAME_INPUT"),
+			Self::BlockGameInputIgnoreWatch => Ok("APP_SETTINGS.BLOCK_GAME_INPUT_IGNORE_WATCH"),
+			Self::BlockPosesOnKbdInteraction => Ok("APP_SETTINGS.BLOCK_POSES_ON_KBD_INTERACTION"),
+			Self::CaptureMethod => Ok("APP_SETTINGS.CAPTURE_METHOD"),
+			Self::ClickFreezeTimeMs => Ok("APP_SETTINGS.CLICK_FREEZE_TIME_MS"),
+			Self::Clock12h => Ok("APP_SETTINGS.CLOCK_12H"),
+			Self::DefaultCurvature => Ok("APP_SETTINGS.DEFAULT_CURVATURE"),
+			Self::DefaultOpacity => Ok("APP_SETTINGS.DEFAULT_OPACITY"),
+			Self::DefaultOverlayScale => Ok("APP_SETTINGS.DEFAULT_OVERLAY_SCALE"),
+			Self::DefaultPositioning => Ok("APP_SETTINGS.DEFAULT_POSITIONING"),
+			Self::DoubleCursorFix => Ok("APP_SETTINGS.DOUBLE_CURSOR_FIX"),
+			Self::EnableWatch => Ok("APP_SETTINGS.ENABLE_WATCH"),
+			Self::FocusFollowsMouseMode => Ok("APP_SETTINGS.FOCUS_FOLLOWS_MOUSE_MODE"),
+			Self::GridOpacity => Ok("APP_SETTINGS.GRID_OPACITY"),
+			Self::HandsfreeAltTab => Ok("APP_SETTINGS.HANDSFREE_ALT_TAB"),
+			Self::HandsfreePointer => Ok("APP_SETTINGS.HANDSFREE_POINTER"),
+			Self::ShowGrabHelp => Ok("APP_SETTINGS.SHOW_GRAB_HELP"),
+			Self::InputCaptureMethod => Ok("APP_SETTINGS.INPUT_CAPTURE_METHOD"),
+			Self::InputEmulationMethod => Ok("APP_SETTINGS.INPUT_EMULATION_METHOD"),
+			Self::InvertScrollDirectionX => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_X"),
+			Self::InvertScrollDirectionY => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_Y"),
+			Self::KeyboardMiddleClick => Ok("APP_SETTINGS.KEYBOARD_MIDDLE_CLICK"),
+			Self::KeyboardSoundEnabled => Ok("APP_SETTINGS.KEYBOARD_SOUND_ENABLED"),
+			Self::Language => Ok("APP_SETTINGS.LANGUAGE"),
+			Self::LeftHandedMouse => Ok("APP_SETTINGS.LEFT_HANDED_MOUSE"),
+			Self::LongPressDuration => Ok("APP_SETTINGS.LONG_PRESS_DURATION"),
+			Self::MiddleGrabsSingle => Ok("APP_SETTINGS.MIDDLE_GRABS_SINGLE"),
+			Self::MouseAcceleration => Ok("APP_SETTINGS.POINTER_ACCELERATION"),
+			Self::MouseSpeed => Ok("APP_SETTINGS.POINTER_SPEED"),
+			Self::NotificationsEnabled => Ok("APP_SETTINGS.NOTIFICATIONS_ENABLED"),
+			Self::NotificationsSoundEnabled => Ok("APP_SETTINGS.NOTIFICATIONS_SOUND_ENABLED"),
+			Self::OpaqueBackground => Ok("APP_SETTINGS.OPAQUE_BACKGROUND"),
+			Self::PointerLerpFactor => Ok("APP_SETTINGS.POINTER_LERP_FACTOR"),
+			Self::ScreenRenderDown => Ok("APP_SETTINGS.SCREEN_RENDER_DOWN"),
+			Self::ScrollSpeed => Ok("APP_SETTINGS.SCROLL_SPEED"),
+			Self::SetsOnWatch => Ok("APP_SETTINGS.SETS_ON_WATCH"),
+			Self::ShowUsername => Ok("APP_SETTINGS.SHOW_USERNAME"),
+			Self::SnapAngleDeg => Ok("APP_SETTINGS.SNAP_ANGLE_DEG"),
+			Self::SpaceDragAffectsWorld => Ok("APP_SETTINGS.SPACE_DRAG_AFFECTS_WORLD"),
+			Self::SpaceDragMultiplier => Ok("APP_SETTINGS.SPACE_DRAG_MULTIPLIER"),
+			Self::SpaceDragUnlocked => Ok("APP_SETTINGS.SPACE_DRAG_UNLOCKED"),
+			Self::SpaceGravityDamping => Ok("APP_SETTINGS.SPACE_GRAVITY_DAMPING"),
+			Self::SpaceGravityEnabled => Ok("APP_SETTINGS.ENABLED"),
+			Self::SpaceGravityFlingStrength => Ok("APP_SETTINGS.SPACE_GRAVITY_FLING_STRENGTH"),
+			Self::SpaceGravityFloorHeight => Ok("APP_SETTINGS.SPACE_GRAVITY_FLOOR_HEIGHT"),
+			Self::SpaceGravityGravity => Ok("APP_SETTINGS.SPACE_GRAVITY_GRAVITY"),
+			Self::SpaceGravityGroundFriction => Ok("APP_SETTINGS.SPACE_GRAVITY_GROUND_FRICTION"),
+			Self::SpaceRotateUnlocked => Ok("APP_SETTINGS.SPACE_ROTATE_UNLOCKED"),
+			Self::UiAnimationSpeed => Ok("APP_SETTINGS.ANIMATION_SPEED"),
+			Self::UiGradientIntensity => Ok("APP_SETTINGS.UI_GRADIENT_INTENSITY"),
+			Self::UiRoundMultiplier => Ok("APP_SETTINGS.ROUND_MULTIPLIER"),
+			Self::UprightScreenFix => Ok("APP_SETTINGS.UPRIGHT_SCREEN_FIX"),
+			Self::UsePassthrough => Ok("APP_SETTINGS.USE_PASSTHROUGH"),
+			Self::UseSkybox => Ok("APP_SETTINGS.USE_SKYBOX"),
+			Self::WatchViewAngleMax => Ok("APP_SETTINGS.WATCH_VIEW_ANGLE"),
+			Self::WatchViewAngleMin => Ok("APP_SETTINGS.WATCH_VIEW_ANGLE"),
+			Self::XwaylandByDefault => Ok("APP_SETTINGS.XWAYLAND_BY_DEFAULT"),
 		}
 	}
 }
@@ -701,7 +566,7 @@ impl<T> TabSettings<T> {
 		self.current_tab = None;
 		let globals = frontend.layout.state.globals.clone();
 
-		let vulkan_devices = if matches!(name, TabNameEnum::Features) {
+		let vulkan_devices = if matches!(name, TabNameEnum::General) {
 			Some(frontend.interface.enumerate_vulkan_devices(data)?)
 		} else {
 			None
@@ -725,17 +590,20 @@ impl<T> TabSettings<T> {
 		};
 
 		match name {
-			TabNameEnum::LookAndFeel => {
-				self.current_tab = Some(Box::new(tab_look_and_feel::State::mount(settings_mount_params)?));
-			}
-			TabNameEnum::Features => {
-				self.current_tab = Some(Box::new(tab_features::State::mount(
+			TabNameEnum::General => {
+				self.current_tab = Some(Box::new(tab_general::State::mount(
 					settings_mount_params,
 					vulkan_devices.unwrap(), /* safe */
 				)?));
 			}
-			TabNameEnum::SpaceDrag => {
-				self.current_tab = Some(Box::new(tab_space_drag::State::mount(settings_mount_params)?));
+			TabNameEnum::Appearance => {
+				self.current_tab = Some(Box::new(tab_appearance::State::mount(settings_mount_params)?));
+			}
+			TabNameEnum::Hid => {
+				self.current_tab = Some(Box::new(tab_hid::State::mount(settings_mount_params)?));
+			}
+			TabNameEnum::Overlays => {
+				self.current_tab = Some(Box::new(tab_overlays::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Controls => {
 				self.current_tab = Some(Box::new(tab_controls::State::mount(settings_mount_params)?));
@@ -751,9 +619,6 @@ impl<T> TabSettings<T> {
 			}
 			TabNameEnum::Troubleshooting => {
 				self.current_tab = Some(Box::new(tab_troubleshooting::State::mount(settings_mount_params)?));
-			}
-			TabNameEnum::Skybox => {
-				self.current_tab = Some(Box::new(tab_skybox::State::mount(settings_mount_params)?));
 			}
 			TabNameEnum::Statistics => {
 				self.current_tab = Some(Box::new(tab_statistics::State::mount(settings_mount_params)?));
@@ -777,6 +642,14 @@ impl<T> TabSettings<T> {
 		let tasks = Tasks::default();
 		let tabs = parser_state.fetch_component_as::<ComponentTabs>("tabs")?;
 
+		{
+			let mut label_version = parser_state.fetch_widget_as::<WidgetLabel>(&frontend.layout.state, "label_version")?;
+
+			label_version.set_text_simple(
+				&mut frontend.globals.get(),
+				Translation::from_raw_text_string(frontend.interface.get_version_string(data)),
+			);
+		}
 		if !frontend.interface.get_feats(data).xr_backend.is_open_xr() {
 			let skybox_btn = tabs.get_tab_button("skybox").unwrap();
 			frontend
@@ -789,14 +662,12 @@ impl<T> TabSettings<T> {
 		tabs.on_select({
 			let tasks = tasks.clone();
 			Rc::new(move |_common, evt| {
-				if let Some(tab) = TabNameEnum::from_string(&evt.name) {
-					tasks.push(Task::SetTab(tab));
-				}
+				tasks.push(Task::SetTab(TabNameEnum::from_string(&evt.name)));
 				Ok(())
 			})
 		});
 
-		tasks.push(Task::SetTab(TabNameEnum::LookAndFeel));
+		tasks.push(Task::SetTab(TabNameEnum::General));
 
 		let feats = frontend.interface.get_feats(data);
 

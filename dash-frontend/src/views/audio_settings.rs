@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use crate::frontend::{FrontendTask, FrontendTasks};
 use wgui::{
 	assets::{AssetPathRef, AssetPathSource},
 	color::{WguiColor, WguiColorName},
@@ -16,11 +17,7 @@ use wgui::{
 	task::Tasks,
 	widget::{ConstructEssentials, rectangle::WidgetRectangle},
 };
-
-use crate::{
-	frontend::{FrontendTask, FrontendTasks},
-	util::pactl_wrapper::{self},
-};
+use wlx_common::pactl_wrapper::{self};
 
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
@@ -175,6 +172,7 @@ fn does_string_mention_hmd_sink(input: &str) -> bool {
 	lwr.contains("oculus") || // Oculus
 	lwr.contains("rift") || // Also Oculus
 	lwr.contains("beyond") ||  // Bigscreen Beyond
+	lwr.contains("pimax") || // Pimax
 	lwr.contains("wivrn") // WiVRn
 }
 
@@ -184,6 +182,7 @@ fn does_string_mention_hmd_source(input: &str) -> bool {
 	lwr.contains("valve") || // Valve hardware
 	lwr.contains("oculus") || // Oculus
 	lwr.contains("beyond")  || // Bigscreen Beyond
+	lwr.contains("pimax") || // Pimax
 	lwr.contains("wivrn") // WiVRn
 }
 

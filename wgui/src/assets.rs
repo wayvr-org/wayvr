@@ -14,10 +14,10 @@ pub enum AssetPathSource {
 
 #[derive(Debug, Clone, Copy)]
 pub enum AssetPathRef<'a> {
-	WguiInternal(&'a str),  // tied to internal wgui AssetProvider. Used internally
-	BuiltIn(&'a str),       // tied to user AssetProvider
-	FileOrBuiltIn(&'a str), // attempts to load from a path relative to asset_folder, falls back to BuiltIn
-	File(&'a str),          // load from filesystem
+	WguiInternal(&'a str), // tied to internal wgui AssetProvider. Used internally
+	BuiltIn(&'a str),      // tied to user AssetProvider
+	FileOrBuiltIn { path: &'a str, fallback: Option<&'a str> }, // load `path` from filesystem, with built-in fallback
+	File(&'a str),         // load from filesystem
 }
 
 // see AssetPath above for documentation
@@ -25,7 +25,7 @@ pub enum AssetPathRef<'a> {
 pub enum AssetPathRc {
 	WguiInternal(Rc<Path>),
 	BuiltIn(Rc<Path>),
-	FileOrBuiltIn(Rc<Path>),
+	FileOrBuiltIn { path: Rc<Path>, fallback: Option<Rc<Path>> },
 	File(Rc<Path>),
 }
 
@@ -34,7 +34,7 @@ impl AssetPathRef<'_> {
 		match &self {
 			AssetPathRef::WguiInternal(path) => path,
 			AssetPathRef::BuiltIn(path) => path,
-			AssetPathRef::FileOrBuiltIn(path) => path,
+			AssetPathRef::FileOrBuiltIn { path, .. } => path,
 			AssetPathRef::File(path) => path,
 		}
 	}
@@ -43,7 +43,10 @@ impl AssetPathRef<'_> {
 		match self {
 			AssetPathRef::WguiInternal(path) => AssetPathRc::WguiInternal(Rc::from(Path::new(path))),
 			AssetPathRef::BuiltIn(path) => AssetPathRc::BuiltIn(Rc::from(Path::new(path))),
-			AssetPathRef::FileOrBuiltIn(path) => AssetPathRc::FileOrBuiltIn(Rc::from(Path::new(path))),
+			AssetPathRef::FileOrBuiltIn { path, fallback } => AssetPathRc::FileOrBuiltIn {
+				path: Rc::from(Path::new(path)),
+				fallback: fallback.map(|p| Rc::from(Path::new(p))),
+			},
 			AssetPathRef::File(path) => AssetPathRc::File(Rc::from(Path::new(path))),
 		}
 	}
@@ -54,17 +57,23 @@ impl AssetPathRc {
 		match self {
 			AssetPathRc::WguiInternal(buf) => AssetPathRef::WguiInternal(buf.to_str().unwrap()),
 			AssetPathRc::BuiltIn(buf) => AssetPathRef::BuiltIn(buf.to_str().unwrap()),
-			AssetPathRc::FileOrBuiltIn(buf) => AssetPathRef::FileOrBuiltIn(buf.to_str().unwrap()),
+			AssetPathRc::FileOrBuiltIn { path, fallback } => AssetPathRef::FileOrBuiltIn {
+				path: path.to_str().unwrap(),
+				fallback: fallback.as_ref().map(|p| p.to_str().unwrap()),
+			},
 			AssetPathRc::File(buf) => AssetPathRef::File(buf.to_str().unwrap()),
 		}
 	}
 
 	#[must_use]
-	pub const fn replace_path(&self, new_path: Rc<Path>) -> AssetPathRc {
+	pub fn replace_path(&self, new_path: Rc<Path>) -> AssetPathRc {
 		match self {
 			AssetPathRc::WguiInternal(_) => AssetPathRc::WguiInternal(new_path),
 			AssetPathRc::BuiltIn(_) => AssetPathRc::BuiltIn(new_path),
-			AssetPathRc::FileOrBuiltIn(_) => AssetPathRc::FileOrBuiltIn(new_path),
+			AssetPathRc::FileOrBuiltIn { fallback, .. } => AssetPathRc::FileOrBuiltIn {
+				path: new_path,
+				fallback: fallback.clone(),
+			},
 			AssetPathRc::File(_) => AssetPathRc::File(new_path),
 		}
 	}
@@ -73,7 +82,7 @@ impl AssetPathRc {
 		match self {
 			AssetPathRc::WguiInternal(buf) => buf.as_ref(),
 			AssetPathRc::BuiltIn(buf) => buf.as_ref(),
-			AssetPathRc::FileOrBuiltIn(buf) => buf.as_ref(),
+			AssetPathRc::FileOrBuiltIn { path, .. } => path.as_ref(),
 			AssetPathRc::File(buf) => buf.as_ref(),
 		}
 	}
@@ -84,7 +93,10 @@ impl AssetPathRc {
 		match self {
 			AssetPathRc::WguiInternal(_) => AssetPathRc::WguiInternal(res.into()),
 			AssetPathRc::BuiltIn(_) => AssetPathRc::BuiltIn(res.into()),
-			AssetPathRc::FileOrBuiltIn(_) => AssetPathRc::FileOrBuiltIn(res.into()),
+			AssetPathRc::FileOrBuiltIn { fallback, .. } => AssetPathRc::FileOrBuiltIn {
+				path: res.into(),
+				fallback: fallback.clone(),
+			},
 			AssetPathRc::File(_) => AssetPathRc::File(res.into()),
 		}
 	}

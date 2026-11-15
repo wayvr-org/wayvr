@@ -134,7 +134,10 @@ impl<S: 'static> GuiPanel<S> {
             path: if params.external_xml {
                 AssetPathRef::File(path)
             } else {
-                AssetPathRef::FileOrBuiltIn(path)
+                AssetPathRef::FileOrBuiltIn {
+                    path,
+                    fallback: None,
+                }
             },
             extra: wgui::parser::ParseDocumentExtra {
                 on_custom_attribs: Some(on_custom_attrib_inner.clone()),
@@ -306,6 +309,8 @@ impl<S: 'static> OverlayBackend for GuiPanel<S> {
         while self.timestep.on_tick() {
             self.layout.tick()?;
         }
+
+        self.update_layout(app)?;
 
         if self.layout.content_size.x * self.layout.content_size.y == 0.0 {
             log::trace!("Unable to render: content size 0");

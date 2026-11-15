@@ -46,6 +46,8 @@ pub struct OpenXrInputAction {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub handsfree: Option<OneOrMany<String>>,
 	#[serde(skip_serializing_if = "Option::is_none")]
+	pub head: Option<OneOrMany<String>>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub left_chord: Option<Vec<OpenXrInputChordMember>>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub right_chord: Option<Vec<OpenXrInputChordMember>>,
@@ -90,6 +92,10 @@ pub struct OpenXrInputProfile {
 	pub scroll: Option<OpenXrInputAction>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub haptic: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub volume_up: Option<OpenXrInputAction>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub volume_down: Option<OpenXrInputAction>,
 }
 
 fn strip_axis_component(path: &str) -> String {
@@ -146,6 +152,12 @@ fn normalize_profile(profile: &mut OpenXrInputProfile) {
 	if let Some(action) = profile.haptic.as_mut() {
 		normalize_action(action);
 	}
+	if let Some(action) = profile.volume_up.as_mut() {
+		normalize_action(action);
+	}
+	if let Some(action) = profile.volume_down.as_mut() {
+		normalize_action(action);
+	}
 }
 
 fn normalize_action(action: &mut OpenXrInputAction) {
@@ -173,6 +185,7 @@ fn normalize_action(action: &mut OpenXrInputAction) {
 	process_one_or_many(&mut action.left);
 	process_one_or_many(&mut action.right);
 	process_one_or_many(&mut action.handsfree);
+	process_one_or_many(&mut action.head);
 
 	let process_chord = |members: &mut Option<Vec<OpenXrInputChordMember>>| {
 		if let Some(m) = members {

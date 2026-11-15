@@ -3,9 +3,9 @@ pub mod dmabuf;
 
 use std::{collections::HashMap, sync::Arc};
 
-use smallvec::SmallVec;
 use wgui::gfx::{
-    BufferUsage, BuiltCommandBuffer, Format, ShaderModule, Vert2Buf, Vert2Uv, WGfx, WGfxCreateInfo,
+    BufferUsage, BuiltCommandBuffer, CommandPool, Format, GpuSubmission, QueueType, ShaderModule,
+    Vert2Buf, Vert2Uv, WGfx, WGfxCreateInfo,
 };
 use wlx_capture::DrmFormat;
 #[cfg(feature = "pipewire")]
@@ -18,6 +18,7 @@ use crate::shaders::{
 use dmabuf::get_drm_formats;
 
 pub struct WGfxExtras {
+    pub gfx_pool: CommandPool,
     pub shaders: HashMap<&'static str, Arc<ShaderModule>>,
     pub drm_formats: Arc<[DrmFormat]>,
     pub quad_verts: Vert2Buf,
@@ -28,6 +29,7 @@ pub struct WGfxExtras {
 
 impl WGfxExtras {
     pub fn new(gfx: &Arc<WGfx>) -> anyhow::Result<Self> {
+        let gfx_pool = gfx.create_command_pool(QueueType::Graphics)?;
         let mut shaders = HashMap::new();
         shaders.insert("vert_quad", vert_quad::load(gfx)?);
         shaders.insert("frag_color", frag_color::load(gfx)?);
@@ -79,6 +81,7 @@ impl WGfxExtras {
         });
 
         Ok(Self {
+            gfx_pool,
             shaders,
             drm_formats,
             quad_verts,
@@ -204,22 +207,21 @@ pub fn init_openvr_graphics(
 
 #[derive(Default)]
 pub struct GpuFutures {
-    command_buffers: Vec<Arc<BuiltCommandBuffer>>,
+    submissions: Vec<GpuSubmission>,
 }
 
 impl GpuFutures {
-    pub fn execute(&mut self, command_buffer: Arc<BuiltCommandBuffer>) {
-        self.command_buffers.push(command_buffer);
-    }
-
-    pub fn execute_results(&mut self, results: SmallVec<[Arc<BuiltCommandBuffer>; 2]>) {
-        self.command_buffers.extend(results);
-    }
-
-    pub fn wait(self) -> anyhow::Result<()> {
-        for command_buffer in self.command_buffers {
-            command_buffer.submit_and_wait()?;
-        }
+    pub fn execute(&mut self, command_buffer: Arc<BuiltCommandBuffer>) -> anyhow::Result<()> {
+        self.submissions
+            .push(GpuSubmission::submit(vec![command_buffer])?);
         Ok(())
+    }
+
+    pub fn add(&mut self, submission: GpuSubmission) {
+        self.submissions.push(submission);
+    }
+
+    pub fn wait(mut self) -> anyhow::Result<()> {
+        GpuSubmission::wait_all(&mut self.submissions)
     }
 }

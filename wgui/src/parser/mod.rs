@@ -123,10 +123,10 @@ pub trait Fetchable {
 	/// Fetch a component by widget ID (returns Component)
 	fn fetch_component_by_widget_id(&self, state: &LayoutState, widget_id: WidgetID) -> anyhow::Result<Component>;
 
-	/// Fetch a component by string ID and down‑cast it to a concrete component type `T` (see `components/mod.rs`)
+	/// Fetch a component by string ID and down-cast it to a concrete component type `T` (see `components/mod.rs`)
 	fn fetch_component_as<T: 'static>(&self, id: &str) -> anyhow::Result<Rc<T>>;
 
-	/// Fetch a component by widget ID and down‑cast it to a concrete component type `T` (see `components/mod.rs`)
+	/// Fetch a component by widget ID and down-cast it to a concrete component type `T` (see `components/mod.rs`)
 	fn fetch_component_from_widget_id_as<T: 'static>(
 		&self,
 		state: &LayoutState,
@@ -139,7 +139,7 @@ pub trait Fetchable {
 	/// Retrieve the widget associated with a string ID, returning a `WidgetPair` (id and widget itself)
 	fn fetch_widget(&self, state: &LayoutState, id: &str) -> anyhow::Result<WidgetPair>;
 
-	/// Retrieve a widget by string ID and down‑cast its inner value to type `T` (see `widget/mod.rs`)
+	/// Retrieve a widget by string ID and down-cast its inner value to type `T` (see `widget/mod.rs`)
 	fn fetch_widget_as<'a, T: 'static>(&self, state: &'a LayoutState, id: &str) -> anyhow::Result<RefMut<'a, T>>;
 }
 
@@ -826,18 +826,30 @@ fn expand_path_from_kv(file: &ParserFile, attrib: &str, value: &str) -> AssetPat
 	match attrib {
 		"src_internal" => AssetPathRc::WguiInternal(expand_path(&par, AssetPathSource::Internal, value).into()),
 		"src_builtin" => AssetPathRc::BuiltIn(expand_path(&par, AssetPathSource::BuiltIn, value).into()),
-		"src" => AssetPathRc::FileOrBuiltIn(
-			expand_path(
-				&par,
-				if file.xml_path_source == AssetPathSource::Filesystem {
-					AssetPathSource::Filesystem // use filesystem for src="..." if the xml file resides on the filesystem too
+		"src" => {
+			// for filesystem paths, '@' expands to the xml document root dir
+			// calculate fallback in case if the filesystem expanded path doesn't exist
+			let fallback =
+				if file.version.0 >= 2 && file.xml_path_source == AssetPathSource::Filesystem && value.starts_with('@') {
+					Some(Rc::from(expand_path(&par, AssetPathSource::BuiltIn, value).as_path()))
 				} else {
-					AssetPathSource::BuiltIn // use builtin
-				},
-				value,
-			)
-			.into(),
-		),
+					None
+				};
+
+			AssetPathRc::FileOrBuiltIn {
+				path: expand_path(
+					&par,
+					if file.xml_path_source == AssetPathSource::Filesystem {
+						AssetPathSource::Filesystem // use filesystem for src="..." if the xml file resides on the filesystem too
+					} else {
+						AssetPathSource::BuiltIn // use builtin
+					},
+					value,
+				)
+				.into(),
+				fallback,
+			}
+		}
 		"src_ext" => AssetPathRc::File(expand_path(&par, AssetPathSource::Filesystem, value).into()),
 		_ => unreachable!(),
 	}
@@ -1218,6 +1230,7 @@ fn parse_child<'a>(
 		"CheckBox" => (
 			Default::default(),
 			Some(parse_component_checkbox(
+				file,
 				ctx,
 				parent_id,
 				&attribs,
@@ -1228,6 +1241,7 @@ fn parse_child<'a>(
 		"RadioBox" => (
 			Default::default(),
 			Some(parse_component_checkbox(
+				file,
 				ctx,
 				parent_id,
 				&attribs,

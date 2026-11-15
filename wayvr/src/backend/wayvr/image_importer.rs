@@ -11,20 +11,23 @@ use smithay::{
         single_pixel_buffer::SinglePixelBufferUserData,
     },
 };
-use wgui::gfx::{CommandBufferUsage, Format, ImageView, WGfx};
-use wlx_capture::frame::{DmabufFrame, FrameFormat, Transform};
+use wgui::gfx::{CommandBufferUsage, CommandPool, Format, ImageView};
+use wlx_capture::{
+    DrmFourcc,
+    frame::{DmabufFrame, FrameFormat, Transform},
+};
 
 use crate::graphics::dmabuf::{WGfxDmabuf, fourcc_to_vk};
 
 pub struct ImageImporter {
-    gfx: Arc<WGfx>,
+    command_pool: CommandPool,
     dmabufs: HashMap<WeakDmabuf, Arc<ImageView>>,
 }
 
 impl ImageImporter {
-    pub fn new(gfx: Arc<WGfx>) -> Self {
+    pub fn new(command_pool: CommandPool) -> Self {
         Self {
-            gfx,
+            command_pool,
             dmabufs: HashMap::new(),
         }
     }
@@ -34,15 +37,15 @@ impl ImageImporter {
         spb: &SinglePixelBufferUserData,
     ) -> anyhow::Result<Arc<ImageView>> {
         let mut cmd_buf = self
-            .gfx
-            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+            .command_pool
+            .create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
         let rgba = spb.rgba8888();
         let image = cmd_buf.upload_image(1, 1, Format::R8G8B8A8_UNORM, &rgba)?;
 
         cmd_buf.build_and_execute_now()?; //TODO: async
 
-        self.gfx.create_image_view(image)
+        self.command_pool.gfx().create_image_view(image)
     }
 
     pub fn import_shm(
@@ -52,8 +55,8 @@ impl ImageImporter {
         bd: BufferData,
     ) -> anyhow::Result<Arc<ImageView>> {
         let mut cmd_buf = self
-            .gfx
-            .create_xfer_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
+            .command_pool
+            .create_command_buffer(CommandBufferUsage::OneTimeSubmit)?;
 
         let fourcc = shm_format_to_fourcc(bd.format)
             .with_context(|| format!("Could not convert {:?} to fourcc", bd.format))?;
@@ -69,20 +72,27 @@ impl ImageImporter {
             other => anyhow::bail!("unsupported SHM format for packed upload: {other:?}"),
         };
 
-        let row_bytes = bd.width as usize * bytes_per_pixel;
-        let stride = bd.stride as usize;
-        let height = bd.height as usize;
+        let width = usize::try_from(bd.width).context("invalid wl_shm width")?;
+        let height = usize::try_from(bd.height).context("invalid wl_shm height")?;
+        let stride = usize::try_from(bd.stride).context("invalid wl_shm stride")?;
+        let offset = usize::try_from(bd.offset).context("invalid wl_shm offset")?;
+        let row_bytes = width
+            .checked_mul(bytes_per_pixel)
+            .context("invalid wl_shm row size")?;
 
-        if stride < row_bytes {
-            anyhow::bail!("invalid wl_shm stride: {stride} < {row_bytes}");
+        if width == 0 || height == 0 || stride < row_bytes {
+            anyhow::bail!("invalid wl_shm dimensions or stride");
         }
 
-        let required = stride * height;
-        if size < required {
-            anyhow::bail!("wl_shm buffer too small: {size} < {required}");
+        let required = (height - 1)
+            .checked_mul(stride)
+            .and_then(|n| n.checked_add(row_bytes))
+            .context("invalid wl_shm buffer size")?;
+        if offset.checked_add(required).is_none_or(|end| end > size) {
+            anyhow::bail!("wl_shm buffer exceeds pool size");
         }
 
-        let src = unsafe { std::slice::from_raw_parts(data, required) };
+        let src = unsafe { std::slice::from_raw_parts(data.add(offset), required) };
         let mut packed = vec![0u8; row_bytes * height];
 
         for y in 0..height {
@@ -91,10 +101,16 @@ impl ImageImporter {
             dst_row.copy_from_slice(src_row);
         }
 
+        if matches!(fourcc, DrmFourcc::Xrgb8888 | DrmFourcc::Xbgr8888) {
+            for pixel in packed.as_chunks_mut::<4>().0 {
+                pixel[3] = 255;
+            }
+        }
+
         let image = cmd_buf.upload_image(bd.width as _, bd.height as _, format, &packed)?;
         cmd_buf.build_and_execute_now()?;
 
-        self.gfx.create_image_view(image)
+        self.command_pool.gfx().create_image_view(image)
     }
 
     pub fn get_or_import_dmabuf(&mut self, dmabuf: Dmabuf) -> anyhow::Result<Arc<ImageView>> {
@@ -131,9 +147,9 @@ impl ImageImporter {
             frame.planes[i].stride = stride as _;
         }
 
-        let image = self.gfx.dmabuf_texture(&frame)?;
+        let image = self.command_pool.gfx().dmabuf_texture(&frame)?;
         log::info!("DMA-buf import: creating image view");
-        let image_view = self.gfx.create_image_view(image)?;
+        let image_view = self.command_pool.gfx().create_image_view(image)?;
         log::info!("DMA-buf import: image view created");
         self.dmabufs.insert(key, image_view.clone());
         log::info!("DMA-buf import: cached ImageView");

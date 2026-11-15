@@ -38,4 +38,6 @@ pub struct RunParams {
     pub wgui_globals: WguiGlobals,
     pub config: GeneralConfig,
     pub no_audio: bool,
+    pub session: bool,
+    pub capture_input: bool,
 }
