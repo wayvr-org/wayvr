@@ -157,6 +157,7 @@ const BLEND_WAYLAND_ALPHA: AttachmentBlend = AttachmentBlend {
     alpha_blend_op: BlendOp::Add,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn create_wl_window_overlay(
     name: Arc<str>,
     title: Arc<str>,
@@ -774,8 +775,8 @@ impl OverlayBackend for WvrWindowBackend {
         }
 
         let inner_extent = meta.extent;
-        let committed_window_extent = window_geometry.map_or(
-            [surface_size.w.max(1) as u32, surface_size.h.max(1) as u32],
+        let committed_window_extent = window_geometry.map_or_else(
+            || [surface_size.w.max(1) as u32, surface_size.h.max(1) as u32],
             |geometry| [geometry.size.w.max(1) as u32, geometry.size.h.max(1) as u32],
         );
         self.window_size = Some(overlay_size_from_client_size(

@@ -1478,8 +1478,8 @@ pub fn parse_from_assets(
 
 	if let Some(extra) = doc_params.extra {
 		ctx.populate_extra_variables(&extra.extra_vars);
-		root_dir = extra.root_dir.clone();
-	};
+		root_dir.clone_from(&extra.root_dir);
+	}
 
 	let root_dir = root_dir.unwrap_or_else(|| xml_path.replace_path(Path::new("/").into()));
 

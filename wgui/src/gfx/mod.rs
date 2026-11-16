@@ -59,6 +59,7 @@ pub fn upload_quad_vertices(
 	upload_quad_vertices_uv(buf, width, height, x, y, w, h, [0.0, 0.0, 1.0, 1.0])
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn upload_quad_vertices_uv(
 	buf: &Buffer<Vert2Uv>,
 	width: f32,

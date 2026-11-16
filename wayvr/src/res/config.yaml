@@ -3,7 +3,7 @@
 # Default values are shown unless noted otherwise.
 
 # In case you're not getting the expected result,
-# check the logs at /tmp/wlx.log for parsing errors.
+# check the logs at /tmp/wayvr.log for parsing errors.
 
 ## Only if built with `osc` feature. What port to send OSC messages to.
 #osc_out_port: 9000
@@ -23,13 +23,6 @@
 
 ## Path to read the custom theme from, relative to `~/.config/wayvr`
 #theme_path: "theme"
-
-## These can be used to control the color theme of WayVR.
-#color_text: "#ffffff"
-#color_accent: "#008cff"
-#color_danger: "#ff3300"
-#color_faded: "#668299"
-#color_background: "#010206"
 
 ## Path to custom skybox texture, relative to `~/.config/wayvr`
 #skybox_texture: ""
@@ -64,9 +57,6 @@
 #  XSNotification: Center
 #  IpdChange: Hide
 
-## Path to a custom notification sound, relative to `~/.config/wayvr`
-#notification_sound: ""
-
 ## If `screen_render_down` is enabled,
 ## controls the maximum height of the screen
 #screen_max_height: 1440
@@ -92,11 +82,13 @@
 #sets_on_watch: false
 
 ## Force an alternative method for Wayland desktop capture.
-## `auto`: default
-## `pw_fallback`: Pipewire-based software capture
-## `screencopy`: Software capture that works on some Wayland compositors
+## `Auto`: default
+## `PipeWire`: Pipewire-based GPU capture
+## `PipeWireCpu`: Pipewire-based software (CPU) capture
+## `ScreenCopyGpu`: Screencopy-based GPU capture
+## `ScreenCopyCpu`: Screencopy-based CPU capture
 ## Other values that were previously here are no longer supported.
-#capture_method: auto
+#capture_method: Auto
 
 ## Monado/WiVRn only. Do not send controller input to other VR apps
 ## while WayVR is being hovered. Either hand will block both hand inputs!
@@ -144,10 +136,10 @@
 #use_skybox: true
 
 ## Monado/WiVRn only. Opacity of the floor grid if use_skybox is enabled.
-#grid_opacity: true
+#grid_opacity: 1.0
 
-## Hide the help popup that appears on your hand while grabbing an overlay
-#hide_grab_help: false
+## Show/hide the help popup that appears on your hand while grabbing an overlay
+#show_grab_help: true
 
 ## Smoothing applied to the pointer.
 ## 1.0 → no smoothing
@@ -173,10 +165,10 @@
 #keyboard_sound_enabled: true
 
 ## Multiplier for animation speed. 2.0 → double speed, 0.5 → half speed
-#animation_speed: 1.0
+#ui_animation_speed: 1.0
 
 ## Adjust this between 0..1 for a more rectangular feel.
-#round_multiplier: 1.0
+#ui_round_multiplier: 1.0
 
 ## Render screens & mirrors at a lower resolution.
 ## Avoids aliasing on 4K+ screens, and also saves VRAM

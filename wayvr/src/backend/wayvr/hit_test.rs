@@ -320,6 +320,7 @@ pub fn rendered_surfaces_dirty(old: &[RenderedSurface], new: &[RenderedSurface])
         return true;
     }
 
+    #[allow(clippy::float_cmp)]
     old.iter().zip(new).any(|(a, b)| {
         a.surface_id != b.surface_id
             || a.pos != b.pos

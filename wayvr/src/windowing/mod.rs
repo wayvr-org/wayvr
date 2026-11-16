@@ -176,7 +176,7 @@ pub fn overlay_scale_from_extent(size: [u32; 2]) -> (f32, f32) {
     ((w * h).sqrt() / RELATIVE_SIZE, w / 1920.0)
 }
 
-pub(crate) fn client_size_from_overlay_size(
+pub fn client_size_from_overlay_size(
     size: [u32; 2],
     server_side_decorations: bool,
 ) -> Size<i32, Logical> {
@@ -194,7 +194,7 @@ pub(crate) fn client_size_from_overlay_size(
     )
 }
 
-pub(crate) fn overlay_size_from_client_size(
+pub const fn overlay_size_from_client_size(
     size: [u32; 2],
     server_side_decorations: bool,
 ) -> [u32; 2] {

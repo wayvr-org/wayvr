@@ -311,7 +311,7 @@ impl BakedToast {
         self.id
     }
 
-    pub fn with_id(mut self, id: ToastId) -> Self {
+    pub const fn with_id(mut self, id: ToastId) -> Self {
         self.id = id;
         self
     }

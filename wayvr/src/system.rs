@@ -9,7 +9,7 @@ impl SystemTaskManager {
     pub fn handle_task(task: SystemTask) -> anyhow::Result<()> {
         match task {
             SystemTask::ChangeVolume(increase) => {
-                Self::update_volume(if increase { VOLUME_STEP } else { -VOLUME_STEP })
+                Self::update_volume(if increase { VOLUME_STEP } else { -VOLUME_STEP });
             }
         }
         Ok(())
