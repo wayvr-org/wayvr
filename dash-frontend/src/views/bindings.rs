@@ -493,6 +493,7 @@ fn is_side_agnostic_action(action: &str) -> bool {
 	matches!(action, "show_hide" | "toggle_dashboard")
 }
 
+#[allow(clippy::too_many_arguments)]
 fn chord_controls_for_output(
 	mp: &mut MacroParams,
 	parent: WidgetID,

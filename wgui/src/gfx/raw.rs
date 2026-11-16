@@ -2861,7 +2861,7 @@ impl Drop for RawCommandBuffer {
 			self
 				.context
 				.device
-				.free_command_buffers(self.pool.handle, &[self.handle])
+				.free_command_buffers(self.pool.handle, &[self.handle]);
 		};
 	}
 }

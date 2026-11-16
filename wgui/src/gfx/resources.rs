@@ -6,7 +6,7 @@ use std::{
 	sync::Arc,
 };
 
-use anyhow::{Context as _, bail};
+use anyhow::bail;
 use parking_lot::MutexGuard;
 
 use super::{
@@ -224,8 +224,8 @@ pub fn spirv_words(bytes: &[u8]) -> anyhow::Result<Vec<u32>> {
 	}
 
 	let mut words = Vec::with_capacity(bytes.len() / 4);
-	for chunk in bytes.chunks_exact(4) {
-		let word = u32::from_le_bytes(chunk.try_into().context("invalid SPIR-V word")?);
+	for chunk in bytes.as_chunks::<4>().0 {
+		let word = u32::from_le_bytes(*chunk);
 		words.push(word);
 	}
 

@@ -105,7 +105,7 @@ impl InputCapture {
                     init_tx,
                     dbus_session_address,
                     capture_input,
-                )
+                );
             })?;
 
         match init_rx.recv() {
@@ -372,7 +372,7 @@ fn worker_main(
 
     log::debug!("input capture worker started");
 
-    let dbus = dbus_session_address.map_or_default(|s| DbusConnector::new(s));
+    let dbus = dbus_session_address.map_or_default(DbusConnector::new);
 
     let mut grabbed = false;
     // when set, arms a grab as soon as no keys are held

@@ -33,30 +33,20 @@ pub struct Window {
 }
 
 impl Window {
-    fn new(
-        toplevel: Rc<ToplevelSurface>,
-        process: process::ProcessHandle,
-        bounds: Size<i32, Logical>,
-        min_size: Size<i32, Logical>,
-        max_size: Size<i32, Logical>,
-        app_id: Option<Arc<str>>,
-        parent: Option<WindowHandle>,
-        name: Option<Arc<str>>,
-        restore_on_spawn: bool,
-    ) -> Self {
+    fn new(par: CreateWindowParams) -> Self {
         Self {
-            bounds,
-            min_size,
-            max_size: max_size.clamp(Size::new(160, 160), bounds),
+            bounds: par.bounds,
+            min_size: par.min_size,
+            max_size: par.max_size.clamp(Size::new(160, 160), par.bounds),
             size_x: 0,
             size_y: 0,
             visible: true,
-            toplevel,
-            process,
-            app_id,
-            parent,
-            name,
-            restore_on_spawn,
+            toplevel: par.toplevel,
+            process: par.process,
+            app_id: par.app_id,
+            parent: par.parent,
+            name: par.name,
+            restore_on_spawn: par.restore_on_spawn,
             pending_configure: None,
         }
     }
@@ -185,18 +175,9 @@ impl WindowManager {
     }
 
     pub fn create_window(&mut self, par: CreateWindowParams) -> WindowHandle {
-        let mut window = Window::new(
-            par.toplevel,
-            par.process,
-            par.bounds,
-            par.min_size,
-            par.max_size,
-            par.app_id,
-            par.parent,
-            par.name,
-            par.restore_on_spawn,
-        );
-        window.remember_committed_size(Size::new(par.size_x as i32, par.size_y as i32), None);
+        let (size_x, size_y) = (par.size_x, par.size_y);
+        let mut window = Window::new(par);
+        window.remember_committed_size(Size::new(size_x as i32, size_y as i32), None);
         self.windows.insert(window)
     }
 

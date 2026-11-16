@@ -359,6 +359,7 @@ impl OpenVrInputSource {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_handsfree(
         pointer: &mut Pointer,
         mode: HandsfreePointer,

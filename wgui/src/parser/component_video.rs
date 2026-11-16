@@ -4,7 +4,7 @@ use crate::{
 	layout::WidgetID,
 	parser::{
 		AttribPair, ParseChildResult, ParserContext, ParserFile, get_asset_path_from_kv, parse_children, parse_f32,
-		parse_i32, process_component, style::parse_style,
+		process_component, style::parse_style,
 	},
 };
 
@@ -29,11 +29,7 @@ pub fn parse_component_video<'a>(
 				speed = parse_f32(value).unwrap_or(speed);
 			}
 			"looping" => {
-				if let Some(v) = parse_i32(value)
-					&& v != 0
-				{
-					looping = true;
-				}
+				ctx.parse_check_bool(tag_name, key, value, &mut looping);
 			}
 			"src" | "src_ext" | "src_builtin" | "src_internal" => {
 				let asset_path = get_asset_path_from_kv(file, "", key, value);

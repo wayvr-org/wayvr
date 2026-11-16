@@ -110,6 +110,7 @@ pub enum SpawnPos {
     /// Automatically spread out for user experience
     Spread,
     /// Spawn relative to a different overlay
+    #[allow(dead_code)] /* FIXME: unused */
     Parent(OverlaySelector),
     /// Resolve parent or app-id at the point of spawn
     WlDefault(wvr::window::WindowHandle, Option<OverlayID>),

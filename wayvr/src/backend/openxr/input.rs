@@ -324,7 +324,7 @@ impl OpenXrInputSource {
         let physical_inputs = &self.physical_inputs;
 
         self.head
-            .update_head(&mut app.input_state.head, &xr, physical_inputs)?;
+            .update_head(&mut app.input_state.head, xr, physical_inputs)?;
 
         app.input_state.eye_gaze = if xr.extra_exts.ext_eye_gaze_interaction {
             self.handsfree_pointer.locate_tracked_pose(xr)?
@@ -505,6 +505,7 @@ impl OpenXrPointer {
             .then(|| posef_to_transform(&location.pose)))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn update_handsfree(
         &mut self,
         pointer: &mut Pointer,

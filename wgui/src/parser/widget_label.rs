@@ -3,7 +3,7 @@ use crate::{
 	i18n::Translation,
 	layout::WidgetID,
 	parser::{
-		AttribPair, ParseChildResult, ParserContext, ParserFile, parse_children, parse_i32, parse_widget_universal,
+		AttribPair, ParseChildResult, ParserContext, ParserFile, parse_children, parse_widget_universal,
 		style::{parse_style, parse_text_style},
 	},
 	widget::label::{WidgetLabel, WidgetLabelParams},

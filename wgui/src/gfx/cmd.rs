@@ -107,6 +107,8 @@ impl CommandBufferBuilder {
 		})
 	}
 
+	// FIXME?
+	#[allow(clippy::arc_with_non_send_sync)]
 	pub fn build(mut self) -> anyhow::Result<Arc<BuiltCommandBuffer>> {
 		self.raw.finish()?;
 		Ok(Arc::new(BuiltCommandBuffer {

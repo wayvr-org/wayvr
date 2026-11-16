@@ -196,7 +196,7 @@ impl OverlayBackend for EditModeBackendWrapper {
         if !matches!(inner, ShouldRender::Unable)
             && let Some(ref frame_meta) = self.inner.frame_meta()
         {
-            let (width_px, height_px) = (frame_meta.extent[0], frame_meta.extent[1]);
+            let (width_px, height_px) = frame_meta.extent.into();
 
             let new_size = vec2(width_px as _, height_px as _);
             if !self.panel.max_size.abs_diff_eq(new_size, 0.1) {

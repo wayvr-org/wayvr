@@ -185,6 +185,7 @@ where
     fn request_new_frame(&mut self) {}
 }
 
+#[allow(clippy::too_many_arguments)]
 fn main_loop<U, R>(
     name: Arc<str>,
     node_id: u32,

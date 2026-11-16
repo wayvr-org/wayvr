@@ -985,7 +985,7 @@ impl<T> MainThreadWlxCapture<T>
 where
     T: WlxCapture<DmaExporterProxy, MainThreadFrame>,
 {
-    pub fn new(inner: T, pool: CommandPool) -> Self {
+    pub const fn new(inner: T, pool: CommandPool) -> Self {
         Self {
             inner,
             data: None,

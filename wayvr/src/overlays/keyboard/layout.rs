@@ -55,9 +55,10 @@ impl Layout {
         self.non_modifier_keys = self
             .non_modifiers
             .iter()
-            .filter_map(|key| match VirtualKey::from_str(key) {
-                Ok(vk) => Some(vk),
-                Err(_) => {
+            .filter_map(|key| {
+                if let Ok(vk) = VirtualKey::from_str(key) {
+                    Some(vk)
+                } else {
                     log::error!("keyboard.yaml: Unknown non-modifier key '{key}'");
                     None
                 }

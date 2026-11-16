@@ -198,6 +198,7 @@ const KEY_REPEAT_RATE: i32 = 50;
 const WAYVR_SCREEN_RES: [i32; 2] = [2560, 1440];
 
 impl WvrServerState {
+    #[allow(clippy::tuple_array_conversions)]
     pub fn new(
         gfx_extras: &WGfxExtras,
         config: &GeneralConfig,
@@ -510,10 +511,9 @@ impl WvrServerState {
                             name.as_deref(),
                             restore_on_spawn,
                         )
-                        .map(|size| {
+                        .map_or(fallback_size, |size| {
                             client_size_from_overlay_size(size, ssd).clamp(min_size, max_size)
-                        })
-                        .unwrap_or(fallback_size);
+                        });
                         let initial_overlay_size = overlay_size_from_client_size(
                             [initial_size.w as u32, initial_size.h as u32],
                             ssd,

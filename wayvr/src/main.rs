@@ -9,6 +9,7 @@
     clippy::default_trait_access,
     clippy::doc_markdown,
     clippy::match_wildcard_for_single_variants,
+    clippy::missing_errors_doc,
     clippy::multiple_crate_versions,
     clippy::needless_pass_by_ref_mut,
     clippy::needless_pass_by_value,
@@ -151,6 +152,7 @@ fn init_run_params(no_audio: bool, session: bool, capture_input: bool) -> backen
     }
 }
 
+#[must_use]
 pub fn get_version_string() -> String {
     format!(
         "{} v. {}{}",
