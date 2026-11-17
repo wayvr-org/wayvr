@@ -485,7 +485,7 @@ where
         let held_buffers = held_buffers.clone();
 
         move |req| {
-            log::debug!("{name}: request pipewire stream to {req:?}");
+            log::trace!("{name}: request pipewire stream to {req:?}");
             match req {
                 PwChangeRequest::Pause => {
                     let _ = stream
