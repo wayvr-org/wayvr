@@ -189,16 +189,27 @@ pub async fn wlx_handsfree(state: &mut WayVRClientState, params: HandsfreeParams
     )
 }
 
+pub async fn wlx_panel_reload(state: &mut WayVRClientState, overlay: String) {
+    handle_empty_result(
+        WayVRClient::fn_wlx_panel_reload(
+            state.wayvr_client.clone(),
+            packet_client::WlxPanelReloadParams { overlay },
+        )
+        .await
+        .context("failed to reload panel"),
+    )
+}
+
 pub async fn wlx_panel_modify(
     state: &mut WayVRClientState,
     overlay: String,
     element: String,
-    command: packet_client::WlxModifyPanelCommand,
+    command: packet_client::WlxPanelModifyCommand,
 ) {
     handle_empty_result(
-        WayVRClient::fn_wlx_modify_panel(
+        WayVRClient::fn_wlx_panel_modify(
             state.wayvr_client.clone(),
-            packet_client::WlxModifyPanelParams {
+            packet_client::WlxPanelModifyParams {
                 overlay,
                 element,
                 command,

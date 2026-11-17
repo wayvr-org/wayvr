@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::backend::wayvr::{WayVRTask, WvrServerState};
+use crate::gui::panel::custom_overlay_reload;
 use wayvr_ipc::packet_client::{HandsfreeMode, HandsfreeParams};
 use wayvr_ipc::packet_server::PacketServer;
 use wlx_common::config::HandsfreePointer;
@@ -38,6 +39,9 @@ where
             WayVRSignal::SwitchSet(set) => {
                 app.tasks
                     .enqueue(TaskType::Overlay(OverlayTask::SwitchSet(set)));
+            }
+            WayVRSignal::PanelReload(params) => {
+                custom_overlay_reload(app, params.overlay.into());
             }
             WayVRSignal::CustomTask(custom_task) => {
                 app.tasks

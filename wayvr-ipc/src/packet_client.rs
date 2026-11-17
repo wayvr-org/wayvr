@@ -65,7 +65,7 @@ pub struct WlxHapticsParams {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum WlxModifyPanelCommand {
+pub enum WlxPanelModifyCommand {
 	SetText(String),
 	SetColor(String),
 	SetImage(String),
@@ -74,10 +74,15 @@ pub enum WlxModifyPanelCommand {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct WlxModifyPanelParams {
+pub struct WlxPanelReloadParams {
+	pub overlay: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WlxPanelModifyParams {
 	pub overlay: String,
 	pub element: String,
-	pub command: WlxModifyPanelCommand,
+	pub command: WlxPanelModifyCommand,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -211,7 +216,8 @@ pub enum PacketClient {
 	WvrProcessTerminate(packet_server::WvrProcessHandle),
 	WvrInputCapture(bool),
 	WlxInputState(Serial),
-	WlxModifyPanel(WlxModifyPanelParams),
+	WlxPanelReload(WlxPanelReloadParams),
+	WlxPanelModify(WlxPanelModifyParams),
 	WlxDeviceHaptics(usize, WlxHapticsParams),
 	WlxShowHide,
 	WlxSwitchSet(Option<usize>),

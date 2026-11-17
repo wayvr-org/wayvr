@@ -13,7 +13,7 @@ use interprocess::local_socket::{self, ToNsName, traits::Listener};
 use smallvec::SmallVec;
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicU64, Ordering};
-use wayvr_ipc::packet_client::HandsfreeParams;
+use wayvr_ipc::packet_client::{HandsfreeParams, WlxPanelReloadParams};
 use wayvr_ipc::{
     ipc::{self},
     packet_client::{self, PacketClient},
@@ -397,9 +397,13 @@ impl Connection {
             .send(WayVRSignal::SetOverlayVisible(overlay, visible));
     }
 
-    fn handle_wlx_panel(
+    fn handle_wlx_panel_reload(params: &mut TickParams, payload: WlxPanelReloadParams) {
+        params.signals.send(WayVRSignal::PanelReload(payload));
+    }
+
+    fn handle_wlx_panel_modify(
         params: &mut TickParams,
-        custom_params: packet_client::WlxModifyPanelParams,
+        custom_params: packet_client::WlxPanelModifyParams,
     ) {
         use crate::backend::task::{ModifyPanelCommand, ModifyPanelTask};
 
@@ -409,19 +413,19 @@ impl Connection {
                 overlay: custom_params.overlay,
                 element: custom_params.element,
                 command: match custom_params.command {
-                    packet_client::WlxModifyPanelCommand::SetText(text) => {
+                    packet_client::WlxPanelModifyCommand::SetText(text) => {
                         ModifyPanelCommand::SetText(text)
                     }
-                    packet_client::WlxModifyPanelCommand::SetImage(sprite) => {
+                    packet_client::WlxPanelModifyCommand::SetImage(sprite) => {
                         ModifyPanelCommand::SetImage(sprite)
                     }
-                    packet_client::WlxModifyPanelCommand::SetStickyState(sticky) => {
+                    packet_client::WlxPanelModifyCommand::SetStickyState(sticky) => {
                         ModifyPanelCommand::SetStickyState(sticky)
                     }
-                    packet_client::WlxModifyPanelCommand::SetVisible(visible) => {
+                    packet_client::WlxPanelModifyCommand::SetVisible(visible) => {
                         ModifyPanelCommand::SetVisible(visible)
                     }
-                    packet_client::WlxModifyPanelCommand::SetColor(color) => {
+                    packet_client::WlxPanelModifyCommand::SetColor(color) => {
                         ModifyPanelCommand::SetColor(color)
                     }
                 },
@@ -474,8 +478,11 @@ impl Connection {
             PacketClient::WlxSwitchSet(set) => {
                 Self::handle_wlx_switch_set(params, set);
             }
-            PacketClient::WlxModifyPanel(custom_params) => {
-                Self::handle_wlx_panel(params, custom_params);
+            PacketClient::WlxPanelReload(payload) => {
+                Self::handle_wlx_panel_reload(params, payload);
+            }
+            PacketClient::WlxPanelModify(custom_params) => {
+                Self::handle_wlx_panel_modify(params, custom_params);
             }
             PacketClient::WlxHandsfree(payload) => {
                 Self::handle_wlx_handsfree(params, payload);
