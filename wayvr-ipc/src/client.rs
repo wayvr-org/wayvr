@@ -455,11 +455,19 @@ impl WayVRClient {
 		Ok(())
 	}
 
-	pub async fn fn_wlx_modify_panel(
+	pub async fn fn_wlx_panel_reload(
 		client: WayVRClientMutex,
-		params: packet_client::WlxModifyPanelParams,
+		params: packet_client::WlxPanelReloadParams,
 	) -> anyhow::Result<()> {
-		send_only!(client, &PacketClient::WlxModifyPanel(params));
+		send_only!(client, &PacketClient::WlxPanelReload(params));
+		Ok(())
+	}
+
+	pub async fn fn_wlx_panel_modify(
+		client: WayVRClientMutex,
+		params: packet_client::WlxPanelModifyParams,
+	) -> anyhow::Result<()> {
+		send_only!(client, &PacketClient::WlxPanelModify(params));
 		Ok(())
 	}
 

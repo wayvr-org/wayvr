@@ -16,9 +16,10 @@ use wayvr_ipc::{
 
 use crate::helper::{
     WayVRClientState, wlr_input_capture, wlx_device_haptics, wlx_handsfree, wlx_input_state,
-    wlx_overlay_list, wlx_overlay_set_visible, wlx_panel_modify, wlx_show_hide, wlx_switch_set,
-    wlx_window_attrib_get, wlx_window_attrib_set, wlx_window_state_get, wlx_window_state_set,
-    wvr_process_get, wvr_process_launch, wvr_process_list, wvr_process_terminate,
+    wlx_overlay_list, wlx_overlay_set_visible, wlx_panel_modify, wlx_panel_reload, wlx_show_hide,
+    wlx_switch_set, wlx_window_attrib_get, wlx_window_attrib_set, wlx_window_state_get,
+    wlx_window_state_set, wvr_process_get, wvr_process_launch, wvr_process_list,
+    wvr_process_terminate,
 };
 
 mod helper;
@@ -201,6 +202,9 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
         Subcommands::ShowHide => {
             wlx_show_hide(state).await;
         }
+        Subcommands::PanelReload { overlay } => {
+            wlx_panel_reload(state, overlay).await;
+        }
         Subcommands::PanelModify {
             overlay,
             element,
@@ -208,20 +212,20 @@ async fn run_once(state: &mut WayVRClientState, args: Args) -> anyhow::Result<()
         } => {
             let command = match command {
                 SubcommandPanelModify::SetText { text } => {
-                    packet_client::WlxModifyPanelCommand::SetText(text.join(" "))
+                    packet_client::WlxPanelModifyCommand::SetText(text.join(" "))
                 }
                 SubcommandPanelModify::SetColor { hex_color } => {
-                    packet_client::WlxModifyPanelCommand::SetColor(hex_color)
+                    packet_client::WlxPanelModifyCommand::SetColor(hex_color)
                 }
                 SubcommandPanelModify::SetImage { absolute_path } => {
-                    packet_client::WlxModifyPanelCommand::SetImage(absolute_path)
+                    packet_client::WlxPanelModifyCommand::SetImage(absolute_path)
                 }
                 SubcommandPanelModify::SetVisible { visible_0_or_1 } => {
-                    packet_client::WlxModifyPanelCommand::SetVisible(visible_0_or_1 != 0)
+                    packet_client::WlxPanelModifyCommand::SetVisible(visible_0_or_1 != 0)
                 }
                 SubcommandPanelModify::SetStickyState {
                     sticky_state_0_or_1,
-                } => packet_client::WlxModifyPanelCommand::SetStickyState(sticky_state_0_or_1 != 0),
+                } => packet_client::WlxPanelModifyCommand::SetStickyState(sticky_state_0_or_1 != 0),
             };
 
             wlx_panel_modify(state, overlay, element, command).await;
@@ -339,6 +343,10 @@ enum Subcommands {
     },
     /// Toggle overlay show or hide
     ShowHide,
+    /// Reload panel XML
+    PanelReload {
+        overlay: String,
+    },
     /// Apply a modification to a panel element
     PanelModify {
         /// The name of the overlay (XML file name without extension)

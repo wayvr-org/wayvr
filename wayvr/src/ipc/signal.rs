@@ -8,6 +8,7 @@ pub enum WayVRSignal {
     Handsfree(wayvr_ipc::packet_client::HandsfreeParams),
     ShowHide,
     CustomTask(crate::backend::task::ModifyPanelTask),
+    PanelReload(wayvr_ipc::packet_client::WlxPanelReloadParams),
     WindowVisibilityChanged(window::WindowHandle, bool),
     // (connection id, serial, params)
     GetWindowState(

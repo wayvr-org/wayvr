@@ -1,13 +1,20 @@
 use super::timer::GuiTimer;
 use crate::{
     app_misc,
-    backend::input::{Haptics, HoverResult, PointerHit, PointerMode},
-    backend::task::ModifyPanelCommand,
+    backend::{
+        input::{Haptics, HoverResult, PointerHit, PointerMode},
+        task::{ModifyPanelCommand, OverlayTask, SpawnPos, TaskType},
+    },
+    overlays::custom::create_custom,
     state::AppState,
     subsystem::hid::WheelDelta,
-    windowing::backend::{
-        FrameMeta, OverlayBackend, OverlayEventData, OverlayLifetimeUpdate, RenderResources,
-        ShouldRender, ui_transform,
+    windowing::{
+        OverlaySelector,
+        backend::{
+            FrameMeta, OverlayBackend, OverlayEventData, OverlayLifetimeUpdate, RenderResources,
+            ShouldRender, ui_transform,
+        },
+        window::OverlayCategory,
     },
 };
 use anyhow::Context;
@@ -15,7 +22,7 @@ use button::setup_custom_button;
 use glam::{Affine2, Vec2, vec2};
 use idmap::IdMap;
 use label::setup_custom_label;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
 use wgui::{
     assets::AssetPathRef,
     components::{
@@ -510,6 +517,34 @@ fn log_cmd_invalid_arg(
         "{:?}: <{tag_name}> \"{attrib}\": \"{command}\" has invalid argument: {arg}",
         parser_state.xml_path.get_path().display()
     );
+}
+
+pub fn custom_overlay_reload(app: &mut AppState, name: Arc<str>) {
+    app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
+        OverlaySelector::Name(name),
+        Box::new(|app, owc| {
+            if !matches!(owc.category, OverlayCategory::Panel) {
+                return;
+            }
+            let name = owc.name.clone();
+            app.tasks
+                .enqueue(TaskType::Overlay(OverlayTask::Drop(OverlaySelector::Name(
+                    name.clone(),
+                ))));
+            app.tasks.enqueue(TaskType::Overlay(OverlayTask::Spawn(
+                OverlaySelector::Name(owc.name.clone()),
+                SpawnPos::Spread,
+                Box::new(move |app| {
+                    if let Some(mut owc) = create_custom(app, name) {
+                        owc.show_on_spawn = true;
+                        Some(owc)
+                    } else {
+                        None
+                    }
+                }),
+            )));
+        }),
+    )));
 }
 
 pub fn apply_custom_command<T>(

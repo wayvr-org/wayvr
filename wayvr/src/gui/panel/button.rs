@@ -30,8 +30,8 @@ use crate::{
         task::{OverlayTask, PlayspaceTask, SpawnPos, TaskType, ToggleMode},
         wayvr::process::KillSignal,
     },
-    gui::panel::{log_cmd_invalid_arg, log_cmd_missing_arg},
-    overlays::{custom::create_custom, toast::Toast, wayvr::WvrCommand},
+    gui::panel::{custom_overlay_reload, log_cmd_invalid_arg, log_cmd_missing_arg},
+    overlays::{toast::Toast, wayvr::WvrCommand},
     state::AppState,
     subsystem::hid::VirtualKey,
     windowing::{OverlaySelector, backend::OverlayEventData, window::OverlayCategory},
@@ -432,30 +432,7 @@ pub(super) fn setup_custom_button<S: 'static>(
                             return Ok(EventResult::Pass);
                         }
 
-                        app.tasks.enqueue(TaskType::Overlay(OverlayTask::Modify(
-                            OverlaySelector::Name(arg.clone()),
-                            Box::new(|app, owc| {
-                                if !matches!(owc.category, OverlayCategory::Panel) {
-                                    return;
-                                }
-                                let name = owc.name.clone();
-                                app.tasks.enqueue(TaskType::Overlay(OverlayTask::Drop(
-                                    OverlaySelector::Name(name.clone()),
-                                )));
-                                app.tasks.enqueue(TaskType::Overlay(OverlayTask::Spawn(
-                                    OverlaySelector::Name(owc.name.clone()),
-                                    SpawnPos::Spread,
-                                    Box::new(move |app| {
-                                        if let Some(mut owc) = create_custom(app, name) {
-                                            owc.show_on_spawn = true;
-                                            Some(owc)
-                                        } else {
-                                            None
-                                        }
-                                    }),
-                                )));
-                            }),
-                        )));
+                        custom_overlay_reload(app, arg.clone());
                         Ok(EventResult::Consumed)
                     })
                 }
