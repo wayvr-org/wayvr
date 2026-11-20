@@ -633,14 +633,6 @@ impl<T> TabSettings<T> {
 				Translation::from_raw_text_string(frontend.interface.get_version_string(data)),
 			);
 		}
-		if frontend.interface.get_feats(data).xr_backend.is_open_xr() {
-			let skybox_btn = tabs.get_tab_button("skybox").unwrap();
-			frontend
-				.layout
-				.common()
-				.alterables
-				.set_style(skybox_btn.get_rect(), StyleSetRequest::Display(taffy::Display::None));
-		}
 
 		tabs.on_select({
 			let tasks = tasks.clone();
