@@ -180,7 +180,7 @@ pub struct WvrServerState {
     grab_toast_sent: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseIndex {
     Left,
     Center,
@@ -1587,6 +1587,19 @@ impl WvrServerState {
         pressed: bool,
         click_freeze: i32,
     ) {
+        log::debug!(
+            "mouse {:?} {} → {} at {:?} (freeze {click_freeze} ms)",
+            index,
+            if pressed { "press" } else { "release" },
+            match &target {
+                PointerFocusTarget::Surface { surface, .. } =>
+                    format!("surface {:?}", surface.id()),
+                PointerFocusTarget::Toplevel => "toplevel".to_owned(),
+                PointerFocusTarget::None => "none/root".to_owned(),
+            },
+            global_pos,
+        );
+
         if pressed {
             self.mouse_freeze = Instant::now() + Duration::from_millis(click_freeze.max(0) as u64);
         }

@@ -544,6 +544,24 @@ impl WvrWindowBackend {
         }
     }
 
+    fn describe_hit_target(target: Option<&WvrHitTarget>) -> String {
+        match target {
+            Some(WvrHitTarget::Panel(_)) => "panel".to_owned(),
+            Some(WvrHitTarget::Toplevel { pos }) => format!("toplevel pos={pos:?}"),
+            Some(WvrHitTarget::Surface {
+                surface, origin, ..
+            }) => {
+                format!("subsurface {} origin={origin:?}", surface.id())
+            }
+            Some(WvrHitTarget::Popup {
+                surface, origin, ..
+            }) => {
+                format!("popup {} origin={origin:?}", surface.id())
+            }
+            None => "none (pass-through)".to_owned(),
+        }
+    }
+
     fn render_subsurface(
         &self,
         app: &mut AppState,
@@ -1081,6 +1099,9 @@ impl OverlayBackend for WvrWindowBackend {
                         false,
                     );
                 }
+                if !self.panel_hovered {
+                    log::debug!("{}: panel hover entered", self.title);
+                }
                 self.panel_hovered = true;
                 self.panel.on_hover(app, &hit2)
             }
@@ -1097,6 +1118,7 @@ impl OverlayBackend for WvrWindowBackend {
                 },
             ) => {
                 if self.panel_hovered {
+                    log::debug!("{}: panel hover left -> surface/popup", self.title);
                     self.panel.on_left(app, hit.pointer);
                     self.panel_hovered = false;
                 }
@@ -1120,6 +1142,7 @@ impl OverlayBackend for WvrWindowBackend {
             }
             Some(WvrHitTarget::Toplevel { pos }) => {
                 if self.panel_hovered {
+                    log::debug!("{}: panel hover left -> toplevel", self.title);
                     self.panel.on_left(app, hit.pointer);
                     self.panel_hovered = false;
                 }
@@ -1156,31 +1179,63 @@ impl OverlayBackend for WvrWindowBackend {
     }
 
     fn on_pointer(&mut self, app: &mut state::AppState, hit: &input::PointerHit, pressed: bool) {
+        let button = if pressed { "press" } else { "release" };
+        log::debug!(
+            "{}: on_pointer {button} pointer {} mode {:?} uv {:?}",
+            self.title,
+            hit.pointer,
+            hit.mode,
+            hit.uv,
+        );
+
         let Some(index) = Self::mouse_index_from_mode(hit.mode) else {
+            log::debug!(
+                "{}: {button} dropped, pointer mode {:?} has no mouse button",
+                self.title,
+                hit.mode,
+            );
             return;
         };
 
         if let Some(wvr_server) = app.wvr_server.as_mut() {
             if wvr_server.dnd_active() && !wvr_server.dnd_active_for_pointer(hit.pointer) {
+                log::debug!(
+                    "{}: {button} dropped, drag-and-drop active for another pointer",
+                    self.title,
+                );
                 return;
             }
             wvr_server.set_vr_pointer_button(hit.pointer, pressed);
             if !pressed && wvr_server.dnd_active_for_pointer(hit.pointer) {
+                log::debug!("{}: {button} routed to drag-and-drop", self.title);
                 wvr_server.send_dnd_release(index);
                 return;
             }
         }
 
         let Some(ref ctx) = self.hit_context else {
+            log::debug!(
+                "{}: {button} dropped, no hit context (overlay not rendered yet?)",
+                self.title,
+            );
             return;
         };
 
         let target = ctx.hit_target(hit);
+        log::debug!(
+            "{}: {button} hit target: {}",
+            self.title,
+            Self::describe_hit_target(target.as_ref()),
+        );
         let outside_pos = ctx.unclamped_client_pos_from_hit(hit);
         let click_freeze = app.session.config.click_freeze_time_ms;
 
         // if the press was consumed to dismiss a popup, consume the matching release too.
         if !pressed && self.popup_outside_button == Some(index) {
+            log::debug!(
+                "{}: {button} swallowed, press was already consumed to dismiss popup",
+                self.title,
+            );
             self.popup_outside_button = None;
 
             app.wvr_server.as_mut().unwrap().send_mouse_button(
@@ -1208,6 +1263,12 @@ impl OverlayBackend for WvrWindowBackend {
                 self.popup_outside_button = Some(index);
             }
 
+            log::debug!(
+                "{}: {button} outside grabbed popup ({} popups in hit context), swallowed as dismiss, target {}",
+                self.title,
+                self.popups.len(),
+                Self::describe_hit_target(target.as_ref()),
+            );
             let click_freeze = app.session.config.click_freeze_time_ms;
             app.wvr_server.as_mut().unwrap().send_mouse_button(
                 PointerFocusTarget::None,

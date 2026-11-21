@@ -683,15 +683,36 @@ where
         if hovered.config.category == OverlayCategory::Keyboard {
             pointer.interaction.kbd_block_activated = true;
         }
+        log::debug!(
+            "Hand {}: click press on {} mode {:?}",
+            hit.pointer,
+            hovered.config.name,
+            hit.mode,
+        );
         update_focus(app, hovered.config.input_focus);
         hovered.config.backend.on_pointer(app, &hit, true);
     } else if !pointer.now.click && pointer.before.click {
         // send release event to overlay that was originally clicked
         if let Some(clicked_id) = pointer.interaction.clicked_id.take() {
             if let Some(clicked) = overlays.mut_by_id(clicked_id) {
+                log::debug!(
+                    "Hand {}: click release routed to previously clicked overlay {}",
+                    hit.pointer,
+                    clicked.config.name,
+                );
                 clicked.config.backend.on_pointer(app, &hit, false);
+            } else {
+                log::debug!(
+                    "Hand {}: click release lost, clicked overlay {clicked_id:?} no longer exists",
+                    hit.pointer,
+                );
             }
         } else {
+            log::debug!(
+                "Hand {}: click release on {} (no tracked click)",
+                hit.pointer,
+                hovered.config.name,
+            );
             hovered.config.backend.on_pointer(app, &hit, false);
         }
     }
@@ -728,6 +749,11 @@ fn handle_no_hit<O>(
         && let Some(clicked_id) = pointer.interaction.clicked_id.take()
         && let Some(clicked) = overlays.mut_by_id(clicked_id)
     {
+        log::debug!(
+            "Hand {}: click release routed to {} with empty hit (ray hit nothing)",
+            pointer_idx,
+            clicked.config.name,
+        );
         let hit = PointerHit {
             pointer: pointer.idx,
             overlay: clicked_id,
