@@ -385,7 +385,6 @@ fn bake_notification(
         Translation::from_raw_text_string(body),
     )
     .with_timeout(match expire_timeout {
-        0 => f32::INFINITY,
         n if n > 0 => n as f32 / 1000.0,
         _ => 5.0,
     })
