@@ -48,6 +48,26 @@ use crate::{
 pub const MAX_OVERLAY_SETS: usize = 6;
 pub const GLOBAL_SET: &str = "global";
 
+fn launch_autostart_apps(app: &mut AppState) {
+    if app.session.no_autostart {
+        log::info!("Not starting apps due to --no-autostart");
+        return;
+    }
+
+    let apps = app.session.config.autostart_apps.clone();
+
+    let Some(wvr_server) = app.wvr_server.as_mut() else {
+        log::warn!("Cannot launch autostart apps: no WVR server");
+        return;
+    };
+
+    for params in apps {
+        if let Err(e) = wvr_server.launch_process(params) {
+            log::error!("Failed to launch autostart app: {e:?}");
+        }
+    }
+}
+
 pub struct OverlayWindowManager<T> {
     wrappers: EditWrapperManager,
     overlays: SlotMap<OverlayID, OverlayWindowData<T>>,
@@ -64,6 +84,7 @@ pub struct OverlayWindowManager<T> {
     edit_mode: bool,
     dropped_overlays: VecDeque<OverlayWindowData<T>>,
     initialized: bool,
+    autostart_launched: bool,
 }
 
 impl<T> OverlayWindowManager<T>
@@ -84,6 +105,7 @@ where
             edit_mode: false,
             dropped_overlays: VecDeque::with_capacity(8),
             initialized: false,
+            autostart_launched: false,
         };
 
         if headless {
@@ -1464,6 +1486,11 @@ impl<T> OverlayWindowManager<T> {
             }
         }
         self.current_set = new_set;
+
+        if new_set.is_some() && self.initialized && !keep_transforms && !self.autostart_launched {
+            self.autostart_launched = true;
+            launch_autostart_apps(app);
+        }
 
         for id in [self.watch_id, self.keyboard_id] {
             let _ = self.mut_by_id(id).context("Missing overlay").and_then(|o| {

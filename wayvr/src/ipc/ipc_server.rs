@@ -6,7 +6,6 @@ use crate::{
     backend::input::InputState,
     ipc::{event_queue::SyncEventQueue, signal::WayVRSignal},
 };
-use anyhow::Context;
 use bytes::BufMut;
 use glam::Vec3A;
 use interprocess::local_socket::{self, ToNsName, traits::Listener};
@@ -221,28 +220,11 @@ impl Connection {
         serial: ipc::Serial,
         packet_params: packet_client::WvrProcessLaunchParams,
     ) -> anyhow::Result<()> {
-        let res = {
-            let mut argv_iter = packet_params.argv.iter().map(String::as_str);
-            let exec_path = argv_iter
-                .next()
-                .context("No executable for process_launch")?;
-            let exec_args = argv_iter.collect::<Box<_>>();
-            let env_vec = gen_env_vec(&packet_params.env);
-
-            params.wvr_server.spawn_process(
-                &packet_params.name,
-                exec_path,
-                &exec_args,
-                &env_vec,
-                packet_params.resolution,
-                packet_params.pos_mode,
-                None,
-                packet_params.icon.as_deref(),
-                packet_params.userdata,
-            )
-        }
-        .map(ProcessHandle::as_packet)
-        .map_err(|e| e.to_string());
+        let res = params
+            .wvr_server
+            .launch_process(packet_params)
+            .map(ProcessHandle::as_packet)
+            .map_err(|e| e.to_string());
 
         send_packet(
             &mut self.conn,

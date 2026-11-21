@@ -4,7 +4,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use anyhow::Context;
 use dash_frontend::frontend::{self, FrontendTask, FrontendUpdateParams};
 use glam::{Affine2, Affine3A, Quat, Vec2, vec2, vec3};
 use wayvr_ipc::{
@@ -44,7 +43,6 @@ use crate::{
         },
     },
     config::{none_if_0, save_settings},
-    ipc::ipc_server::gen_env_vec,
     state::AppState,
     subsystem::hid::WheelDelta,
     windowing::{
@@ -76,20 +74,10 @@ const GUI_SCALE: f32 = 2.0;
 
 impl DashFrontend {
     fn new(app: &mut AppState) -> anyhow::Result<Self> {
-        let mut interface = DashInterfaceLive::new();
-
-        if app.session.no_autostart {
-            log::info!("Not starting apps due to --no-autostart");
-        } else {
-            for p in app.session.config.autostart_apps.clone() {
-                let _ = interface.process_launch(app, false, p);
-            }
-        }
-
         let tutorial = !app.session.config.tutorial_graduated;
 
         let frontend = frontend::Frontend::new(frontend::InitParams {
-            interface: Box::new(interface),
+            interface: Box::new(DashInterfaceLive::new()),
             lang_provider: &WayVRLangProvider::from_config(&app.session.config),
             show_welcome: tutorial,
             has_monado: app.feats.xr_backend.is_open_xr(),
@@ -443,32 +431,14 @@ impl DashInterface<AppState> for DashInterfaceLive {
         auto_start: bool,
         params: WvrProcessLaunchParams,
     ) -> anyhow::Result<WvrProcessHandle> {
-        let wvr_server = app.wvr_server.as_mut().unwrap();
-
-        let mut argv_iter = params.argv.iter().map(String::as_str);
-        let exec_path = argv_iter
-            .next()
-            .context("No executable for process_launch")?;
-        let exec_args = argv_iter.collect::<Box<_>>();
-        let env_vec = gen_env_vec(&params.env);
-
         if auto_start {
             app.session.config.autostart_apps.push(params.clone());
             save_settings(&app.session.config)?;
         }
 
+        let wvr_server = app.wvr_server.as_mut().unwrap();
         wvr_server
-            .spawn_process(
-                &params.name,
-                exec_path,
-                &exec_args,
-                &env_vec,
-                params.resolution,
-                params.pos_mode,
-                None,
-                params.icon.as_deref(),
-                params.userdata,
-            )
+            .launch_process(params)
             .map(ProcessHandle::as_packet)
     }
 

@@ -56,7 +56,7 @@ use std::{
     time::{Duration, Instant},
 };
 use wayland_protocols::xdg::shell::server::xdg_toplevel;
-use wayvr_ipc::packet_client::PositionMode;
+use wayvr_ipc::packet_client::{PositionMode, WvrProcessLaunchParams};
 use wgui::{gfx::ImageView, globals::WguiGlobals, log::LogErr};
 use wlx_capture::frame::Transform;
 use wlx_common::{
@@ -1702,6 +1702,30 @@ impl WvrServerState {
 
     pub fn set_clipboard(&mut self, content: &str) {
         self.manager.state.set_clipboard_text(content);
+    }
+
+    pub fn launch_process(
+        &mut self,
+        params: WvrProcessLaunchParams,
+    ) -> anyhow::Result<process::ProcessHandle> {
+        let mut argv_iter = params.argv.iter().map(String::as_str);
+        let exec_path = argv_iter
+            .next()
+            .context("No executable for process_launch")?;
+        let exec_args = argv_iter.collect::<Box<_>>();
+        let env_vec = ipc_server::gen_env_vec(&params.env);
+
+        self.spawn_process(
+            &params.name,
+            exec_path,
+            &exec_args,
+            &env_vec,
+            params.resolution,
+            params.pos_mode,
+            None,
+            params.icon.as_deref(),
+            params.userdata,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
