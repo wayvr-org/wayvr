@@ -170,6 +170,7 @@ pub struct WvrServerState {
     ticks: u64,
     cur_modifiers: u8,
     mouse_freeze: Instant,
+    pending_release: Option<(MouseIndex, Vec2)>,
     window_to_overlay: HashMap<window::WindowHandle, OverlayID>,
     overlay_to_window: SecondaryMap<OverlayID, window::WindowHandle>,
     process_overlays: HashMap<process::ProcessHandle, Vec<OverlayID>>,
@@ -362,6 +363,7 @@ impl WvrServerState {
             tasks,
             cur_modifiers: 0,
             mouse_freeze: Instant::now(),
+            pending_release: None,
             window_to_overlay: HashMap::new(),
             overlay_to_window: SecondaryMap::new(),
             process_overlays: HashMap::new(),
@@ -946,6 +948,7 @@ impl WvrServerState {
                 WayVRTask::DndStarted { icon, pointer } => {
                     // don't freeze on drag start
                     wvr_server.mouse_freeze = Instant::now();
+                    wvr_server.pending_release = None;
 
                     let selector = OverlaySelector::Name(DRAG_ITEM_NAME.clone());
 
@@ -1581,7 +1584,7 @@ impl WvrServerState {
     pub fn send_mouse_button(
         &mut self,
         target: PointerFocusTarget,
-        global_pos: Vec2,
+        mut global_pos: Vec2,
         hover_window: window::WindowHandle,
         index: MouseIndex,
         pressed: bool,
@@ -1589,6 +1592,12 @@ impl WvrServerState {
     ) {
         if pressed {
             self.mouse_freeze = Instant::now() + Duration::from_millis(click_freeze.max(0) as u64);
+            self.pending_release = Some((index, global_pos));
+        } else if self.mouse_freeze > Instant::now()
+            && let Some((press_index, press_pos)) = self.pending_release.take()
+            && press_index == index
+        {
+            global_pos = press_pos;
         }
 
         let (focus, focus_keyboard) = self.get_mouse_focus(target, hover_window, pressed);
