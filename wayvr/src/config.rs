@@ -14,40 +14,10 @@ use wlx_common::{
         PinnedApp, SerializedWindowSet,
     },
     config_io,
+    keyboard::KeyboardModel,
     locale::Language,
     overlays::BackendAttribValue,
 };
-
-const FALLBACKS: [&str; 1] = [include_str!("res/keyboard.yaml")];
-
-const FILES: [&str; 1] = ["keyboard.yaml"];
-
-#[derive(Clone, Copy)]
-#[repr(usize)]
-pub enum ConfigType {
-    Keyboard,
-}
-
-pub fn load_known_yaml<T>(config_type: ConfigType) -> T
-where
-    T: for<'de> Deserialize<'de>,
-{
-    let fallback = FALLBACKS[config_type as usize];
-    let file_name = FILES[config_type as usize];
-    let maybe_override = config_io::load(file_name);
-
-    for yaml in [maybe_override.as_deref(), Some(fallback)].iter().flatten() {
-        match serde_yaml::from_str::<T>(yaml) {
-            Ok(d) => return d,
-            Err(e) => {
-                error!("Failed to parse {file_name}, falling back to defaults.");
-                error!("{e}");
-            }
-        }
-    }
-    // can only get here if internal fallback is broken
-    panic!("No usable config found.");
-}
 
 const SUPPORTED_EXTESIONS: [&str; 4] = ["yaml", "yml", "json", "json5"];
 
@@ -144,6 +114,7 @@ pub struct AutoSettings {
     pub notifications_enabled: bool,
     pub notifications_sound_enabled: bool,
     pub keyboard_sound_enabled: bool,
+    pub keyboard_model: KeyboardModel,
     pub upright_screen_fix: bool,
     pub double_cursor_fix: bool,
     pub enable_watch: bool,
@@ -222,6 +193,7 @@ pub fn save_settings(config: &GeneralConfig) -> anyhow::Result<()> {
         notifications_enabled: config.notifications_enabled,
         notifications_sound_enabled: config.notifications_sound_enabled,
         keyboard_sound_enabled: config.keyboard_sound_enabled,
+        keyboard_model: config.keyboard_model,
         upright_screen_fix: config.upright_screen_fix,
         double_cursor_fix: config.double_cursor_fix,
         enable_watch: config.enable_watch,

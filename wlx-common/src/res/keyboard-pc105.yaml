@@ -14,6 +14,8 @@
 # For example, Q on a French layout actually results in A.
 # If you're using a non-english layout, chances are you only need to edit the label section below.
 
+model: pc105
+
 # How many units of key size in each row? 1 = standard letter key size
 row_size: 23
 
@@ -36,7 +38,7 @@ main_layout:
     - ["Escape", ~, "F1", "F2", "F3", "F4", ~, "F5", "F6", "F7", "F8", ~, "F9", "F10", "F11", "F12", ~, "Print", "Scroll", "Pause", ~, "Copy", "Paste", "KEYMAP_CYCLE"]
     - ["Oem3", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N0", "Minus", "Plus", "BackSpace", ~, "Insert", "Home", "Prior", ~, "NumLock", "KP_Divide", "KP_Multiply", "KP_Subtract"]
     - ["Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Oem4", "Oem6", "Oem5", ~, "Delete", "End", "Next", ~, "KP_7", "KP_8", "KP_9", "KP_Add"]
-    - ["XF86Favorites", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Oem1", "Oem7", "Return", ~, "KP_4", "KP_5", "KP_6", ~]
+    - ["Caps", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Oem1", "Oem7", "Return", ~, "KP_4", "KP_5", "KP_6", ~]
     - ["LShift", "Oem102", "Z", "X", "C", "V", "B", "N", "M", "Comma", "Period", "Oem2", "RShift", ~, "Up", ~, "KP_1", "KP_2", "KP_3", "KP_Enter"]
     - ["LCtrl", "LSuper", "LAlt", "Space", "AltGr", "RSuper", "Menu", "RCtrl", ~, "Left", "Down", "Right", ~, "KP_0", "KP_Decimal", "Load"]
 

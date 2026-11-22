@@ -9,6 +9,7 @@ use wgui::drawing::{self, HsvColor};
 
 use crate::{
 	astr_containers::{AStrMap, AStrSet},
+	keyboard::KeyboardModel,
 	locale::{self},
 	overlays::{BackendAttribValue, ToastDisplayMethod, ToastTopic},
 	windowing::OverlayWindowState,
@@ -342,6 +343,9 @@ pub struct GeneralConfig {
 	pub keyboard_layouts: Vec<Arc<str>>,
 
 	#[serde(default)]
+	pub keyboard_model: KeyboardModel,
+
+	#[serde(default)]
 	pub attribs: AStrMap<Vec<BackendAttribValue>>,
 
 	#[serde(default = "def_click_freeze_time_ms")]
@@ -607,6 +611,7 @@ pub enum SettingType {
 	InvertScrollDirectionX,
 	InvertScrollDirectionY,
 	KeyboardMiddleClick,
+	KeyboardModel,
 	KeyboardSoundEnabled,
 	Language,
 	LeftHandedMouse,

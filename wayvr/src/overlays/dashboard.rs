@@ -544,6 +544,18 @@ impl DashInterface<AppState> for DashInterfaceLive {
                         GlobalChange::Settings,
                     )));
             }
+            ConfigChangeKind::KeyboardModel => {
+                data.tasks
+                    .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
+                        GlobalChange::RecreateKeyboard,
+                    )));
+            }
+            ConfigChangeKind::KeyboardLayouts => {
+                data.tasks
+                    .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
+                        GlobalChange::KeyboardLayoutsChanged,
+                    )));
+            }
             ConfigChangeKind::EnvironmentBlend => {
                 #[cfg(feature = "openxr")]
                 {

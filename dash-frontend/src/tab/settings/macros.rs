@@ -48,6 +48,7 @@ fn get_icon_from_setting_type(t: SettingType) -> Option<&'static str> {
 		SettingType::Language => Some("dashboard/language.svg"),
 		SettingType::DefaultPositioning => Some("dashboard/drag.svg"),
 		SettingType::KeyboardMiddleClick => Some("dashboard/keyboard.svg"),
+		SettingType::KeyboardModel => Some("dashboard/keyboard.svg"),
 		SettingType::InputCaptureMethod => Some("dashboard/input.svg"),
 		SettingType::InputEmulationMethod => Some("dashboard/input.svg"),
 		SettingType::CaptureMethod => Some("dashboard/monitor.svg"),

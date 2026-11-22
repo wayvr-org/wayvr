@@ -117,6 +117,8 @@ pub enum ConfigChangeKind {
 	EnvironmentBlend,
 	WguiColorPaletteChange,
 	WvrServerConfig,
+	KeyboardModel,
+	KeyboardLayouts,
 	/// Marks the config for saving but doesn't notify any components
 	#[default]
 	Other,

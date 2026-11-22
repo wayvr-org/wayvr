@@ -379,6 +379,18 @@ where
                 self.overlays_changed(app)?;
                 self.sets_changed(app);
             }
+            OverlayTask::GlobalChange(GlobalChange::RecreateKeyboard) => {
+                self.recreate_keyboard(app)?;
+            }
+            OverlayTask::GlobalChange(GlobalChange::KeyboardLayoutsChanged) => {
+                if let Some(keyboard) = self.mut_by_id(self.keyboard_id) {
+                    let _ = keyboard
+                        .config
+                        .backend
+                        .notify(app, OverlayEventData::KeyboardLayoutsChanged)
+                        .log_err("Could not update keymap cycle layouts");
+                }
+            }
             OverlayTask::GlobalChange(GlobalChange::ColorPalette) => {
                 {
                     let mut globals = app.wgui_globals.get();
@@ -543,6 +555,53 @@ where
             app,
             spawn_pos,
         );
+    }
+
+    fn recreate_keyboard(&mut self, app: &mut AppState) -> anyhow::Result<()> {
+        let old_id = self.keyboard_id;
+
+        let mut keyboard = OverlayWindowData::from_config(create_keyboard(app)?);
+        keyboard.config.show_on_spawn = true;
+
+        if let Some(keyboard) = self.mut_by_id(old_id) {
+            let _ = keyboard
+                .config
+                .backend
+                .pause(app)
+                .log_err("Could not pause keyboard");
+        }
+
+        let Some(mut old_keyboard) = self.remove_by_selector(&OverlaySelector::Id(old_id), app)
+        else {
+            return Ok(());
+        };
+
+        let editing = old_keyboard.config.editing;
+        let name = old_keyboard.config.name.clone();
+
+        if editing {
+            self.wrappers
+                .unwrap_edit_mode(&mut old_keyboard.config, app)?;
+        }
+
+        drop(old_keyboard);
+
+        for set in &mut self.sets {
+            if let Some(state) = set.overlays.remove(old_id) {
+                set.inactive_overlays.arc_set(name.clone(), state);
+            }
+            if let Some(state) = set.hidden_overlays.arc_rm(&name) {
+                set.inactive_overlays.arc_set(name.clone(), state);
+            }
+        }
+
+        self.keyboard_id = self.add(keyboard, app);
+
+        self.edit_overlay(self.keyboard_id, editing, app);
+
+        self.overlays_changed(app)?;
+        self.sets_changed(app);
+        Ok(())
     }
 }
 
