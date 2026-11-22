@@ -147,6 +147,9 @@ APP_SETTINGS.KEYBOARD_MIDDLE_CLICK,Keyboard middle click,Dropdown label in Setti
 APP_SETTINGS.KEYBOARD_MIDDLE_CLICK_HELP,"Modifier to use when typing
 with purple laser",Tooltip for the keyboard middle-click setting.
 APP_SETTINGS.KEYBOARD_MODEL,Keyboard model,"Dropdown box for the physical keyboard layout (ANSI, ISO, JIS, etc) used by the on-screen keyboard."
+APP_SETTINGS.KEYBOARD_LAYOUT,Keyboard layout,"Keyboard layout editor (for selecting between qwerty/colemak/dvorak/etc or languages)"
+APP_SETTINGS.ACTIVE_LIST,Active,"List title of active entities"
+APP_SETTINGS.AVAILABLE_LIST,Available,"List title of available entities"
 APP_SETTINGS.OPTION.CUSTOM,Custom,"Dropdown option for the keyboard model. Uses a custom keyboard layout defined in keyboard.yaml in the config folder."
 APP_SETTINGS.SOUND,Sound,Category name in general settings tab
 APP_SETTINGS.KEYBOARD_SOUND_ENABLED,Keyboard sounds,Checkbox label in Settings > Features tab. Enables or disables typing sounds when using the on-screen keyboard.

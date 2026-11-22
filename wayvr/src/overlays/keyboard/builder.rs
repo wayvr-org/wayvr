@@ -254,7 +254,7 @@ pub(super) fn create_keyboard_panel(
                         widget_id,
                         EventListenerKind::InternalStateChange,
                         Box::new({
-                            let k = key_state.clone();
+                            let k = key_state;
                             move |common, data, _app, state| {
                                 if (state.modifiers & modifier) != 0 {
                                     on_press_anim(k.clone(), common, data);

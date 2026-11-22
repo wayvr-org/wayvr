@@ -168,7 +168,7 @@ impl<S: 'static> GuiPanel<S> {
 
             for (id, widget) in ids {
                 on_element_id(
-                    id.clone(),
+                    id,
                     widget,
                     &doc_params,
                     &mut layout,

@@ -181,7 +181,8 @@
 			"UINPUT_HELP": "uinputモジュールを使用してデバイスをエミュレートします。\nほとんどのデスクトップ環境で良好に動作します。",
 			"EVDEV_HELP": "入力デバイスを排他的に使用する。\nユーザーが input グループに属している必要がある。",
 			"WL_VIRTUAL": "Wayland仮想入力",
-			"WL_VIRTUAL_HELP": "zwlr_virtual_pointer と zwp_virtual_keyboard を使用して\nWayland コンポジターにイベントを送信する。\nデスクトップ環境によって安定性が異なり、\nKDE、GNOME、COSMIC では動作しない。"
+			"WL_VIRTUAL_HELP": "zwlr_virtual_pointer と zwp_virtual_keyboard を使用して\nWayland コンポジターにイベントを送信する。\nデスクトップ環境によって安定性が異なり、\nKDE、GNOME、COSMIC では動作しない。",
+			"CUSTOM": "カスタム"
 		},
 		"POINTER_ACCELERATION": "マウス加速",
 		"POINTER_ACCELERATION_HELP": "オン: 適応型マウス加速\nオフ: 等速",
@@ -269,7 +270,11 @@
 		"OVERLAYS": "オーバーレイ",
 		"SHOW_GRAB_HELP": "掴み方のヘルプを表示",
 		"WATCH": "ウォッチ",
-		"VARIOUS": "その他"
+		"VARIOUS": "その他",
+		"KEYBOARD_MODEL": "キーボードモデル",
+		"KEYBOARD_LAYOUT": "キーボードレイアウト",
+		"ACTIVE_LIST": "アクティブ",
+		"AVAILABLE_LIST": "利用可能"
 	},
 	"APPLICATION_LAUNCHER": "アプリランチャー",
 	"APPLICATION_STARTED": "アプリが起動しました",

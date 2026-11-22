@@ -40,7 +40,7 @@ impl ButtonPaneTabSwitcher {
             tabs.insert(
                 *tab_name,
                 Rc::new(TabData {
-                    button: button.clone(),
+                    button,
                     pane,
                     name: tab_name,
                 }),

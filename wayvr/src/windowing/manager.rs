@@ -1078,7 +1078,7 @@ impl<T> OverlayWindowManager<T> {
                     log::debug!(
                         "global set has saved state for {name} which doesn't exist or is inactive. will apply state once added."
                     );
-                    self.global_set.inactive_overlays.arc_set(name.clone(), ows);
+                    self.global_set.inactive_overlays.arc_set(name, ows);
                 }
             }
         }

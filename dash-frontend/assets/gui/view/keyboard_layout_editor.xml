@@ -1,0 +1,29 @@
+<layout version="2">
+  <include src="@/gui/t_separator.xml"/>
+
+  <!-- name, layout, flag -->
+  <template name="KeyboardLayoutButton">
+    <Button id="button" tooltip_str="${layout}" width="100%" max_width="200" min_height="32" height="32" flex_direction="row" justify_content="space_between" gap="8" padding_left="8" padding_right="8">
+      <sprite min_width="24" min_height="24" src_builtin="@/dashboard/flags/${flag}.svg" color="#FFFFFF" parent_color="ignore"/>
+      <label text="${name}" weight="bold"/>
+    </Button>
+  </template>
+
+  <!-- title, translation, id, width -->
+  <template name="List">
+    <div flex_direction="column" gap="8" width="${width}">
+      <label translation="${translation}" size="16" weight="bold" />
+
+      <!-- real list -->
+      <div id="${id}" flex_direction="row" gap="4" overflow_y="scroll" flex_wrap="wrap"/>
+    </div>
+  </template>
+
+  <elements>
+    <div flex_direction="row" gap="16" width="100%">
+      <List translation="APP_SETTINGS.ACTIVE_LIST" id="list_active" width="25%"/>
+      <VerticalSeparator/>
+      <List translation="APP_SETTINGS.AVAILABLE_LIST" id="list_available" width="75%"/>
+    </div>
+  </elements>
+</layout>

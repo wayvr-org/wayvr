@@ -2,4 +2,8 @@
   <template name="Separator">
     <rectangle width="100%" min_height="2" color="outline" />
   </template>
+
+  <template name="VerticalSeparator">
+    <rectangle height="100%" min_width="2" color="outline" />
+  </template>
 </layout>
