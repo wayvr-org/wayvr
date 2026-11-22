@@ -75,7 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	let mut recreate = false;
 
-	let mut scale = window.scale_factor() as f32;
+	let mut scale = window.scale_factor() as f32 * 1.666;
 
 	let mut audio: Box<dyn audio::AudioProvider> = Box::new(audio::RealAudioProvider::new());
 	let mut testbed = load_testbed(&gfx, &mut audio)?;

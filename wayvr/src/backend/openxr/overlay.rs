@@ -96,8 +96,7 @@ impl OverlayWindowData<OpenXrOverlayData> {
                 .config
                 .backend
                 .frame_meta()
-                .map(|x| x.transform)
-                .unwrap_or_default(); // contract
+                .map_or_default(|x| x.transform); // contract
 
         let aspect_ratio = swapchain.extent[0] as f32 / swapchain.extent[1] as f32;
         let (scale_x, scale_y) = if aspect_ratio < 1.0 {

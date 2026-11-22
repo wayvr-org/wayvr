@@ -12,6 +12,7 @@ pub fn init_window(title: &str) -> anyhow::Result<(Arc<WGfx>, EventLoop<()>, Arc
 		event_loop
 			.create_window(
 				Window::default_attributes()
+					.with_inner_size(winit::dpi::Size::Logical((1600, 900).into()))
 					.with_transparent(true)
 					.with_title(title),
 			)

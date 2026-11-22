@@ -195,7 +195,8 @@
 			"UINPUT_HELP": "Använder modulen uinput för att emulera en enhet.\nFungerar generellt bra på de flesta skrivbord.",
 			"EVDEV_HELP": "Ta kontroll över inmatningsenheter för exklusiv användning.\nAnvändaren måste tillhöra gruppen 'input'.",
 			"WL_VIRTUAL": "Wayland virtuell inmatning",
-			"WL_VIRTUAL_HELP": "Skickar händelser till Wayland-kompositorn via\nzwlr_virtual_pointer och zwp_virtual_keyboard.\nFungerar endast på vissa skrivbord.\nFungerar INTE på KDE, GNOME eller COSMIC."
+			"WL_VIRTUAL_HELP": "Skickar händelser till Wayland-kompositorn via\nzwlr_virtual_pointer och zwp_virtual_keyboard.\nFungerar endast på vissa skrivbord.\nFungerar INTE på KDE, GNOME eller COSMIC.",
+			"CUSTOM": "Anpassad"
 		},
 		"POINTER_ACCELERATION": "Musacceleration",
 		"POINTER_ACCELERATION_HELP": "På: Adaptiv musacceleration\nAv: Konstant hastighet",
@@ -269,7 +270,11 @@
 		"OVERLAYS": "Overlays",
 		"SHOW_GRAB_HELP": "Visa hjälp för grepp",
 		"WATCH": "Klocka",
-		"VARIOUS": "Övrigt"
+		"VARIOUS": "Övrigt",
+		"KEYBOARD_MODEL": "Tangentbordsmodell",
+		"KEYBOARD_LAYOUT": "Tangentbordslayout",
+		"ACTIVE_LIST": "Aktiva",
+		"AVAILABLE_LIST": "Tillgängliga"
 	},
 	"APPLICATION_LAUNCHER": "App-startare",
 	"APPLICATION_STARTED": "Applikationen startades",

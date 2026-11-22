@@ -249,8 +249,7 @@ impl OverlayWindowData<OpenVrOverlayData> {
                 .config
                 .backend
                 .frame_meta()
-                .map(|f| f.transform)
-                .unwrap_or_default();
+                .map_or_default(|f| f.transform);
 
         let transform = Matrix3x4::from_affine(&effective);
 

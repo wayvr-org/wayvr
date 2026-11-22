@@ -3,7 +3,6 @@ use strum::EnumProperty;
 use wgui::{
 	color::WguiColorName,
 	components::tabs::ComponentTabs,
-	event::StyleSetRequest,
 	i18n::Translation,
 	layout::{Layout, WidgetID},
 	log::LogErr,

@@ -181,7 +181,8 @@
 			"UINPUT_HELP": "使用 uinput 模块来模拟设备。\n在大多数桌面环境下运行良好。",
 			"EVDEV_HELP": "独占捕捉输入设备。\n用户必须在 input 组中。",
 			"WL_VIRTUAL": "Wayland 虚拟输入",
-			"WL_VIRTUAL_HELP": "使用 zwlr_virtual_pointer 和 zwp_virtual_keyboard 向 Wayland 合成器发送事件。\n仅在部分桌面环境下运行稳定。\n在 KDE、GNOME 或 COSMIC 上无效。"
+			"WL_VIRTUAL_HELP": "使用 zwlr_virtual_pointer 和 zwp_virtual_keyboard 向 Wayland 合成器发送事件。\n仅在部分桌面环境下运行稳定。\n在 KDE、GNOME 或 COSMIC 上无效。",
+			"CUSTOM": "自定义"
 		},
 		"POINTER_ACCELERATION": "鼠标加速",
 		"POINTER_ACCELERATION_HELP": "开启：自适应鼠标加速\n关闭：恒定速度",
@@ -269,7 +270,11 @@
 		"OVERLAYS": "叠加层",
 		"SHOW_GRAB_HELP": "显示抓取帮助",
 		"WATCH": "手表",
-		"VARIOUS": "杂项"
+		"VARIOUS": "杂项",
+		"KEYBOARD_MODEL": "键盘布局",
+		"KEYBOARD_LAYOUT": "键盘布局",
+		"ACTIVE_LIST": "活跃",
+		"AVAILABLE_LIST": "可用列表"
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",
 	"APPLICATION_STARTED": "应用程序已启动",

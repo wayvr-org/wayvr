@@ -181,7 +181,8 @@
 			"UINPUT_HELP": "Utilizza il modulo uinput per emulare un dispositivo.\nFunziona bene sulla maggior parte dei desktop.",
 			"EVDEV_HELP": "Cattura i dispositivi di input per l'uso esclusivo.\nL'utente deve appartenere al gruppo 'input'.",
 			"WL_VIRTUAL": "Input virtuale Wayland",
-			"WL_VIRTUAL_HELP": "Invia eventi al compositor Wayland usando\nzwlr_virtual_pointer e zwp_virtual_keyboard.\nFunziona in modo affidabile solo su alcuni desktop.\nNON funziona su KDE, GNOME o COSMIC."
+			"WL_VIRTUAL_HELP": "Invia eventi al compositor Wayland usando\nzwlr_virtual_pointer e zwp_virtual_keyboard.\nFunziona in modo affidabile solo su alcuni desktop.\nNON funziona su KDE, GNOME o COSMIC.",
+			"CUSTOM": "Personalizzato"
 		},
 		"POINTER_ACCELERATION": "Accelerazione mouse",
 		"POINTER_ACCELERATION_HELP": "On: Accelerazione mouse adattiva\nOff: Velocità costante",
@@ -269,7 +270,11 @@
 		"OVERLAYS": "Overlay",
 		"SHOW_GRAB_HELP": "Mostra aiuto presa",
 		"WATCH": "Watch",
-		"VARIOUS": "Varie"
+		"VARIOUS": "Varie",
+		"KEYBOARD_MODEL": "Modello tastiera",
+		"KEYBOARD_LAYOUT": "Layout tastiera",
+		"ACTIVE_LIST": "Attivi",
+		"AVAILABLE_LIST": "Disponibili"
 	},
 	"APPLICATION_LAUNCHER": "Avvio applicazioni",
 	"APPLICATION_STARTED": "Applicazione avviata",
