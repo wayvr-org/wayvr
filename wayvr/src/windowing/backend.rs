@@ -156,6 +156,7 @@ pub enum OverlayEventData {
     VisibleOverlaysChanged(Rc<[OverlayID]>),
     DevicesChanged,
     SettingsChanged,
+    KeyboardLayoutsChanged,
     OverlayGrabbed {
         name: Arc<str>,
         pos: Positioning,

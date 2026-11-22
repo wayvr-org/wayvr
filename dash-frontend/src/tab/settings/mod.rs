@@ -271,7 +271,7 @@ impl<T> Tab<T> for TabSettings<T> {
 				let setting = SettingType::from_str(setting).expect("Invalid Enum string");
 				let config = frontend.interface.general_config(data);
 				setting.set_enum(config, value);
-				changed = Some(ConfigChangeKind::OverlayConfig);
+				changed = Some(setting.change_kind());
 			}
 		}
 
@@ -309,6 +309,7 @@ impl SettingTypeImpl for SettingType {
 		match self {
 			Self::MouseAcceleration | Self::MouseSpeed => ConfigChangeKind::WvrServerConfig,
 			Self::UseSkybox | Self::UsePassthrough => ConfigChangeKind::EnvironmentBlend,
+			Self::KeyboardModel => ConfigChangeKind::KeyboardModel,
 			_ => ConfigChangeKind::OverlayConfig,
 		}
 	}
@@ -332,6 +333,9 @@ impl SettingTypeImpl for SettingType {
 			Self::KeyboardMiddleClick => {
 				config.keyboard_middle_click_mode =
 					wlx_common::config::AltModifier::from_str(value).expect("Invalid enum value!")
+			}
+			Self::KeyboardModel => {
+				config.keyboard_model = wlx_common::keyboard::KeyboardModel::from_str(value).expect("Invalid enum value!")
 			}
 			Self::HandsfreeAltTab => {
 				config.handsfree_alt_tab = wlx_common::config::HandsfreeAltTab::from_str(value).expect("Invalid enum value!")
@@ -430,6 +434,7 @@ impl SettingTypeImpl for SettingType {
 			Self::InputCaptureMethod => Self::get_enum_title_inner(config.wvr_input_capture),
 			Self::InputEmulationMethod => Self::get_enum_title_inner(config.input_emulation_method),
 			Self::KeyboardMiddleClick => Self::get_enum_title_inner(config.keyboard_middle_click_mode),
+			Self::KeyboardModel => Self::get_enum_title_inner(config.keyboard_model),
 			Self::HandsfreePointer => Self::get_enum_title_inner(config.handsfree_pointer),
 			Self::HandsfreeAltTab => Self::get_enum_title_inner(config.handsfree_alt_tab),
 			Self::Language => match &config.language {
@@ -464,6 +469,7 @@ impl SettingTypeImpl for SettingType {
 			Self::InvertScrollDirectionX => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_X"),
 			Self::InvertScrollDirectionY => Ok("APP_SETTINGS.INVERT_SCROLL_DIRECTION_Y"),
 			Self::KeyboardMiddleClick => Ok("APP_SETTINGS.KEYBOARD_MIDDLE_CLICK"),
+			Self::KeyboardModel => Ok("APP_SETTINGS.KEYBOARD_MODEL"),
 			Self::KeyboardSoundEnabled => Ok("APP_SETTINGS.KEYBOARD_SOUND_ENABLED"),
 			Self::Language => Ok("APP_SETTINGS.LANGUAGE"),
 			Self::LeftHandedMouse => Ok("APP_SETTINGS.LEFT_HANDED_MOUSE"),

@@ -1,14 +1,13 @@
 use std::{collections::HashMap, collections::HashSet, str::FromStr, sync::Arc, sync::LazyLock};
 
+use anyhow::Context;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use wlx_common::keyboard::KeyboardModel;
 
-use crate::{
-    config::{ConfigType, load_known_yaml},
-    subsystem::hid::{
-        ALTGR, DEFAULT_XKB_MODEL, KEYS_TO_MODS, KeyModifier, KeyType, NUM_LOCK, SHIFT, VirtualKey,
-        XkbKeymap, get_key_type,
-    },
+use crate::subsystem::hid::{
+    ALTGR, DEFAULT_XKB_MODEL, KEYS_TO_MODS, KeyModifier, KeyType, NUM_LOCK, SHIFT, VirtualKey,
+    XkbKeymap, get_key_type,
 };
 
 use super::KeyButtonData;
@@ -45,13 +44,17 @@ fn default_native_layout() -> String {
 }
 
 impl Layout {
-    pub(super) fn load_from_disk() -> Self {
-        let mut layout = load_known_yaml::<Self>(ConfigType::Keyboard);
-        layout.post_load();
-        layout
+    pub(super) fn load(model: KeyboardModel) -> anyhow::Result<Self> {
+        let yaml = model
+            .layout_yaml()
+            .context("Could not load the keyboard layout")?;
+        let mut layout: Self = serde_yaml::from_str(&yaml)
+            .context("Could not parse the keyboard layout. Check keyboard.yaml.")?;
+        layout.post_load()?;
+        Ok(layout)
     }
 
-    fn post_load(&mut self) {
+    fn post_load(&mut self) -> anyhow::Result<()> {
         self.non_modifier_keys = self
             .non_modifiers
             .iter()
@@ -65,29 +68,37 @@ impl Layout {
             })
             .collect();
 
-        for i in 0..self.key_sizes.len() {
-            let row = &self.key_sizes[i];
+        anyhow::ensure!(
+            !self.key_sizes.is_empty(),
+            "The keyboard layout does not define any keys"
+        );
+        anyhow::ensure!(self.row_size > 0.0, "row_size must be a positive number");
+        anyhow::ensure!(
+            self.main_layout.len() == self.key_sizes.len(),
+            "The main layout has {} rows, but key_sizes has {}",
+            self.main_layout.len(),
+            self.key_sizes.len()
+        );
+
+        for (i, row) in self.key_sizes.iter().enumerate() {
             let width: f32 = row.iter().sum();
-            assert!(
+            anyhow::ensure!(
                 (width - self.row_size).abs() < 0.001,
-                "Row {} has a width of {}, but the row size is {}",
-                i,
-                width,
+                "Row {i} has a width of {width}, but the row size is {}",
                 self.row_size
             );
         }
 
-        for i in 0..self.main_layout.len() {
-            let row = &self.main_layout[i];
-            let width = row.len();
-            assert!(
-                (width == self.key_sizes[i].len()),
-                "Row {} has {} keys, needs to have {} according to key_sizes",
-                i,
-                width,
+        for (i, row) in self.main_layout.iter().enumerate() {
+            anyhow::ensure!(
+                row.len() == self.key_sizes[i].len(),
+                "Row {i} has {} keys, needs to have {} according to key_sizes",
+                row.len(),
                 self.key_sizes[i].len()
             );
         }
+
+        Ok(())
     }
 
     pub(super) fn get_key_data(

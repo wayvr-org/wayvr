@@ -12,6 +12,7 @@ pub mod dash_interface_emulated;
 pub mod data_dir;
 pub mod desktop_finder;
 mod desktop_watcher;
+pub mod keyboard;
 pub mod locale;
 pub mod openxr_actions;
 pub mod openxr_bindings_schema;

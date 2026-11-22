@@ -12,6 +12,7 @@ impl State {
 		let c = options_category(par.mp, par.id_parent, "HID", "@/dashboard/mouse.svg")?;
 
 		options_dropdown::<wlx_common::config::InputCaptureMethod>(par.mp, c, &SettingType::InputCaptureMethod)?;
+		options_dropdown::<wlx_common::keyboard::KeyboardModel>(par.mp, c, &SettingType::KeyboardModel)?;
 		options_slider(par.mp, c, SettingType::MouseSpeed, -1., 1., 0.05)?;
 		options_checkbox(par.mp, c, SettingType::MouseAcceleration)?;
 

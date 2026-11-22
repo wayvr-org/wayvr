@@ -120,6 +120,8 @@ pub enum GlobalChange {
     Settings,
     Keyboard,
     ColorPalette,
+    RecreateKeyboard,
+    KeyboardLayoutsChanged,
 }
 
 pub type ModifyOverlayTask = dyn FnOnce(&mut AppState, &mut OverlayWindowConfig) + Send;

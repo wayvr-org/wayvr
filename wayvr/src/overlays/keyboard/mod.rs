@@ -39,6 +39,7 @@ use wgui::{
 use wlx_common::windowing::{OverlayWindowState, Positioning};
 use wlx_common::{
     config::{AltModifier, GeneralConfig},
+    keyboard::KeyboardModel,
     overlays::{BackendAttrib, BackendAttribValue, ToastTopic},
 };
 
@@ -57,8 +58,36 @@ fn keymap_layouts(config: &GeneralConfig, layout: &layout::Layout) -> Vec<Arc<st
     }
 }
 
+fn default_keyboard_state(app: &AppState, keymap_switch_layouts: Vec<Arc<str>>) -> KeyboardState {
+    KeyboardState {
+        modifiers: 0,
+        alt_modifier: alt_modifier_to_key(app.session.config.keyboard_middle_click_mode),
+        processes: vec![],
+        overlay_list: OverlayList::default(),
+        set_list: SetList::default(),
+        clock_12h: app.session.config.clock_12h,
+        keymap_switch_layouts,
+        keymap_switch_index: 0,
+        keymap_switch_pending: false,
+    }
+}
+
 pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig> {
-    let layout = layout::Layout::load_from_disk();
+    let layout = match layout::Layout::load(app.session.config.keyboard_model) {
+        Ok(layout) => layout,
+        Err(e) => {
+            log::error!("{e:?}");
+            Toast::new(
+                ToastTopic::Error,
+                Some(Translation::from_translation_key("SETTINGS")),
+                Translation::from_raw_text_string(e.to_string()),
+            )
+            .with_timeout(10.)
+            .submit(app);
+
+            layout::Layout::load(KeyboardModel::Iso)?
+        }
+    };
 
     let auto_labels = layout.auto_labels.unwrap_or(true);
 
@@ -88,17 +117,7 @@ pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig
         maybe_keymap = None;
     }
 
-    let default_state = KeyboardState {
-        modifiers: 0,
-        alt_modifier: alt_modifier_to_key(app.session.config.keyboard_middle_click_mode),
-        processes: vec![],
-        overlay_list: OverlayList::default(),
-        set_list: SetList::default(),
-        clock_12h: app.session.config.clock_12h,
-        keymap_switch_layouts,
-        keymap_switch_index: 0,
-        keymap_switch_pending: false,
-    };
+    let default_state = default_keyboard_state(app, keymap_switch_layouts);
 
     let mut backend = KeyboardBackend {
         layout_panels: SlotMap::default(),
@@ -307,6 +326,66 @@ impl KeyboardBackend {
     fn panel(&mut self) -> &mut GuiPanel<KeyboardState> {
         self.layout_panels.get_mut(self.active_layout).unwrap() // want panic
     }
+
+    fn rebuild_active_panel(&mut self, app: &mut AppState) -> anyhow::Result<()> {
+        let Some(mut shell) = self.layout_panels.remove(self.active_layout) else {
+            return Ok(());
+        };
+        let state = shell.state.take();
+
+        match create_keyboard_panel(app, None, state, &self.wlx_layout) {
+            Ok(panel) => {
+                self.active_layout = self.layout_panels.insert(panel);
+                Ok(())
+            }
+            Err(e) => {
+                let layouts = keymap_layouts(&app.session.config, &self.wlx_layout);
+                shell.state = default_keyboard_state(app, layouts);
+                self.active_layout = self.layout_panels.insert(shell);
+                log::error!("Could not rebuild the keyboard: {e:?}");
+                Err(e)
+            }
+        }
+    }
+
+    fn reload_keymap_switch_layouts(&mut self, app: &mut AppState) -> anyhow::Result<()> {
+        let layouts = keymap_layouts(&app.session.config, &self.wlx_layout);
+        let first = layouts.first().cloned();
+
+        {
+            let state = &mut self.panel().state;
+            state.keymap_switch_layouts = layouts;
+            state.keymap_switch_index = 0;
+            state.keymap_switch_pending = false;
+        }
+
+        self.drop_stale_panels();
+
+        if self.wlx_layout.auto_labels.unwrap_or(true) {
+            if let Some(first) = first
+                && let Err(e) = self.switch_keymap_by_name(&first, app)
+            {
+                log::warn!("Could not switch to layout '{first}': {e:?}");
+            }
+            self.drop_orphan_panels();
+        } else {
+            self.rebuild_active_panel(app)?;
+        }
+
+        self.panel().init(app)
+    }
+
+    fn drop_stale_panels(&mut self) {
+        let active = self.active_layout;
+        self.layout_panels.retain(|key, _| key == active);
+        self.layout_ids.clear();
+    }
+
+    fn drop_orphan_panels(&mut self) {
+        let active = self.active_layout;
+        self.layout_panels.retain(|key, _| key == active);
+        self.layout_ids.retain(|_, key| *key == active);
+    }
 }
 
 impl OverlayBackend for KeyboardBackend {
@@ -375,6 +454,9 @@ impl OverlayBackend for KeyboardBackend {
     }
 
     fn notify(&mut self, app: &mut AppState, event_data: OverlayEventData) -> anyhow::Result<()> {
+        if matches!(event_data, OverlayEventData::KeyboardLayoutsChanged) {
+            return self.reload_keymap_switch_layouts(app);
+        }
         self.panel().notify(app, event_data)
     }
 
