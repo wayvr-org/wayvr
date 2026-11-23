@@ -88,6 +88,12 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId, ExtraExts), anyho
         log::warn!("Missing XR_KHR_composition_layer_color_scale_bias extension.");
     }
 
+    if available_extensions.khr_generic_controller {
+        enabled_extensions.khr_generic_controller = true;
+    } else {
+        log::warn!("Missing XR_KHR_generic_controller extension.");
+    }
+
     let xr_extension = b"XR_MNDX_composition_layer_alpha_blend_system_ui\0".to_vec();
     if available_extensions.other.contains(&xr_extension) {
         enabled_extensions.other.push(xr_extension);
