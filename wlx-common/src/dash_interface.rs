@@ -4,7 +4,7 @@ use wayvr_ipc::{
 	packet_server::{WvrProcess, WvrProcessHandle, WvrWindow, WvrWindowHandle},
 };
 
-use crate::{config::GeneralConfig, desktop_finder::DesktopFinder, DesktopBackend, XrBackend};
+use crate::{DesktopBackend, XrBackend, config::GeneralConfig, desktop_finder::DesktopFinder};
 
 #[derive(Clone)]
 pub struct MonadoClient {

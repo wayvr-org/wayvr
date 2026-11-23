@@ -662,10 +662,14 @@ where
         let name = old_watch.config.name.clone();
 
         if let Some(state) = self.global_set.overlays.remove(old_id) {
-            self.global_set.inactive_overlays.arc_set(name.clone(), state);
+            self.global_set
+                .inactive_overlays
+                .arc_set(name.clone(), state);
         }
         if let Some(state) = self.global_set.hidden_overlays.arc_rm(&name) {
-            self.global_set.inactive_overlays.arc_set(name.clone(), state);
+            self.global_set
+                .inactive_overlays
+                .arc_set(name.clone(), state);
         }
 
         let active_state = old_watch.config.active_state.take();
@@ -673,7 +677,9 @@ where
         drop(old_watch);
 
         if let Some(state) = active_state {
-            self.global_set.inactive_overlays.arc_set(name.clone(), state);
+            self.global_set
+                .inactive_overlays
+                .arc_set(name.clone(), state);
         }
 
         self.watch_id = self.add(watch, app);

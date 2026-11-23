@@ -156,7 +156,7 @@ fn find_custom_panels() -> Vec<Arc<str>> {
 
 		let name = if path.is_file() && path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("xml")) {
 			path.file_stem()
-		} else if path.is_dir() && path.join("layout.xml").is_file() {
+		} else if path.is_dir() && path.join("panel.xml").is_file() {
 			path.file_name()
 		} else {
 			continue;
