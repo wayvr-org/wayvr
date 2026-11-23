@@ -111,6 +111,11 @@ pub(super) fn init_xr() -> Result<(xr::Instance, xr::SystemId, ExtraExts), anyho
         enabled_extensions.other.push(xr_extension);
     }
 
+    let xr_extension = b"XR_MNDX_psvr2_interaction\0".to_vec();
+    if available_extensions.other.contains(&xr_extension) {
+        enabled_extensions.other.push(xr_extension);
+    }
+
     //#[cfg(not(debug_assertions))]
     let layers = [];
     //#[cfg(debug_assertions)]
