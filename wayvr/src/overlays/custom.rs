@@ -29,7 +29,7 @@ pub fn create_custom(app: &mut AppState, name: Arc<str>) -> Option<OverlayWindow
 
     let candidates = {
         let gui_folder = get_gui_root().join(name.as_ref());
-        let v2_layout = gui_folder.join("layout.xml");
+        let v2_layout = gui_folder.join("panel.xml");
         [
             (Some(gui_folder), v2_layout),
             (None, get_gui_root().join(format!("{name}.xml"))),
