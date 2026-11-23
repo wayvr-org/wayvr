@@ -1,9 +1,10 @@
+use std::sync::Arc;
 use wayvr_ipc::{
 	packet_client::WvrProcessLaunchParams,
 	packet_server::{WvrProcess, WvrProcessHandle, WvrWindow, WvrWindowHandle},
 };
 
-use crate::{DesktopBackend, XrBackend, config::GeneralConfig, desktop_finder::DesktopFinder};
+use crate::{config::GeneralConfig, desktop_finder::DesktopFinder, DesktopBackend, XrBackend};
 
 #[derive(Clone)]
 pub struct MonadoClient {
@@ -111,7 +112,7 @@ pub trait DashInterface<T> {
 	fn get_version_string(&self, data: &mut T) -> String;
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone)]
 pub enum ConfigChangeKind {
 	OverlayConfig,
 	EnvironmentBlend,
@@ -119,6 +120,8 @@ pub enum ConfigChangeKind {
 	WvrServerConfig,
 	KeyboardModel,
 	KeyboardLayouts,
+	/// Custom panel was added/removed
+	CustomPanel(Arc<str>),
 	/// Marks the config for saving but doesn't notify any components
 	#[default]
 	Other,

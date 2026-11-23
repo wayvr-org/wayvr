@@ -1,7 +1,8 @@
 use glam::{Affine3A, Quat, Vec3, vec3};
 use std::{sync::Arc, time::Duration};
-use wgui::globals::expand_env_vars;
+use wgui::{assets::AssetPathRc, globals::expand_env_vars};
 use wlx_common::{
+    config_io::get_gui_root,
     overlays::{BackendAttrib, BackendAttribValue},
     windowing::OverlayWindowState,
 };
@@ -21,18 +22,51 @@ use crate::{
 struct CustomPanelState;
 
 pub fn create_custom(app: &mut AppState, name: Arc<str>) -> Option<OverlayWindowConfig> {
-    let params = NewGuiPanelParams {
+    let mut params = NewGuiPanelParams {
         external_xml: true,
         ..NewGuiPanelParams::default()
     };
 
-    let mut panel =
-        GuiPanel::new_from_template(app, &format!("gui/{name}.xml"), CustomPanelState, params)
-            .inspect_err(|e| log::warn!("Error creating '{name}': {e:?}"))
-            .ok()?;
+    let candidates = {
+        let gui_folder = get_gui_root().join(name.as_ref());
+        let v2_layout = gui_folder.join("layout.xml");
+        [
+            (Some(gui_folder), v2_layout),
+            (None, get_gui_root().join(format!("{name}.xml"))),
+        ]
+    };
+
+    let Some((root, path)) = candidates.iter().find_map(|(r, p)| {
+        if p.is_file()
+            && let Some(p_str) = p.to_str()
+        {
+            Some((r, p_str))
+        } else {
+            None
+        }
+    }) else {
+        log::error!("No GUI definition file for custom panel {name}. Tried: {candidates:?}");
+        return None;
+    };
+
+    if let Some(root) = root {
+        params.external_dir = Some(AssetPathRc::File(root.as_path().into()));
+    }
+
+    let mut panel = GuiPanel::new_from_template(app, path, CustomPanelState, params)
+        .inspect_err(|e| log::warn!("Error creating '{name}': {e:?}"))
+        .ok()?;
 
     if let Some(icon) = panel.parser_state.data.var_map.get("_panel_icon") {
-        let icon = expand_env_vars(icon);
+        let icon = if let Some(root) = root
+            && let Some(prefixed) = icon.strip_prefix("@/")
+        {
+            let path = root.join(prefixed);
+            expand_env_vars(path.to_string_lossy().as_ref())
+        } else {
+            expand_env_vars(icon.as_ref())
+        };
+
         panel
             .extra_attribs
             .insert(BackendAttrib::Icon, BackendAttribValue::Icon(icon.into()));

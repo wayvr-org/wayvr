@@ -11,7 +11,7 @@ use slotmap::{Key, SecondaryMap, SlotMap};
 use wgui::{i18n::Translation, log::LogErr};
 use wlx_common::{
     DesktopBackend,
-    astr_containers::{AStrMap, AStrMapExt},
+    astr_containers::{AStrMap, AStrMapExt, AStrSetExt},
     config::SerializedWindowSet,
     overlays::{BackendAttrib, BackendAttribValue, ToastTopic},
     windowing::{OverlayWindowState, Positioning},
@@ -403,6 +403,30 @@ where
                         .config
                         .backend
                         .notify(app, OverlayEventData::ColorPaletteRefresh);
+                }
+            }
+            OverlayTask::GlobalChange(GlobalChange::CustomPanel(name)) => {
+                let id_to_remove = self
+                    .overlays
+                    .iter()
+                    .find(|(_, o)| {
+                        o.config.category == OverlayCategory::Panel && o.config.name == name
+                    })
+                    .map(|(oid, _)| oid);
+
+                if let Some(oid) = id_to_remove
+                    && let Some(o) = self.remove_by_selector(&OverlaySelector::Id(oid), app)
+                {
+                    log::info!("Dropped custom panel '{}'", o.config.name);
+                    self.on_overlay_dropped(app, oid, &o);
+                    self.dropped_overlays.push_back(o);
+                }
+
+                if app.session.config.custom_panels.arc_get(&name)
+                    && let Some(panel) = create_custom(app, name)
+                {
+                    log::info!("Loaded custom panel '{}'", panel.name);
+                    self.add(OverlayWindowData::from_config(panel), app);
                 }
             }
             OverlayTask::CleanupOverlays(category) => {

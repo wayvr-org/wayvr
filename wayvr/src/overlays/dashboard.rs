@@ -556,6 +556,12 @@ impl DashInterface<AppState> for DashInterfaceLive {
                         GlobalChange::KeyboardLayoutsChanged,
                     )));
             }
+            ConfigChangeKind::CustomPanel(name) => {
+                data.tasks
+                    .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
+                        GlobalChange::CustomPanel(name),
+                    )));
+            }
             ConfigChangeKind::EnvironmentBlend => {
                 #[cfg(feature = "openxr")]
                 {

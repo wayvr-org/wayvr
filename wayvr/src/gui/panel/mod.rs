@@ -24,7 +24,7 @@ use idmap::IdMap;
 use label::setup_custom_label;
 use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
 use wgui::{
-    assets::AssetPathRef,
+    assets::{AssetPathRc, AssetPathRef},
     components::{
         button::ComponentButton, checkbox::ComponentCheckbox, radio_group::ComponentRadioGroup,
         slider::ComponentSlider,
@@ -103,6 +103,7 @@ pub struct NewGuiPanelParams<S> {
     pub on_custom_attrib: Option<OnCustomAttribFunc>, // used only in `new_from_template`
     pub resize_to_parent: bool,
     pub external_xml: bool,
+    pub external_dir: Option<AssetPathRc>,
     pub gui_scale: f32,
     pub extra_vars: HashMap<Rc<str>, Rc<str>>,
 }
@@ -114,6 +115,7 @@ impl<S> Default for NewGuiPanelParams<S> {
             on_custom_attrib: None,
             resize_to_parent: false,
             external_xml: false,
+            external_dir: None,
             gui_scale: 1.0,
             extra_vars: HashMap::default(),
         }
@@ -136,9 +138,11 @@ impl<S: 'static> GuiPanel<S> {
             }
         });
 
+        #[allow(clippy::needless_update)]
         let extra = wgui::parser::ParseDocumentExtra {
             on_custom_attribs: Some(on_custom_attrib_inner.clone()),
             extra_vars: params.extra_vars,
+            root_dir: params.external_dir,
             ..Default::default()
         };
 

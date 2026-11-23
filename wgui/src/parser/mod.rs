@@ -83,6 +83,12 @@ pub struct TemplateParams(HashMap<Rc<str>, Rc<str>>);
 #[derive(Clone, Copy)]
 pub struct Version(u32);
 
+impl Version {
+	pub const fn check_min(&self, ver: u32) -> bool {
+		self.0 >= ver
+	}
+}
+
 struct ParserFile {
 	version: Version,
 
@@ -259,7 +265,7 @@ impl Fetchable for ParserData {
 	Make sure to store them somewhere in your code.
 */
 pub struct ParserState {
-	version: Version,
+	pub version: Version,
 	xml_path_source: AssetPathSource,
 	pub data: ParserData,
 	pub root_dir: AssetPathRc,
