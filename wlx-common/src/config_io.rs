@@ -29,6 +29,10 @@ pub fn get_palettes_root() -> PathBuf {
 	get_config_root().join("palettes")
 }
 
+pub fn get_gui_root() -> PathBuf {
+	get_config_root().join("theme").join("gui")
+}
+
 pub fn get_skymaps_uuids() -> anyhow::Result<Vec<String>> {
 	let data = std::fs::read_to_string(get_skymaps_root().join("skymaps.txt"))?;
 	Ok(data.lines().filter(|line| !line.is_empty()).map(String::from).collect())

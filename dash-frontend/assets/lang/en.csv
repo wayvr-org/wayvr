@@ -103,6 +103,7 @@ APP_SETTINGS.CLICK_FREEZE_TIME_MS,Click freeze time (ms),Slider/numeric input in
 APP_SETTINGS.CLICK_FREEZE_TIME_MS_HELP,Helps with double-click precision,Tooltip for the click freeze time setting.
 APP_SETTINGS.CLOCK_12H,12-hour clock,Checkbox label in Settings > Look & Feel tab. Toggles between 12-hour and 24-hour time display.
 APP_SETTINGS.CONTROLS,Controls,Category header in Settings. Groups input/controller-related settings.
+APP_SETTINGS.CUSTOM_OVERLAYS,Custom Overlays,Category header in Settings > Overlays tab. Groups toggles for user-provided custom panels.
 APP_SETTINGS.DELETE_ALL_CONFIGS,Wipe configuration,Button label in Settings > Troubleshooting tab. Removes all configuration files from conf.d.
 APP_SETTINGS.DELETE_ALL_CONFIGS_HELP,Remove all configuration files from conf.d,Tooltip explaining the Wipe configuration button.
 APP_SETTINGS.DOUBLE_CURSOR_FIX,Double cursor fix,Checkbox label in Settings > Miscellaneous tab. Enables a workaround for systems that show two cursors.
@@ -202,6 +203,7 @@ APP_SETTINGS.OPTION.WL_VIRTUAL_HELP,"Send events to the Wayland compositor using
 zwlr_virtual_pointer and zwp_virtual_keyboard.
 Only works reliably on some desktops.
 Does NOT work on KDE, GNOME or COSMIC.",Tooltip for the Wayland virtual input option.
+APP_SETTINGS.OPEN_CUSTOMIZATION_GUIDE,Open customization guide in browser,Button label in Settings > Overlays tab. Opens the custom panel customization guide in a web browser.
 APP_SETTINGS.OVERLAYS,Overlays,Setting category name (plural). Previously translated as ${DEFINITIONS.OVERLAY}.
 APP_SETTINGS.POINTER_ACCELERATION,Mouse acceleration,Checkbox/dropdown in Settings > Features tab. Toggles adaptive mouse acceleration (on) or constant speed (off).
 APP_SETTINGS.POINTER_ACCELERATION_HELP,"On: Adaptive mouse acceleration

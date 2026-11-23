@@ -9,6 +9,7 @@ use std::{
 
 use anyhow::Context;
 use wgui::{
+    assets::AssetPathRc,
     components::button::ComponentButton,
     event::{
         CallbackData, CallbackMetadata, EventCallback, EventListenerKind, MouseButtonIndex,
@@ -694,9 +695,29 @@ pub(super) fn setup_custom_button<S: 'static>(
                     })
                 }
                 "::ShellExec" => {
+                    let root_dir = if parser_state.version.check_min(2)
+                        && let AssetPathRc::File(ref path) = parser_state.root_dir
+                    {
+                        Some(path.clone())
+                    } else {
+                        None
+                    };
+
+                    let exec = args.fold(String::new(), |c, n| {
+                        if let Some(root_dir) = root_dir.as_ref()
+                            && let Some(prefixed) = n.strip_prefix("@/")
+                        {
+                            let path = root_dir.join(prefixed);
+                            let n = path.to_string_lossy();
+                            c + " " + n.as_ref()
+                        } else {
+                            c + " " + n
+                        }
+                    });
+
                     let state = Rc::new(ShellButtonState {
                         button: button.clone(),
-                        exec: args.fold(String::new(), |c, n| c + " " + n),
+                        exec,
                         mut_state: RefCell::new(ShellButtonMutableState::default()),
                     });
 

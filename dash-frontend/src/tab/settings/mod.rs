@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, rc::Rc, str::FromStr};
+use std::{marker::PhantomData, rc::Rc, str::FromStr, sync::Arc};
 use strum::EnumProperty;
 use wgui::{
 	color::WguiColorName,
@@ -17,6 +17,7 @@ use wgui::{
 	windowing::context_menu::{self, Blueprint, ContextMenu, TickResult},
 };
 use wlx_common::{
+	astr_containers::AStrSetExt,
 	config::{GeneralConfig, SettingType, SettingVar},
 	config_io::ConfigRoot,
 	dash_interface::{ConfigChangeKind, DashPlayspaceTask, HmdStats, InterfaceFeats},
@@ -84,6 +85,7 @@ pub(crate) enum Task {
 	SavePlayspaceCenter,
 	SetTab(TabNameEnum),
 	SettingUpdated(SettingType),
+	ToggleCustomPanel(Arc<str>, bool),
 	UpdateVar(SettingType, SettingVar),
 }
 
@@ -221,6 +223,15 @@ impl<T> Tab<T> for TabSettings<T> {
 						frontend.layout.remove_widget(widget);
 						changed = Some(ConfigChangeKind::OverlayConfig);
 					}
+				}
+				Task::ToggleCustomPanel(name, checked) => {
+					let config = frontend.interface.general_config(data);
+					if checked {
+						config.custom_panels.arc_set(name.clone());
+					} else {
+						config.custom_panels.arc_rm(&name);
+					}
+					changed = Some(ConfigChangeKind::CustomPanel(name));
 				}
 				Task::SettingUpdated(setting) => {
 					if let Some(tab) = &mut self.current_tab {
