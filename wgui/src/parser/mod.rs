@@ -395,8 +395,10 @@ impl ParserState {
 							"action" => action_name = Some(value.into()),
 							"sprite_src_builtin" => sprite_src_builtin = Some(value.into()),
 							"skip" => {
-								let resolved = replace_vars(value, template_params);
-								//FIXME: this is always empty
+								let resolved = match value.strip_prefix('~') {
+									Some(name) => self.data.var_map.get(name).cloned().unwrap_or_default(),
+									None => replace_vars(value, template_params),
+								};
 								if &*resolved == "1" {
 									continue 'children;
 								}
