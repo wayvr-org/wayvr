@@ -273,6 +273,14 @@ impl<S: 'static> GuiPanel<S> {
     ) -> Option<EventListenerID> {
         self.layout.add_event_listener(widget_id, kind, callback)
     }
+
+    pub fn context_menu_handle(&self) -> Rc<RefCell<ContextMenu>> {
+        self.context_menu.clone()
+    }
+
+    pub fn context_menu_custom_attribs(&self) -> parser::OnCustomAttribsFunc {
+        self.on_custom_attrib_inner.clone()
+    }
 }
 
 impl<S: 'static> OverlayBackend for GuiPanel<S> {

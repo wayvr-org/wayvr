@@ -16,6 +16,109 @@ const WHISPER_SAMPLE_RATE: usize = 16_000;
 const MAX_DURATION: Duration = Duration::from_secs(30);
 const UNLOAD_AFTER: Duration = Duration::from_mins(5);
 
+pub const WHISPER_LANGUAGES: &[(&str, &str)] = &[
+    ("af", "Afrikaans"),
+    ("am", "Amharic"),
+    ("ar", "Arabic"),
+    ("as", "Assamese"),
+    ("az", "Azerbaijani"),
+    ("ba", "Bashkir"),
+    ("be", "Belarusian"),
+    ("bg", "Bulgarian"),
+    ("bn", "Bengali"),
+    ("bo", "Tibetan"),
+    ("br", "Breton"),
+    ("bs", "Bosnian"),
+    ("ca", "Catalan"),
+    ("cs", "Czech"),
+    ("cy", "Welsh"),
+    ("da", "Danish"),
+    ("de", "German"),
+    ("el", "Greek"),
+    ("en", "English"),
+    ("es", "Spanish"),
+    ("et", "Estonian"),
+    ("eu", "Basque"),
+    ("fa", "Persian"),
+    ("fi", "Finnish"),
+    ("fo", "Faroese"),
+    ("fr", "French"),
+    ("gl", "Galician"),
+    ("gu", "Gujarati"),
+    ("ha", "Hausa"),
+    ("haw", "Hawaiian"),
+    ("he", "Hebrew"),
+    ("hi", "Hindi"),
+    ("hr", "Croatian"),
+    ("ht", "Haitian Creole"),
+    ("hu", "Hungarian"),
+    ("hy", "Armenian"),
+    ("id", "Indonesian"),
+    ("is", "Icelandic"),
+    ("it", "Italian"),
+    ("ja", "Japanese"),
+    ("jw", "Javanese"),
+    ("ka", "Georgian"),
+    ("kk", "Kazakh"),
+    ("km", "Khmer"),
+    ("kn", "Kannada"),
+    ("ko", "Korean"),
+    ("la", "Latin"),
+    ("lb", "Luxembourgish"),
+    ("ln", "Lingala"),
+    ("lo", "Lao"),
+    ("lt", "Lithuanian"),
+    ("lv", "Latvian"),
+    ("mg", "Malagasy"),
+    ("mi", "Maori"),
+    ("mk", "Macedonian"),
+    ("ml", "Malayalam"),
+    ("mn", "Mongolian"),
+    ("mr", "Marathi"),
+    ("ms", "Malay"),
+    ("mt", "Maltese"),
+    ("my", "Myanmar"),
+    ("ne", "Nepali"),
+    ("nl", "Dutch"),
+    ("nn", "Norwegian Nynorsk"),
+    ("no", "Norwegian"),
+    ("oc", "Occitan"),
+    ("pa", "Punjabi"),
+    ("pl", "Polish"),
+    ("ps", "Pashto"),
+    ("pt", "Portuguese"),
+    ("ro", "Romanian"),
+    ("ru", "Russian"),
+    ("sa", "Sanskrit"),
+    ("sd", "Sindhi"),
+    ("si", "Sinhala"),
+    ("sk", "Slovak"),
+    ("sl", "Slovenian"),
+    ("sn", "Shona"),
+    ("so", "Somali"),
+    ("sq", "Albanian"),
+    ("sr", "Serbian"),
+    ("su", "Sundanese"),
+    ("sv", "Swedish"),
+    ("sw", "Swahili"),
+    ("ta", "Tamil"),
+    ("te", "Telugu"),
+    ("tg", "Tajik"),
+    ("th", "Thai"),
+    ("tk", "Turkmen"),
+    ("tl", "Tagalog"),
+    ("tr", "Turkish"),
+    ("tt", "Tatar"),
+    ("uk", "Ukrainian"),
+    ("ur", "Urdu"),
+    ("uz", "Uzbek"),
+    ("vi", "Vietnamese"),
+    ("yi", "Yiddish"),
+    ("yo", "Yoruba"),
+    ("zh", "Chinese"),
+    ("yue", "Cantonese"),
+];
+
 #[derive(Clone, Debug)]
 pub struct WhisperSttConfig {
     pub model_path: PathBuf,
@@ -116,10 +219,19 @@ pub enum PttProgress {
 }
 
 impl WhisperStt {
-    pub fn new(model_path: impl AsRef<Path>, gpu_idx: u32) -> Result<Self, WhisperSttError> {
+    pub fn new(
+        model_path: impl AsRef<Path>,
+        gpu_idx: u32,
+        language: Option<String>,
+    ) -> Result<Self, WhisperSttError> {
         let mut conf = WhisperSttConfig::new(model_path);
         conf.gpu_device = gpu_idx as i32;
+        conf.language = language;
         Self::init(conf)
+    }
+
+    pub fn set_language(&mut self, language: Option<String>) {
+        self.config.language = language;
     }
 
     pub fn init(config: WhisperSttConfig) -> Result<Self, WhisperSttError> {

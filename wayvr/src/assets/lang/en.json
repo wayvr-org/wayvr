@@ -170,7 +170,9 @@
 		"DOWNLOAD_GUIDANCE": "Set up speech-to-text under settings, features!",
 		"INITIAL_TEXT": "Press and hold the mic button to start transcribing...",
 		"INIT_ERROR": "Error while starting Whisper engine",
-		"ENTER_KEY": "Enter key"
+		"ENTER_KEY": "Enter key",
+		"LANGUAGE": "Transcription language",
+		"AUTO": "Auto"
 	},
 	"NOTIFICATION": {
 		"COUD_NOT_CONNECT_TO_VR_RUNTIME": "Could not connect to VR runtime.",

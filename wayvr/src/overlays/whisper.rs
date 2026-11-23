@@ -1,18 +1,19 @@
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{cell::RefCell, rc::Rc, sync::Arc, time::Duration};
 
 use glam::Affine3A;
 use wgui::{
     animation::{Animation, AnimationDuration, AnimationEasing},
     color::WguiColor,
-    components::button::ComponentButton,
+    components::button::{ButtonClickEvent, ComponentButton},
     drawing::Color,
     event::{CallbackDataCommon, EventCallback, StyleSetRequest},
     i18n::Translation,
     layout::{LayoutTask, WidgetID},
     log::LogErr,
-    parser::Fetchable,
+    parser::{AttribPair, Fetchable},
     taffy,
     widget::{EventResult, label::WidgetLabel, rectangle::WidgetRectangle},
+    windowing::context_menu::{self, Blueprint, OpenParams},
 };
 use wlx_common::{
     data_dir,
@@ -35,7 +36,7 @@ use crate::{
         clipboard::{self, ClipboardProvider},
         hid::VirtualKey,
         input::InputFocus,
-        whisper_stt::{PttProgress, WhisperStt},
+        whisper_stt::{PttProgress, WHISPER_LANGUAGES, WhisperStt},
     },
     windowing::{
         OverlaySelector,
@@ -46,12 +47,83 @@ use crate::{
 use wlx_common::DesktopBackend;
 
 const WHISPER_NAME: &str = "whisper";
+const MAX_RECENT_LANGUAGES: usize = 4;
+
+struct LanguageMenuState {
+    current: Rc<str>,
+    recent: Vec<Rc<str>>,
+}
+
+impl LanguageMenuState {
+    fn set(&mut self, code: Rc<str>) -> Vec<Arc<str>> {
+        self.current = code.clone();
+
+        if !code.is_empty() {
+            self.recent.retain(|c| c != &code);
+            self.recent.insert(0, code);
+            self.recent.truncate(MAX_RECENT_LANGUAGES);
+        }
+
+        self.recent.iter().map(|c| Arc::from(c.as_ref())).collect()
+    }
+}
+
+fn whisper_language_translation(code: &str) -> Translation {
+    if code.is_empty() {
+        Translation::from_translation_key("WHISPER.AUTO")
+    } else {
+        let name = WHISPER_LANGUAGES
+            .iter()
+            .find(|(c, _)| *c == code)
+            .map_or(code, |(_, name)| *name);
+
+        Translation::from_raw_text_string(name.to_string())
+    }
+}
+
+fn whisper_language_cell(code: &str) -> context_menu::Cell {
+    context_menu::Cell::Button(context_menu::Button {
+        title: whisper_language_translation(code),
+        attribs: vec![AttribPair {
+            attrib: Rc::from("_press"),
+            value: Rc::from(format!("::WhisperSetLanguage {code}")),
+        }],
+        ..Default::default()
+    })
+}
+
+fn whisper_language_cells(lang: &LanguageMenuState) -> Vec<context_menu::Cell> {
+    let mut cells = vec![whisper_language_cell("")];
+
+    for code in &lang.recent {
+        cells.push(whisper_language_cell(code));
+    }
+
+    if !lang.recent.is_empty() {
+        cells.push(context_menu::Cell::Separator);
+    }
+
+    let mut rest: Vec<&(&str, &str)> = WHISPER_LANGUAGES
+        .iter()
+        .filter(|(code, _)| !lang.recent.iter().any(|r| r.as_ref() == *code))
+        .collect();
+
+    rest.sort_by(|a, b| a.1.cmp(b.1));
+
+    for (code, _) in rest {
+        cells.push(whisper_language_cell(code));
+    }
+
+    cells
+}
 
 struct WhisperState {
     clipboard_provider: Option<Box<dyn ClipboardProvider>>,
     last_transcription: Option<Rc<str>>,
     id_rect_vu_meter: WidgetID,
     id_label_progress: WidgetID,
+    id_label_language: WidgetID,
+    lang_state: Rc<RefCell<LanguageMenuState>>,
 }
 
 impl WhisperState {
@@ -75,6 +147,23 @@ impl WhisperState {
             }
         }
         false
+    }
+
+    fn set_language(&mut self, common: &mut CallbackDataCommon, app: &mut AppState, code: Rc<str>) {
+        app.session.config.whisper_recent_languages =
+            self.lang_state.borrow_mut().set(code.clone());
+
+        if let Some(stt) = app.whisper_sst.as_mut() {
+            stt.set_language((!code.is_empty()).then(|| code.to_string()));
+        }
+
+        if let Some(mut label) = common
+            .state
+            .widgets
+            .get_as::<WidgetLabel>(self.id_label_language)
+        {
+            label.set_text(common, whisper_language_translation(&code));
+        }
     }
 }
 
@@ -196,6 +285,17 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
         last_transcription: None,
         id_rect_vu_meter: Default::default(),
         id_label_progress: Default::default(),
+        id_label_language: Default::default(),
+        lang_state: Rc::new(RefCell::new(LanguageMenuState {
+            current: Rc::from(""),
+            recent: app
+                .session
+                .config
+                .whisper_recent_languages
+                .iter()
+                .map(|s| Rc::from(s.as_ref()))
+                .collect(),
+        })),
     };
     let xml = "gui/whisper.xml";
 
@@ -232,9 +332,14 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
                             let model_path = data_dir::get_path("whisper")
                                 .join(app.session.config.whisper_model.as_ref());
                             if model_path.is_file() {
+                                let language = {
+                                    let lang = state.lang_state.borrow();
+                                    (!lang.current.is_empty()).then(|| lang.current.to_string())
+                                };
                                 app.whisper_sst = match WhisperStt::new(
                                     model_path,
                                     app.session.config.whisper_gpu,
+                                    language,
                                 )
                                 .log_err("Error while starting Whisper engine")
                                 {
@@ -353,6 +458,18 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
 
                         Ok(EventResult::Consumed)
                     }),
+                    "::WhisperSetLanguage" => {
+                        let code: Rc<str> = args.next().unwrap_or_default().into();
+                        Box::new(move |common, data, app, state| {
+                            if !test_button(data) || !test_duration(&button, app) {
+                                return Ok(EventResult::Pass);
+                            }
+
+                            state.set_language(common, app, code.clone());
+
+                            Ok(EventResult::Consumed)
+                        })
+                    }
                     "::WhisperUnloadAndClose" => Box::new(move |_common, data, app, _state| {
                         if !test_button(data) || !test_duration(&button, app) {
                             return Ok(EventResult::Pass);
@@ -389,6 +506,26 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
     let id_label_transcription = panel.parser_state.get_widget_id("transcription")?;
     panel.state.id_label_progress = panel.parser_state.get_widget_id("label_progress")?;
     panel.state.id_rect_vu_meter = panel.parser_state.get_widget_id("rect_vu_meter")?;
+    panel.state.id_label_language = panel.parser_state.get_widget_id("label_language")?;
+
+    let btn_language = panel
+        .parser_state
+        .fetch_component_as::<ComponentButton>("btn_language")?;
+    let context_menu = panel.context_menu_handle();
+    let context_menu_custom_attribs = panel.context_menu_custom_attribs();
+    let lang_state = panel.state.lang_state.clone();
+
+    btn_language.on_click(Rc::new(move |_common, e: ButtonClickEvent| {
+        let cells = whisper_language_cells(&lang_state.borrow());
+
+        context_menu.borrow_mut().open(OpenParams {
+            on_custom_attribs: Some(context_menu_custom_attribs.clone()),
+            blueprint: Blueprint::Cells(cells),
+            position: e.mouse_pos_absolute.into(),
+        });
+
+        Ok(())
+    }));
 
     #[cfg(not(feature = "osc"))]
     {
