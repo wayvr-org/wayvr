@@ -1,3 +1,5 @@
+use std::env;
+
 use wgui::layout::WidgetID;
 
 use crate::{
@@ -162,12 +164,17 @@ impl State {
 
 		mount_installed_path(par.mp, c, "pactl", Some("APP_SETTINGS.DIAGNOSTICS_REASON.PACTL"))?;
 		mount_installed_path(par.mp, c, "cage", Some("APP_SETTINGS.DIAGNOSTICS_REASON.CAGE"))?;
-		mount_installed_path(
-			par.mp,
-			c,
-			"xwayland-satellite",
-			Some("APP_SETTINGS.DIAGNOSTICS_REASON.XWAYLAND_SATELLITE"),
-		)?;
+
+		// AppImage already contains xwayland-satellite, no need to check!
+		if env::var_os("APPIMAGE").is_none() {
+			mount_installed_path(
+				par.mp,
+				c,
+				"xwayland-satellite",
+				Some("APP_SETTINGS.DIAGNOSTICS_REASON.XWAYLAND_SATELLITE"),
+			)?;
+		}
+
 		mount_installed_path(par.mp, c, "xdg-open", Some("APP_SETTINGS.DIAGNOSTICS_REASON.XDG_OPEN"))?;
 		mount_installed_path(par.mp, c, "steam", None)?;
 
