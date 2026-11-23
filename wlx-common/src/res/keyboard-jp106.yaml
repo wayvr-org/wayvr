@@ -12,7 +12,6 @@
 # *** Important ***
 # The keyboard layout uses virtual key codes, so they are layout-independent.
 # For example, Q on a French layout actually results in A.
-# If you're using a non-english layout, chances are you only need to edit the label section below.
 
 model: jp106
 native_layout: jp
@@ -21,15 +20,17 @@ native_layout: jp
 row_size: 23
 
 # Specifies the size of each key. The sum of any given row must equal RowSize
+# For error messages about rows the first row is 0.
 key_sizes:
-    - [1.5,0.5, 1, 1, 1, 1,0.5,1, 1, 1, 1,0.5,1, 1, 1, 1, 0.5, 1, 1, 1, 0.5, 1, 1, 2]
-    - [1,   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  0.5, 1, 1, 1, 0.5,    1, 1, 1, 1]
-    - [1.5,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5,  0.5, 1, 1, 1, 0.5,    1, 1, 1, 1]
-    - [1.75,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2.25,   4,                    1, 1, 1, 1]
-    - [2.25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.75, 1.5,    1, 1.5,       1, 1, 1, 1]
-    - [1.5, 1, 1.5, 1.5, 2.5, 1.5, 1, 1, 1, 1, 1.5,      0.5, 1, 1, 1, 0.5,    2,    1, 1]
+    - [1.5,0.5, 1, 1, 1, 1,0.5,1, 1, 1, 1,0.5,1, 1, 1, 1, 0.5, 1, 1, 1, 0.5,  1, 1, 2]
+    - [1,   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  0.5, 1, 1, 1, 0.5,     1, 1, 1, 1]
+    - [1.5,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5,  0.5, 1, 1, 1, 0.5,     1, 1, 1, 1]
+    - [1.75,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  2.25,  4,                     1, 1, 1, 1]
+    - [2.25,   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.75, 1.5,      1, 1.5,       1, 1, 1, 1]
+    - [1.5,  1,  1.5, 1.5,   2.5,   1.5,  1, 1, 1, 1, 1.5, 0.5, 1, 1, 1, 0.5, 2,   1, 1]
 
 # The layout of the keyboard.
+# For error messages about rows the first row is 0.
 # Accepted are:
 # - virtual keys. For a full list, see https://github.com/wayvr-org/wayvr/blob/786660a4d54b73714399c9433a68c8cc35eb55f4/wayvr/src/subsystem/hid/mod.rs#L79
 # - exec_commands (defined below)
