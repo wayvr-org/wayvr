@@ -47,9 +47,9 @@ impl Layout {
     pub(super) fn load(model: KeyboardModel) -> anyhow::Result<Self> {
         let yaml = model
             .layout_yaml()
-            .context("Could not load the keyboard layout")?;
-        let mut layout: Self = serde_yaml::from_str(&yaml)
-            .context("Could not parse the keyboard layout. Check keyboard.yaml.")?;
+            .context("keyboard.yaml: Could not read file contents")?;
+        let mut layout: Self =
+            serde_yaml::from_str(&yaml).context("keyboard.yaml: Not a valid yaml")?;
         layout.post_load()?;
         Ok(layout)
     }
@@ -62,7 +62,7 @@ impl Layout {
                 if let Ok(vk) = VirtualKey::from_str(key) {
                     Some(vk)
                 } else {
-                    log::error!("keyboard.yaml: Unknown non-modifier key '{key}'");
+                    log::error!("keyboard.yaml: Unknown key '{key}' in non_modifier_keys");
                     None
                 }
             })
@@ -70,12 +70,15 @@ impl Layout {
 
         anyhow::ensure!(
             !self.key_sizes.is_empty(),
-            "The keyboard layout does not define any keys"
+            "keyboard.yaml: The keyboard layout does not define any keys"
         );
-        anyhow::ensure!(self.row_size > 0.0, "row_size must be a positive number");
+        anyhow::ensure!(
+            self.row_size > 0.0,
+            "keyboard.yaml: row_size must be a positive number"
+        );
         anyhow::ensure!(
             self.main_layout.len() == self.key_sizes.len(),
-            "The main layout has {} rows, but key_sizes has {}",
+            "keyboard.yaml: The main layout has {} rows, but key_sizes has {}",
             self.main_layout.len(),
             self.key_sizes.len()
         );
@@ -84,7 +87,7 @@ impl Layout {
             let width: f32 = row.iter().sum();
             anyhow::ensure!(
                 (width - self.row_size).abs() < 0.001,
-                "Row {i} has a width of {width}, but the row size is {}",
+                "keyboard.yaml: Row {i} has a width of {width}, but the row size is {}",
                 self.row_size
             );
         }
@@ -92,7 +95,7 @@ impl Layout {
         for (i, row) in self.main_layout.iter().enumerate() {
             anyhow::ensure!(
                 row.len() == self.key_sizes[i].len(),
-                "Row {i} has {} keys, needs to have {} according to key_sizes",
+                "keyboard.yaml: Row {i} has {} keys, needs to have {} according to key_sizes",
                 row.len(),
                 self.key_sizes[i].len()
             );

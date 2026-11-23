@@ -584,7 +584,17 @@ where
                 .unwrap_edit_mode(&mut old_keyboard.config, app)?;
         }
 
+        let active_state = old_keyboard.config.active_state.take();
+
         drop(old_keyboard);
+
+        if let Some(state) = active_state
+            && let Some(current_set) = self.current_set
+        {
+            self.sets[current_set]
+                .inactive_overlays
+                .arc_set(name.clone(), state);
+        }
 
         for set in &mut self.sets {
             if let Some(state) = set.overlays.remove(old_id) {
