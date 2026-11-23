@@ -382,6 +382,9 @@ where
             OverlayTask::GlobalChange(GlobalChange::RecreateKeyboard) => {
                 self.recreate_keyboard(app)?;
             }
+            OverlayTask::GlobalChange(GlobalChange::RecreateWatch) => {
+                self.recreate_watch(app)?;
+            }
             OverlayTask::GlobalChange(GlobalChange::KeyboardLayoutsChanged) => {
                 if let Some(keyboard) = self.mut_by_id(self.keyboard_id) {
                     let _ = keyboard
@@ -635,6 +638,62 @@ where
 
         self.overlays_changed(app)?;
         self.sets_changed(app);
+        Ok(())
+    }
+
+    fn recreate_watch(&mut self, app: &mut AppState) -> anyhow::Result<()> {
+        let old_id = self.watch_id;
+
+        let mut watch = OverlayWindowData::from_config(create_watch(app)?);
+        watch.config.show_on_spawn = app.session.config.enable_watch;
+
+        if let Some(watch) = self.mut_by_id(old_id) {
+            let _ = watch
+                .config
+                .backend
+                .pause(app)
+                .log_err("Could not pause watch");
+        }
+
+        let Some(mut old_watch) = self.remove_by_selector(&OverlaySelector::Id(old_id), app) else {
+            return Ok(());
+        };
+
+        let name = old_watch.config.name.clone();
+
+        if let Some(state) = self.global_set.overlays.remove(old_id) {
+            self.global_set.inactive_overlays.arc_set(name.clone(), state);
+        }
+        if let Some(state) = self.global_set.hidden_overlays.arc_rm(&name) {
+            self.global_set.inactive_overlays.arc_set(name.clone(), state);
+        }
+
+        let active_state = old_watch.config.active_state.take();
+
+        drop(old_watch);
+
+        if let Some(state) = active_state {
+            self.global_set.inactive_overlays.arc_set(name.clone(), state);
+        }
+
+        self.watch_id = self.add(watch, app);
+
+        self.overlays_changed(app)?;
+        self.visible_overlays_changed(app)?;
+        for ev in [
+            OverlayEventData::NumSetsChanged(self.sets.len()),
+            OverlayEventData::EditModeChanged(self.edit_mode),
+            OverlayEventData::DevicesChanged,
+        ] {
+            if let Some(watch) = self.mut_by_id(self.watch_id) {
+                let _ = watch
+                    .config
+                    .backend
+                    .notify(app, ev)
+                    .log_err("Could not update watch after recreate");
+            }
+        }
+
         Ok(())
     }
 }

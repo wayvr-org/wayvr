@@ -121,6 +121,7 @@ pub enum GlobalChange {
     Keyboard,
     ColorPalette,
     RecreateKeyboard,
+    RecreateWatch,
     KeyboardLayoutsChanged,
     CustomPanel(Arc<str>),
 }

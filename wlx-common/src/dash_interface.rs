@@ -120,6 +120,7 @@ pub enum ConfigChangeKind {
 	WvrServerConfig,
 	KeyboardModel,
 	KeyboardLayouts,
+	WatchContents,
 	/// Custom panel was added/removed
 	CustomPanel(Arc<str>),
 	/// Marks the config for saving but doesn't notify any components

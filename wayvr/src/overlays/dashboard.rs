@@ -550,6 +550,12 @@ impl DashInterface<AppState> for DashInterfaceLive {
                         GlobalChange::RecreateKeyboard,
                     )));
             }
+            ConfigChangeKind::WatchContents => {
+                data.tasks
+                    .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
+                        GlobalChange::RecreateWatch,
+                    )));
+            }
             ConfigChangeKind::KeyboardLayouts => {
                 data.tasks
                     .enqueue(TaskType::Overlay(OverlayTask::GlobalChange(
