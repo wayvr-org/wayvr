@@ -36,6 +36,11 @@
           <Button macro="button_style" _press="::WhisperSendOSC" tooltip="WHISPER.SEND_OSC" id="btn_osc_send" tooltip_side="right">
             <sprite width="38" height="38" src_builtin="@/icons/chat.svg" />
           </Button>
+          <VerticalSeparator />
+          <Button macro="button_style" id="btn_language" tooltip="WHISPER.LANGUAGE" tooltip_side="right" flex_direction="column">
+            <label id="label_language" translation="WHISPER.AUTO" wrap="1" size="12" weight="bold" align="center" />
+            <sprite width="16" height="16" src_builtin="@/keyboard/down.svg" />
+          </Button>
         </div>
         <div gap="8">
           <Button macro="button_style" _press="::WhisperUnloadAndClose" tooltip="WHISPER.UNLOAD_AND_CLOSE" tooltip_side="left"

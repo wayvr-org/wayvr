@@ -551,6 +551,9 @@ pub struct GeneralConfig {
 	#[serde(default)]
 	pub whisper_gpu: u32,
 
+	#[serde(default)]
+	pub whisper_recent_languages: Vec<Arc<str>>,
+
 	#[serde(default = "def_default")]
 	pub color_palette: Arc<str>,
 

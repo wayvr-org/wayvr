@@ -149,6 +149,8 @@ WHISPER.DOWNLOAD_GUIDANCE,"Set up speech-to-text under settings, features!",Help
 WHISPER.INITIAL_TEXT,Press and hold the mic button to start transcribing...,Help message prompting the user to hold down the button with the microphone icon.
 WHISPER.INIT_ERROR,Error while starting Whisper engine,Error message.
 WHISPER.ENTER_KEY,Enter key,Button to send an Enter key on the emulated keyboard
+WHISPER.LANGUAGE,Transcription language,Tooltip for a dropdown that selects the language used for speech-to-text transcription.
+WHISPER.AUTO,Auto,Auto language option in the speech-to-text transcription language dropdown
 NOTIFICATION.COUD_NOT_CONNECT_TO_VR_RUNTIME,"Could not connect to VR runtime.",A system notification which shows up on initialization failure.
 NOTIFICATION.NOT_RUNNING_XR_VR,"Make sure that Monado, WiVRn or SteamVR is running.",A system notification which shows up on initialization failure.
 NOTIFICATION.NOT_RUNNING_VR,"Make sure that Monado, WiVRn or SteamVR is running.",A system notification which shows up on initialization failure.
