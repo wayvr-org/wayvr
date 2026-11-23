@@ -121,12 +121,11 @@ impl Layout {
             button_state = KeyButtonData::KeymapSwitch {
                 layouts: keyboard_layouts.to_vec(),
             };
-            let keymap_name = keymap
+            let layout_name = keymap
                 .as_ref()
-                .and_then(|m| m.get_name())
-                .unwrap_or("Layout");
+                .map_or("Layout", |m| m.get_layout_code().as_ref());
             return Some(KeyData {
-                label: vec![keymap_name.into()],
+                label: vec![layout_name.into()],
                 button_state,
                 cap_type: KeyCapType::Other,
             });

@@ -5,7 +5,7 @@ use idmap_derive::IntegerId;
 use libc::{input_event, timeval};
 use regex::Regex;
 use serde::Deserialize;
-use std::{cell::LazyCell, sync::LazyLock};
+use std::{cell::LazyCell, rc::Rc, sync::LazyLock};
 use strum::{EnumIter, EnumString, FromRepr};
 use xkbcommon::xkb;
 
@@ -331,6 +331,24 @@ pub const DEFAULT_XKB_MODEL: &str = "pc105";
 #[derive(Clone)]
 pub struct XkbKeymap {
     pub inner: xkb::Keymap,
+    layout_code: Rc<str>,
+}
+
+fn make_layout_code(layout: &str, variant: &str) -> Rc<str> {
+    if layout.is_empty() {
+        "US".into()
+    } else if variant.is_empty() {
+        layout.to_string().to_uppercase().into()
+    } else {
+        let variant = match variant {
+            "nodeadkeys" => "NDK",
+            "colemak_dh" => "CMK-DH",
+            "altgr-intl" => "ALTGR",
+            _ => variant,
+        };
+
+        format!("{layout} {variant}").to_uppercase().into()
+    }
 }
 
 impl Default for XkbKeymap {
@@ -362,11 +380,18 @@ impl XkbKeymap {
             None,
             xkb::COMPILE_NO_FLAGS,
         )
-        .map(|inner| Self { inner })
+        .map(|inner| Self {
+            inner,
+            layout_code: make_layout_code(layout, variant),
+        })
     }
 
     pub fn get_name(&self) -> Option<&str> {
         self.inner.layouts().next()
+    }
+
+    pub fn get_layout_code(&self) -> &Rc<str> {
+        &self.layout_code
     }
 
     pub fn label_for_key(&self, key: VirtualKey, modifier: KeyModifier) -> String {
