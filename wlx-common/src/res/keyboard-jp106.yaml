@@ -26,7 +26,7 @@ key_sizes:
     - [1,   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  0.5, 1, 1, 1, 0.5,    1, 1, 1, 1]
     - [1.5,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5,  0.5, 1, 1, 1, 0.5,    1, 1, 1, 1]
     - [1.75,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2.25,   4,                    1, 1, 1, 1]
-    - [1.25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.75, 1.5,    1, 1.5,       1, 1, 1, 1]
+    - [2.25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.75, 1.5,    1, 1.5,       1, 1, 1, 1]
     - [1.5, 1, 1.5, 1.5, 2.5, 1.5, 1, 1, 1, 1, 1.5,      0.5, 1, 1, 1, 0.5,    2,    1, 1]
 
 # The layout of the keyboard.
@@ -40,7 +40,7 @@ main_layout:
     - ["Oem3", "N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N0", "Minus", "Plus", "Yen", "BackSpace", ~, "Insert", "Home", "Prior", ~, "NumLock", "KP_Divide", "KP_Multiply", "KP_Subtract"]
     - ["Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Oem4", "Oem6", "Oem5", ~, "Delete", "End", "Next", ~, "KP_7", "KP_8", "KP_9", "KP_Add"]
     - ["Caps", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Oem1", "Oem7", "Return", ~, "KP_4", "KP_5", "KP_6", ~]
-    - ["LShift", "Oem102", "Z", "X", "C", "V", "B", "N", "M", "Comma", "Period", "Oem2", "AbntC1", "RShift", ~, "Up", ~, "KP_1", "KP_2", "KP_3", "KP_Enter"]
+    - ["LShift", "Z", "X", "C", "V", "B", "N", "M", "Comma", "Period", "Oem2", "AbntC1", "RShift", ~, "Up", ~, "KP_1", "KP_2", "KP_3", "KP_Enter"]
     - ["LCtrl", "LSuper", "LAlt", "Muhenkan", "Space", "Henkan", "Kana", "AltGr", "RSuper", "Menu", "RCtrl", ~, "Left", "Down", "Right", ~, "KP_0", "KP_Decimal", "Load"]
 
 non_modifiers:
@@ -117,4 +117,5 @@ labels:
     "Yen":            ["¥", "|"]
     "AbntC1":         ["_", "\\"]
     "Oem3":           ["半角", "全角"]
+    "Caps":           ["英数"]
 
