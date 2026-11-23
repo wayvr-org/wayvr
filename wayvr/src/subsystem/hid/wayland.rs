@@ -121,7 +121,10 @@ impl Dispatch<WlKeyboard, ()> for MonitorState {
                                 log::info!("wayland keymap: {l}");
                             }
 
-                            state.keymap = Some(XkbKeymap { inner: keymap });
+                            state.keymap = Some(XkbKeymap {
+                                inner: keymap,
+                                layout_code: "Wayland".into(),
+                            });
                         }
                         Ok(None) => {
                             log::error!("Could not load keymap: no keymap");
