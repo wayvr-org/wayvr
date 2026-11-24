@@ -274,7 +274,9 @@
 		"KEYBOARD_MODEL": "Tangentbordsmodell",
 		"KEYBOARD_LAYOUT": "Tangentbordslayout",
 		"ACTIVE_LIST": "Aktiva",
-		"AVAILABLE_LIST": "Tillgängliga"
+		"AVAILABLE_LIST": "Tillgängliga",
+		"CUSTOM_OVERLAYS": "Anpassade overlays",
+		"OPEN_CUSTOMIZATION_GUIDE": "Öppna anpassningsguide i webbläsare"
 	},
 	"APPLICATION_LAUNCHER": "App-startare",
 	"APPLICATION_STARTED": "Applikationen startades",

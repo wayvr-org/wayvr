@@ -170,7 +170,9 @@
 		"DOWNLOAD_GUIDANCE": "Konfigurera tal-till-text under inställningar, funktioner!",
 		"INITIAL_TEXT": "Håll inne mikroknappen för att börja transkribera...",
 		"INIT_ERROR": "Fel vid start av Whisper-motorn",
-		"ENTER_KEY": "Enter-tangent"
+		"ENTER_KEY": "Enter-tangent",
+		"LANGUAGE": "Transkriberingsspråk",
+		"AUTO": "Auto"
 	},
 	"NOTIFICATION": {
 		"COUD_NOT_CONNECT_TO_VR_RUNTIME": "Kunde inte ansluta till VR-runtime.",

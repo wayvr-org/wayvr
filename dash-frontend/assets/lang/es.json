@@ -274,7 +274,9 @@
 		"KEYBOARD_MODEL": "Modelo de teclado",
 		"KEYBOARD_LAYOUT": "Distribución del teclado",
 		"ACTIVE_LIST": "Activos",
-		"AVAILABLE_LIST": "Disponibles"
+		"AVAILABLE_LIST": "Disponibles",
+		"CUSTOM_OVERLAYS": "Overlays personalizados",
+		"OPEN_CUSTOMIZATION_GUIDE": "Abrir guía de personalización en el navegador"
 	},
 	"APPLICATION_LAUNCHER": "Lanzador de aplicaciones",
 	"APPLICATION_STARTED": "Aplicación iniciada",

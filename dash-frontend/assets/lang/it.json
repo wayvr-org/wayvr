@@ -274,7 +274,9 @@
 		"KEYBOARD_MODEL": "Modello tastiera",
 		"KEYBOARD_LAYOUT": "Layout tastiera",
 		"ACTIVE_LIST": "Attivi",
-		"AVAILABLE_LIST": "Disponibili"
+		"AVAILABLE_LIST": "Disponibili",
+		"CUSTOM_OVERLAYS": "Overlay personalizzati",
+		"OPEN_CUSTOMIZATION_GUIDE": "Apri guida personalizzazione nel browser"
 	},
 	"APPLICATION_LAUNCHER": "Avvio applicazioni",
 	"APPLICATION_STARTED": "Applicazione avviata",

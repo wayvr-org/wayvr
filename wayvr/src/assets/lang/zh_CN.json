@@ -170,7 +170,9 @@
 		"DOWNLOAD_GUIDANCE": "请在“设置”的“功能”选项卡中配置语音转文本！",
 		"INITIAL_TEXT": "按住麦克风按钮开始转写...",
 		"INIT_ERROR": "启动 Whisper 引擎时出错",
-		"ENTER_KEY": "回车键"
+		"ENTER_KEY": "回车键",
+		"LANGUAGE": "转录语言",
+		"AUTO": "自动"
 	},
 	"NOTIFICATION": {
 		"NOT_RUNNING_XR_VR": "请确保 Monado、WiVRn 或 SteamVR 正在运行。",

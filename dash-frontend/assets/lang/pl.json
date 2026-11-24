@@ -274,7 +274,9 @@
 		"KEYBOARD_MODEL": "Model klawiatury",
 		"KEYBOARD_LAYOUT": "Układ klawiatury",
 		"ACTIVE_LIST": "Aktywne",
-		"AVAILABLE_LIST": "Dostępne"
+		"AVAILABLE_LIST": "Dostępne",
+		"CUSTOM_OVERLAYS": "Nakładki własne",
+		"OPEN_CUSTOMIZATION_GUIDE": "Otwórz poradnik personalizacji w przeglądarce"
 	},
 	"APPLICATION_LAUNCHER": "Launcher aplikacji",
 	"APPLICATION_STARTED": "Uruchomiono aplikację",
