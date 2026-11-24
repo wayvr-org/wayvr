@@ -31,7 +31,7 @@ impl SettingsTab for State {
 			self.last_rotations = rotations;
 
 			let mut label = common.state.widgets.cast_as::<WidgetLabel>(self.id_label_rotations)?;
-			label.set_text(&mut common, Translation::from_raw_text_string(rotations.to_string()));
+			label.set_text(&mut common, Translation::from_raw_text(rotations.to_string()));
 		}
 
 		if hmd_stats.session_time_ms != self.last_session_time_ms {
@@ -43,7 +43,7 @@ impl SettingsTab for State {
 				.cast_as::<WidgetLabel>(self.id_label_session_time)?;
 			label.set_text(
 				&mut common,
-				Translation::from_raw_text_string(format_duration(hmd_stats.session_time_ms)),
+				Translation::from_raw_text(format_duration(hmd_stats.session_time_ms)),
 			);
 		}
 
@@ -54,10 +54,7 @@ impl SettingsTab for State {
 				.state
 				.widgets
 				.cast_as::<WidgetLabel>(self.id_label_lens_separation)?;
-			label.set_text(
-				&mut common,
-				Translation::from_raw_text_string(format!("{:.2}", hmd_stats.ipd)),
-			);
+			label.set_text(&mut common, Translation::from_raw_text(format!("{:.2}", hmd_stats.ipd)));
 		}
 
 		Ok(())

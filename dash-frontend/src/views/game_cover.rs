@@ -177,7 +177,7 @@ impl View {
 				border: 2.0,
 				tooltip: Some(TooltipInfo {
 					side: TooltipSide::Bottom,
-					text: Translation::from_raw_text(&params.manifest.name),
+					text: Translation::from_raw_text(params.manifest.name.as_str()),
 				}),
 				style: taffy::Style {
 					position: taffy::Position::Relative,

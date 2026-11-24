@@ -77,7 +77,7 @@ fn whisper_language_translation(code: &str) -> Translation {
             .find(|(c, _)| *c == code)
             .map_or(code, |(_, name)| *name);
 
-        Translation::from_raw_text_string(name.to_string())
+        Translation::from_raw_text(name.to_string())
     }
 }
 
@@ -239,7 +239,7 @@ fn start_progress_state(
                     .set_widget_visible(id_label_progress, true);
                 label.set_text(
                     common,
-                    Translation::from_raw_text_string(format!(
+                    Translation::from_raw_text(format!(
                         "{}%",
                         ((st.processed_samples as f32 / st.sent_samples as f32) * 100.0).round()
                             as i32
@@ -350,7 +350,7 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
                                             Some(Translation::from_translation_key(
                                                 "WHISPER.INIT_ERROR",
                                             )),
-                                            Translation::from_raw_text_string(e.to_string()),
+                                            Translation::from_raw_text(e.to_string()),
                                         )
                                         .with_timeout(5.)
                                         .with_sound(true)
@@ -557,7 +557,7 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
                 let text: Rc<str> = text.into();
                 state.last_transcription = Some(text.clone());
                 let label = data.obj.get_as_mut::<WidgetLabel>().unwrap();
-                label.set_text(common, Translation::from_raw_text_rc(text));
+                label.set_text(common, Translation::from_raw_text(text));
             }
             Ok(EventResult::Pass)
         });

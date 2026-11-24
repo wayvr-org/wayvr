@@ -80,7 +80,7 @@ pub fn create_keyboard(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig
             Toast::new(
                 ToastTopic::Error,
                 Some(Translation::from_translation_key("SETTINGS")),
-                Translation::from_raw_text_string(e.to_string()),
+                Translation::from_raw_text(e.to_string()),
             )
             .with_timeout(10.)
             .submit(app);

@@ -60,15 +60,14 @@ pub(super) fn create_keyboard_panel(
     layout: &layout::Layout,
 ) -> anyhow::Result<GuiPanel<KeyboardState>> {
     let mut params = NewGuiPanelParams::default();
-    params.extra_vars.insert(
-        "openvr".into(),
-        bool_to_rc_str(app.feats.xr_backend.is_open_vr()),
-    );
     params
         .extra_vars
-        .insert("not_passthru".into(), bool_to_rc_str(!app.feats.passthru));
+        .insert("openvr", bool_to_rc_str(app.feats.xr_backend.is_open_vr()));
+    params
+        .extra_vars
+        .insert("not_passthru", bool_to_rc_str(!app.feats.passthru));
     params.extra_vars.insert(
-        "not_wayland".into(),
+        "not_wayland",
         bool_to_rc_str(!app.feats.desktop_backend.is_wayland()),
     );
 

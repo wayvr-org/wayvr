@@ -602,7 +602,7 @@ pub(super) fn setup_custom_button<S: 'static>(
                         );
                         Toast::new(
                             ToastTopic::System,
-                            Some(Translation::from_raw_text_string(text)),
+                            Some(Translation::from_raw_text(text)),
                             Translation::from_translation_key("TOAST.ONE_CONTROLLER_ON_FLOOR"),
                         )
                         .with_timeout(1.0)

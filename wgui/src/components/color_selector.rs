@@ -93,7 +93,7 @@ impl ComponentTrait for ComponentColorSelector {
 
 		self.data.button.set_text(
 			&mut data.layout.common(),
-			Translation::from_raw_text_string(state.color.to_hex_rgb()),
+			Translation::from_raw_text(state.color.to_hex_rgb()),
 		);
 
 		self

@@ -82,7 +82,7 @@ impl View {
 
 			label_title.set_text_simple(
 				&mut globals.get(),
-				Translation::from_raw_text_string(
+				Translation::from_raw_text(
 					par
 						.entry
 						.as_ref()
@@ -92,7 +92,7 @@ impl View {
 			);
 			label_author.set_text_simple(
 				&mut globals.get(),
-				Translation::from_raw_text_string(format!(
+				Translation::from_raw_text(format!(
 					"by {}",
 					par.entry.as_ref().map(|e| e.author.as_str()).unwrap_or("WayVR Team")
 				)),

@@ -147,7 +147,7 @@ fn update_text(common: &mut CallbackDataCommon, state: &mut State, data: &Data, 
 		return;
 	};
 
-	label.set_text(common, Translation::from_raw_text(&text));
+	label.set_text(common, Translation::from_raw_text(text.as_str()));
 
 	common.alterables.refresh_component_once(&state.self_ref);
 
@@ -327,7 +327,7 @@ pub fn construct(
 	let widget_label = WidgetLabel::create(
 		&mut ess.layout.state,
 		WidgetLabelParams {
-			content: Translation::from_raw_text(&params.initial_text),
+			content: Translation::from_raw_text(params.initial_text.as_str()),
 			style: TextStyle {
 				shadow: Some(WguiTextShadow {
 					x: 1.0,

@@ -646,7 +646,7 @@ impl<T> TabSettings<T> {
 
 			label_version.set_text_simple(
 				&mut frontend.globals.get(),
-				Translation::from_raw_text_string(frontend.interface.get_version_string(data)),
+				Translation::from_raw_text(frontend.interface.get_version_string(data)),
 			);
 		}
 

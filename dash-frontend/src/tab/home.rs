@@ -79,10 +79,7 @@ fn get_supporter_anim(
 				let variants = translated.split('|').collect::<Vec<&str>>();
 				let variant = variants[rand::random_range(0..variants.len() - 1)];
 
-				btn.set_text(
-					common,
-					Translation::from_raw_text_string(variant.replace("{USER}", &username)),
-				);
+				btn.set_text(common, Translation::from_raw_text(variant.replace("{USER}", &username)));
 			}
 
 			// last iter
@@ -128,7 +125,7 @@ fn configure_label_hello(common: &mut CallbackDataCommon, label_hello: Widget, c
 	};
 
 	let mut label_hello = label_hello.get_as::<WidgetLabel>().unwrap();
-	label_hello.set_text(common, Translation::from_raw_text(&translated));
+	label_hello.set_text(common, Translation::from_raw_text(translated));
 }
 
 impl<T> TabHome<T> {

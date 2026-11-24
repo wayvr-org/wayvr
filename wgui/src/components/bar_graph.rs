@@ -81,11 +81,11 @@ impl ComponentBarGraph {
 
 		label_val_min.set_text(
 			c,
-			Translation::from_raw_text_string(format!("{}{}", state.limits.0, self.data.unit)),
+			Translation::from_raw_text(format!("{}{}", state.limits.0, self.data.unit)),
 		);
 		label_val_max.set_text(
 			c,
-			Translation::from_raw_text_string(format!("{}{}", state.limits.1, self.data.unit)),
+			Translation::from_raw_text(format!("{}{}", state.limits.1, self.data.unit)),
 		);
 
 		Some(())

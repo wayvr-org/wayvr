@@ -324,7 +324,7 @@ impl WvrWindowBackend {
             NewGuiPanelParams {
                 resize_to_parent: true,
                 on_custom_attrib: Some(on_custom_attrib),
-                extra_vars: [("title".into(), title.as_ref().into())].into(),
+                extra_vars: [("title", title.as_ref())].into(),
                 ..Default::default()
             },
         )?;
@@ -485,7 +485,7 @@ impl WvrWindowBackend {
             .parser_state
             .fetch_widget_as::<WidgetLabel>(&self.panel.layout.state, "title")
         {
-            title.set_text(&mut common, Translation::from_raw_text_rc(new_title));
+            title.set_text(&mut common, Translation::from_raw_text(new_title));
         }
     }
 

@@ -390,8 +390,8 @@ fn new_toast(toast: BakedToast, app: &mut AppState) -> Option<OverlayWindowConfi
             0.0
         };
 
-    let title = Translation::from_raw_text(&toast.title_raw);
-    let body = Translation::from_raw_text(&toast.body_raw);
+    let title = Translation::from_raw_text(toast.title_raw.as_ref());
+    let body = Translation::from_raw_text(toast.body_raw.as_ref());
 
     let on_custom_id: OnCustomIdFunc<()> =
         Box::new(move |id, widget, _doc_params, layout, _parser_state, ()| {

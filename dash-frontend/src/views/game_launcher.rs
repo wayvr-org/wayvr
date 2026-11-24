@@ -84,7 +84,7 @@ impl View {
 			let mut label_title = state.fetch_widget_as::<WidgetLabel>(&params.layout.state, "label_title")?;
 			label_title.set_text_simple(
 				&mut params.globals.get(),
-				Translation::from_raw_text(&params.manifest.name),
+				Translation::from_raw_text(params.manifest.name.as_str()),
 			);
 		}
 
@@ -139,7 +139,7 @@ impl View {
 			if let Some(developer) = details.developers.pop() {
 				label_author
 					.cast::<WidgetLabel>()?
-					.set_text(&mut c, Translation::from_raw_text_string(developer));
+					.set_text(&mut c, Translation::from_raw_text(developer));
 			}
 
 			let desc = if let Some(desc) = &details.short_description {
@@ -153,7 +153,7 @@ impl View {
 			if let Some(desc) = desc {
 				label_description
 					.cast::<WidgetLabel>()?
-					.set_text(&mut c, Translation::from_raw_text(desc));
+					.set_text(&mut c, Translation::from_raw_text(desc.as_str()));
 			}
 		}
 
@@ -173,7 +173,7 @@ impl View {
 			Err(e) => {
 				self
 					.frontend_tasks
-					.push(FrontendTask::PushToast(Translation::from_raw_text_string(format!(
+					.push(FrontendTask::PushToast(Translation::from_raw_text(format!(
 						"Failed to launch: {:?}",
 						e
 					))));
@@ -196,7 +196,7 @@ pub fn mount_popup(
 	frontend_tasks
 		.clone()
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
-			Translation::from_raw_text(&manifest.name),
+			Translation::from_raw_text(manifest.name.as_str()),
 			Box::new(move |data| {
 				let on_launched = popup.get_close_callback(data.layout);
 				let view = View::new(Params {

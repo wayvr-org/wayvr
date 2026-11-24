@@ -22,7 +22,7 @@ use button::setup_custom_button;
 use glam::{Affine2, Vec2, vec2};
 use idmap::IdMap;
 use label::setup_custom_label;
-use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 use wgui::{
     assets::{AssetPathRc, AssetPathRef},
     components::{
@@ -39,6 +39,7 @@ use wgui::{
     i18n::Translation,
     layout::{Layout, LayoutParams, LayoutTask, LayoutUpdateParams, WidgetID},
     parser::{self, CustomAttribsInfoOwned, Fetchable, ParseDocumentExtra, ParserState},
+    rcstrmap::RcStrMap,
     renderer::{context::Context as WguiContext, text::custom_glyph::CustomGlyphData},
     widget::{
         EventResult, image::WidgetImage, label::WidgetLabel, rectangle::WidgetRectangle,
@@ -105,7 +106,7 @@ pub struct NewGuiPanelParams<S> {
     pub external_xml: bool,
     pub external_dir: Option<AssetPathRc>,
     pub gui_scale: f32,
-    pub extra_vars: HashMap<Rc<str>, Rc<str>>,
+    pub extra_vars: RcStrMap,
 }
 
 impl<S> Default for NewGuiPanelParams<S> {
@@ -117,7 +118,7 @@ impl<S> Default for NewGuiPanelParams<S> {
             external_xml: false,
             external_dir: None,
             gui_scale: 1.0,
-            extra_vars: HashMap::default(),
+            extra_vars: RcStrMap::default(),
         }
     }
 }
@@ -573,12 +574,12 @@ pub fn apply_custom_command<T>(
                 .parser_state
                 .fetch_widget_as::<WidgetLabel>(com.state, element)
             {
-                label.set_text(&mut com, Translation::from_raw_text(text));
+                label.set_text(&mut com, Translation::from_raw_text(text.as_str()));
             } else if let Ok(button) = panel
                 .parser_state
                 .fetch_component_as::<ComponentButton>(element)
             {
-                button.set_text(&mut com, Translation::from_raw_text(text));
+                button.set_text(&mut com, Translation::from_raw_text(text.as_str()));
             } else {
                 anyhow::bail!("No <label> or <Button> with such id.");
             }
