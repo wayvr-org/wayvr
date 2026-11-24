@@ -161,6 +161,12 @@ pub enum WayVRTask {
     DndDropped,
 }
 
+struct PendingRelease {
+    index: MouseIndex,
+    pos: Vec2,
+    freeze_until: Instant,
+}
+
 pub struct WvrServerState {
     pub manager: client::WayVRCompositor,
     pub wm: window::WindowManager,
@@ -170,7 +176,7 @@ pub struct WvrServerState {
     ticks: u64,
     cur_modifiers: u8,
     mouse_freeze: Instant,
-    pending_release: Option<(MouseIndex, Vec2)>,
+    pending_release: Option<PendingRelease>,
     window_to_overlay: HashMap<window::WindowHandle, OverlayID>,
     overlay_to_window: SecondaryMap<OverlayID, window::WindowHandle>,
     process_overlays: HashMap<process::ProcessHandle, Vec<OverlayID>>,
@@ -1591,13 +1597,18 @@ impl WvrServerState {
         click_freeze: i32,
     ) {
         if pressed {
-            self.mouse_freeze = Instant::now() + Duration::from_millis(click_freeze.max(0) as u64);
-            self.pending_release = Some((index, global_pos));
-        } else if self.mouse_freeze > Instant::now()
-            && let Some((press_index, press_pos)) = self.pending_release.take()
-            && press_index == index
+            let freeze_until = Instant::now() + Duration::from_millis(click_freeze.max(0) as u64);
+            self.mouse_freeze = freeze_until;
+            self.pending_release = Some(PendingRelease {
+                index,
+                pos: global_pos,
+                freeze_until,
+            });
+        } else if let Some(pending) = self.pending_release.take()
+            && pending.index == index
+            && pending.freeze_until > Instant::now()
         {
-            global_pos = press_pos;
+            global_pos = pending.pos;
         }
 
         let (focus, focus_keyboard) = self.get_mouse_focus(target, hover_window, pressed);
@@ -1662,6 +1673,7 @@ impl WvrServerState {
     }
 
     pub fn send_dnd_release(&mut self, index: MouseIndex) {
+        self.pending_release = None;
         self.manager.send_pointer_button(index, false);
     }
 
