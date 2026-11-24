@@ -320,9 +320,16 @@ where
                     .submit(app);
                     return Ok(());
                 }
-                self.sets.push(OverlayWindowSet::default());
+
+                let src_set = self.current_set.unwrap_or(self.restore_set);
+                self.save_active_states();
+                let new_set = OverlayWindowSet::copied_from(&self.sets[src_set]);
+                self.sets.push(new_set);
+
                 self.switch_to_set(app, Some(new_idx), false);
-                self.overlays[self.keyboard_id].config.activate(app, true);
+                if !self.overlays[self.keyboard_id].config.is_active() {
+                    self.overlays[self.keyboard_id].config.activate(app, true);
+                }
                 self.sets_changed(app);
                 self.visible_overlays_changed(app)?;
             }
@@ -1574,6 +1581,20 @@ impl<T> OverlayWindowManager<T> {
         Some(())
     }
 
+    fn save_active_states(&mut self) {
+        let Some(current_set) = self.current_set else {
+            return;
+        };
+
+        let ws = &mut self.sets[current_set];
+        for (id, data) in self.overlays.iter_mut().filter(|(_, d)| !d.config.global) {
+            if let Some(state) = data.config.active_state.take() {
+                log::debug!("{}: active_state → ws{}", data.config.name, current_set);
+                ws.overlays.insert(id, state);
+            }
+        }
+    }
+
     pub fn switch_or_toggle_set(&mut self, app: &mut AppState, set: usize) {
         let new_set = if self.current_set.iter().any(|cur| *cur == set) {
             None
@@ -1594,15 +1615,7 @@ impl<T> OverlayWindowManager<T> {
             return;
         }
 
-        if let Some(current_set) = self.current_set.as_ref() {
-            let ws = &mut self.sets[*current_set];
-            for (id, data) in self.overlays.iter_mut().filter(|(_, d)| !d.config.global) {
-                if let Some(state) = data.config.active_state.take() {
-                    log::debug!("{}: active_state → ws{}", data.config.name, current_set);
-                    ws.overlays.insert(id, state);
-                }
-            }
-        }
+        self.save_active_states();
 
         if let Some(new_set) = new_set {
             let mut num_overlays = 0;
