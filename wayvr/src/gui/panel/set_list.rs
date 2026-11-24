@@ -46,8 +46,8 @@ impl SetList {
 
                 for i in 0..*num_sets {
                     let mut params = TemplateParams::new();
-                    params.insert_rc("idx", i.to_string().into());
-                    params.insert_rc("display", (i + 1).to_string().into());
+                    params.insert("idx", i.to_string());
+                    params.insert("display", (i + 1).to_string());
                     parser_state
                         .instantiate_template(doc_params, "Set", layout, sets_root, params)?;
                     let set_button =

@@ -61,8 +61,8 @@ pub fn options_split_horiz2(mp: &mut MacroParams, parent: WidgetID) -> anyhow::R
 	let id2 = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id1", &id1);
-	params.insert("id2", &id2);
+	params.insert("id1", id1.as_str());
+	params.insert("id2", id2.as_str());
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "SettingsSplitHoriz2", mp.layout, parent, params)?;
@@ -79,9 +79,9 @@ pub fn options_split_horiz3(mp: &mut MacroParams, parent: WidgetID) -> anyhow::R
 	let id3 = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id1", &id1);
-	params.insert("id2", &id2);
-	params.insert("id3", &id3);
+	params.insert("id1", id1.as_str());
+	params.insert("id2", id2.as_str());
+	params.insert("id3", id3.as_str());
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "SettingsSplitHoriz3", mp.layout, parent, params)?;
@@ -104,7 +104,7 @@ pub fn options_category(
 	let mut params = TemplateParams::new();
 	params.insert("translation", translation);
 	params.insert("icon", icon);
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "SettingsGroupBox", mp.layout, parent, params)?;
@@ -116,7 +116,7 @@ pub fn options_stat_row(mp: &mut MacroParams, parent: WidgetID, translation: &st
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 	params.insert("translation", translation);
 
 	mp.parser_state
@@ -172,10 +172,10 @@ pub fn options_checkbox<'a>(mp: &'a mut MacroParams, parent: WidgetID, setting: 
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 
 	if let Some(src) = get_icon_from_setting_type(setting) {
-		params.insert_str("sprite_src_builtin", format!("@/{}", src));
+		params.insert("sprite_src_builtin", format!("@/{}", src));
 	}
 
 	match setting.get_translation() {
@@ -224,7 +224,7 @@ pub fn options_range_f32(
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 
 	match setting1.get_translation() {
 		Ok(translation) => params.insert("translation", translation),
@@ -240,11 +240,11 @@ pub fn options_range_f32(
 	let value2_t: &mut f32 = setting2.mut_var(mp.config).try_into()?;
 	let value2 = value2_t.to_string();
 
-	params.insert_str("value", value1);
-	params.insert_str("value2", value2);
-	params.insert_rc("min", min.to_string().into());
-	params.insert_rc("max", max.to_string().into());
-	params.insert_rc("step", step.to_string().into());
+	params.insert("value", value1);
+	params.insert("value2", value2);
+	params.insert("min", min.to_string());
+	params.insert("max", max.to_string());
+	params.insert("step", step.to_string());
 
 	let id_cell = horiz_cell(mp.layout, parent)?;
 
@@ -285,7 +285,7 @@ where
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 
 	match setting.get_translation() {
 		Ok(translation) => params.insert("translation", translation),
@@ -299,10 +299,10 @@ where
 	let value_t: &'a mut NumType = setting.mut_var(mp.config).try_into()?;
 	let value = value_t.to_string();
 
-	params.insert_rc("value", value.into());
-	params.insert_rc("min", min.to_string().into());
-	params.insert_rc("max", max.to_string().into());
-	params.insert_rc("step", step.to_string().into());
+	params.insert("value", value);
+	params.insert("min", min.to_string());
+	params.insert("max", max.to_string());
+	params.insert("step", step.to_string());
 
 	let id_cell = horiz_cell(mp.layout, parent)?;
 
@@ -425,7 +425,7 @@ pub fn options_danger_button(
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 	params.insert("translation", translation);
 	params.insert("icon", icon);
 
@@ -454,7 +454,7 @@ pub fn options_button(
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 	params.insert("translation", translation);
 	params.insert("icon", icon);
 
@@ -482,7 +482,7 @@ pub fn options_autostart_app(
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 	params.insert("text", text);
 
 	mp.parser_state

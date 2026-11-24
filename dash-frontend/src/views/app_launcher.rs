@@ -137,7 +137,7 @@ impl View {
 		// app icon
 		if let Some(icon_path) = &params.entry.icon_path {
 			let mut template_params = TemplateParams::new();
-			template_params.insert("path", icon_path);
+			template_params.insert("path", &**icon_path);
 			state.instantiate_template(
 				&doc_params,
 				"ApplicationIcon",

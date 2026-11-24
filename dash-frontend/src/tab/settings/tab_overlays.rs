@@ -174,7 +174,7 @@ fn options_custom_panel_checkbox(mp: &mut MacroParams, parent: WidgetID, panel: 
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 	params.insert("text", panel);
 	params.insert(
 		"checked",

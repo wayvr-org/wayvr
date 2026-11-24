@@ -404,8 +404,8 @@ fn input_controls_for_action(
 	mp.idx += 1;
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
-	params.insert_str(
+	params.insert("id", id.as_str());
+	params.insert(
 		"translation",
 		format!("APP_SETTINGS.BINDINGS.ACTION.{}", action.as_ref().to_uppercase()),
 	);
@@ -910,10 +910,10 @@ fn chord_threshold_slider(
 	let current = current.unwrap_or(DEFAULT_BUTTON_THRESHOLDS);
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 	params.insert("tooltip", "APP_SETTINGS.BINDINGS.THRESHOLD");
-	params.insert_str("value", format!("{:.2}", current[0]));
-	params.insert_str("value2", format!("{:.2}", current[1]));
+	params.insert("value", format!("{:.2}", current[0]));
+	params.insert("value2", format!("{:.2}", current[1]));
 	params.insert("min", "0.0");
 	params.insert("max", "1.0");
 	params.insert("step", "0.1");
@@ -956,10 +956,10 @@ fn threshold_slider(
 	let current = current.unwrap_or(DEFAULT_BUTTON_THRESHOLDS);
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 	params.insert("tooltip", "APP_SETTINGS.BINDINGS.THRESHOLD");
-	params.insert_str("value", format!("{:.2}", current[0]));
-	params.insert_str("value2", format!("{:.2}", current[1]));
+	params.insert("value", format!("{:.2}", current[0]));
+	params.insert("value2", format!("{:.2}", current[1]));
 	params.insert("min", "0.0");
 	params.insert("max", "1.0");
 	params.insert("step", "0.1");

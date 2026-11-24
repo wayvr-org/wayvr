@@ -121,7 +121,7 @@ fn create_color_palettes_button(
 	let id_cell = horiz_cell(mp.layout, parent)?;
 
 	let mut params = TemplateParams::new();
-	params.insert("id", &id);
+	params.insert("id", id.as_str());
 	params.insert("translation", "APP_SETTINGS.COLOR_PALETTE");
 	params.insert("icon", "@/dashboard/palette.svg");
 

@@ -46,7 +46,7 @@ impl DeviceList {
 
                     let template = device.role.as_ref();
 
-                    params.insert_rc("idx", i.to_string().into());
+                    params.insert("idx", i.to_string());
                     parser_state.instantiate_template(
                         doc_params,
                         template,

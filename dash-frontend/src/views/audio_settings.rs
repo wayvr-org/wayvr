@@ -738,8 +738,8 @@ impl View {
 		let disp_name = get_profile_display_name(&params.card.active_profile, params.card);
 
 		let mut par = TemplateParams::new();
-		par.insert("card_name", desc);
-		par.insert("profile_name", &disp_name.name);
+		par.insert("card_name", desc.as_str());
+		par.insert("profile_name", disp_name.name.as_str());
 
 		let data = self
 			.state
@@ -764,7 +764,7 @@ impl View {
 		let mut par = TemplateParams::new();
 
 		if let Some(disp) = &params.disp {
-			par.insert("device_name", &disp.name);
+			par.insert("device_name", disp.name.as_str());
 			par.insert("device_icon", disp.icon_path);
 		} else {
 			let icon_path = if params.device_desc.contains("WiVRn") {
@@ -773,7 +773,7 @@ impl View {
 				"@/dashboard/binary.svg"
 			};
 
-			par.insert("device_name", &params.device_desc);
+			par.insert("device_name", params.device_desc.as_str());
 			par.insert("device_icon", icon_path);
 		}
 

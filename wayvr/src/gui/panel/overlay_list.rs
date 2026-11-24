@@ -41,21 +41,20 @@ impl OverlayList {
 
                     let (template, root) = match meta.category {
                         OverlayCategory::Screen => {
-                            params.insert_rc(
+                            params.insert(
                                 "display",
                                 format!(
                                     "{}{}",
                                     (*meta.name).chars().next().unwrap_or_default(),
                                     (*meta.name).chars().last().unwrap_or_default()
-                                )
-                                .into(),
+                                ),
                             );
                             ("Screen", panels_root)
                         }
                         OverlayCategory::Mirror => {
-                            params.insert_rc(
+                            params.insert(
                                 "display",
-                                (*meta.name).chars().last().unwrap().to_string().into(),
+                                (*meta.name).chars().last().unwrap().to_string(),
                             );
                             ("Mirror", panels_root)
                         }
@@ -66,7 +65,7 @@ impl OverlayList {
                                 .next()
                                 .unwrap_or(&meta.name)
                                 .to_string();
-                            params.insert_rc("display", display.into());
+                            params.insert("display", display);
                             ("Passthru", panels_root)
                         }
                         OverlayCategory::Panel | OverlayCategory::BuiltInPanel => {
@@ -76,7 +75,7 @@ impl OverlayList {
                                 "@/edit/panel.svg".into()
                             };
 
-                            params.insert_rc("icon", icon);
+                            params.insert("icon", icon);
                             ("Panel", panels_root)
                         }
                         OverlayCategory::WayVR => {
@@ -115,7 +114,7 @@ impl OverlayList {
                         continue;
                     }
 
-                    params.insert_rc("idx", i.to_string().into());
+                    params.insert("idx", i.to_string());
                     params.insert("name", meta.name.as_ref());
                     params.insert("title", meta.title.as_deref().unwrap_or(&meta.name));
                     parser_state

@@ -186,10 +186,10 @@ impl ContextMenu {
 			match cell {
 				Cell::Button(cell) => {
 					let mut par = TemplateParams::new();
-					par.insert_rc("text", cell.title.generate(&mut globals.i18n()));
+					par.insert("text", cell.title.generate(&mut globals.i18n()));
 
 					if has_sprites {
-						par.insert_rc(
+						par.insert(
 							"sprite_src_builtin",
 							cell
 								.sprite_src_builtin
@@ -198,7 +198,7 @@ impl ContextMenu {
 						);
 					}
 					if let Some(tooltip) = &cell.tooltip {
-						par.insert_rc("tooltip_str", tooltip.generate(&mut globals.i18n()));
+						par.insert("tooltip_str", tooltip.generate(&mut globals.i18n()));
 					}
 
 					let mut data_cell = inner_parser.parse_template_only(

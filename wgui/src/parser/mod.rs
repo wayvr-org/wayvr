@@ -158,16 +158,12 @@ impl TemplateParams {
 		Self(map)
 	}
 
-	pub fn insert(&mut self, key: &str, value: &str) -> Option<Rc<str>> {
-		self.0.insert(Rc::from(key), Rc::from(value))
-	}
-
-	pub fn insert_rc(&mut self, key: &str, value: Rc<str>) -> Option<Rc<str>> {
-		self.0.insert(Rc::from(key), value)
-	}
-
-	pub fn insert_str(&mut self, key: &str, value: String) -> Option<Rc<str>> {
-		self.0.insert(Rc::from(key), value.into())
+	pub fn insert<K, V>(&mut self, key: K, value: V) -> Option<Rc<str>>
+	where
+		K: Into<Rc<str>>,
+		V: Into<Rc<str>>,
+	{
+		self.0.insert(key.into(), value.into())
 	}
 }
 

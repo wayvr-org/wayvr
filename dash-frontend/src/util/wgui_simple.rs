@@ -184,7 +184,7 @@ pub struct MountDropdownParams<'a> {
 
 pub fn mount_dropdown(par: MountDropdownParams) -> anyhow::Result<()> {
 	let mut params = par.params;
-	params.insert("id", &par.id);
+	params.insert("id", par.id.as_str());
 
 	if let Some(src) = par.sprite_src {
 		wgui_simple::create_icon(par.layout, par.parent, Vec2::splat(24.0), src)?;

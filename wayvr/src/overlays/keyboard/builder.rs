@@ -129,33 +129,23 @@ pub(super) fn create_keyboard_panel(
 
             // todo: make this easier to maintain somehow
             let mut params = TemplateParams::new();
-            params.insert_rc("id", my_id.clone());
-            params.insert_rc("width", key_width.to_string().into());
-            params.insert_rc("height", key_height.to_string().into());
+            params.insert("id", my_id.clone());
+            params.insert("width", key_width.to_string());
+            params.insert("height", key_height.to_string());
 
             let mut label = key.label.into_iter();
-            label
-                .next()
-                .and_then(|s| params.insert_rc("text", s.into()));
+            label.next().and_then(|s| params.insert("text", s));
 
             match key.cap_type {
                 KeyCapType::LetterAltGr => {
-                    label
-                        .next()
-                        .and_then(|s| params.insert_rc("text_altgr", s.into()));
+                    label.next().and_then(|s| params.insert("text_altgr", s));
                 }
                 KeyCapType::Symbol => {
-                    label
-                        .next()
-                        .and_then(|s| params.insert_rc("text_shift", s.into()));
+                    label.next().and_then(|s| params.insert("text_shift", s));
                 }
                 KeyCapType::SymbolAltGr => {
-                    label
-                        .next()
-                        .and_then(|s| params.insert_rc("text_shift", s.into()));
-                    label
-                        .next()
-                        .and_then(|s| params.insert_rc("text_altgr", s.into()));
+                    label.next().and_then(|s| params.insert("text_shift", s));
+                    label.next().and_then(|s| params.insert("text_altgr", s));
                 }
                 _ => {}
             }
