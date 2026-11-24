@@ -170,7 +170,9 @@
 		"DOWNLOAD_GUIDANCE": "¡Configura el dictado en Ajustes > Funciones!",
 		"INITIAL_TEXT": "Mantén pulsado el botón del micro para empezar a transcribir...",
 		"INIT_ERROR": "Error al iniciar el motor Whisper",
-		"ENTER_KEY": "Tecla Enter"
+		"ENTER_KEY": "Tecla Enter",
+		"LANGUAGE": "Idioma de transcripción",
+		"AUTO": "Auto"
 	},
 	"NOTIFICATION": {
 		"NOT_RUNNING_XR_VR": "Asegúrate de que Monado, WiVRn o SteamVR estén ejecutándose.",

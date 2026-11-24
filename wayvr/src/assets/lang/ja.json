@@ -170,7 +170,9 @@
 		"DOWNLOAD_GUIDANCE": "設定の「機能」タブで音声入力の設定をしてね！",
 		"INITIAL_TEXT": "マイクボタンを長押しして文字起こしを開始...",
 		"INIT_ERROR": "Whisperエンジンの起動中にエラーが発生しました",
-		"ENTER_KEY": "Enterキー"
+		"ENTER_KEY": "Enterキー",
+		"LANGUAGE": "文字起こし言語",
+		"AUTO": "自動"
 	},
 	"NOTIFICATION": {
 		"NOT_RUNNING_XR_VR": "Monado、WiVRn、またはSteamVRが実行されていることを確認してください。",

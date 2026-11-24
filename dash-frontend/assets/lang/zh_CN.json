@@ -274,7 +274,9 @@
 		"KEYBOARD_MODEL": "键盘布局",
 		"KEYBOARD_LAYOUT": "键盘布局",
 		"ACTIVE_LIST": "活跃",
-		"AVAILABLE_LIST": "可用列表"
+		"AVAILABLE_LIST": "可用列表",
+		"CUSTOM_OVERLAYS": "自定义叠加层",
+		"OPEN_CUSTOMIZATION_GUIDE": "在浏览器中打开自定义指南"
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",
 	"APPLICATION_STARTED": "应用程序已启动",

@@ -170,7 +170,9 @@
 		"DOWNLOAD_GUIDANCE": "Spracherkennung unter Einstellungen > Features einrichten!",
 		"INITIAL_TEXT": "Mic-Taste gedrückt halten, um die Transkription zu starten...",
 		"INIT_ERROR": "Fehler beim Starten der Whisper-Engine",
-		"ENTER_KEY": "Enter-Taste"
+		"ENTER_KEY": "Enter-Taste",
+		"LANGUAGE": "Transkriptionssprache",
+		"AUTO": "Automatisch"
 	},
 	"NOTIFICATION": {
 		"NOT_RUNNING_XR_VR": "Stelle sicher, dass Monado, WiVRn oder SteamVR läuft.",

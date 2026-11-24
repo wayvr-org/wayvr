@@ -170,7 +170,9 @@
 		"DOWNLOAD_GUIDANCE": "Configura il riconoscimento vocale in Impostazioni > Funzionalità!",
 		"INITIAL_TEXT": "Tieni premuto il tasto del microfono per trascrivere...",
 		"INIT_ERROR": "Errore durante l'avvio del motore Whisper",
-		"ENTER_KEY": "Tasto Invio"
+		"ENTER_KEY": "Tasto Invio",
+		"LANGUAGE": "Lingua di trascrizione",
+		"AUTO": "Auto"
 	},
 	"NOTIFICATION": {
 		"NOT_RUNNING_XR_VR": "Assicurati che Monado, WiVRn o SteamVR siano attivi.",

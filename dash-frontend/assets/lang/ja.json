@@ -274,7 +274,9 @@
 		"KEYBOARD_MODEL": "キーボードモデル",
 		"KEYBOARD_LAYOUT": "キーボードレイアウト",
 		"ACTIVE_LIST": "アクティブ",
-		"AVAILABLE_LIST": "利用可能"
+		"AVAILABLE_LIST": "利用可能",
+		"CUSTOM_OVERLAYS": "カスタムオーバーレイ",
+		"OPEN_CUSTOMIZATION_GUIDE": "ブラウザでカスタマイズガイドを開く"
 	},
 	"APPLICATION_LAUNCHER": "アプリランチャー",
 	"APPLICATION_STARTED": "アプリが起動しました",

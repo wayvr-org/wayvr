@@ -170,7 +170,9 @@
 		"DOWNLOAD_GUIDANCE": "Skonfiguruj zamianę mowy na tekst w ustawieniach, w zakładce funkcje!",
 		"INITIAL_TEXT": "Przytrzymaj przycisk mikrofonu, aby rozpocząć transkrypcję...",
 		"INIT_ERROR": "Błąd podczas uruchamiania silnika Whisper",
-		"ENTER_KEY": "Klawisz Enter"
+		"ENTER_KEY": "Klawisz Enter",
+		"LANGUAGE": "Język transkrypcji",
+		"AUTO": "Auto"
 	},
 	"NOTIFICATION": {
 		"NOT_RUNNING_XR_VR": "Upewnij się, że Monado, WiVRn lub SteamVR jest uruchomione.",
