@@ -442,7 +442,9 @@ impl KeyboardState {
 }
 
 fn play_key_click(app: &mut AppState) {
-    app.audio.play_sample("key_click");
+    if app.session.config.keyboard_sound_enabled {
+        app.audio.play_sample("key_click");
+    }
 }
 
 struct ChildWidget {
