@@ -15,3 +15,14 @@ pub struct OverlayWindowSet {
     /// overlays that have not been seen since startup
     pub(super) inactive_overlays: AStrMap<OverlayWindowState>,
 }
+
+impl OverlayWindowSet {
+    pub(super) fn copied_from(src: &Self) -> Self {
+        Self {
+            name: Arc::from(""),
+            overlays: src.overlays.clone(),
+            hidden_overlays: src.hidden_overlays.clone(),
+            inactive_overlays: src.inactive_overlays.clone(),
+        }
+    }
+}
