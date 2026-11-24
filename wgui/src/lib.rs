@@ -38,6 +38,7 @@ pub mod layout;
 pub mod log;
 pub mod palette;
 pub mod parser;
+pub mod rcstrmap;
 pub mod renderer_vk;
 pub use renderer_vk as renderer;
 pub mod sound;

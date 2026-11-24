@@ -1,6 +1,5 @@
 use std::{
     any::Any,
-    collections::HashMap,
     rc::Rc,
     sync::Arc,
     time::{Duration, Instant},
@@ -9,7 +8,7 @@ use std::{
 use glam::Vec2;
 use wgui::{
     event::CallbackDataCommon, i18n::Translation, log::LogErr, parser::Fetchable,
-    widget::label::WidgetLabel,
+    rcstrmap::RcStrMap, widget::label::WidgetLabel,
 };
 use wlx_capture::{
     WlxCapture,
@@ -171,9 +170,9 @@ impl ScreenCastBackend {
         }
 
         let panel_params = NewGuiPanelParams {
-            extra_vars: HashMap::from([
-                ("name".into(), name.as_ref().into()),
-                ("description".into(), description.as_ref().into()),
+            extra_vars: RcStrMap::from([
+                ("name", name.as_ref()),
+                ("description", description.as_ref()),
             ]),
             ..Default::default()
         };
@@ -425,7 +424,7 @@ fn check(mut par: CheckParams, finalize_fn: ScreenCastFinalizeFn) {
                     Some(Translation::from_translation_key(
                         "TOAST.TITLE_SCREENCAST_FAIL",
                     )),
-                    Translation::from_raw_text_string(format!("{e}")),
+                    Translation::from_raw_text(format!("{e}")),
                 )
                 .submit(par.app);
             }

@@ -75,7 +75,7 @@ pub fn create_label_error(layout: &mut Layout, parent: WidgetID, content: String
 	let label = WidgetLabel::create(
 		&mut layout.state,
 		WidgetLabelParams {
-			content: Translation::from_raw_text_string(content),
+			content: Translation::from_raw_text(content),
 			style: TextStyle {
 				wrap: true,
 				color: Some(WguiColorName::Danger.into()),

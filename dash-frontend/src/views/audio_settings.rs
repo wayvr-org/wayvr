@@ -119,7 +119,7 @@ fn mount_multi_selector(params: MultiSelectorParams) -> anyhow::Result<()> {
 		let (_, button) = components::button::construct(
 			params.ess,
 			components::button::Params {
-				text: Some(Translation::from_raw_text(&cell.display_text)),
+				text: Some(Translation::from_raw_text(cell.display_text.as_str())),
 				sprite_src: Some(strip_path_as(AssetPathSource::BuiltIn, cell.icon_path_builtin).unwrap()),
 				color,
 				..Default::default()

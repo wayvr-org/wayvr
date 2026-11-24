@@ -152,7 +152,7 @@ impl View {
 			.fetch_widget_as::<WidgetLabel>(&par.layout.state, "label_author")?
 			.set_text_simple(
 				&mut par.globals.get(),
-				Translation::from_raw_text_string(format!("by {}", par.entry.author)),
+				Translation::from_raw_text(format!("by {}", par.entry.author)),
 			);
 
 		// Set description label
@@ -160,7 +160,7 @@ impl View {
 			.fetch_widget_as::<WidgetLabel>(&par.layout.state, "label_description")?
 			.set_text_simple(
 				&mut par.globals.get(),
-				Translation::from_raw_text(&par.entry.description),
+				Translation::from_raw_text(par.entry.description.as_str()),
 			);
 
 		// Set version label
@@ -168,7 +168,7 @@ impl View {
 			.fetch_widget_as::<WidgetLabel>(&par.layout.state, "label_version")?
 			.set_text_simple(
 				&mut par.globals.get(),
-				Translation::from_raw_text_string(format!("{}: {}", str_version, par.entry.version)),
+				Translation::from_raw_text(format!("{}: {}", str_version, par.entry.version)),
 			);
 
 		// Set creation date label
@@ -176,7 +176,7 @@ impl View {
 			.fetch_widget_as::<WidgetLabel>(&par.layout.state, "label_creation_date")?
 			.set_text_simple(
 				&mut par.globals.get(),
-				Translation::from_raw_text_string(format!("{}: {}", str_creation_date, par.entry.created_at)),
+				Translation::from_raw_text(format!("{}: {}", str_creation_date, par.entry.created_at)),
 			);
 
 		// Set modification date label
@@ -184,7 +184,7 @@ impl View {
 			.fetch_widget_as::<WidgetLabel>(&par.layout.state, "label_modification_date")?
 			.set_text_simple(
 				&mut par.globals.get(),
-				Translation::from_raw_text_string(format!("{}: {}", str_modification_date, par.entry.created_at)),
+				Translation::from_raw_text(format!("{}: {}", str_modification_date, par.entry.created_at)),
 			);
 
 		tasks.push(Task::Refresh);
@@ -367,7 +367,7 @@ pub fn mount_popup(
 	frontend_tasks
 		.clone()
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
-			Translation::from_raw_text(&entry.name),
+			Translation::from_raw_text(entry.name.as_str()),
 			Box::new(move |data| {
 				let view = View::new(Params {
 					globals: &globals,

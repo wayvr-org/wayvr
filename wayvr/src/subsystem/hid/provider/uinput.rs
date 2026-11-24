@@ -274,7 +274,7 @@ Check if you're in input group, run: id -nG";
     Err(Toast::new(
         ToastTopic::Error,
         None,
-        Translation::from_raw_text_string(full_uinput_error),
+        Translation::from_raw_text(full_uinput_error),
     )
     .with_timeout(30.0))
 }

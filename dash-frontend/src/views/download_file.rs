@@ -76,7 +76,7 @@ impl ViewTrait for View {
 						widgets
 							.fetch(self.id_label_status)?
 							.cast::<WidgetLabel>()?
-							.set_text(&mut par.layout.common(), Translation::from_raw_text_string(text));
+							.set_text(&mut par.layout.common(), Translation::from_raw_text(text));
 					}
 					Task::ShowIconSuccess => {
 						par.layout.remove_children(self.id_loading_parent);
@@ -162,7 +162,7 @@ impl View {
 			let label_target_path = parser_state.fetch_widget(&layout.state, "label_target_path")?.widget;
 			label_target_path.cast::<WidgetLabel>()?.set_text(
 				&mut layout.common(),
-				Translation::from_raw_text_string(format!("{}: {}", str_target_path, par.target_path.display())),
+				Translation::from_raw_text(format!("{}: {}", str_target_path, par.target_path.display())),
 			);
 		}
 

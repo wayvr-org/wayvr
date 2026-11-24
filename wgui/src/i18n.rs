@@ -28,30 +28,16 @@ impl Translation {
 		}
 	}
 
-	pub const fn from_raw_text_rc(text: Rc<str>) -> Self {
-		Self {
-			text,
-			translated: false,
-		}
-	}
-
-	pub fn from_raw_text_string(text: String) -> Self {
+	pub fn from_raw_text<T: Into<Rc<str>>>(text: T) -> Self {
 		Self {
 			text: text.into(),
 			translated: false,
 		}
 	}
 
-	pub fn from_raw_text(text: &str) -> Self {
+	pub fn from_translation_key<T: Into<Rc<str>>>(key: T) -> Self {
 		Self {
-			text: Rc::from(text),
-			translated: false,
-		}
-	}
-
-	pub fn from_translation_key(key: &str) -> Self {
-		Self {
-			text: Rc::from(key),
+			text: key.into(),
 			translated: true,
 		}
 	}

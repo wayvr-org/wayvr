@@ -748,7 +748,7 @@ fn component_dropdown(
 
 	let current_text = current
 		.map(|c| c.translation())
-		.unwrap_or_else(|| Translation::from_raw_text_rc(Default::default()));
+		.unwrap_or_else(|| Translation::default());
 
 	create_dropdown(mp, parent, params, action, side, current_text, available)?;
 
@@ -871,7 +871,7 @@ fn chord_component_dropdown(
 
 	let current_text = current
 		.map(|component| component.translation())
-		.unwrap_or_else(|| Translation::from_raw_text_rc(Default::default()));
+		.unwrap_or_else(|| Translation::default());
 	let cells = available
 		.iter()
 		.map(|component| {

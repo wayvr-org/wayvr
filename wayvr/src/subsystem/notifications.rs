@@ -191,8 +191,8 @@ impl NotificationManager {
 
                     let toast = Toast::new(
                         ToastTopic::XSNotification,
-                        Some(Translation::from_raw_text_string(msg.title)),
-                        Translation::from_raw_text_string(msg.content.unwrap_or(String::new())),
+                        Some(Translation::from_raw_text(msg.title)),
+                        Translation::from_raw_text(msg.content.unwrap_or(String::new())),
                     )
                     .with_timeout(msg.timeout.unwrap_or(5.))
                     .with_sound(msg.volume.unwrap_or(-1.) >= 0.); // XSOverlay still plays at 0,
@@ -381,8 +381,8 @@ fn bake_notification(
 
     Toast::new(
         ToastTopic::DesktopNotification,
-        Some(Translation::from_raw_text_string(title)),
-        Translation::from_raw_text_string(body),
+        Some(Translation::from_raw_text(title)),
+        Translation::from_raw_text(body),
     )
     .with_timeout(match expire_timeout {
         n if n > 0 => n as f32 / 1000.0,

@@ -46,7 +46,7 @@ impl BindingsDropdown for XrInputSubpathKind {
 		self
 			.get_str("Translation")
 			.map(Translation::from_translation_key)
-			.unwrap_or_else(|| Translation::from_raw_text(&wlx_common::locale::capitalize_string(self.as_ref())))
+			.unwrap_or_else(|| Translation::from_raw_text(wlx_common::locale::capitalize_string(self.as_ref())))
 	}
 	fn action_str(&self, action: &str, side: XrInputSide) -> Rc<str> {
 		let value = self.as_ref();

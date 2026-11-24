@@ -197,7 +197,7 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                                 Toast::new(
                                     ToastTopic::IpdChange,
                                     Some(Translation::from_raw_text("IPD")),
-                                    Translation::from_raw_text_string(format!("{ipd:.1} mm")),
+                                    Translation::from_raw_text(format!("{ipd:.1} mm")),
                                 )
                                 .submit(&mut app);
                             }

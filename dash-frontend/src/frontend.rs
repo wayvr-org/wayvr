@@ -382,7 +382,7 @@ impl<T: 'static> Frontend<T> {
 				format!("{hours:02}:{minutes:02}")
 			};
 
-			label.set_text(&mut common, Translation::from_raw_text(&text));
+			label.set_text(&mut common, Translation::from_raw_text(text));
 		}
 
 		Ok(())
@@ -666,7 +666,7 @@ impl<T: 'static> Frontend<T> {
 		let _ = std::process::Command::new("xdg-open").arg(url.as_ref()).spawn();
 		self
 			.tasks
-			.push(FrontendTask::PushToast(Translation::from_raw_text_string(format!(
+			.push(FrontendTask::PushToast(Translation::from_raw_text(format!(
 				"Opened URL: {}",
 				url
 			))));
@@ -676,7 +676,7 @@ impl<T: 'static> Frontend<T> {
 		if let Err(e) = Command::new(command).args(args).spawn() {
 			self
 				.tasks
-				.push(FrontendTask::PushToast(Translation::from_raw_text_string(format!(
+				.push(FrontendTask::PushToast(Translation::from_raw_text(format!(
 					"Failed to launch command: {e}"
 				))))
 		};

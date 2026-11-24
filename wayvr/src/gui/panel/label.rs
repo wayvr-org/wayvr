@@ -233,7 +233,7 @@ fn battery_on_tick(
             state.normal_color
         };
         label.set_color(common, color, false);
-        label.set_text(common, Translation::from_raw_text(&text));
+        label.set_text(common, Translation::from_raw_text(text));
         return;
     }
     label.set_text(common, Translation::default());
@@ -268,7 +268,7 @@ fn clock_on_tick(
     );
 
     let label = data.obj.get_as_mut::<WidgetLabel>().unwrap();
-    label.set_text(common, Translation::from_raw_text(&date_time));
+    label.set_text(common, Translation::from_raw_text(date_time));
 }
 
 struct TimerLabelState {
@@ -292,7 +292,7 @@ fn timer_on_tick(
         .replace("%h", &format!("{:02}", ((duration / 60) / 60)));
 
     let label = data.obj.get_as_mut::<WidgetLabel>().unwrap();
-    label.set_text(common, Translation::from_raw_text(time));
+    label.set_text(common, Translation::from_raw_text(time.as_str()));
 }
 
 fn ipd_on_tick(
@@ -302,5 +302,5 @@ fn ipd_on_tick(
 ) {
     let text = app.input_state.ipd.to_string();
     let label = data.obj.get_as_mut::<WidgetLabel>().unwrap();
-    label.set_text(common, Translation::from_raw_text(&text));
+    label.set_text(common, Translation::from_raw_text(text));
 }

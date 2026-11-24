@@ -173,7 +173,7 @@ impl TestbedGeneric {
 		cb_first.on_toggle(Box::new(move |common, e| {
 			let mut widget = label.cast::<WidgetLabel>()?;
 			let text = format!("checkbox toggle: {}", e.checked);
-			widget.set_text(common, Translation::from_raw_text(&text));
+			widget.set_text(common, Translation::from_raw_text(text));
 			Ok(())
 		}));
 

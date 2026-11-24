@@ -142,10 +142,7 @@ impl SettingsTab for State {
 				let mut common = layout.common();
 				let mut label = state.fetch_widget_as::<WidgetLabel>(common.state, &format!("{id}_value"))?;
 				config.whisper_gpu = value.parse::<u32>().unwrap();
-				label.set_text(
-					&mut common,
-					Translation::from_raw_text_string(config.whisper_gpu.to_string()),
-				);
+				label.set_text(&mut common, Translation::from_raw_text(config.whisper_gpu.to_string()));
 				change_kind.replace(ConfigChangeKind::Other);
 			}
 			_ => unreachable!(),
@@ -367,7 +364,7 @@ fn whisper_gpu_select_dropdown(
 	let mut params = TemplateParams::new();
 	params.insert("translation", "APP_SETTINGS.WHISPER_GPU_SELECT");
 
-	let current_text = Translation::from_raw_text_string(mp.config.whisper_gpu.to_string());
+	let current_text = Translation::from_raw_text(mp.config.whisper_gpu.to_string());
 
 	let cells = vulkan_devices
 		.iter()
@@ -376,7 +373,7 @@ fn whisper_gpu_select_dropdown(
 		.map(|(idx, name)| {
 			context_menu::Cell::Button(context_menu::Button {
 				action_name: Some(format!(";whisper_gpu;{};{}", id, idx).into()),
-				title: Translation::from_raw_text_string(name.to_string()),
+				title: Translation::from_raw_text(name.to_string()),
 				..Default::default()
 			})
 		})

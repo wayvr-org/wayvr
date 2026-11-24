@@ -40,6 +40,7 @@ use crate::{
 		widget_rectangle::parse_widget_rectangle,
 		widget_sprite::parse_widget_sprite,
 	},
+	rcstrmap::RcStrMap,
 	widget::ConstructEssentials,
 	windowing::context_menu,
 };
@@ -72,7 +73,7 @@ pub struct Template {
 }
 
 #[derive(Clone, Default)]
-pub struct TemplateParams(HashMap<Rc<str>, Rc<str>>);
+pub struct TemplateParams(RcStrMap);
 
 // Changelog:
 // v1: source paths are always relative to the assets root
@@ -118,7 +119,7 @@ pub struct ParserData {
 	pub components: Vec<Component>,
 	pub ids: HashMap<Rc<str>, WidgetID>,
 	pub templates: HashMap<Rc<str>, Rc<Template>>,
-	pub var_map: HashMap<Rc<str>, Rc<str>>,
+	pub var_map: RcStrMap,
 	macro_attribs: HashMap<Rc<str>, MacroAttribs>,
 }
 
@@ -151,11 +152,11 @@ pub trait Fetchable {
 
 impl TemplateParams {
 	pub fn new() -> Self {
-		Self(HashMap::new())
+		Self(RcStrMap::new())
 	}
 
 	pub const fn from_hashmap(map: HashMap<Rc<str>, Rc<str>>) -> Self {
-		Self(map)
+		Self(RcStrMap::from_hashmap(map))
 	}
 
 	pub fn insert<K, V>(&mut self, key: K, value: V) -> Option<Rc<str>>
@@ -163,7 +164,13 @@ impl TemplateParams {
 		K: Into<Rc<str>>,
 		V: Into<Rc<str>>,
 	{
-		self.0.insert(key.into(), value.into())
+		self.0.insert(key, value)
+	}
+}
+
+impl From<RcStrMap> for TemplateParams {
+	fn from(map: RcStrMap) -> Self {
+		Self(map)
 	}
 }
 
@@ -468,7 +475,7 @@ impl Fetchable for ParserState {
 
 #[derive(Debug, Clone)]
 struct MacroAttribs {
-	attribs: HashMap<Rc<str>, Rc<str>>,
+	attribs: RcStrMap,
 }
 
 struct ParserContext<'a> {
@@ -533,7 +540,7 @@ impl ParserContext<'_> {
 	}
 
 	fn insert_var(&mut self, key: &str, value: &str) {
-		self.data_local.var_map.insert(Rc::from(key), Rc::from(value));
+		self.data_local.var_map.insert(key, value);
 	}
 
 	fn insert_macro_attrib(&mut self, name: Rc<str>, attribs: MacroAttribs) {
@@ -566,7 +573,7 @@ impl ParserContext<'_> {
 		}
 	}
 
-	fn populate_extra_variables(&mut self, other: &HashMap<Rc<str>, Rc<str>>) {
+	fn populate_extra_variables(&mut self, other: &RcStrMap) {
 		for (k, v) in other {
 			self.data_local.var_map.insert(k.clone(), v.clone());
 		}
@@ -733,17 +740,10 @@ fn parse_widget_other<'a>(
 		return Ok(()); // not critical
 	};
 
-	let template_params: HashMap<Rc<str>, Rc<str>> =
-		attribs.iter().map(|a| (a.attrib.clone(), a.value.clone())).collect();
+	let template_params: RcStrMap = attribs.iter().map(|a| (a.attrib.clone(), a.value.clone())).collect();
 
 	// parse template body
-	let res = parse_widget_other_internal(
-		&template,
-		TemplateParams::from_hashmap(template_params),
-		file,
-		ctx,
-		parent_id,
-	)?;
+	let res = parse_widget_other_internal(&template, TemplateParams::from(template_params), file, ctx, parent_id)?;
 
 	if let Some(children_parent_id) = res.template_children_parent_id {
 		let _ = parse_children(file, ctx, node, children_parent_id)?;
@@ -1091,7 +1091,7 @@ fn parse_tag_macro(file: &ParserFile, ctx: &mut ParserContext, node: roxmltree::
 	let mut macro_name: Option<Rc<str>> = None;
 
 	let attribs = process_attribs(file, ctx, &node, true);
-	let mut macro_attribs = HashMap::<Rc<str>, Rc<str>>::new();
+	let mut macro_attribs = RcStrMap::new();
 
 	for pair in attribs {
 		match pair.attrib.as_ref() {
@@ -1439,7 +1439,7 @@ pub type OnCustomAttribsFunc = Rc<dyn Fn(CustomAttribsInfo)>;
 #[derive(Default, Clone)]
 pub struct ParseDocumentExtra {
 	pub on_custom_attribs: Option<OnCustomAttribsFunc>, // all attributes with '_' character prepended
-	pub extra_vars: HashMap<Rc<str>, Rc<str>>,
+	pub extra_vars: RcStrMap,
 	pub root_dir: Option<AssetPathRc>,
 }
 

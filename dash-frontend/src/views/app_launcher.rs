@@ -115,7 +115,7 @@ impl View {
 			let mut label_exec = state.fetch_widget_as::<WidgetLabel>(&params.layout.state, "label_exec")?;
 
 			let command = shell_words::join(params.entry.exec_argv.iter().map(|x| x.as_ref()));
-			label_exec.set_text_simple(&mut params.globals.get(), Translation::from_raw_text_string(command));
+			label_exec.set_text_simple(&mut params.globals.get(), Translation::from_raw_text(command));
 		}
 
 		let tasks = Tasks::new();
@@ -272,7 +272,7 @@ impl View {
 
 		label_title.set_text_simple(
 			&mut params.globals.get(),
-			Translation::from_raw_text(&params.entry.app_name),
+			Translation::from_raw_text(params.entry.app_name.clone()),
 		);
 
 		Ok(Self {
@@ -386,7 +386,7 @@ impl View {
 		let Err(e) = View::launch(params) else { return };
 
 		let str_failed = globals.i18n().translate("FAILED_TO_LAUNCH_APPLICATION");
-		frontend_tasks.push(FrontendTask::PushToast(Translation::from_raw_text_string(format!(
+		frontend_tasks.push(FrontendTask::PushToast(Translation::from_raw_text(format!(
 			"{} {:?}",
 			str_failed, e
 		))));
@@ -496,7 +496,7 @@ pub fn mount_popup(
 	frontend_tasks
 		.clone()
 		.push(FrontendTask::MountPopupOnce(MountPopupOnceParams::new(
-			Translation::from_raw_text(&entry.app_name),
+			Translation::from_raw_text(entry.app_name.clone()),
 			Box::new(move |data| {
 				let on_close_request = popup.get_close_callback(data.layout);
 				let view = View::new(Params {

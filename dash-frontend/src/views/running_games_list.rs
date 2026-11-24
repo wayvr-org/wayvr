@@ -129,10 +129,7 @@ impl View {
 				Task::StopGame(game.app_id, true),
 			);
 
-			label_name.set_text_simple(
-				&mut layout.state.globals.get(),
-				Translation::from_raw_text_string(game_name),
-			);
+			label_name.set_text_simple(&mut layout.state.globals.get(), Translation::from_raw_text(game_name));
 		}
 
 		Ok(())
@@ -157,7 +154,7 @@ impl View {
 		if let Err(e) = steam_utils::stop(app_id, kill) {
 			self
 				.frontend_tasks
-				.push(FrontendTask::PushToast(Translation::from_raw_text_string(format!(
+				.push(FrontendTask::PushToast(Translation::from_raw_text(format!(
 					"Error: {}",
 					e
 				))));

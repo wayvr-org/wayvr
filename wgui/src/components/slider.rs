@@ -281,7 +281,7 @@ impl State {
 			s.trim_end_matches('0').trim_end_matches('.').to_string()
 		};
 
-		text.set_text(common, Translation::from_raw_text(&pretty));
+		text.set_text(common, Translation::from_raw_text(pretty));
 	}
 
 	fn set_value(&mut self, common: &mut CallbackDataCommon, data: &Data, index: ValueIndex, new_value: f32) {

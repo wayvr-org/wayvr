@@ -279,7 +279,7 @@ pub fn initialize_wl_virtual() -> anyhow::Result<Box<dyn HidProvider>, Toast> {
         Toast::new(
             ToastTopic::System,
             None,
-            Translation::from_raw_text_string(format!("Could not initialize wl_virtual: {e}")),
+            Translation::from_raw_text(format!("Could not initialize wl_virtual: {e}")),
         )
     })?;
     Ok(Box::new(provider))
