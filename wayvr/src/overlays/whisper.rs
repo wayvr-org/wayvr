@@ -520,7 +520,7 @@ pub fn create_whisper(app: &mut AppState) -> anyhow::Result<OverlayWindowConfig>
 
         context_menu.borrow_mut().open(OpenParams {
             on_custom_attribs: Some(context_menu_custom_attribs.clone()),
-            blueprint: Blueprint::Cells(cells),
+            blueprint: Blueprint::Cells(cells.into()),
             position: e.mouse_pos_absolute.into(),
         });
 

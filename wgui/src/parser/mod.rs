@@ -389,7 +389,7 @@ impl ParserState {
 				"cell" => {
 					let mut title: Option<Translation> = None;
 					let mut tooltip: Option<Translation> = None;
-					let mut action_name: Option<Rc<str>> = None;
+					let mut action = context_menu::Action::Empty;
 					let mut attribs = Vec::<AttribPair>::new();
 					let mut sprite_src_builtin: Option<Rc<str>> = None;
 
@@ -401,7 +401,7 @@ impl ParserState {
 							"translation" => title = Some(Translation::from_translation_key(value)),
 							"tooltip" => tooltip = Some(Translation::from_translation_key(value)),
 							"tooltip_str" => tooltip = Some(Translation::from_raw_text(value)),
-							"action" => action_name = Some(value.into()),
+							"action" => action = context_menu::Action::Named(value.into()),
 							"sprite_src_builtin" => sprite_src_builtin = Some(value.into()),
 							"skip" => {
 								let resolved = replace_vars(value, template_params);
@@ -423,7 +423,7 @@ impl ParserState {
 					cells.push(context_menu::Cell::Button(context_menu::Button {
 						title,
 						tooltip,
-						action_name,
+						action,
 						sprite_src_builtin,
 						attribs,
 					}));
@@ -1294,7 +1294,7 @@ fn parse_child<'a>(
 			if !pair.attrib.starts_with('_') || pair.attrib.is_empty() {
 				continue;
 			}
-			pairs.push(pair.clone());
+			pairs.push(pair);
 		}
 
 		if !pairs.is_empty() {

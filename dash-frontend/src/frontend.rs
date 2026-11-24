@@ -340,9 +340,11 @@ impl<T: 'static> Frontend<T> {
 			config_change_kind: &mut config_change_kind,
 		})?;
 
-		if let context_menu::TickResult::Action(action) = self.context_menu_power.tick(&mut self.layout, &mut self.state)? {
+		if let context_menu::TickResult::Action(action) = self.context_menu_power.tick(&mut self.layout, &mut self.state)?
+			&& let context_menu::Action::Named(action) = action
+		{
 			self.process_power_action(&action, params.data);
-		}
+		};
 
 		{
 			// always 30 times per second

@@ -2,11 +2,12 @@ use std::rc::Rc;
 
 use crate::{
 	tab::settings::{self, SettingTypeImpl, Task, horiz_cell, mount_requires_restart},
-	util::wgui_simple,
+	util::wgui_simple::{self},
 };
 use wgui::{
 	assets::AssetPathRef,
 	components::{button::ComponentButton, checkbox::ComponentCheckbox, slider::ComponentSlider},
+	i18n::Translation,
 	layout::{Layout, WidgetID},
 	parser::{Fetchable, ParseDocumentParams, ParserState, TemplateParams},
 	task::Tasks,
@@ -61,8 +62,8 @@ pub fn options_split_horiz2(mp: &mut MacroParams, parent: WidgetID) -> anyhow::R
 	let id2 = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id1", id1.as_str());
-	params.insert("id2", id2.as_str());
+	params.insert("id1", id1.clone());
+	params.insert("id2", id2.clone());
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "SettingsSplitHoriz2", mp.layout, parent, params)?;
@@ -79,9 +80,9 @@ pub fn options_split_horiz3(mp: &mut MacroParams, parent: WidgetID) -> anyhow::R
 	let id3 = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id1", id1.as_str());
-	params.insert("id2", id2.as_str());
-	params.insert("id3", id3.as_str());
+	params.insert("id1", id1.clone());
+	params.insert("id2", id2.clone());
+	params.insert("id3", id3.clone());
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "SettingsSplitHoriz3", mp.layout, parent, params)?;
@@ -104,7 +105,7 @@ pub fn options_category(
 	let mut params = TemplateParams::new();
 	params.insert("translation", translation);
 	params.insert("icon", icon);
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "SettingsGroupBox", mp.layout, parent, params)?;
@@ -116,7 +117,7 @@ pub fn options_stat_row(mp: &mut MacroParams, parent: WidgetID, translation: &st
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 	params.insert("translation", translation);
 
 	mp.parser_state
@@ -172,7 +173,7 @@ pub fn options_checkbox<'a>(mp: &'a mut MacroParams, parent: WidgetID, setting: 
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 
 	if let Some(src) = get_icon_from_setting_type(setting) {
 		params.insert("sprite_src_builtin", format!("@/{}", src));
@@ -224,7 +225,7 @@ pub fn options_range_f32(
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 
 	match setting1.get_translation() {
 		Ok(translation) => params.insert("translation", translation),
@@ -285,7 +286,7 @@ where
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 
 	match setting.get_translation() {
 		Ok(translation) => params.insert("translation", translation),
@@ -324,6 +325,29 @@ where
 	Ok(())
 }
 
+pub enum DropdownAction {
+	WhisperModels {
+		id_label: Rc<str>,
+		file_name: Option<&'static str>,
+	},
+	WhisperGpu {
+		id_label: Rc<str>,
+		idx: usize,
+	},
+	Enum {
+		id_label: Rc<str>,
+		setting_str: Rc<str>,
+		value: Rc<str>,
+		translation: Translation,
+	},
+}
+
+impl DropdownAction {
+	pub fn into_cell(self) -> context_menu::Action {
+		context_menu::Action::Custom(Rc::new(self))
+	}
+}
+
 pub fn options_dropdown<EnumType>(
 	mp: &mut MacroParams,
 	parent: WidgetID,
@@ -332,20 +356,16 @@ pub fn options_dropdown<EnumType>(
 where
 	EnumType: strum::VariantArray + strum::EnumProperty + std::convert::AsRef<str> + Copy + 'static,
 {
-	let id = mp.gen_id();
-
-	let mut params = TemplateParams::new();
+	let id_label = mp.gen_id();
 
 	let sprite_src = get_icon_from_setting_type(*setting);
-
+	let tooltip = setting.get_tooltip();
+	let mut translation: Option<&str> = None;
+	let mut text: Option<&str> = None;
 	match setting.get_translation() {
-		Ok(translation) => params.insert("translation", translation),
-		Err(raw_text) => params.insert("text", raw_text),
+		Ok(t) => translation = Some(t),
+		Err(raw_text) => text = Some(raw_text),
 	};
-
-	if let Some(tooltip) = setting.get_tooltip() {
-		params.insert("tooltip", tooltip);
-	}
 
 	let id_cell = horiz_cell(mp.layout, parent)?;
 
@@ -380,15 +400,17 @@ where
 			let title = SettingType::get_enum_title_inner(*item);
 			let tooltip = SettingType::get_enum_tooltip_inner(*item);
 
-			let text = &title.text;
-			let translated = if title.translated { "1" } else { "0" };
-			let action = format!("{setting_str};{id};{value};{text};{translated}");
-
 			Some(context_menu::Cell::Button(context_menu::Button {
-				action_name: Some(action.into()),
-				title,
+				title: title.clone(),
 				tooltip,
 				sprite_src_builtin,
+				action: DropdownAction::Enum {
+					id_label: id_label.clone(),
+					setting_str: setting_str.into(),
+					value: value.into(),
+					translation: title,
+				}
+				.into_cell(),
 				..Default::default()
 			}))
 		})
@@ -400,12 +422,15 @@ where
 		parser_state: mp.parser_state,
 		doc_params: mp.doc_params,
 		parent: id_cell,
-		id,
-		params,
 		current_text: title,
 		cells,
 		sprite_src: sprite_src.map(AssetPathRef::BuiltIn),
-		on_open: Box::new(move |pos, cells| tasks.push(Task::OpenContextMenu(pos, cells))),
+		text,
+		id_label: &id_label,
+		translation,
+		tooltip,
+		min_width: None,
+		on_open: Box::new(move |evt| tasks.push(Task::OpenDropdown(evt))),
 	})?;
 
 	if setting.requires_restart() {
@@ -425,7 +450,7 @@ pub fn options_danger_button(
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 	params.insert("translation", translation);
 	params.insert("icon", icon);
 
@@ -454,7 +479,7 @@ pub fn options_button(
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 	params.insert("translation", translation);
 	params.insert("icon", icon);
 
@@ -482,14 +507,13 @@ pub fn options_autostart_app(
 	let id = mp.gen_id();
 
 	let mut params = TemplateParams::new();
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 	params.insert("text", text);
 
 	mp.parser_state
 		.instantiate_template(mp.doc_params, "AutostartApp", mp.layout, parent, params)?;
 
 	let btn = mp.parser_state.fetch_component_as::<ComponentButton>(&id)?;
-	let id: Rc<str> = Rc::from(id);
 
 	ids.push(id.clone());
 
@@ -514,9 +538,9 @@ pub struct MacroParams<'a> {
 }
 
 impl<'ż> MacroParams<'ż> {
-	pub fn gen_id(&mut self) -> String {
-		let id = self.id_counter.to_string();
+	pub fn gen_id(&mut self) -> Rc<str> {
+		let id = format!("dyn{}", self.id_counter);
 		self.id_counter += 1;
-		id
+		id.into()
 	}
 }

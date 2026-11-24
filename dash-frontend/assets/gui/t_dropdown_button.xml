@@ -6,12 +6,12 @@
     border_color="outline"
     justify_content="space_between" />
 
-  <!-- id, text, translation, tooltip, min_width -->
+  <!-- id_label, id_button, text, translation, tooltip, min_width -->
   <template name="DropdownButton">
     <label text="${text}" translation="${translation}" />
-    <Button id="${id}" height="32" tooltip="${tooltip}" >
+    <Button id="${id_button}" height="32" tooltip="${tooltip}" >
       <div padding_left="8" padding_right="8" min_width="${min_width}">
-        <label id="${id}_value" weight="bold" />
+        <label id="${id_label}" weight="bold" />
       </div>
       <div gap="2">
         <div padding_top="4" padding_bottom="4">

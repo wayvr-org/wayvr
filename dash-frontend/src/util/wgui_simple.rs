@@ -5,8 +5,8 @@ use wgui::{
 	assets::AssetPathRef,
 	color::WguiColorName,
 	components::{
-		self,
-		button::{ButtonClickCallback, ButtonClickEvent, ComponentButton},
+		self, ComponentTrait,
+		button::{ButtonClickCallback, ComponentButton},
 	},
 	i18n::Translation,
 	layout::{Layout, LayoutTask, WidgetID},
@@ -169,25 +169,54 @@ pub fn create_loading(par: CreateLoadingParams) -> anyhow::Result<WidgetID> {
 	Ok(id_root)
 }
 
+#[derive(Clone)]
+pub struct DropdownOpenEvent {
+	pub widget: WidgetID,
+	pub cells: Rc<Vec<context_menu::Cell>>,
+}
+
 pub struct MountDropdownParams<'a> {
 	pub layout: &'a mut Layout,
 	pub parser_state: &'a mut ParserState,
 	pub doc_params: &'a ParseDocumentParams<'a>,
 	pub parent: WidgetID,
-	pub id: String,
-	pub params: TemplateParams,
 	pub current_text: Translation,
 	pub cells: Vec<context_menu::Cell>,
-	pub on_open: Box<dyn Fn(context_menu::Position, Vec<context_menu::Cell>)>,
 	pub sprite_src: Option<AssetPathRef<'a>>,
+	pub id_label: &'a str,
+	pub text: Option<&'a str>,
+	pub translation: Option<&'a str>,
+	pub tooltip: Option<&'a str>,
+	pub min_width: Option<f32>,
+	pub on_open: Box<dyn Fn(DropdownOpenEvent)>,
 }
 
 pub fn mount_dropdown(par: MountDropdownParams) -> anyhow::Result<()> {
-	let mut params = par.params;
-	params.insert("id", par.id.as_str());
-
 	if let Some(src) = par.sprite_src {
 		wgui_simple::create_icon(par.layout, par.parent, Vec2::splat(24.0), src)?;
+	}
+
+	let mut params = TemplateParams::new();
+
+	let id_button = format!("btn_{}", par.id_label);
+
+	params.insert("id_label", par.id_label);
+	params.insert("id_button", id_button.clone());
+
+	if let Some(text) = par.text {
+		params.insert("text", text);
+	}
+
+	if let Some(translation) = par.translation {
+		params.insert("translation", translation);
+	}
+
+	if let Some(tooltip) = par.tooltip {
+		params.insert("tooltip", tooltip);
+	}
+
+	if let Some(min_width) = par.min_width {
+		params.insert("min_width", format!("{}", min_width));
 	}
 
 	par
@@ -197,16 +226,24 @@ pub fn mount_dropdown(par: MountDropdownParams) -> anyhow::Result<()> {
 	{
 		let mut label = par
 			.parser_state
-			.fetch_widget_as::<WidgetLabel>(&par.layout.state, &format!("{}_value", par.id))?;
+			.fetch_widget_as::<WidgetLabel>(&par.layout.state, par.id_label)?;
 		label.set_text_simple(&mut par.layout.state.globals.get(), par.current_text);
 	}
 
-	let btn = par.parser_state.fetch_component_as::<ComponentButton>(&par.id)?;
-	btn.on_click(Rc::new(move |_common, e: ButtonClickEvent| {
-		(par.on_open)(e.mouse_pos_absolute.into(), par.cells.clone());
-		Ok(())
-	}));
+	let btn = par.parser_state.fetch_component_as::<ComponentButton>(&id_button)?;
+	let id_button = btn.base().get_id();
 
+	let cells = Rc::new(par.cells);
+
+	btn.on_click(Rc::new({
+		move |_common, _| {
+			(*par.on_open)(DropdownOpenEvent {
+				widget: id_button,
+				cells: cells.clone(),
+			});
+			Ok(())
+		}
+	}));
 	Ok(())
 }
 

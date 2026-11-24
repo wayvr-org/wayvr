@@ -80,7 +80,7 @@ fn create_input_profiles_button(
 	let id_cell = horiz_cell(mp.layout, parent)?;
 
 	let mut params = TemplateParams::new();
-	params.insert("id", id.as_str());
+	params.insert("id", id.clone());
 	params.insert("translation", "APP_SETTINGS.INPUT_PROFILES");
 	params.insert("icon", "@/dashboard/controller.svg");
 

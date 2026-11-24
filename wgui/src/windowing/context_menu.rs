@@ -9,13 +9,21 @@ use crate::{
 	windowing::window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra, WguiWindowPlacement},
 };
 use glam::Vec2;
-use std::rc::Rc;
+use std::{any::Any, rc::Rc};
+
+#[derive(Default, Clone)]
+pub enum Action {
+	#[default]
+	Empty,
+	Named(Rc<str>),
+	Custom(Rc<dyn Any> /* sorry */),
+}
 
 #[derive(Default, Clone)]
 pub struct Button {
 	pub title: Translation,
 	pub tooltip: Option<Translation>,
-	pub action_name: Option<Rc<str>>,
+	pub action: Action,
 	pub sprite_src_builtin: Option<Rc<str>>,
 	pub attribs: Vec<parser::AttribPair>,
 }
@@ -27,7 +35,7 @@ pub enum Cell {
 }
 
 pub enum Blueprint {
-	Cells(Vec<Cell>),
+	Cells(Rc<Vec<Cell>>),
 	Template {
 		template_name: Rc<str>,
 		template_params: TemplateParams,
@@ -80,7 +88,7 @@ pub struct OpenParams {
 
 #[derive(Clone)]
 enum Task {
-	ActionClicked(Option<Rc<str>>),
+	ActionClicked(Action),
 }
 
 #[derive(Default)]
@@ -103,9 +111,7 @@ pub enum TickResult {
 	/// The context menu was opened.
 	Opened,
 	/// User has selected an action.
-	Action(Rc<str>),
-	/// The context menu was closed without an action.
-	Closed,
+	Action(Action),
 }
 
 impl ContextMenu {
@@ -127,7 +133,7 @@ impl ContextMenu {
 			Blueprint::Template {
 				template_name,
 				template_params,
-			} => parser_state.context_menu_parse_cells(&template_name, &template_params)?,
+			} => Rc::new(parser_state.context_menu_parse_cells(&template_name, &template_params)?),
 			Blueprint::Cells(cells) => cells,
 		};
 
@@ -174,7 +180,7 @@ impl ContextMenu {
 
 		let mut has_sprites = false;
 
-		for cell in &cells {
+		for cell in cells.as_ref() {
 			if let Cell::Button(button) = cell
 				&& button.sprite_src_builtin.is_some()
 			{
@@ -182,7 +188,7 @@ impl ContextMenu {
 			}
 		}
 
-		for cell in &cells {
+		for cell in cells.as_ref() {
 			match cell {
 				Cell::Button(cell) => {
 					let mut par = TemplateParams::new();
@@ -214,7 +220,7 @@ impl ContextMenu {
 					parser_state.data.take_results_from(&mut data_cell);
 					self
 						.tasks
-						.handle_button(&button, Task::ActionClicked(cell.action_name.clone()));
+						.handle_button(&button, Task::ActionClicked(cell.action.clone()));
 
 					if let Some(c) = params.on_custom_attribs.as_ref() {
 						(*c)(parser::CustomAttribsInfo {
@@ -245,12 +251,8 @@ impl ContextMenu {
 
 		for task in self.tasks.drain() {
 			match task {
-				Task::ActionClicked(Some(action_name)) => {
-					result = TickResult::Action(action_name);
-					self.close();
-				}
-				Task::ActionClicked(None) => {
-					result = TickResult::Closed;
+				Task::ActionClicked(action) => {
+					result = TickResult::Action(action);
 					self.close();
 				}
 			}

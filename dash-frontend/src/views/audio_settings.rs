@@ -189,6 +189,7 @@ fn is_card_mentioning_hmd(card: &pactl_wrapper::Card) -> bool {
 	does_string_mention_hmd_sink(&card.properties.device_name)
 }
 
+#[allow(clippy::needless_bool)]
 fn is_source_mentioning_hmd(source: &pactl_wrapper::Source) -> bool {
 	if let Some(source_card_name) = &source.properties.card_name
 		&& does_string_mention_hmd_source(source_card_name)

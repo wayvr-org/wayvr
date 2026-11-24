@@ -22,7 +22,7 @@ impl TooltipAttribs {
 pub fn parse_attrib_tooltip(ctx: &mut ParserContext, tag_name: &str, pair: &AttribPair, tooltip: &mut TooltipAttribs) {
 	match pair.attrib.as_ref() {
 		"tooltip" if !pair.value.is_empty() => {
-			tooltip.tooltip = Some(Translation::from_translation_key(pair.value.clone()))
+			tooltip.tooltip = Some(Translation::from_translation_key(pair.value.clone()));
 		}
 		"tooltip_str" if !pair.value.is_empty() => tooltip.tooltip = Some(Translation::from_raw_text(pair.value.clone())),
 		"tooltip_side" => {
