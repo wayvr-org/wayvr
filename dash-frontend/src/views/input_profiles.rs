@@ -60,7 +60,7 @@ impl View {
 			let id = format!("profile_btn_{idx}");
 
 			let mut cell_params = TemplateParams::new();
-			cell_params.insert("id", &id);
+			cell_params.insert("id", id.as_str());
 			cell_params.insert("text", profile.display_name);
 
 			parser_state.instantiate_template(

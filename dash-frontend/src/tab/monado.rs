@@ -344,14 +344,13 @@ fn mount_sessions_list(
 	for (session_id, session) in sessions {
 		let mut params = TemplateParams::new();
 
-		params.insert_rc(
+		params.insert(
 			"text",
 			format!(
 				"{} (ID {})",
 				session.resolved_name.as_ref().map_or("Unknown", |s| s.as_str()),
 				session_id,
-			)
-			.into(),
+			),
 		);
 
 		let data = state.realize_template(
@@ -388,8 +387,8 @@ fn mount_graph(
 ) -> anyhow::Result<DebugGraph> {
 	let mut params = TemplateParams::new();
 	params.insert("name", name);
-	params.insert_rc("limit_min", limits.0.to_string().into());
-	params.insert_rc("limit_max", limits.1.to_string().into());
+	params.insert("limit_min", limits.0.to_string());
+	params.insert("limit_max", limits.1.to_string());
 
 	let data = state.realize_template(&DOC_PARAMS_TAB_DEBUG_TIMINGS, "DebugGraph", layout, id_parent, params)?;
 
@@ -599,7 +598,7 @@ impl SubtabProcessList {
 	) -> anyhow::Result<()> {
 		let mut par = TemplateParams::new();
 		par.insert("checked", if client.is_primary { "1" } else { "0" });
-		par.insert_rc("name", format!("{} (Client ID: {})", client.name, client.id).into());
+		par.insert("name", format!("{} (Client ID: {})", client.name, client.id));
 		par.insert("flag_active", yesno(client.is_active));
 		par.insert("flag_focused", yesno(client.is_focused));
 		par.insert("flag_io_active", yesno(client.is_io_active));

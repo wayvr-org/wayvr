@@ -61,7 +61,7 @@ impl<T> TabDonate<T> {
 				current_tier = Some(supporter.tier);
 
 				let mut params = TemplateParams::new();
-				params.insert_str("text", supporter.tier.pretty_str());
+				params.insert("text", supporter.tier.pretty_str());
 				params.insert("color", supporter.tier.color_str());
 				self
 					.state
@@ -82,7 +82,7 @@ impl<T> TabDonate<T> {
 			}
 
 			let mut params = TemplateParams::new();
-			params.insert("username", &supporter.username);
+			params.insert("username", supporter.username.as_str());
 			self
 				.state
 				.realize_template(&DOC_PARAMS, "SupporterCell", layout, tier_parent, params)?;

@@ -333,11 +333,11 @@ fn mount_entry<T>(
 		let mut params = TemplateParams::new();
 
 		if let Some(tooltip) = tooltip {
-			params.insert_str("tooltip", tooltip);
+			params.insert("tooltip", tooltip);
 		};
 
 		// entry icon
-		params.insert_rc(
+		params.insert(
 			"src_ext",
 			entry
 				.icon_path
@@ -354,7 +354,7 @@ fn mount_entry<T>(
 				""
 			},
 		);
-		params.insert("name", &entry.app_name);
+		params.insert("name", &*entry.app_name);
 
 		let data = parser_state.realize_template(doc_params, "AppEntry", &mut frontend.layout, id_parent, params)?;
 

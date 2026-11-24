@@ -72,7 +72,7 @@ macro_rules! insert_colors {
 		$( $key:literal => $color:ident ),* $(,)?
 	) => {
 		$(
-			$params.insert_str(
+			$params.insert(
 				$key,
 				WguiColorName::$color
 					.to_wgui_color()
@@ -101,12 +101,12 @@ impl View {
 			let is_current = &*params.current_palette == name.as_str();
 
 			let mut cell_params = TemplateParams::new();
-			cell_params.insert("id", &id);
+			cell_params.insert("id", id.as_str());
 
 			let display_name = &name[..name.len() - 5];
 
 			if is_current {
-				cell_params.insert_str("text", format!("{display_name} ✅"));
+				cell_params.insert("text", format!("{display_name} ✅"));
 				cell_params.insert("tooltip", "APP_SETTINGS.COLOR_PALETTE_CURRENT");
 			} else {
 				cell_params.insert("text", display_name);
@@ -156,13 +156,13 @@ impl View {
 			let is_current = &*params.current_palette == *name;
 
 			let mut cell_params = TemplateParams::new();
-			cell_params.insert("id", &id);
+			cell_params.insert("id", id.as_str());
 
 			if is_current {
-				cell_params.insert_str("text", format!("{name} ✅"));
+				cell_params.insert("text", format!("{name} ✅"));
 				cell_params.insert("tooltip", "APP_SETTINGS.COLOR_PALETTE_CURRENT");
 			} else {
-				cell_params.insert("text", name);
+				cell_params.insert("text", *name);
 				cell_params.insert("tooltip", "APP_SETTINGS.COLOR_PALETTE_ACTIVATE");
 			}
 

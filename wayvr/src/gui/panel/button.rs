@@ -225,8 +225,12 @@ pub(super) fn setup_custom_button<S: 'static>(
                         const PREFIX: &str = "_context_";
                         #[allow(clippy::manual_strip)]
                         if attrib.starts_with(PREFIX) {
-                            template_params.insert_rc(attrib[PREFIX.len()..].into(), value.clone());
+                            template_params.insert(&attrib[PREFIX.len()..], value.clone());
                         }
+                    }
+
+                    for (k, v) in &parser_state.data.var_map {
+                        template_params.insert(k.clone(), v.clone());
                     }
 
                     let template_name: Rc<str> = template_name.into();
