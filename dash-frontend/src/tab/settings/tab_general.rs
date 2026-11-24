@@ -1,15 +1,6 @@
-use std::rc::Rc;
-
 use wgui::{
-	assets::AssetPathRef,
-	globals::WguiGlobals,
-	i18n::Translation,
-	layout::WidgetID,
-	log::LogErr,
-	parser::{Fetchable, TemplateParams},
-	task::Tasks,
-	widget::label::WidgetLabel,
-	windowing::context_menu,
+	assets::AssetPathRef, globals::WguiGlobals, i18n::Translation, layout::WidgetID, log::LogErr, parser::Fetchable,
+	task::Tasks, widget::label::WidgetLabel, windowing::context_menu,
 };
 use wlx_common::{async_executor::AsyncExecutor, config::GeneralConfig, dash_interface::ConfigChangeKind};
 
@@ -17,11 +8,11 @@ use crate::{
 	frontend::FrontendTasks,
 	tab::settings::{
 		SettingType, SettingsMountParams, SettingsTab, TabNameEnum, Task, UpdateExtra, horiz_cell,
-		macros::{MacroParams, options_category, options_checkbox, options_dropdown},
+		macros::{DropdownAction, MacroParams, options_category, options_checkbox, options_dropdown},
 	},
 	util::{
 		popup_manager::PopupHolder,
-		wgui_simple,
+		wgui_simple::{self, DropdownOpenEvent},
 		whisper::{
 			WHISPER_MODELS, WhisperModel, whisper_any_models_downloaded, whisper_delete_all_models, whisper_model_from_name,
 			whisper_model_path,
@@ -96,28 +87,19 @@ impl SettingsTab for State {
 
 	fn context_menu_custom(
 		&mut self,
-		action: Rc<str>,
+		action: &DropdownAction,
 		config: &mut GeneralConfig,
 		change_kind: &mut Option<ConfigChangeKind>,
 		layout: &mut wgui::layout::Layout,
 		state: &mut wgui::parser::ParserState,
 	) -> anyhow::Result<()> {
-		let (Some(_), Some(_type), Some(id), Some(value)) = ({
-			let mut s = action.splitn(4, ';');
-			(s.next(), s.next(), s.next(), s.next())
-		}) else {
-			debug_assert!(false);
-			return Ok(());
-		};
-
-		match _type {
-			"whisper_model" => {
-				let model_name = value;
-				if !model_name.is_empty()
-					&& let Some(model) = whisper_model_from_name(model_name)
+		match action {
+			DropdownAction::WhisperModels { id_label, file_name } => {
+				if let Some(file_name) = &file_name
+					&& let Some(model) = whisper_model_from_name(file_name)
 				{
 					let mut common = layout.common();
-					let mut label = state.fetch_widget_as::<WidgetLabel>(common.state, &format!("{id}_value"))?;
+					let mut label = state.fetch_widget_as::<WidgetLabel>(common.state, id_label)?;
 					label.set_text(&mut common, Translation::from_raw_text(model.display_name));
 
 					config.whisper_model = model.file_name.into();
@@ -138,16 +120,15 @@ impl SettingsTab for State {
 					}
 				}
 			}
-			"whisper_gpu" => {
+			DropdownAction::WhisperGpu { id_label, idx } => {
 				let mut common = layout.common();
-				let mut label = state.fetch_widget_as::<WidgetLabel>(common.state, &format!("{id}_value"))?;
-				config.whisper_gpu = value.parse::<u32>().unwrap();
+				let mut label = state.fetch_widget_as::<WidgetLabel>(common.state, id_label)?;
+				config.whisper_gpu = *idx as u32;
 				label.set_text(&mut common, Translation::from_raw_text(config.whisper_gpu.to_string()));
 				change_kind.replace(ConfigChangeKind::Other);
 			}
-			_ => unreachable!(),
-		};
-
+			_ => {}
+		}
 		Ok(())
 	}
 }
@@ -286,8 +267,7 @@ impl State {
 }
 
 fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Result<()> {
-	let id = mp.gen_id();
-
+	let id_label = mp.gen_id();
 	let parent = horiz_cell(mp.layout, parent)?;
 
 	let mut downloaded_models = vec![];
@@ -303,24 +283,26 @@ fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Re
 			Translation::from_raw_text(x.display_name)
 		});
 
-	let mut params = TemplateParams::new();
-	params.insert("translation", "APP_SETTINGS.WHISPER_MODEL");
-	params.insert("tooltip", "APP_SETTINGS.WHISPER_MODEL_HELP");
-
 	let mut cells = WHISPER_MODELS
 		.iter()
 		.enumerate()
 		.map(|(idx, item)| {
+			let action = DropdownAction::WhisperModels {
+				id_label: id_label.clone(),
+				file_name: Some(item.file_name),
+			}
+			.into_cell();
+
 			if downloaded_models.contains(&idx) {
 				context_menu::Cell::Button(context_menu::Button {
-					action_name: Some(format!(";whisper_model;{id};{}", item.file_name).into()),
+					action,
 					title: Translation::from_raw_text(item.display_name),
 					sprite_src_builtin: Some("@/dashboard/check.svg".into()),
 					..Default::default()
 				})
 			} else {
 				context_menu::Cell::Button(context_menu::Button {
-					action_name: Some(format!(";whisper_model;{id};{}", item.file_name).into()),
+					action,
 					title: Translation::from_raw_text(item.display_name),
 					..Default::default()
 				})
@@ -331,7 +313,11 @@ fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Re
 	cells.insert(
 		0,
 		context_menu::Cell::Button(context_menu::Button {
-			action_name: Some(format!(";whisper_model;{id};").into()),
+			action: DropdownAction::WhisperModels {
+				id_label: id_label.clone(),
+				file_name: None,
+			}
+			.into_cell(),
 			title: Translation::from_translation_key("APP_SETTINGS.OPTION.NONE"),
 			..Default::default()
 		}),
@@ -343,11 +329,14 @@ fn whisper_models_dropdown(mp: &mut MacroParams, parent: WidgetID) -> anyhow::Re
 		parser_state: mp.parser_state,
 		doc_params: mp.doc_params,
 		parent,
-		id,
-		params,
 		current_text: current_translation,
 		cells,
-		on_open: Box::new(move |pos, cells| tasks.push(Task::OpenContextMenu(pos, cells))),
+		id_label: &id_label,
+		translation: Some("APP_SETTINGS.WHISPER_MODEL"),
+		tooltip: Some("APP_SETTINGS.WHISPER_MODEL_HELP"),
+		text: None,
+		min_width: None,
+		on_open: Box::new(move |evt| tasks.push(Task::OpenDropdown(evt))),
 		sprite_src: Some(AssetPathRef::BuiltIn("dashboard/stt.svg")),
 	})
 }
@@ -357,12 +346,8 @@ fn whisper_gpu_select_dropdown(
 	parent: WidgetID,
 	vulkan_devices: Vec<String>,
 ) -> anyhow::Result<()> {
-	let id = mp.gen_id();
-
+	let id_label = mp.gen_id();
 	let parent = horiz_cell(mp.layout, parent)?;
-
-	let mut params = TemplateParams::new();
-	params.insert("translation", "APP_SETTINGS.WHISPER_GPU_SELECT");
 
 	let current_text = Translation::from_raw_text(mp.config.whisper_gpu.to_string());
 
@@ -372,7 +357,11 @@ fn whisper_gpu_select_dropdown(
 		.filter(|(_, name)| !name.contains("llvmpipe"))
 		.map(|(idx, name)| {
 			context_menu::Cell::Button(context_menu::Button {
-				action_name: Some(format!(";whisper_gpu;{};{}", id, idx).into()),
+				action: DropdownAction::WhisperGpu {
+					id_label: id_label.clone(),
+					idx,
+				}
+				.into_cell(),
 				title: Translation::from_raw_text(name.to_string()),
 				..Default::default()
 			})
@@ -385,11 +374,19 @@ fn whisper_gpu_select_dropdown(
 		parser_state: mp.parser_state,
 		doc_params: mp.doc_params,
 		parent,
-		id,
-		params,
 		current_text,
+		id_label: &id_label,
+		translation: Some("APP_SETTINGS.WHISPER_GPU_SELECT"),
 		cells,
-		on_open: Box::new(move |pos, cells| tasks.push(Task::OpenContextMenu(pos, cells))),
+		on_open: Box::new(move |evt| {
+			tasks.push(Task::OpenDropdown(DropdownOpenEvent {
+				widget: evt.widget,
+				cells: evt.cells,
+			}))
+		}),
 		sprite_src: Some(AssetPathRef::BuiltIn("dashboard/gpu.svg")),
+		text: None,
+		tooltip: None,
+		min_width: None,
 	})
 }

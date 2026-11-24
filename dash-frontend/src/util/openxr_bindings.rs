@@ -18,10 +18,32 @@ pub enum ClickType {
 	Triple,
 }
 
+#[derive(Clone)]
+pub enum BindingsDropdownAction {
+	Click {
+		action: Rc<str>,
+		click_type: ClickType,
+	},
+	Subpath {
+		action: Rc<str>,
+		side: XrInputSide,
+		subpath: XrInputSubpathKind,
+	},
+	Comp {
+		action: Rc<str>,
+		side: XrInputSide,
+		comp: XrInputComponent,
+	},
+	Clear {
+		action: Rc<str>,
+		side: XrInputSide,
+	},
+}
+
 pub trait BindingsDropdown {
 	fn translation(&self) -> Translation;
-	fn action_str(&self, action: &str, side: XrInputSide) -> Rc<str>;
-	fn clear_str(action: &str, side: XrInputSide) -> Option<Rc<str>>;
+	fn get_action(&self, action: &str, side: XrInputSide) -> BindingsDropdownAction;
+	fn get_clear(action: &str, side: XrInputSide) -> Option<BindingsDropdownAction>;
 }
 
 impl BindingsDropdown for ClickType {
@@ -32,11 +54,13 @@ impl BindingsDropdown for ClickType {
 			.or_else(|| self.get_str("Text").map(Translation::from_raw_text))
 			.unwrap_or_else(|| Translation::from_raw_text(self.as_ref()))
 	}
-	fn action_str(&self, action: &str, _side: XrInputSide) -> Rc<str> {
-		let value = self.as_ref();
-		format!("click;{action};-;{value}").into()
+	fn get_action(&self, action: &str, _side: XrInputSide) -> BindingsDropdownAction {
+		BindingsDropdownAction::Click {
+			action: action.into(),
+			click_type: *self,
+		}
 	}
-	fn clear_str(_action: &str, _side: XrInputSide) -> Option<Rc<str>> {
+	fn get_clear(_action: &str, _side: XrInputSide) -> Option<BindingsDropdownAction> {
 		None
 	}
 }
@@ -48,14 +72,18 @@ impl BindingsDropdown for XrInputSubpathKind {
 			.map(Translation::from_translation_key)
 			.unwrap_or_else(|| Translation::from_raw_text(wlx_common::locale::capitalize_string(self.as_ref())))
 	}
-	fn action_str(&self, action: &str, side: XrInputSide) -> Rc<str> {
-		let value = self.as_ref();
-		let side = side.as_ref();
-		format!("subpath;{action};{side};{value}").into()
+	fn get_action(&self, action: &str, side: XrInputSide) -> BindingsDropdownAction {
+		BindingsDropdownAction::Subpath {
+			action: action.into(),
+			side,
+			subpath: *self,
+		}
 	}
-	fn clear_str(action: &str, side: XrInputSide) -> Option<Rc<str>> {
-		let side = side.as_ref();
-		Some(format!("clear;{action};{side};-").into())
+	fn get_clear(action: &str, side: XrInputSide) -> Option<BindingsDropdownAction> {
+		Some(BindingsDropdownAction::Clear {
+			action: action.into(),
+			side,
+		})
 	}
 }
 
@@ -67,12 +95,14 @@ impl BindingsDropdown for XrInputComponent {
 			.or_else(|| self.get_str("Text").map(Translation::from_raw_text))
 			.unwrap_or_else(|| Translation::from_raw_text(self.as_ref()))
 	}
-	fn action_str(&self, action: &str, side: XrInputSide) -> Rc<str> {
-		let value = self.as_ref();
-		let side = side.as_ref();
-		format!("comp;{action};{side};{value}").into()
+	fn get_action(&self, action: &str, side: XrInputSide) -> BindingsDropdownAction {
+		BindingsDropdownAction::Comp {
+			action: action.into(),
+			side,
+			comp: *self,
+		}
 	}
-	fn clear_str(_action: &str, _side: XrInputSide) -> Option<Rc<str>> {
+	fn get_clear(_action: &str, _side: XrInputSide) -> Option<BindingsDropdownAction> {
 		None
 	}
 }

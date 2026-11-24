@@ -25,7 +25,11 @@ use wlx_common::{
 
 use crate::{
 	frontend::{Frontend, FrontendTask, FrontendTasks},
-	tab::{Tab, settings::macros::MacroParams},
+	tab::{
+		Tab,
+		settings::macros::{DropdownAction, MacroParams},
+	},
+	util::wgui_simple,
 	views::ViewUpdateParams,
 };
 
@@ -78,7 +82,7 @@ pub(crate) enum Task {
 	ClearPipewireTokens,
 	ClearSavedState,
 	DeleteAllConfigs,
-	OpenContextMenu(context_menu::Position, Vec<context_menu::Cell>),
+	OpenDropdown(wgui_simple::DropdownOpenEvent),
 	RemoveAutostartApp(Rc<str>),
 	ResetPlayspace,
 	ResetPlayspaceCenter,
@@ -117,7 +121,7 @@ trait SettingsTab {
 
 	fn context_menu_custom(
 		&mut self,
-		_action: Rc<str>,
+		_action: &DropdownAction,
 		_config: &mut GeneralConfig,
 		_change_kind: &mut Option<ConfigChangeKind>,
 		_layout: &mut Layout,
@@ -205,11 +209,11 @@ impl<T> Tab<T> for TabSettings<T> {
 					frontend.interface.playspace_task(data, DashPlayspaceTask::Reset)?;
 					return Ok(());
 				}
-				Task::OpenContextMenu(position, cells) => {
+				Task::OpenDropdown(evt) => {
 					self.context_menu.open(context_menu::OpenParams {
 						on_custom_attribs: None,
-						position,
-						blueprint: Blueprint::Cells(cells),
+						position: context_menu::Position::Widget(evt.widget),
+						blueprint: Blueprint::Cells(evt.cells),
 					});
 				}
 				Task::RemoveAutostartApp(button_id) => {
@@ -252,36 +256,14 @@ impl<T> Tab<T> for TabSettings<T> {
 		}
 
 		// Dropdown handling
-		if let TickResult::Action(name) = self.context_menu.tick(&mut frontend.layout, &mut self.state)? {
-			if name.starts_with(';')
-				&& let Some(tab) = self.current_tab.as_mut()
-			{
-				let config = frontend.interface.general_config(data);
-				let mut change_kind: Option<ConfigChangeKind> = None;
-				tab.context_menu_custom(name, config, &mut change_kind, &mut frontend.layout, &mut self.state)?;
-				if let Some(change_kind) = change_kind {
-					frontend.interface.config_changed(data, change_kind);
+		if let TickResult::Action(action) = self.context_menu.tick(&mut frontend.layout, &mut self.state)? {
+			match action {
+				context_menu::Action::Empty => {}
+				context_menu::Action::Named(_) => {}
+				context_menu::Action::Custom(action) => {
+					let action = action.as_ref().downcast_ref::<DropdownAction>().unwrap() /* want panic */;
+					self.handle_dropdown_action(frontend, data, &mut changed, action)?;
 				}
-			} else if let (Some(setting), Some(id), Some(value), Some(text), Some(translated)) = {
-				let mut s = name.splitn(5, ';');
-				(s.next(), s.next(), s.next(), s.next(), s.next())
-			} {
-				let mut common = frontend.layout.common();
-				let mut label = self
-					.state
-					.fetch_widget_as::<WidgetLabel>(common.state, &format!("{id}_value"))?;
-
-				let translation = Translation {
-					text: text.into(),
-					translated: translated == "1",
-				};
-
-				label.set_text(&mut common, translation);
-
-				let setting = SettingType::from_str(setting).expect("Invalid Enum string");
-				let config = frontend.interface.general_config(data);
-				setting.set_enum(config, value);
-				changed = Some(setting.change_kind());
 			}
 		}
 
@@ -631,6 +613,37 @@ impl<T> TabSettings<T> {
 			}
 		}
 
+		Ok(())
+	}
+
+	fn handle_dropdown_action(
+		&mut self,
+		frontend: &mut Frontend<T>,
+		data: &mut T,
+		changed: &mut Option<ConfigChangeKind>,
+		action: &DropdownAction,
+	) -> anyhow::Result<()> {
+		if let Some(tab) = self.current_tab.as_mut() {
+			let config = frontend.interface.general_config(data);
+			tab.context_menu_custom(action, config, changed, &mut frontend.layout, &mut self.state)?;
+		}
+
+		if let DropdownAction::Enum {
+			id_label,
+			setting_str,
+			value,
+			translation,
+		} = action
+		{
+			let mut common = frontend.layout.common();
+			let mut label = self.state.fetch_widget_as::<WidgetLabel>(common.state, id_label)?;
+			label.set_text(&mut common, translation.clone());
+
+			let setting = SettingType::from_str(setting_str).expect("Invalid Enum string");
+			let config = frontend.interface.general_config(data);
+			setting.set_enum(config, value);
+			*changed = Some(setting.change_kind());
+		}
 		Ok(())
 	}
 

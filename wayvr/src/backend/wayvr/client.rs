@@ -131,11 +131,7 @@ impl WayVRCompositor {
                 return false;
             };
 
-            if *data.disconnected.lock().unwrap() {
-                return false;
-            }
-
-            true
+            !*data.disconnected.lock().unwrap()
         });
     }
 

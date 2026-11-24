@@ -390,7 +390,7 @@ impl XkbKeymap {
         self.inner.layouts().next()
     }
 
-    pub fn get_layout_code(&self) -> &Rc<str> {
+    pub const fn get_layout_code(&self) -> &Rc<str> {
         &self.layout_code
     }
 

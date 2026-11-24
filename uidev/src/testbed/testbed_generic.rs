@@ -303,8 +303,23 @@ impl Testbed for TestbedGeneric {
 		let res = data
 			.context_menu
 			.tick(&mut self.layout, &mut self.parser_state)?;
-		if let TickResult::Action(action_name) = res {
-			log::info!("got action: {}", action_name);
+
+		match res {
+			TickResult::None => {}
+			TickResult::Opened => {
+				log::info!("got action: opened")
+			}
+			TickResult::Action(action) => match action {
+				context_menu::Action::Empty => {
+					log::info!("got action: empty");
+				}
+				context_menu::Action::Named(name) => {
+					log::info!("got action: {}", name);
+				}
+				context_menu::Action::Custom(_) => {
+					log::info!("got custom action");
+				}
+			},
 		}
 
 		Ok(())
