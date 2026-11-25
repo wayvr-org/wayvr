@@ -642,21 +642,21 @@ impl Context {
 	) -> Option<u32> {
 		let count = self.memory_properties.memory_type_count as usize;
 
-		for idx in 0..count {
+		for (idx, memory_type) in self.memory_properties.memory_types.iter().enumerate().take(count) {
 			if memory_type_bits & (1 << idx) == 0 {
 				continue;
 			}
-			let flags = self.memory_properties.memory_types[idx].property_flags;
+			let flags = memory_type.property_flags;
 			if flags.contains(required) && flags.contains(preferred) {
 				return Some(idx as u32);
 			}
 		}
 
-		for idx in 0..count {
+		for (idx, memory_type) in self.memory_properties.memory_types.iter().enumerate().take(count) {
 			if memory_type_bits & (1 << idx) == 0 {
 				continue;
 			}
-			let flags = self.memory_properties.memory_types[idx].property_flags;
+			let flags = memory_type.property_flags;
 			if flags.contains(required) {
 				return Some(idx as u32);
 			}

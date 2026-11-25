@@ -1164,9 +1164,7 @@ impl<T> OverlayWindowManager<T> {
             self.global_set.inactive_overlays = inactive_overlays;
             self.global_set.hidden_overlays = hidden_overlays;
         } else {
-            for (name, ows) in app.session.config.global_set.clone() {
-                let mut ows = ows.clone();
-
+            for (name, mut ows) in app.session.config.global_set.clone() {
                 // fix angle_fade missing on watch if loading older state
                 if name.as_ref() == WATCH_NAME {
                     ows.angle_fade = true;

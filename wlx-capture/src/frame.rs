@@ -110,12 +110,10 @@ impl DmabufFrame {
 
     /// Returns true if all planes have a valid file descriptor.
     pub fn is_valid(&self) -> bool {
-        for i in 0..self.num_planes {
-            if self.planes[i].fd.is_none() {
-                return false;
-            }
-        }
-        true
+        self.planes
+            .iter()
+            .take(self.num_planes)
+            .all(|plane| plane.fd.is_some())
     }
 }
 
