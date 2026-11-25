@@ -6349,7 +6349,6 @@ dependencies = [
  "wayvr-ipc",
  "wgui",
  "whisper-rs",
- "winit",
  "wlx-capture",
  "wlx-common",
  "xcb",
