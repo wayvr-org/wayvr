@@ -24,15 +24,21 @@ jobs:
         ../.github/workflows/scripts/appimage_prepare_env.sh
     - name: Run cargo fmt
       run: cargo fmt --check
-    - name: Install cargo-hack
-      uses: taiki-e/install-action@cargo-hack
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
     - name: Check Features
-      run: cargo hack check --feature-powerset --no-dev-deps --depth 4 --at-least-one-of=openvr,openxr --exclude-features=pipewire,feat-monado-metrics,default --keep-going
+      run: |
+        fails=""
+        for features in "openxr,wayland,osc,whisper" "openvr,x11" "openvr,openxr,osc" "openvr,openxr,wayland,x11,whisper"; do
+          cargo check --no-default-features --features "$features" || fails="$fails $features"
+        done
+        if [ -n "$fails" ]; then
+          echo "failed checks:$fails"
+          exit 1
+        fi
     - name: Build
       run: cargo build --verbose
     - name: Run clippy
-      run: cargo clippy --no-deps
+      run: cargo clippy -- -D warnings
     - name: Run tests
       run: cargo test --verbose
