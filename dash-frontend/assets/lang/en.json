@@ -192,6 +192,7 @@
 			"WL_VIRTUAL": "Wayland virtual input",
 			"WL_VIRTUAL_HELP": "Send events to the Wayland compositor using\nzwlr_virtual_pointer and zwp_virtual_keyboard.\nOnly works reliably on some desktops.\nDoes NOT work on KDE, GNOME or COSMIC."
 		},
+		"SELECT_TIMEZONE": "Select timezone",
 		"SOUND": "Sound",
 		"KEYBOARD_SOUND_ENABLED": "Keyboard sounds",
 		"LANGUAGE": "Language",

@@ -1,0 +1,5 @@
+<layout version="2">
+  <elements>
+    <div id="list_parent" width="100%"/>
+  </elements>
+</layout>

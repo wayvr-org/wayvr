@@ -1440,6 +1440,7 @@ pub type OnCustomAttribsFunc = Rc<dyn Fn(CustomAttribsInfo)>;
 pub struct ParseDocumentExtra {
 	pub on_custom_attribs: Option<OnCustomAttribsFunc>, // all attributes with '_' character prepended
 	pub extra_vars: RcStrMap,
+	pub template_params: TemplateParams,
 	pub root_dir: Option<AssetPathRc>,
 }
 
@@ -1559,7 +1560,7 @@ fn get_doc_from_xml_asset_path(
 	let file = ParserFile {
 		document: document.clone(),
 		xml_path_source,
-		template_parameters: TemplateParams::new(),
+		template_parameters: ctx.doc_params.extra.map_or_default(|e| e.template_params.clone()),
 		root_dir: root_dir.clone(),
 		xml_path,
 		xml_dir,

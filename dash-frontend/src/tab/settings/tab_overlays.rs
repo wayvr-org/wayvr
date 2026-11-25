@@ -1,42 +1,49 @@
-use std::{rc::Rc, sync::Arc};
+use chrono_tz;
+use std::{collections::HashSet, rc::Rc, sync::Arc};
 use wgui::{
 	assets::AssetPathRef,
-	components::checkbox::ComponentCheckbox,
+	components::{checkbox::ComponentCheckbox, list},
 	i18n::Translation,
 	layout::WidgetID,
 	parser::{Fetchable, TemplateParams},
 	task::Tasks,
 };
-use wlx_common::{astr_containers::AStrSetExt, config_io::get_gui_root};
+use wlx_common::{astr_containers::AStrSetExt, config_io::get_gui_root, dash_interface::ConfigChangeKind};
 
 use crate::{
 	frontend::{FrontendTask, FrontendTasks},
 	tab::settings::{
-		SettingType, SettingsMountParams, SettingsTab, Task, horiz_cell,
+		self, SettingType, SettingsMountParams, SettingsTab, Task, horiz_cell,
 		macros::{
 			MacroParams, options_category, options_checkbox, options_dropdown, options_range_f32, options_slider,
 			options_split_horiz2,
 		},
 	},
 	util::{popup_manager::PopupHolder, wgui_simple},
-	views::keyboard_layout_editor,
+	views::{keyboard_layout_editor, list_selector},
 };
 
 #[derive(Clone)]
 enum LocalTask {
 	OpenCustomizationGuide,
 	OpenKeyboardLayoutEditor,
+	OpenTimezoneSelectorRegion { idx: u8 },
+	OpenTimezoneSelectorCity { idx: u8, region: Rc<str> },
+	SetTimezone { idx: u8, region: Rc<str>, city: Rc<str> },
 }
 
 pub struct State {
 	tasks: Tasks<LocalTask>,
+	settings_tasks: Tasks<settings::Task>,
 	frontend_tasks: FrontendTasks,
 	popup_keyboard_layout_editor: PopupHolder<keyboard_layout_editor::View>,
+	popup_select_timezone: PopupHolder<list_selector::View>,
 }
 
 impl SettingsTab for State {
 	fn update(&mut self, par: &mut crate::views::ViewUpdateParams, _extra: &super::UpdateExtra) -> anyhow::Result<()> {
 		self.popup_keyboard_layout_editor.update(par)?;
+		self.popup_select_timezone.update(par)?;
 
 		for task in self.tasks.drain() {
 			match task {
@@ -48,11 +55,65 @@ impl SettingsTab for State {
 				LocalTask::OpenKeyboardLayoutEditor => {
 					self.open_keyboard_layout_editor();
 				}
+				LocalTask::OpenTimezoneSelectorRegion { idx } => {
+					self.open_timezone_selector_region(idx);
+				}
+				LocalTask::OpenTimezoneSelectorCity { idx, region } => {
+					self.open_timezone_selector_city(idx, region);
+				}
+				LocalTask::SetTimezone { idx, region, city } => {
+					let idx = idx as usize;
+					if idx >= par.general_config.timezones.len() {
+						par.general_config.timezones.resize(idx + 1, Default::default());
+					}
+					par.general_config.timezones[idx] = format!("{}/{}", region, city);
+					*par.config_change_kind = Some(ConfigChangeKind::WatchContents);
+					self.settings_tasks.push(settings::Task::RefreshTab);
+				}
 			}
 		}
 
 		Ok(())
 	}
+}
+
+fn get_regions() -> Vec<list::Cell> {
+	// dedup
+	let mut regions = HashSet::<&'static str>::new();
+
+	for v in chrono_tz::TZ_VARIANTS {
+		let Some((region, _)) = v.name().split_once("/") else {
+			continue;
+		};
+		regions.insert(region);
+	}
+
+	regions
+		.into_iter()
+		.map(|r| list::Cell {
+			id: r.into(),
+			text: Translation::from_raw_text(r),
+			sprite_src: None,
+		})
+		.collect()
+}
+
+fn get_cities(region: &str) -> Vec<list::Cell> {
+	chrono_tz::TZ_VARIANTS
+		.iter()
+		.filter_map(|v| {
+			let (it_region, city) = v.name().split_once("/")?;
+			if region != it_region {
+				return None;
+			}
+			Some(city)
+		})
+		.map(|c| list::Cell {
+			id: c.into(),
+			text: Translation::from_raw_text(c),
+			sprite_src: None,
+		})
+		.collect()
 }
 
 impl State {
@@ -90,6 +151,29 @@ impl State {
 				1.0,
 				0.1,
 			)?;
+
+			wgui_simple::create_label(
+				par.mp.layout,
+				c,
+				Translation::from_translation_key("APP_SETTINGS.SELECT_TIMEZONE"),
+			)?;
+
+			let row = wgui_simple::create_flex_right(par.mp.layout, c)?;
+
+			// Timezone selection buttons
+			let mut tz = |parent: WidgetID, idx: u8| -> anyhow::Result<()> {
+				wgui_simple::create_button(wgui_simple::CreateButtonParams {
+					id_parent: parent,
+					layout: par.mp.layout,
+					content: Translation::from_raw_text(par.mp.config.timezones.get(idx as usize).map_or("---", |v| v)),
+					icon_builtin: AssetPathRef::BuiltIn("dashboard/globe.svg"),
+					on_click: tasks.get_button_click_callback(LocalTask::OpenTimezoneSelectorRegion { idx }),
+				})?;
+				Ok(())
+			};
+
+			tz(row, 0)?;
+			tz(row, 1)?;
 		}
 
 		// Custom overlays
@@ -134,13 +218,54 @@ impl State {
 
 		Ok(State {
 			tasks,
+			settings_tasks: par.mp.tasks.clone(),
 			frontend_tasks: par.frontend_tasks.clone(),
 			popup_keyboard_layout_editor: Default::default(),
+			popup_select_timezone: Default::default(),
 		})
 	}
 
 	fn open_keyboard_layout_editor(&mut self) {
 		keyboard_layout_editor::mount_popup(self.popup_keyboard_layout_editor.clone(), self.frontend_tasks.clone());
+	}
+
+	fn mount_timezone_selector(&mut self, cells: Vec<list::Cell>, on_finish: list_selector::OnFinishCallback) {
+		list_selector::mount_popup(
+			self.popup_select_timezone.clone(),
+			self.frontend_tasks.clone(),
+			Translation::from_translation_key("APP_SETTINGS.SELECT_TIMEZONE"),
+			cells,
+			on_finish,
+		);
+	}
+
+	fn open_timezone_selector_region(&mut self, idx: u8) {
+		let tasks = self.tasks.clone();
+
+		self.mount_timezone_selector(
+			get_regions(),
+			Box::new(move |e| {
+				tasks.push(LocalTask::OpenTimezoneSelectorCity {
+					idx,
+					region: e.cell.clone(),
+				})
+			}),
+		);
+	}
+
+	fn open_timezone_selector_city(&mut self, idx: u8, region: Rc<str>) {
+		let tasks = self.tasks.clone();
+
+		self.mount_timezone_selector(
+			get_cities(&region),
+			Box::new(move |e| {
+				tasks.push(LocalTask::SetTimezone {
+					idx,
+					region,
+					city: e.cell.clone(),
+				})
+			}),
+		);
 	}
 }
 

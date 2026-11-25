@@ -13,6 +13,7 @@ pub mod button;
 pub mod checkbox;
 pub mod color_selector;
 pub mod editbox;
+pub mod list;
 pub mod radio_group;
 pub mod slider;
 pub mod tabs;
