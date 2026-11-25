@@ -1492,10 +1492,10 @@ impl<T> OverlayWindowManager<T> {
                     return;
                 };
                 let parent = OverlaySelector::Id(parent_id);
-                let _ = self.offset_spawn_from_parent(app, oid, &parent);
+                let _ = self.offset_spawn_from_parent(app, oid, &parent, false);
             }
             SpawnPos::Parent(parent) => {
-                let _ = self.offset_spawn_from_parent(app, oid, &parent);
+                let _ = self.offset_spawn_from_parent(app, oid, &parent, true);
             }
             SpawnPos::WlDefault(window, fallback_pid) => {
                 let Some((parent, has_app_id)) = app.wvr_server.as_ref().and_then(|wvr| {
@@ -1519,14 +1519,14 @@ impl<T> OverlayWindowManager<T> {
                 });
                 if let Some(parent_id) = parent_id
                     && self
-                        .offset_spawn_from_parent(app, oid, &OverlaySelector::Id(parent_id))
+                        .offset_spawn_from_parent(app, oid, &OverlaySelector::Id(parent_id), false)
                         .is_some()
                 {
                     return;
                 }
                 if let Some(parent_id) = self.spread_parent_for(oid) {
-                    let _ =
-                        self.offset_spawn_from_parent(app, oid, &OverlaySelector::Id(parent_id));
+                    let parent = OverlaySelector::Id(parent_id);
+                    let _ = self.offset_spawn_from_parent(app, oid, &parent, false);
                 }
             }
         }
@@ -1553,6 +1553,7 @@ impl<T> OverlayWindowManager<T> {
         app: &mut AppState,
         oid: OverlayID,
         parent: &OverlaySelector,
+        inherit_scale: bool,
     ) -> Option<()> {
         let parent_id = self.id_by_selector(parent)?;
 
@@ -1571,7 +1572,8 @@ impl<T> OverlayWindowManager<T> {
         let overlay = self.overlays.get_mut(oid)?;
         let state = overlay.config.active_state.as_mut()?;
 
-        state.transform = spawn_transform_from_parent(&parent_transform, &app.input_state.hmd);
+        state.transform =
+            spawn_transform_from_parent(&parent_transform, &app.input_state.hmd, inherit_scale);
 
         save_transform(state, app);
         overlay.config.dirty = true;
