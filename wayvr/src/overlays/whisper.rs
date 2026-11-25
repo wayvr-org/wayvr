@@ -21,6 +21,8 @@ use wlx_common::{
     windowing::OverlayWindowState,
 };
 
+#[cfg(any(feature = "wayland", feature = "x11"))]
+use crate::subsystem::clipboard;
 use crate::{
     backend::task::{OverlayTask, TaskType, ToggleMode},
     gui::{
@@ -33,7 +35,7 @@ use crate::{
     overlays::toast::Toast,
     state::AppState,
     subsystem::{
-        clipboard::{self, ClipboardProvider},
+        clipboard::ClipboardProvider,
         hid::VirtualKey,
         input::InputFocus,
         whisper_stt::{PttProgress, WHISPER_LANGUAGES, WhisperStt},
@@ -43,7 +45,7 @@ use crate::{
         window::{OverlayCategory, OverlayWindowConfig},
     },
 };
-#[cfg(feature = "wayland")]
+#[cfg(any(feature = "wayland", feature = "x11"))]
 use wlx_common::DesktopBackend;
 
 const WHISPER_NAME: &str = "whisper";

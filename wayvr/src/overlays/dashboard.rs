@@ -500,7 +500,7 @@ impl DashInterface<AppState> for DashInterfaceLive {
         Ok(())
     }
 
-    #[allow(unreachable_patterns)]
+    #[allow(unreachable_patterns, unused_variables)]
     fn backend_task(&mut self, app: &mut AppState, mode: DashBackendTask) -> anyhow::Result<()> {
         #[cfg(feature = "openvr")]
         if app.feats.xr_backend.is_open_vr() {

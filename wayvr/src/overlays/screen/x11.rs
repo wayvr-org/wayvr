@@ -1,13 +1,10 @@
 use std::sync::Arc;
 
-use wgui::log::LogErr;
-
 use glam::{DVec2, vec2};
 use wlx_capture::{
     frame::Transform,
     xshm::{XshmCapture, XshmScreen},
 };
-use wlx_common::{astr_containers::AStrMapExt, config::CaptureMethod};
 
 use crate::{
     overlays::screen::{backend::CaptureType, create_screen_from_backend},
@@ -17,7 +14,11 @@ use crate::{
 use super::{ScreenCreateData, backend::ScreenBackend, capture::new_wlx_capture};
 
 #[cfg(feature = "pipewire")]
-use crate::{overlays::screen::pw::ScreenCastBackend, windowing::backend::OverlayBackend};
+use {
+    crate::{overlays::screen::pw::ScreenCastBackend, windowing::backend::OverlayBackend},
+    wgui::log::LogErr,
+    wlx_common::{astr_containers::AStrMapExt, config::CaptureMethod},
+};
 
 impl ScreenBackend {
     pub fn new_xshm(screen: Arc<XshmScreen>, app: &AppState) -> Self {
