@@ -32,7 +32,7 @@ use crate::{
     },
     config::{save_settings, save_state},
     graphics::{GpuFutures, init_openxr_graphics},
-    overlays::{toast::Toast, watch::WATCH_NAME},
+    overlays::{osd::Osd, toast::Toast, watch::WATCH_NAME},
     state::AppState,
     windowing::{
         backend::{RenderResources, RenderTarget, ShouldRender},
@@ -363,12 +363,13 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
         if (app.input_state.ipd - ipd).abs() > 0.5 {
             log::info!("IPD changed: {} -> {}", app.input_state.ipd, ipd);
             app.input_state.ipd = ipd;
-            Toast::new(
-                ToastTopic::IpdChange,
-                Some(Translation::from_raw_text("IPD")),
-                Translation::from_raw_text(format!("{ipd:.1} mm")),
-            )
-            .submit(&mut app);
+            Osd {
+                topic: ToastTopic::IpdChange,
+                title: "IPD".into(),
+                value: format!("{ipd:.1} mm"),
+                level: None,
+            }
+            .show(&mut app);
         }
 
         overlays.tick(&mut app);

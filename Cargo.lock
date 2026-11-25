@@ -1025,7 +1025,7 @@ checksum = "b85f248a4de22d204ceabc6299d89d2c70fbd7f09fea53c06c852369652d8139"
 dependencies = [
  "async-trait",
  "convert_case 0.6.0",
- "json5 0.4.1",
+ "json5",
  "pathdiff",
  "ron",
  "rust-ini",
@@ -2749,16 +2749,6 @@ dependencies = [
  "pest",
  "pest_derive",
  "serde",
-]
-
-[[package]]
-name = "json5"
-version = "1.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "733a844dbd6fef128e98cb4487b887cb55454d92cd9994b1bafe004fabbe670c"
-dependencies = [
- "serde",
- "ucd-trie",
 ]
 
 [[package]]
@@ -6261,7 +6251,6 @@ dependencies = [
  "input-linux",
  "interprocess",
  "json",
- "json5 1.3.1",
  "libc",
  "libmonado",
  "log",

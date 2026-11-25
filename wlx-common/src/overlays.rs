@@ -13,7 +13,7 @@ pub enum ToastTopic {
 	Priority,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ToastDisplayMethod {
 	Hide,
 	Center,

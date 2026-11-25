@@ -25,6 +25,7 @@ pub const PIXELS_TO_METERS: f32 = 1. / 2000.;
 
 pub const Z_ORDER_DRAG_ITEM: u32 = 72;
 pub const Z_ORDER_TOAST: u32 = 71;
+pub const Z_ORDER_OSD: u32 = Z_ORDER_TOAST;
 pub const Z_ORDER_HELP: u32 = 70;
 pub const Z_ORDER_LINES: u32 = 69;
 pub const Z_ORDER_WATCH: u32 = 68;
