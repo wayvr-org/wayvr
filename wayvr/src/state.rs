@@ -3,6 +3,7 @@ use glam::Affine3A;
 use idmap::IdMap;
 use serde::{Deserialize, Serialize};
 use smallvec::{SmallVec, smallvec};
+#[cfg(feature = "pipewire")]
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -11,6 +12,7 @@ use wgui::theme::WguiTheme;
 use wgui::{gfx::WGfx, globals::WguiGlobals, renderer::context::SharedContext as WSharedContext};
 #[cfg(feature = "pipewire")]
 use wlx_capture::pipewire::ScreenCastManager;
+#[cfg(feature = "pipewire")]
 use wlx_common::config::PwTokenMap;
 use wlx_common::{
     audio,

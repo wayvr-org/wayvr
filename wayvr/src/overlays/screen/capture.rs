@@ -1141,6 +1141,7 @@ fn extent_from_format(fmt: FrameFormat, config: &GeneralConfig) -> [u32; 2] {
     [w, h]
 }
 
+#[cfg(any(feature = "wayland", feature = "x11", feature = "pipewire"))]
 macro_rules! new_wlx_capture {
     ($app:expr, $capture:expr) => {{
         if $app.gfx.has_capture_queue() {
@@ -1156,4 +1157,5 @@ macro_rules! new_wlx_capture {
     }};
 }
 
+#[cfg(any(feature = "wayland", feature = "x11", feature = "pipewire"))]
 pub(super) use new_wlx_capture;
