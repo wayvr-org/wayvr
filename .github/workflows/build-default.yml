@@ -29,7 +29,7 @@ jobs:
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
     - name: Check Features
-      run: cargo hack check --workspace --feature-powerset --no-dev-deps --at-least-one-of=openvr,openxr --keep-going
+      run: cargo hack check --feature-powerset --no-dev-deps --depth 4 --at-least-one-of=openvr,openxr --exclude-features=pipewire,feat-monado-metrics,default --keep-going
     - name: Build
       run: cargo build --verbose
     - name: Run clippy

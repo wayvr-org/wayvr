@@ -19,6 +19,17 @@ categories = ["games"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["openvr", "openxr", "osc", "wayland", "whisper", "x11"]
+feat-monado-metrics = []
+openvr = ["dep:json", "dep:ovr_overlay"]
+openxr = ["dep:libmonado", "dep:openxr", "dep:prost"]
+osc = ["dep:rosc"]
+pipewire = ["wlx-capture/pipewire"]
+wayland = ["pipewire", "wlx-capture/wlr", "xkbcommon/wayland"]
+whisper = ["dep:calloop", "dep:calloop-wayland-source", "dep:pipewire", "dep:whisper-rs"]
+x11 = ["dep:xcb", "wlx-capture/xshm", "xkbcommon/x11"]
+
 [dependencies]
 dash-frontend = { path = "../dash-frontend/" }
 wayvr-ipc = { path = "../wayvr-ipc", default-features = false }
@@ -54,7 +65,6 @@ wayland-client = { workspace = true }
 wayland-protocols = { workspace = true, features = ["server", "staging"] }
 wayland-protocols-misc = { workspace = true }
 wayland-scanner = "0.31.10"
-winit = { workspace = true, optional = true }
 xdg.workspace = true
 
 bytes = { workspace = true }
@@ -106,13 +116,7 @@ sysinfo = { version = "0.39.6" }
 thiserror = "2.0.18"
 tracing = "0.1.44"
 whisper-rs = { version = "0.16.0", features = ["vulkan"], optional = true }
-xcb = {
-  version = "1.7.0",
-  features = [
-    "as-raw-xcb-connection",
-  ],
-  optional = true
-}
+xcb = { version = "1.7.0", features = ["as-raw-xcb-connection"], optional = true }
 xkbcommon = { version = "0.8.0" }  # 0.9.0 breaks keymap import on some distros
 
 calloop = { version = "0.14.4", optional = true }
@@ -122,17 +126,3 @@ evdev = "0.13.2"
 [build-dependencies]
 regex.workspace = true
 shaderc = "0.8"
-
-[features]
-default = ["openvr", "openxr", "osc", "wayland", "whisper", "x11"]
-as-raw-xcb-connection = []
-feat-monado-metrics = []
-openvr = ["dep:json", "dep:ovr_overlay"]
-openxr = ["dep:libmonado", "dep:openxr", "dep:prost"]
-osc = ["dep:rosc"]
-pipewire = ["wlx-capture/pipewire"]
-uidev = ["dep:winit"]
-wayland = ["pipewire", "wlx-capture/wlr", "xkbcommon/wayland"]
-whisper = ["dep:calloop", "dep:calloop-wayland-source", "dep:pipewire", "dep:whisper-rs"]
-x11 = ["dep:xcb", "wlx-capture/xshm", "xkbcommon/x11"]
-xcb = ["dep:xcb"]
