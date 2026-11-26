@@ -17,7 +17,6 @@ use wgui::{
 	globals::WguiGlobals,
 	i18n::Translation,
 	layout::{Layout, LayoutParams, LayoutUpdateParams, Widget},
-	palette::WguiColorPalette,
 	parser::{Fetchable, ParseDocumentExtra, ParseDocumentParams, ParserState},
 	taffy::{self, prelude::length},
 	task::Tasks,
@@ -28,7 +27,7 @@ use wgui::{
 		window::{WguiWindow, WguiWindowParams, WguiWindowParamsExtra},
 	},
 };
-use wlx_common::locale::WayVRLangProvider;
+use wlx_common::{locale::WayVRLangProvider, palette::load_palette};
 
 #[derive(Clone)]
 pub enum TestbedTask {
@@ -93,7 +92,7 @@ impl TestbedGeneric {
 			&lang_provider,
 			&WguiFontConfig::default(),
 			PathBuf::new(), // cwd
-			WguiColorPalette::get_builtin(&palette_name),
+			load_palette(&palette_name),
 		)?;
 
 		let extra = ParseDocumentExtra {

@@ -10,10 +10,9 @@ use wgui::{
 	font_config::WguiFontConfig,
 	globals::WguiGlobals,
 	layout::{Layout, LayoutParams, LayoutUpdateParams},
-	palette::WguiColorPalette,
 	parser::{ParseDocumentExtra, ParseDocumentParams, ParserState},
 };
-use wlx_common::locale::WayVRLangProvider;
+use wlx_common::{locale::WayVRLangProvider, palette::load_palette};
 
 pub struct TestbedAny {
 	pub layout: Layout,
@@ -41,7 +40,7 @@ impl TestbedAny {
 			&lang_provider,
 			&WguiFontConfig::default(),
 			PathBuf::new(), // cwd
-			WguiColorPalette::get_builtin(&palette_name),
+			load_palette(&palette_name),
 		)?;
 
 		let extra = ParseDocumentExtra {
