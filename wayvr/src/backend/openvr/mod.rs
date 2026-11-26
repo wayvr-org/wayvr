@@ -31,7 +31,7 @@ use crate::{
     },
     config::{save_settings, save_state},
     graphics::{GpuFutures, init_openvr_graphics},
-    overlays::toast::Toast,
+    overlays::{osd::Osd, toast::Toast},
     state::AppState,
     windowing::{
         backend::{RenderResources, RenderTarget, ShouldRender},
@@ -194,12 +194,13 @@ pub fn openvr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                             let ipd = (ipd * 1000.0).round();
                             if (ipd - app.input_state.ipd).abs() > 0.05 {
                                 log::info!("IPD: {:.1} mm -> {:.1} mm", app.input_state.ipd, ipd);
-                                Toast::new(
-                                    ToastTopic::IpdChange,
-                                    Some(Translation::from_raw_text("IPD")),
-                                    Translation::from_raw_text(format!("{ipd:.1} mm")),
-                                )
-                                .submit(&mut app);
+                                Osd {
+                                    topic: ToastTopic::IpdChange,
+                                    title: "IPD".into(),
+                                    value: format!("{ipd:.1} mm"),
+                                    level: None,
+                                }
+                                .show(&mut app);
                             }
                             app.input_state.ipd = ipd;
                         }

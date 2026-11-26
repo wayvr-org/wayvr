@@ -31,6 +31,7 @@ use crate::subsystem::notifications::{NotificationEvent, NotificationManager};
 #[cfg(feature = "osc")]
 use crate::subsystem::osc::OscSender;
 
+use crate::overlays::osd::OsdState;
 #[cfg(feature = "whisper")]
 use crate::subsystem::whisper_stt::WhisperStt;
 use crate::{
@@ -48,6 +49,7 @@ pub struct AppState {
     pub session: AppSession,
     pub tasks: TaskContainer,
     pub toast_queue: ToastQueue,
+    pub osd: OsdState,
 
     pub gfx: Arc<WGfx>,
     pub gfx_extras: WGfxExtras,
@@ -226,6 +228,7 @@ impl AppState {
         let mut app_state = Self {
             tasks,
             toast_queue: ToastQueue::default(),
+            osd: Default::default(),
             gfx,
             gfx_extras,
             hid_provider,

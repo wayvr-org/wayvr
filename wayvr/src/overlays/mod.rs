@@ -4,6 +4,7 @@ pub mod dashboard;
 pub mod drag_item;
 pub mod edit;
 pub mod keyboard;
+pub mod osd;
 pub mod passthrough;
 pub mod screen;
 pub mod toast;
