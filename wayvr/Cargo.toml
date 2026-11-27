@@ -68,7 +68,7 @@ wayland-scanner = "0.31.10"
 xdg.workspace = true
 
 bytes = { workspace = true }
-chrono-tz = "0.10.4"
+chrono-tz.workspace = true
 config = "0.15.25"
 image.workspace = true
 image_dds = {

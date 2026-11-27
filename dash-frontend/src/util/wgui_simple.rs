@@ -263,3 +263,20 @@ pub fn create_flex_down(layout: &mut Layout, parent: WidgetID) -> anyhow::Result
 			.id,
 	)
 }
+
+pub fn create_flex_right(layout: &mut Layout, parent: WidgetID) -> anyhow::Result<WidgetID> {
+	Ok(
+		layout
+			.add_child(
+				parent,
+				WidgetDiv::create(),
+				taffy::Style {
+					flex_direction: taffy::FlexDirection::Row,
+					gap: length(4.0_f32),
+					..Default::default()
+				},
+			)?
+			.0
+			.id,
+	)
+}

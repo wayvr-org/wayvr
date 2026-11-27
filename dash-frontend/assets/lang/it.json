@@ -276,7 +276,8 @@
 		"ACTIVE_LIST": "Attivi",
 		"AVAILABLE_LIST": "Disponibili",
 		"CUSTOM_OVERLAYS": "Overlay personalizzati",
-		"OPEN_CUSTOMIZATION_GUIDE": "Apri guida personalizzazione nel browser"
+		"SELECT_TIMEZONE": "Seleziona fuso orario",
+		"OPEN_CUSTOMIZATION_GUIDE": "Apri guida alla personalizzazione nel browser"
 	},
 	"APPLICATION_LAUNCHER": "Avvio applicazioni",
 	"APPLICATION_STARTED": "Applicazione avviata",

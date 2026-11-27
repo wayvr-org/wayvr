@@ -276,6 +276,7 @@
 		"ACTIVE_LIST": "Aktiv",
 		"AVAILABLE_LIST": "Verfügbar",
 		"CUSTOM_OVERLAYS": "Benutzerdefinierte Overlays",
+		"SELECT_TIMEZONE": "Zeitzone auswählen",
 		"OPEN_CUSTOMIZATION_GUIDE": "Anpassungsleitfaden im Browser öffnen"
 	},
 	"APPLICATION_LAUNCHER": "Programmstarter",

@@ -125,6 +125,7 @@ pub fn parse_component_button<'a>(
 			sticky,
 			long_press_time,
 			sprite_src: sprite_src.as_ref().map(|s| s.as_ref()),
+			hover_effect: button::HoverEffect::Zoom,
 		},
 	)?;
 

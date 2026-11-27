@@ -276,6 +276,7 @@
 		"ACTIVE_LIST": "Activos",
 		"AVAILABLE_LIST": "Disponibles",
 		"CUSTOM_OVERLAYS": "Overlays personalizados",
+		"SELECT_TIMEZONE": "Seleccionar zona horaria",
 		"OPEN_CUSTOMIZATION_GUIDE": "Abrir guía de personalización en el navegador"
 	},
 	"APPLICATION_LAUNCHER": "Lanzador de aplicaciones",

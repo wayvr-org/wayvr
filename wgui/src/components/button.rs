@@ -32,6 +32,11 @@ use std::{
 };
 use taffy::{AlignItems, JustifyContent, prelude::length};
 
+pub enum HoverEffect {
+	None,
+	Zoom,
+}
+
 pub struct Params<'a> {
 	pub text: Option<Translation>, // if unset, label will not be populated
 	pub sprite_src: Option<AssetPathRef<'a>>,
@@ -52,6 +57,7 @@ pub struct Params<'a> {
 	/// set the initial state using `set_sticky_state`
 	pub sticky: bool,
 	pub long_press_time: f32,
+	pub hover_effect: HoverEffect,
 }
 
 impl Default for Params<'_> {
@@ -73,6 +79,7 @@ impl Default for Params<'_> {
 			tooltip: None,
 			sticky: false,
 			long_press_time: 0.0,
+			hover_effect: HoverEffect::Zoom,
 		}
 	}
 }
@@ -104,6 +111,7 @@ struct State {
 	id_label: WidgetID,  // Label
 	id_sprite: WidgetID, // Sprite
 	children_discovered: bool,
+	hover_effect: HoverEffect,
 }
 
 impl TooltipTrait for State {
@@ -333,15 +341,17 @@ impl ComponentButton {
 fn anim_hover(
 	common: &mut CallbackDataCommon,
 	rect: &mut WidgetRectangle,
-	label: WidgetID,
-	sprite: WidgetID,
+	state: &State,
 	widget_data: &mut WidgetData,
-	colors: &Colors,
 	widget_boundary: Boundary,
 	pos: f32,
 	pressed: bool,
-	sticky_down: bool,
 ) {
+	let colors = &state.colors;
+	let label = state.id_label;
+	let sprite = state.id_sprite;
+	let sticky_down = state.sticky_down;
+
 	let mult = pos * if pressed { 1.5 } else { 1.0 };
 
 	let (init_border_color, init_color) = if sticky_down {
@@ -372,10 +382,13 @@ fn anim_hover(
 
 	let gradient_intensity = common.state.theme.gradient_intensity;
 
-	//let t = Mat4::from_scale(Vec3::splat(1.0 + pos * 0.5)) * Mat4::from_rotation_z(pos * 1.0);
-
-	let t = Mat4::from_scale(Vec3::splat(1.0 + pos * 0.05));
-	widget_data.transform = centered_matrix(widget_boundary.size, &t);
+	match state.hover_effect {
+		HoverEffect::Zoom => {
+			let t = Mat4::from_scale(Vec3::splat(1.0 + pos * 0.05));
+			widget_data.transform = centered_matrix(widget_boundary.size, &t);
+		}
+		HoverEffect::None => {}
+	}
 
 	rect.params.color = bg_color;
 	rect.params.color2 = get_color2(&bg_color, gradient_intensity);
@@ -394,14 +407,11 @@ fn anim_hover_create(state: Rc<RefCell<State>>, widget_id: WidgetID, fade_in: bo
 			anim_hover(
 				common,
 				rect,
-				state.id_label,
-				state.id_sprite,
+				&state,
 				anim_data.data,
-				&state.colors,
 				anim_data.widget_boundary,
 				if fade_in { anim_data.pos } else { 1.0 - anim_data.pos },
 				state.down,
-				state.sticky_down,
 			);
 			common.alterables.mark_redraw();
 		}),
@@ -470,14 +480,11 @@ fn register_event_mouse_press(state: Rc<RefCell<State>>, listeners: &mut EventLi
 			anim_hover(
 				common,
 				rect,
-				state.id_label,
-				state.id_sprite,
+				&state,
 				event_data.widget_data,
-				&state.colors,
 				common.state.get_node_boundary(event_data.node_id),
 				1.0,
 				true,
-				state.sticky_down,
 			);
 
 			common.alterables.trigger_haptics();
@@ -521,14 +528,11 @@ fn register_event_mouse_release(
 					anim_hover(
 						common,
 						rect,
-						state.id_label,
-						state.id_sprite,
+						&state,
 						event_data.widget_data,
-						&state.colors,
 						common.state.get_node_boundary(event_data.node_id),
 						1.0,
 						false,
-						state.sticky_down,
 					);
 
 					if let Some(on_click) = state.on_click.clone() {
@@ -691,6 +695,7 @@ pub fn construct(ess: &mut ConstructEssentials, params: Params) -> anyhow::Resul
 		id_label,
 		id_sprite,
 		children_discovered: false,
+		hover_effect: params.hover_effect,
 	}));
 
 	let base = ComponentBase {

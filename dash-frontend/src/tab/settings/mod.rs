@@ -45,7 +45,7 @@ mod tab_overlays;
 mod tab_statistics;
 mod tab_troubleshooting;
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub(crate) enum TabNameEnum {
 	Appearance,
 	AutostartApps,
@@ -87,6 +87,7 @@ pub(crate) enum Task {
 	ResetPlayspace,
 	ResetPlayspaceCenter,
 	SavePlayspaceCenter,
+	RefreshTab,
 	SetTab(TabNameEnum),
 	SettingUpdated(SettingType),
 	ToggleCustomPanel(Arc<str>, bool),
@@ -138,6 +139,7 @@ pub struct TabSettings<T> {
 	context_menu: ContextMenu,
 
 	current_tab: Option<Box<dyn SettingsTab>>,
+	current_tab_type: TabNameEnum,
 
 	tasks: Tasks<Task>,
 	marker: PhantomData<T>,
@@ -172,6 +174,9 @@ impl<T> Tab<T> for TabSettings<T> {
 			match task {
 				Task::SetTab(tab) => {
 					self.set_tab(frontend, data, tab)?;
+				}
+				Task::RefreshTab => {
+					self.set_tab(frontend, data, self.current_tab_type)?;
 				}
 				Task::UpdateVar(setting, var) => {
 					self.tasks.push(Task::SettingUpdated(setting));
@@ -550,6 +555,7 @@ impl<T> TabSettings<T> {
 		let root = self.state.get_widget_id("settings_root")?;
 		frontend.layout.remove_children(root);
 		self.current_tab = None;
+		self.current_tab_type = name;
 
 		let vulkan_devices = if matches!(name, TabNameEnum::General) {
 			Some(frontend.interface.enumerate_vulkan_devices(data)?)
@@ -671,7 +677,7 @@ impl<T> TabSettings<T> {
 			})
 		});
 
-		tasks.push(Task::SetTab(TabNameEnum::General));
+		tasks.push(Task::RefreshTab);
 
 		let feats = frontend.interface.get_feats(data);
 
@@ -684,6 +690,7 @@ impl<T> TabSettings<T> {
 			current_tab: None,
 			frontend_tasks: frontend.tasks.clone(),
 			feats,
+			current_tab_type: TabNameEnum::General,
 		})
 	}
 }

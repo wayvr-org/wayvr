@@ -275,7 +275,8 @@
 		"KEYBOARD_LAYOUT": "键盘布局",
 		"ACTIVE_LIST": "活跃",
 		"AVAILABLE_LIST": "可用列表",
-		"CUSTOM_OVERLAYS": "自定义叠加层",
+		"CUSTOM_OVERLAYS": "自定义覆盖层",
+		"SELECT_TIMEZONE": "选择时区",
 		"OPEN_CUSTOMIZATION_GUIDE": "在浏览器中打开自定义指南"
 	},
 	"APPLICATION_LAUNCHER": "应用启动器",

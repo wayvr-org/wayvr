@@ -276,6 +276,7 @@
 		"ACTIVE_LIST": "アクティブ",
 		"AVAILABLE_LIST": "利用可能",
 		"CUSTOM_OVERLAYS": "カスタムオーバーレイ",
+		"SELECT_TIMEZONE": "タイムゾーンを選択",
 		"OPEN_CUSTOMIZATION_GUIDE": "ブラウザでカスタマイズガイドを開く"
 	},
 	"APPLICATION_LAUNCHER": "アプリランチャー",

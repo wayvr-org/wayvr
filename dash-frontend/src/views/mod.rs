@@ -11,6 +11,7 @@ pub mod game_launcher;
 pub mod game_list;
 pub mod input_profiles;
 pub mod keyboard_layout_editor;
+pub mod list_selector;
 pub mod remote_skymap_downloader;
 pub mod remote_skymap_list;
 pub mod running_games_list;
