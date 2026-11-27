@@ -1222,6 +1222,13 @@ impl OverlayBackend for WvrWindowBackend {
 
         match target {
             Some(WvrHitTarget::Panel(hit2)) => {
+                if !pressed
+                    && let Some(wvr_server) = app.wvr_server.as_mut()
+                    && wvr_server.send_pending_release(index, click_freeze)
+                {
+                    return;
+                }
+
                 self.panel_hovered = true;
                 self.panel.on_pointer(app, &hit2, pressed);
             }

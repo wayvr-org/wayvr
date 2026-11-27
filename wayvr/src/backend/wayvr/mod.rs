@@ -161,9 +161,12 @@ pub enum WayVRTask {
     DndDropped,
 }
 
+#[derive(Clone)]
 struct PendingRelease {
     index: MouseIndex,
     pos: Vec2,
+    target: PointerFocusTarget,
+    hover_window: window::WindowHandle,
     freeze_until: Instant,
 }
 
@@ -177,6 +180,7 @@ pub struct WvrServerState {
     cur_modifiers: u8,
     mouse_freeze: Instant,
     pending_release: Option<PendingRelease>,
+    last_hover: Option<window::MouseState>,
     window_to_overlay: HashMap<window::WindowHandle, OverlayID>,
     overlay_to_window: SecondaryMap<OverlayID, window::WindowHandle>,
     process_overlays: HashMap<process::ProcessHandle, Vec<OverlayID>>,
@@ -194,6 +198,7 @@ pub enum MouseIndex {
     Right,
 }
 
+#[derive(Clone)]
 pub enum PointerFocusTarget {
     Surface { surface: WlSurface, origin: Vec2 },
     Toplevel,
@@ -370,6 +375,7 @@ impl WvrServerState {
             cur_modifiers: 0,
             mouse_freeze: Instant::now(),
             pending_release: None,
+            last_hover: None,
             window_to_overlay: HashMap::new(),
             overlay_to_window: SecondaryMap::new(),
             process_overlays: HashMap::new(),
@@ -1394,11 +1400,12 @@ impl WvrServerState {
         if mouse_delta.length_squared() > 1e-6 {
             if self.has_input_focus {
                 'mouse_update: {
-                    let Some(ref hover) = self.wm.mouse else {
+                    let Some(hover) = self.wm.mouse.or(self.last_hover) else {
                         break 'mouse_update;
                     };
 
                     let Some(window) = self.wm.windows.get(hover.hover_window) else {
+                        self.last_hover = None;
                         break 'mouse_update;
                     };
                     let toplevel = window.toplevel.wl_surface().clone();
@@ -1464,6 +1471,7 @@ impl WvrServerState {
         self.has_input_focus = has_focus;
         if !has_focus {
             self.wm.mouse = None;
+            self.last_hover = None;
         }
     }
 
@@ -1534,6 +1542,12 @@ impl WvrServerState {
         global_pos - mouse.pos
     }
 
+    const fn set_mouse_state(&mut self, hover_window: window::WindowHandle, pos: DVec2) {
+        let mouse = window::MouseState { hover_window, pos };
+        self.wm.mouse = Some(mouse);
+        self.last_hover = Some(mouse);
+    }
+
     fn send_mouse_move_relative(
         &mut self,
         target: PointerFocusTarget,
@@ -1547,10 +1561,7 @@ impl WvrServerState {
         self.manager
             .send_mouse_move(focus, global_pos, delta, delta_unaccel);
         self.mouse_freeze = Instant::now() + Duration::from_millis(1);
-        self.wm.mouse = Some(window::MouseState {
-            hover_window,
-            pos: global_pos,
-        });
+        self.set_mouse_state(hover_window, global_pos);
     }
 
     pub fn send_mouse_move(
@@ -1581,34 +1592,45 @@ impl WvrServerState {
         self.manager
             .send_mouse_move(focus, global_pos, linear_delta, linear_delta);
         self.mouse_freeze = Instant::now() + Duration::from_millis(1);
-        self.wm.mouse = Some(window::MouseState {
-            hover_window,
-            pos: global_pos,
-        });
+        self.set_mouse_state(hover_window, global_pos);
     }
 
     pub fn send_mouse_button(
         &mut self,
-        target: PointerFocusTarget,
+        mut target: PointerFocusTarget,
         mut global_pos: Vec2,
-        hover_window: window::WindowHandle,
+        mut hover_window: window::WindowHandle,
         index: MouseIndex,
         pressed: bool,
         click_freeze: i32,
     ) {
+        let now = Instant::now();
+        let frozen = self.mouse_freeze > now
+            && self
+                .wm
+                .mouse
+                .is_some_and(|mouse| mouse.hover_window == hover_window);
+
         if pressed {
-            let freeze_until = Instant::now() + Duration::from_millis(click_freeze.max(0) as u64);
+            if let Some(mouse) = frozen.then_some(self.wm.mouse).flatten() {
+                global_pos = mouse.pos.as_vec2();
+            }
+            let freeze_until = now + Duration::from_millis(click_freeze.max(0) as u64);
             self.mouse_freeze = freeze_until;
             self.pending_release = Some(PendingRelease {
                 index,
                 pos: global_pos,
+                target: target.clone(),
+                hover_window,
                 freeze_until,
             });
         } else if let Some(pending) = self.pending_release.take()
             && pending.index == index
-            && pending.freeze_until > Instant::now()
+            && pending.freeze_until > now
         {
+            target = pending.target;
             global_pos = pending.pos;
+            hover_window = pending.hover_window;
         }
 
         let (focus, focus_keyboard) = self.get_mouse_focus(target, hover_window, pressed);
@@ -1628,11 +1650,29 @@ impl WvrServerState {
 
         self.manager
             .send_mouse_move(focus, global_pos, linear_delta, linear_delta);
-        self.wm.mouse = Some(window::MouseState {
-            hover_window,
-            pos: global_pos,
-        });
+        self.set_mouse_state(hover_window, global_pos);
         self.manager.send_pointer_button(index, pressed);
+    }
+
+    pub fn send_pending_release(&mut self, index: MouseIndex, click_freeze: i32) -> bool {
+        let Some(pending) = self
+            .pending_release
+            .as_ref()
+            .filter(|pending| pending.index == index && pending.freeze_until > Instant::now())
+            .cloned()
+        else {
+            return false;
+        };
+
+        self.send_mouse_button(
+            pending.target,
+            pending.pos,
+            pending.hover_window,
+            index,
+            false,
+            click_freeze,
+        );
+        true
     }
 
     pub const fn set_vr_pointer(&mut self, pointer: usize) {
@@ -1692,10 +1732,7 @@ impl WvrServerState {
             self.manager
                 .send_mouse_move(focus, global_pos, DVec2::ZERO, DVec2::ZERO);
         }
-        self.wm.mouse = Some(window::MouseState {
-            hover_window,
-            pos: global_pos,
-        });
+        self.set_mouse_state(hover_window, global_pos);
 
         self.manager.send_pointer_axis_wheel_accumulated(delta);
     }
