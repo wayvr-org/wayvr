@@ -536,7 +536,7 @@ pub fn openxr_run(args: &Args, params: RunParams) -> Result<(), BackendError> {
                 TaskType::Input(task) => {
                     app.input_state.handle_task(task);
                 }
-                TaskType::System(task) => SystemTaskManager::handle_task(task)?,
+                TaskType::System(task) => SystemTaskManager::handle_task(&mut app, task),
                 TaskType::Overlay(task) => {
                     overlays.handle_task(&mut app, task)?;
                 }

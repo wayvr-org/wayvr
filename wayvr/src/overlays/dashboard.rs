@@ -1,11 +1,11 @@
+use anyhow::Context;
+use dash_frontend::frontend::{self, FrontendTask, FrontendUpdateParams};
+use glam::{Affine2, Affine3A, Quat, Vec2, vec2, vec3};
 use std::{
     ops::Add,
     sync::{Arc, atomic::Ordering},
     time::{Duration, Instant},
 };
-
-use dash_frontend::frontend::{self, FrontendTask, FrontendUpdateParams};
-use glam::{Affine2, Affine3A, Quat, Vec2, vec2, vec3};
 use wayvr_ipc::{
     packet_client::WvrProcessLaunchParams,
     packet_server::{WvrProcess, WvrProcessHandle, WvrWindow, WvrWindowHandle},
@@ -601,6 +601,33 @@ impl DashInterface<AppState> for DashInterfaceLive {
 
     fn get_feats(&mut self, data: &mut AppState) -> dash_interface::InterfaceFeats {
         data.feats
+    }
+
+    fn audio_snapshot(
+        &mut self,
+        app: &mut AppState,
+    ) -> Option<Arc<wlx_common::audio_devices::AudioSnapshot>> {
+        #[cfg(feature = "pipewire")]
+        return app.audio_service.as_ref()?.snapshot();
+        #[cfg(not(feature = "pipewire"))]
+        None
+    }
+
+    fn audio_task(
+        &mut self,
+        app: &mut AppState,
+        task: wlx_common::audio_devices::AudioTask,
+    ) -> anyhow::Result<()> {
+        #[cfg(feature = "pipewire")]
+        {
+            let audio = app
+                .audio_service
+                .as_mut()
+                .context("audio service unavailable")?;
+
+            audio.task(task);
+        }
+        Ok(())
     }
 
     fn hmd_stats(&mut self, data: &mut AppState) -> dash_interface::HmdStats {

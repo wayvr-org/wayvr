@@ -127,6 +127,10 @@ impl WguiWindow {
 		self.0.borrow_mut().opened_window = None;
 	}
 
+	pub fn is_open(&self) -> bool {
+		self.0.borrow().opened_window.is_some()
+	}
+
 	// before                     after
 	// ┌───────────────────────┐  ┌───────────────────────┐
 	// │                  root │  │                  root │

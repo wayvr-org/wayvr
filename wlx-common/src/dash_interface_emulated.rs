@@ -8,6 +8,7 @@ use wayvr_ipc::{
 use wgui::{gfx::WGfx, i18n::Locale};
 
 use crate::{
+	audio_devices::{AudioSnapshot, AudioTask},
 	config::GeneralConfig,
 	dash_interface::{self, ConfigChangeKind, DashBackendTask, DashInterface, DashPlayspaceTask},
 	desktop_finder::DesktopFinder,
@@ -257,6 +258,14 @@ impl DashInterface<()> for DashInterfaceEmulated {
 			session_time_ms: crate::timestep::get_micros() / 1000,
 			ipd: 0.0,
 		}
+	}
+
+	fn audio_snapshot(&mut self, _data: &mut ()) -> Option<Arc<AudioSnapshot>> {
+		None
+	}
+
+	fn audio_task(&mut self, _data: &mut (), _task: AudioTask) -> anyhow::Result<()> {
+		Ok(())
 	}
 
 	fn monado_client_list(

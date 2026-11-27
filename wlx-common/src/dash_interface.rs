@@ -4,7 +4,12 @@ use wayvr_ipc::{
 	packet_server::{WvrProcess, WvrProcessHandle, WvrWindow, WvrWindowHandle},
 };
 
-use crate::{DesktopBackend, XrBackend, config::GeneralConfig, desktop_finder::DesktopFinder};
+use crate::{
+	DesktopBackend, XrBackend,
+	audio_devices::{AudioSnapshot, AudioTask},
+	config::GeneralConfig,
+	desktop_finder::DesktopFinder,
+};
 
 #[derive(Clone)]
 pub struct MonadoClient {
@@ -108,6 +113,8 @@ pub trait DashInterface<T> {
 	fn toggle_dashboard(&mut self, data: &mut T);
 	fn get_feats(&mut self, data: &mut T) -> InterfaceFeats;
 	fn hmd_stats(&mut self, data: &mut T) -> HmdStats;
+	fn audio_snapshot(&mut self, data: &mut T) -> Option<Arc<AudioSnapshot>>;
+	fn audio_task(&mut self, data: &mut T, task: AudioTask) -> anyhow::Result<()>;
 	fn enumerate_vulkan_devices(&mut self, data: &mut T) -> anyhow::Result<Vec<String>>;
 	fn get_version_string(&self, data: &mut T) -> String;
 }

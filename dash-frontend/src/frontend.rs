@@ -255,6 +255,8 @@ impl<T: 'static> Frontend<T> {
 			self.process_task(&mut params, task)?;
 		}
 
+		self.action_update_audio_settings(params.data)?;
+
 		let time_ms = timestep::get_micros() / 1000;
 
 		if let Some(mut tab) = self.current_tab.take() {
@@ -437,7 +439,7 @@ impl<T: 'static> Frontend<T> {
 			FrontendTask::RefreshPopupManager => self.refresh_popup_manager()?,
 			FrontendTask::ShowAudioSettings => self.action_show_audio_settings()?,
 			FrontendTask::ShowPowerSettings(pos) => self.action_show_power_settings(pos)?,
-			FrontendTask::UpdateAudioSettingsView => self.action_update_audio_settings()?,
+			FrontendTask::UpdateAudioSettingsView => self.action_update_audio_settings(params.data)?,
 			FrontendTask::RecenterPlayspace => self.action_recenter_playspace(params.data)?,
 			FrontendTask::ResetSpaceDrag => self.action_reset_space_drag(params.data)?,
 			FrontendTask::PushToast(content) => self.toast_manager.push(content),
@@ -634,12 +636,19 @@ impl<T: 'static> Frontend<T> {
 		Ok(())
 	}
 
-	fn action_update_audio_settings(&mut self) -> anyhow::Result<()> {
+	fn action_update_audio_settings(&mut self, data: &mut T) -> anyhow::Result<()> {
+		if !self.window_audio_settings.is_open() {
+			self.view_audio_settings = None;
+		}
+
 		let Some(view) = &mut self.view_audio_settings else {
 			return Ok(());
 		};
 
-		view.update(&mut self.layout)?;
+		let snapshot = self.interface.audio_snapshot(data);
+		for task in view.update(&mut self.layout, snapshot)? {
+			self.interface.audio_task(data, task)?;
+		}
 
 		Ok(())
 	}

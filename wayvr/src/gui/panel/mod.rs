@@ -588,7 +588,10 @@ pub fn apply_custom_command<T>(
             if let Ok(pair) = panel.parser_state.fetch_widget(com.state, element) {
                 let data = CustomGlyphData::from_assets(
                     &app.wgui_globals,
-                    wgui::assets::AssetPathRef::File(path),
+                    AssetPathRef::FileOrBuiltIn {
+                        path,
+                        fallback: None,
+                    },
                 )
                 .context("Could not load content from supplied path.")?;
 
