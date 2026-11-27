@@ -1,6 +1,6 @@
-use std::rc::Rc;
-
 use crate::frontend::{FrontendTask, FrontendTasks};
+use std::collections::HashMap;
+use std::{rc::Rc, sync::Arc};
 use wgui::{
 	assets::AssetPathSource,
 	color::{WguiColor, WguiColorName},
@@ -17,7 +17,7 @@ use wgui::{
 	task::Tasks,
 	widget::{ConstructEssentials, rectangle::WidgetRectangle},
 };
-use wlx_common::pactl_wrapper::{self};
+use wlx_common::audio_devices::{self as ad, AudioDevice, AudioDeviceProfile, AudioNodeType, AudioSnapshot, AudioTask};
 
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
@@ -25,7 +25,7 @@ enum CurrentMode {
 	Sinks,
 	Sources,
 	Cards,
-	CardProfileSelector(pactl_wrapper::Card),
+	CardProfileSelector(ad::AudioDevice),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,9 +42,9 @@ struct IndexAndVolume {
 }
 
 #[derive(Clone)]
-struct CardAndProfileName {
-	card: pactl_wrapper::Card,
-	profile_name: String,
+struct CardAndProfile {
+	card: AudioDevice,
+	profile_index: i32,
 }
 
 #[derive(Clone)]
@@ -53,9 +53,9 @@ enum ViewTask {
 	Remount,
 	SetMode(CurrentMode),
 	AutoSwitch,
-	SetSinkVolume(IndexAndVolume),
-	SetSourceVolume(IndexAndVolume),
-	SetCardProfile(CardAndProfileName),
+	SetVolume(IndexAndVolume),
+	SetCardProfile(CardAndProfile),
+	Audio(AudioTask),
 }
 
 type ViewTasks = Tasks<ViewTask>;
@@ -71,6 +71,9 @@ pub struct View {
 
 	//entry: DesktopEntry,
 	mode: CurrentMode,
+
+	snapshot: Option<Arc<AudioSnapshot>>,
+	mounted_revision: Option<u64>,
 
 	id_devices: WidgetID,
 
@@ -139,31 +142,6 @@ fn mount_multi_selector(params: MultiSelectorParams) -> anyhow::Result<()> {
 	Ok(())
 }
 
-fn get_card_from_sink<'a>(
-	sink: &pactl_wrapper::Sink,
-	cards: &'a [pactl_wrapper::Card],
-) -> Option<&'a pactl_wrapper::Card> {
-	let Some(sink_dev_name) = &sink.properties.get("device.name") else {
-		return None;
-	};
-
-	cards.iter().find(|&card| **sink_dev_name == card.name).map(|v| v as _)
-}
-
-fn get_card_from_source<'a>(
-	source: &pactl_wrapper::Source,
-	cards: &'a [pactl_wrapper::Card],
-) -> Option<&'a pactl_wrapper::Card> {
-	let Some(source_dev_name) = &source.properties.device_name else {
-		return None;
-	};
-
-	cards
-		.iter()
-		.find(|&card| **source_dev_name == card.name)
-		.map(|v| v as _)
-}
-
 fn does_string_mention_hmd_sink(input: &str) -> bool {
 	let lwr = input.to_lowercase();
 	lwr.contains("hmd") || // generic hmd name detected
@@ -185,40 +163,20 @@ fn does_string_mention_hmd_source(input: &str) -> bool {
 	lwr.contains("wivrn") // WiVRn
 }
 
-fn is_card_mentioning_hmd(card: &pactl_wrapper::Card) -> bool {
-	does_string_mention_hmd_sink(&card.properties.device_name)
+fn is_card_mentioning_hmd(card: &ad::AudioDevice) -> bool {
+	does_string_mention_hmd_sink(&card.name)
 }
 
 #[allow(clippy::needless_bool)]
-fn is_source_mentioning_hmd(source: &pactl_wrapper::Source) -> bool {
-	if let Some(source_card_name) = &source.properties.card_name
-		&& does_string_mention_hmd_source(source_card_name)
-	{
-		return true;
-	}
-
-	// WiVRn
-	if source.name == "wivrn.source" {
-		return true;
-	}
-
-	false
+fn is_source_mentioning_hmd(source: &ad::Source) -> bool {
+	does_string_mention_hmd_source(&source.name)
 }
 
-fn get_profile_display_name(profile_name: &str, card: &pactl_wrapper::Card) -> ProfileDisplayName {
-	let Some(profile) = card.profiles.get(profile_name) else {
-		// fallback
-		return ProfileDisplayName {
-			name: profile_name.into(),
-			icon_path: "@/dashboard/binary.svg",
-			is_vr: false,
-		};
-	};
-
+fn get_profile_display_name(profile: &AudioDeviceProfile, card: &AudioDevice) -> ProfileDisplayName {
 	let mut out_icon_path: &'static str;
 	let mut is_vr = false;
 
-	let prof = profile_name.to_lowercase();
+	let prof = profile.name.to_lowercase();
 	if prof.contains("analog") {
 		out_icon_path = "@/dashboard/minijack.svg";
 	} else if prof.contains("iec" /* digital */) {
@@ -245,23 +203,15 @@ fn get_profile_display_name(profile_name: &str, card: &pactl_wrapper::Card) -> P
 
 	let mut out_name: Option<String> = None;
 
-	for port in card.ports.values() {
-		// Find profile
-		for port_profile in &port.profiles {
-			if !port_profile.contains("stereo") {
-				continue; // we only want stereo, not surround or other types
-			}
+	if profile.name.contains("stereo") {
+		let product_name = card
+			.routes
+			.iter()
+			.filter(|r| r.profile_ids.contains(&profile.index))
+			.find_map(|r| r.product_name.as_deref());
 
-			if port_profile != profile_name {
-				continue;
-			}
-
-			// Exact match! Use its device name
-			let Some(product_name) = port.properties.get("device.product.name") else {
-				continue;
-			};
-
-			out_name = Some(product_name.clone());
+		if let Some(product_name) = product_name {
+			out_name = Some(product_name.to_owned());
 
 			if does_string_mention_hmd_sink(product_name) {
 				// VR icon
@@ -271,8 +221,6 @@ fn get_profile_display_name(profile_name: &str, card: &pactl_wrapper::Card) -> P
 				// Monitor icon
 				out_icon_path = "@/dashboard/displayport.svg";
 			}
-
-			break;
 		}
 	}
 
@@ -296,97 +244,49 @@ trait DeviceControl {
 	fn on_volume_change(&self, volume: f32) -> anyhow::Result<()>;
 }
 
-struct ControlSink {
+struct ControlNode {
 	tasks: ViewTasks,
 	on_update: Rc<dyn Fn()>,
-	sink: pactl_wrapper::Sink,
+	node: ad::AudioNode,
 }
 
-impl ControlSink {
-	fn new(tasks: ViewTasks, on_update: Rc<dyn Fn()>, sink: pactl_wrapper::Sink) -> Self {
-		Self { tasks, sink, on_update }
+impl ControlNode {
+	fn push(&self, task: ViewTask) {
+		self.tasks.push(task);
+		(*self.on_update)();
 	}
 }
 
-impl DeviceControl for ControlSink {
+impl DeviceControl for ControlNode {
 	fn on_volume_request(&self) -> anyhow::Result<f32> {
-		let volume = pactl_wrapper::get_sink_volume(&self.sink)?;
-		Ok(volume)
+		Ok(self.node.volume)
 	}
 
 	fn on_check(&self) -> anyhow::Result<()> {
-		pactl_wrapper::set_default_sink(self.sink.index)?;
-		self.tasks.push(ViewTask::Remount);
-		(*self.on_update)();
+		self.push(ViewTask::Audio(AudioTask::SetDefaultNode(
+			self.node.node_type,
+			self.node.index,
+		)));
 		Ok(())
 	}
 
 	fn on_mute_toggle(&self) -> anyhow::Result<()> {
-		pactl_wrapper::set_sink_mute(self.sink.index, !self.sink.mute)?;
-		self.tasks.push(ViewTask::Remount);
-		(*self.on_update)();
+		self.push(ViewTask::Audio(AudioTask::SetMute(self.node.index, !self.node.mute)));
 		Ok(())
 	}
 
 	fn on_volume_change(&self, volume: f32) -> anyhow::Result<()> {
-		self.tasks.push(ViewTask::SetSinkVolume(IndexAndVolume {
-			idx: self.sink.index,
+		self.push(ViewTask::SetVolume(IndexAndVolume {
+			idx: self.node.index,
 			volume,
 		}));
-		(*self.on_update)();
-		Ok(())
-	}
-}
-
-struct ControlSource {
-	tasks: ViewTasks,
-	on_update: Rc<dyn Fn()>,
-	source: pactl_wrapper::Source,
-}
-
-impl ControlSource {
-	fn new(tasks: ViewTasks, on_update: Rc<dyn Fn()>, source: pactl_wrapper::Source) -> Self {
-		Self {
-			tasks,
-			source,
-			on_update,
-		}
-	}
-}
-
-impl DeviceControl for ControlSource {
-	fn on_volume_request(&self) -> anyhow::Result<f32> {
-		let volume = pactl_wrapper::get_source_volume(&self.source)?;
-		Ok(volume)
-	}
-
-	fn on_check(&self) -> anyhow::Result<()> {
-		pactl_wrapper::set_default_source(self.source.index)?;
-		self.tasks.push(ViewTask::Remount);
-		(*self.on_update)();
-		Ok(())
-	}
-
-	fn on_mute_toggle(&self) -> anyhow::Result<()> {
-		pactl_wrapper::set_source_mute(self.source.index, !self.source.mute)?;
-		self.tasks.push(ViewTask::Remount);
-		(*self.on_update)();
-		Ok(())
-	}
-
-	fn on_volume_change(&self, volume: f32) -> anyhow::Result<()> {
-		self.tasks.push(ViewTask::SetSourceVolume(IndexAndVolume {
-			idx: self.source.index,
-			volume,
-		}));
-		(*self.on_update)();
 		Ok(())
 	}
 }
 
 struct MountCardParams<'a> {
 	layout: &'a mut Layout,
-	card: &'a pactl_wrapper::Card,
+	card: &'a ad::AudioDevice,
 }
 
 struct MountDeviceSliderParams<'a> {
@@ -423,147 +323,95 @@ fn push_popup_microphone_set_successfully(globals: &WguiGlobals, frontend_tasks:
 fn switch_sink_card(
 	globals: &WguiGlobals,
 	frontend_tasks: &FrontendTasks,
-	card: &pactl_wrapper::Card,
-	profile_name: &str,
+	audio_tasks: &mut Vec<AudioTask>,
+	card: &ad::AudioDevice,
+	profile_index: i32,
 	name: &ProfileDisplayName,
-) -> anyhow::Result<()> {
-	let card_index = card.index;
-	let profile = profile_name.to_string();
-	pactl_wrapper::set_card_profile(card_index, &profile)?;
-	let sinks = pactl_wrapper::list_sinks()?;
-
-	let mut sink_found = false;
-	for sink in &sinks {
-		if let Some(device_name) = sink.properties.get("device.name")
-			&& device_name == &card.name
-		{
-			pactl_wrapper::set_default_sink(sink.index)?;
-			sink_found = true;
-			break;
-		}
-	}
-
-	if sink_found {
-		push_popup_speakers_set_successfully(globals, frontend_tasks, &name.name);
-	} else {
-		frontend_tasks.push(FrontendTask::PushToast(Translation::from_translation_key(
-			format!("Card found ({}), but no matching speakers found", name.name).as_str(),
-		)));
-	}
-
-	Ok(())
+) {
+	audio_tasks.push(AudioTask::SetCardProfile {
+		card: card.index,
+		profile: profile_index,
+		make_default_sink: true,
+	});
+	push_popup_speakers_set_successfully(globals, frontend_tasks, &name.name);
 }
 
 fn switch_source(
 	globals: &WguiGlobals,
 	frontend_tasks: &FrontendTasks,
-	source: &pactl_wrapper::Source,
-) -> anyhow::Result<()> {
-	match pactl_wrapper::set_default_source(source.index) {
-		Ok(()) => {
-			push_popup_microphone_set_successfully(
-				globals,
-				frontend_tasks,
-				if let Some(card_name) = &source.properties.card_name {
-					card_name
-				} else {
-					&source.description
-				},
-			);
-			Ok(())
-		}
-		Err(e) => {
-			Translation::from_translation_key(format!("[AUDIO.FAILED_TO_SWITCH_MICROPHONE]: {:?}", e).as_str());
-			Err(e)
-		}
-	}
+	audio_tasks: &mut Vec<AudioTask>,
+	source: &ad::AudioNode,
+) {
+	audio_tasks.push(AudioTask::SetDefaultNode(AudioNodeType::Source, source.index));
+	push_popup_microphone_set_successfully(globals, frontend_tasks, &source.description);
 }
 
-fn switch_to_vr_microphone(globals: &WguiGlobals, frontend_tasks: &FrontendTasks) -> anyhow::Result<()> {
-	let sources = pactl_wrapper::list_sources()?;
-	let mut switched = false;
-
-	for source in &sources {
-		if is_source_mentioning_hmd(source) {
-			switch_source(globals, frontend_tasks, source)?;
-			switched = true;
-			break;
-		}
-	}
-
-	if !switched {
+fn switch_to_vr_microphone(
+	globals: &WguiGlobals,
+	frontend_tasks: &FrontendTasks,
+	audio_tasks: &mut Vec<AudioTask>,
+	snapshot: &AudioSnapshot,
+) {
+	if let Some(source) = snapshot
+		.nodes(AudioNodeType::Source)
+		.find(|s| is_source_mentioning_hmd(s))
+	{
+		switch_source(globals, frontend_tasks, audio_tasks, source);
+	} else {
 		frontend_tasks.push(FrontendTask::PushToast(Translation::from_translation_key(
 			"AUDIO.NO_VR_MICROPHONE_SWITCH_MANUALLY",
 		)));
 	}
-
-	Ok(())
 }
 
 #[derive(Debug, Clone)]
 struct CardPriorityResult<'a> {
-	priority: u32,
-	name: String,
-	card: &'a pactl_wrapper::Card,
+	card: &'a AudioDevice,
+	profile: &'a AudioDeviceProfile,
 }
 
-fn get_card_best_profile<'a>(card: &'a pactl_wrapper::Card, search_type: SearchType) -> Option<CardPriorityResult<'a>> {
-	let mut best_priority = 0;
-	let mut best_profile_name = "";
-	let mut best_profile: Option<&'a pactl_wrapper::CardProfile> = None;
+fn get_card_best_profile<'a>(card: &'a AudioDevice, search_type: SearchType) -> Option<CardPriorityResult<'a>> {
+	let mut best_profile: Option<&'a AudioDeviceProfile> = None;
 
-	for (profile_name, profile) in &card.profiles {
+	for profile in &card.profiles {
 		match search_type {
-			SearchType::Sink if profile.sinks == 0 => continue,
-			SearchType::Source if profile.sources == 0 => continue,
+			SearchType::Sink if profile.sink_count == 0 => continue,
+			SearchType::Source if profile.source_count == 0 => continue,
 			_ => {}
 		}
 
-		if profile.priority > best_priority {
-			best_priority = profile.priority;
+		if best_profile.is_none_or(|p| profile.priority > p.priority) {
 			best_profile = Some(profile);
-			best_profile_name = profile_name;
 		}
 	}
 
-	best_profile?; // do not proceed if no profile was found
-
 	Some(CardPriorityResult {
-		priority: best_priority,
-		name: best_profile_name.to_string(),
 		card,
+		profile: best_profile?,
 	})
 }
 
 fn get_best_profile_from_array<'a>(arr: &[CardPriorityResult<'a>]) -> Option<CardPriorityResult<'a>> {
-	let mut best_priority = 0;
-	let mut res: Option<CardPriorityResult<'a>> = None;
-
-	for cell in arr {
-		if cell.priority > best_priority {
-			best_priority = cell.priority;
-			res = Some(cell.clone());
-		}
-	}
-
-	res
+	arr.iter().max_by_key(|r| r.profile.priority).cloned()
 }
 
-fn switch_to_vr_speakers(globals: &WguiGlobals, frontend_tasks: &FrontendTasks) -> anyhow::Result<()> {
-	let cards = pactl_wrapper::list_cards()?;
-	let sinks = pactl_wrapper::list_sinks()?;
+fn switch_to_vr_speakers(
+	globals: &WguiGlobals,
+	frontend_tasks: &FrontendTasks,
+	audio_tasks: &mut Vec<AudioTask>,
+	snapshot: &AudioSnapshot,
+) {
+	let cards = &snapshot.devices;
 	let mut best_profiles = Vec::new();
 
 	// Check for WiVRn presence
-	for sink in sinks {
-		if sink.name.contains("wivrn") {
-			pactl_wrapper::set_default_sink(sink.index)?;
-			push_popup_speakers_set_successfully(globals, frontend_tasks, "WiVRn");
-			return Ok(());
-		}
+	if let Some(sink) = snapshot.nodes(AudioNodeType::Sink).find(|s| s.name.contains("wivrn")) {
+		audio_tasks.push(AudioTask::SetDefaultNode(AudioNodeType::Sink, sink.index));
+		push_popup_speakers_set_successfully(globals, frontend_tasks, "WiVRn");
+		return;
 	}
 
-	for card in &cards {
+	for card in cards {
 		if !is_card_mentioning_hmd(card) {
 			continue;
 		}
@@ -574,31 +422,37 @@ fn switch_to_vr_speakers(globals: &WguiGlobals, frontend_tasks: &FrontendTasks) 
 
 	if !best_profiles.is_empty() {
 		let best_profile = get_best_profile_from_array(&best_profiles).unwrap();
-		let name = get_profile_display_name(&best_profile.name, best_profile.card);
-		switch_sink_card(globals, frontend_tasks, best_profile.card, &best_profile.name, &name)?;
-		return Ok(());
+		let name = get_profile_display_name(best_profile.profile, best_profile.card);
+		switch_sink_card(
+			globals,
+			frontend_tasks,
+			audio_tasks,
+			best_profile.card,
+			best_profile.profile.index,
+			&name,
+		);
+		return;
 	}
 
 	// There aren't any cards which mention VR explicitly. Time for plan B.
-	for card in &cards {
-		for profile_name in card.profiles.keys() {
-			let name = get_profile_display_name(profile_name, card);
+	for card in cards {
+		for profile in &card.profiles {
+			let name = get_profile_display_name(profile, card);
 			if !name.is_vr {
 				continue;
 			}
-			switch_sink_card(globals, frontend_tasks, card, profile_name, &name)?;
-			return Ok(());
+			switch_sink_card(globals, frontend_tasks, audio_tasks, card, profile.index, &name);
+			return;
 		}
 	}
 
 	frontend_tasks.push(FrontendTask::PushToast(Translation::from_translation_key(
 		"AUDIO.NO_VR_SPEAKERS_FOUND_SWITCH_MANUALLY",
 	)));
-
-	Ok(())
 }
 
 const ONE_HUNDRED_PERCENT: f32 = 100.0;
+const REVISION_UNAVAILABLE: u64 = u64::MAX;
 const VOLUME_MULT: f32 = 1.0 / ONE_HUNDRED_PERCENT;
 
 impl View {
@@ -624,11 +478,13 @@ impl View {
 		let btn_cards = state.fetch_component_as::<ComponentButton>("btn_cards")?;
 		let btn_auto = state.fetch_component_as::<ComponentButton>("btn_auto")?;
 
-		let mut res = Self {
+		let res = Self {
 			globals: params.globals,
 			frontend_tasks: params.frontend_tasks,
 			state,
 			mode: CurrentMode::Sinks,
+			snapshot: None,
+			mounted_revision: None,
 			id_devices,
 			tasks,
 			on_update: params.on_update,
@@ -642,7 +498,7 @@ impl View {
 		btn_cards.on_click(res.handle_func_button_click(ViewTask::SetMode(CurrentMode::Cards)));
 		btn_auto.on_click(res.handle_func_button_click(ViewTask::AutoSwitch));
 
-		res.init_mode_sinks(params.layout)?;
+		// the device list gets mounted on the first update()
 		res.update_button_highlights(params.layout)?;
 
 		Ok(res)
@@ -674,73 +530,113 @@ impl View {
 		Ok(())
 	}
 
-	fn process_tasks(&mut self, layout: &mut Layout) -> anyhow::Result<bool> {
+	fn process_tasks(&mut self, layout: &mut Layout, audio_tasks: &mut Vec<AudioTask>) -> anyhow::Result<bool> {
 		let tasks = self.tasks.drain();
 		if tasks.is_empty() {
 			return Ok(false);
 		}
 
-		let mut set_sink_volume: Option<IndexAndVolume> = None;
-		let mut set_source_volume: Option<IndexAndVolume> = None;
+		let mut set_volume: HashMap<u32, f32> = HashMap::new();
 
 		for task in tasks {
 			match task {
 				ViewTask::Remount => {
+					self.mounted_revision = Some(self.current_revision());
 					self.update_button_highlights(layout)?;
-					match &self.mode {
-						CurrentMode::Sinks => self.init_mode_sinks(layout)?,
-						CurrentMode::Sources => self.init_mode_sources(layout)?,
+					match self.mode.clone() {
+						CurrentMode::Sinks | CurrentMode::Sources => {
+							let node_type = match self.mode.clone() {
+								CurrentMode::Sinks => AudioNodeType::Sink,
+								CurrentMode::Sources => AudioNodeType::Source,
+								_ => unreachable!(),
+							};
+							self.init_mode_nodes(layout, node_type)?
+						}
 						CurrentMode::Cards => self.init_mode_cards(layout)?,
-						CurrentMode::CardProfileSelector(card) => self.init_mode_card_selector(layout, card.clone())?,
+						CurrentMode::CardProfileSelector(card) => {
+							// refresh the card, it could've changed or disappeared
+							match self
+								.snapshot
+								.as_ref()
+								.and_then(|s| s.devices.iter().find(|c| c.index == card.index))
+							{
+								Some(card) => self.init_mode_card_selector(layout, card.clone())?,
+								None => {
+									self.mode = CurrentMode::Cards;
+									self.tasks.push(ViewTask::Remount);
+								}
+							}
+						}
 					}
 				}
-				ViewTask::SetSinkVolume(s) => {
-					set_sink_volume = Some(s);
-				}
-				ViewTask::SetSourceVolume(s) => {
-					set_source_volume = Some(s);
+				ViewTask::SetVolume(s) => {
+					set_volume.insert(s.idx, s.volume);
 				}
 				ViewTask::SetMode(current_mode) => {
 					self.mode = current_mode;
 					self.tasks.push(ViewTask::Remount);
 				}
 				ViewTask::SetCardProfile(c) => {
-					pactl_wrapper::set_card_profile(c.card.index, &c.profile_name)?;
+					audio_tasks.push(AudioTask::SetCardProfile {
+						card: c.card.index,
+						profile: c.profile_index,
+						make_default_sink: false,
+					});
 				}
+				ViewTask::Audio(task) => audio_tasks.push(task),
 				ViewTask::AutoSwitch => {
-					switch_to_vr_speakers(&self.globals, &self.frontend_tasks)?;
-					switch_to_vr_microphone(&self.globals, &self.frontend_tasks)?;
-					self.tasks.push(ViewTask::Remount);
+					if let Some(snapshot) = self.snapshot.clone() {
+						switch_to_vr_speakers(&self.globals, &self.frontend_tasks, audio_tasks, &snapshot);
+						switch_to_vr_microphone(&self.globals, &self.frontend_tasks, audio_tasks, &snapshot);
+					}
 				}
 			}
 		}
 
 		// set volume only to the latest event (prevent cpu time starvation
 		// due to excessive input motion events)
-		if let Some(s) = set_sink_volume {
-			pactl_wrapper::set_sink_volume(s.idx, s.volume)?;
-		}
-
-		if let Some(s) = set_source_volume {
-			pactl_wrapper::set_source_volume(s.idx, s.volume)?;
+		for (idx, volume) in set_volume {
+			audio_tasks.push(AudioTask::SetVolume(idx, volume));
 		}
 
 		Ok(true)
 	}
 
-	pub fn update(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
-		while self.process_tasks(layout)? {}
+	fn current_revision(&self) -> u64 {
+		self
+			.snapshot
+			.as_ref()
+			.map_or(REVISION_UNAVAILABLE, |s| s.layout_revision)
+	}
 
-		Ok(())
+	// call every frame, returns the audio changes requested by the user
+	pub fn update(
+		&mut self,
+		layout: &mut Layout,
+		snapshot: Option<Arc<AudioSnapshot>>,
+	) -> anyhow::Result<Vec<AudioTask>> {
+		self.snapshot = snapshot;
+		if self.mounted_revision != Some(self.current_revision()) {
+			self.tasks.push(ViewTask::Remount);
+		}
+
+		let mut audio_tasks = Vec::new();
+		while self.process_tasks(layout, &mut audio_tasks)? {}
+
+		Ok(audio_tasks)
 	}
 
 	fn mount_card(&mut self, params: MountCardParams) -> anyhow::Result<()> {
-		let desc = &params.card.properties.device_description;
-		let disp_name = get_profile_display_name(&params.card.active_profile, params.card);
+		let desc = &params.card.description;
+		let profile_name = params
+			.card
+			.active_profile()
+			.map(|p| get_profile_display_name(p, params.card).name)
+			.unwrap_or_default();
 
 		let mut par = TemplateParams::new();
 		par.insert("card_name", desc.as_str());
-		par.insert("profile_name", disp_name.name.as_str());
+		par.insert("profile_name", profile_name.as_str());
 
 		let data = self
 			.state
@@ -836,80 +732,39 @@ impl View {
 		Ok(())
 	}
 
-	fn init_mode_sinks(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
-		log::info!("refreshing sink list");
-
-		let sinks = pactl_wrapper::list_sinks()?;
-		let cards = pactl_wrapper::list_cards()?;
-		let default_sink = pactl_wrapper::get_default_sink(&sinks)?;
-
+	fn init_mode_nodes(&mut self, layout: &mut Layout, node_type: AudioNodeType) -> anyhow::Result<()> {
 		layout.remove_children(self.id_devices);
 
-		for sink in sinks {
-			let card = get_card_from_sink(&sink, &cards);
+		let Some(snapshot) = self.snapshot.clone() else {
+			return Ok(());
+		};
 
-			let checked = if let Some(default_sink) = &default_sink {
-				sink.index == default_sink.index
-			} else {
-				false
-			};
+		let nodes = snapshot.nodes(node_type);
+		let default_node = snapshot.get_default_node(node_type);
 
-			let device_desc = sink.description.clone();
-			let muted = sink.mute;
+		for node in nodes {
+			let device = node.device_id.and_then(|device_id| snapshot.get_device(device_id));
 
-			let control = Rc::new(ControlSink::new(self.tasks.clone(), self.on_update.clone(), sink));
+			let checked = default_node.is_some_and(|d| d.index == node.index);
 
-			let disp = card
-				.as_ref()
-				.map(|card| get_profile_display_name(&card.active_profile, card));
+			let control = Rc::new(ControlNode {
+				tasks: self.tasks.clone(),
+				on_update: self.on_update.clone(),
+				node: node.clone(),
+			});
+
+			let mut disp = device.and_then(|card| card.active_profile().map(|p| get_profile_display_name(p, card)));
+			if let Some(disp) = &mut disp {
+				disp.name = node.nick.clone().unwrap_or_else(|| node.description.clone());
+			}
 
 			self.mount_device_slider(MountDeviceSliderParams {
 				checked,
 				disp,
-				device_desc,
+				device_desc: node.description.clone(),
 				layout,
 				control,
-				muted,
-			})?;
-		}
-
-		Ok(())
-	}
-
-	fn init_mode_sources(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
-		log::info!("refreshing source list");
-
-		let sources = pactl_wrapper::list_sources()?;
-		let cards = pactl_wrapper::list_cards()?;
-		let default_source = pactl_wrapper::get_default_source(&sources)?;
-
-		layout.remove_children(self.id_devices);
-
-		for source in sources {
-			let card = get_card_from_source(&source, &cards);
-
-			let checked = if let Some(default_source) = &default_source {
-				source.index == default_source.index
-			} else {
-				false
-			};
-
-			let device_desc = source.description.clone();
-			let muted = source.mute;
-
-			let control = Rc::new(ControlSource::new(self.tasks.clone(), self.on_update.clone(), source));
-
-			let disp = card
-				.as_ref()
-				.map(|card| get_profile_display_name(&card.active_profile, card));
-
-			self.mount_device_slider(MountDeviceSliderParams {
-				checked,
-				disp,
-				device_desc,
-				layout,
-				control,
-				muted,
+				muted: node.mute,
 			})?;
 		}
 
@@ -919,17 +774,20 @@ impl View {
 	fn init_mode_cards(&mut self, layout: &mut Layout) -> anyhow::Result<()> {
 		log::info!("refreshing card list");
 
-		let cards = pactl_wrapper::list_cards()?;
 		layout.remove_children(self.id_devices);
 
-		for card in cards {
-			self.mount_card(MountCardParams { layout, card: &card })?;
+		let Some(snapshot) = self.snapshot.clone() else {
+			return Ok(());
+		};
+
+		for card in &snapshot.devices {
+			self.mount_card(MountCardParams { layout, card })?;
 		}
 
 		Ok(())
 	}
 
-	fn init_mode_card_selector(&mut self, layout: &mut Layout, card: pactl_wrapper::Card) -> anyhow::Result<()> {
+	fn init_mode_card_selector(&mut self, layout: &mut Layout, card: ad::AudioDevice) -> anyhow::Result<()> {
 		log::info!("showing card selector for {}", card.name);
 
 		layout.remove_children(self.id_devices);
@@ -955,14 +813,14 @@ impl View {
 		}
 
 		let mut cells = Vec::<SelectorCell>::new();
-		for profile_name in card.profiles.keys() {
-			if profile_name.contains("surround") {
+		for profile in &card.profiles {
+			if profile.name.contains("surround") {
 				continue; // we aren't interested in that
 			}
 
-			let disp_name = get_profile_display_name(profile_name, &card);
+			let disp_name = get_profile_display_name(profile, &card);
 			cells.push(SelectorCell {
-				key: profile_name.clone(),
+				key: profile.name.clone(),
 				display_text: disp_name.name,
 				icon_path_builtin: disp_name.icon_path,
 			});
@@ -975,16 +833,19 @@ impl View {
 
 		mount_multi_selector(MultiSelectorParams {
 			cells: &cells,
-			def_cell: &card.active_profile,
+			def_cell: card.active_profile().map(|p| p.name.as_str()).unwrap_or("Unknown"),
 			ess: &mut ess,
 			on_click: {
 				let card = card.clone();
 				let tasks = self.tasks.clone();
 				let on_update = self.on_update.clone();
 				Rc::new(move |profile_name| {
-					tasks.push(ViewTask::SetCardProfile(CardAndProfileName {
+					let Some(profile) = card.profile_by_name(profile_name) else {
+						return;
+					};
+					tasks.push(ViewTask::SetCardProfile(CardAndProfile {
 						card: card.clone(),
-						profile_name: profile_name.to_string(),
+						profile_index: profile.index,
 					}));
 					tasks.push(ViewTask::SetMode(CurrentMode::Cards));
 					(*on_update)();

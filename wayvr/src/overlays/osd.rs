@@ -110,6 +110,8 @@ impl Osd {
 
     fn get_sprite(topic: ToastTopic) -> String {
         match topic {
+            ToastTopic::VolumeChange => "icons/volume.svg",
+            ToastTopic::Mute => "icons/volume_off.svg",
             ToastTopic::IpdChange => "icons/vr.svg",
             _ => "icons/bell.svg",
         }

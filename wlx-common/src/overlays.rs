@@ -10,6 +10,8 @@ pub enum ToastTopic {
 	DesktopNotification,
 	XSNotification,
 	IpdChange,
+	VolumeChange,
+	Mute,
 	Priority,
 }
 

@@ -84,7 +84,7 @@ pub struct AppState {
     pub osc_sender: Option<OscSender>,
 
     pub wvr_server: Option<WvrServerState>,
-    pub _desktop_session: Option<XdgDesktopSession>,
+    _desktop_session: Option<XdgDesktopSession>,
 
     #[cfg(feature = "whisper")]
     pub whisper_sst: Option<WhisperStt>,
@@ -94,6 +94,9 @@ pub struct AppState {
 
     #[cfg(feature = "pipewire")]
     pub screencast_manager: Option<ScreenCastManager>,
+
+    #[cfg(feature = "pipewire")]
+    pub audio_service: Option<crate::subsystem::audio::AudioService>,
 
     pub delta_time: f32,
 }
@@ -211,6 +214,11 @@ impl AppState {
         desktop_finder.refresh();
 
         #[cfg(feature = "pipewire")]
+        let audio_service = crate::subsystem::audio::AudioService::new()
+            .log_err("Could not start the audio service. Audio controls will not work.")
+            .ok();
+
+        #[cfg(feature = "pipewire")]
         let screencast_manager = ScreenCastManager::new()
             .log_err(
                 // would only fail if session D-bus is unreachable
@@ -261,6 +269,8 @@ impl AppState {
 
             #[cfg(feature = "pipewire")]
             screencast_manager,
+            #[cfg(feature = "pipewire")]
+            audio_service,
 
             delta_time: 1.0 / 120.0,
             session,
@@ -309,6 +319,9 @@ impl AppState {
             }
         }
 
+        #[cfg(feature = "pipewire")]
+        crate::system::show_volume_osd(self);
+
         if let Some(id) = toast_tick(self, self.delta_time) {
             self.notifications.notification_closed(id, 1);
         }
@@ -347,6 +360,8 @@ impl AppSession {
         toast_topics.insert(ToastTopic::DesktopNotification, ToastDisplayMethod::Center);
         toast_topics.insert(ToastTopic::XSNotification, ToastDisplayMethod::Center);
         toast_topics.insert(ToastTopic::Priority, ToastDisplayMethod::Center);
+        toast_topics.insert(ToastTopic::VolumeChange, ToastDisplayMethod::Center);
+        toast_topics.insert(ToastTopic::Mute, ToastDisplayMethod::Center);
 
         config.notification_topics.iter().for_each(|(k, v)| {
             toast_topics.insert(*k, *v);

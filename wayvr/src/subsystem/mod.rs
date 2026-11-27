@@ -1,3 +1,5 @@
+#[cfg(feature = "pipewire")]
+pub mod audio;
 pub mod dbus;
 pub mod hid;
 pub mod input;

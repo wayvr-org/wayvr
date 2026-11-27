@@ -7,13 +7,13 @@ authors = ["galister", "oo8dev"]
 description = "Your way to enjoy VR on Linux! Access your Wayland/X11 desktop from Monado/WiVRn/SteamVR."
 repository = "https://github.com/wlx-team/wayvr"
 keywords = [
-  "linux",
-  "openvr",
-  "openvr-overlay",
-  "openxr",
-  "openxr-overlay",
-  "wayland",
-  "x11",
+    "linux",
+    "openvr",
+    "openvr-overlay",
+    "openxr",
+    "openxr-overlay",
+    "wayland",
+    "x11",
 ]
 categories = ["games"]
 
@@ -25,7 +25,7 @@ feat-monado-metrics = []
 openvr = ["dep:json", "dep:ovr_overlay"]
 openxr = ["dep:libmonado", "dep:openxr", "dep:prost"]
 osc = ["dep:rosc"]
-pipewire = ["wlx-capture/pipewire"]
+pipewire = ["wlx-capture/pipewire", "dep:pipewire"]
 wayland = ["pipewire", "wlx-capture/wlr", "xkbcommon/wayland"]
 whisper = ["dep:calloop", "dep:calloop-wayland-source", "dep:pipewire", "dep:whisper-rs"]
 x11 = ["dep:xcb", "wlx-capture/xshm", "xkbcommon/x11"]
@@ -72,11 +72,11 @@ chrono-tz = "0.10.4"
 config = "0.15.25"
 image.workspace = true
 image_dds = {
-  version = "0.7.2",
-  default-features = false,
-  features = [
-    "ddsfile",
-  ]
+    version = "0.7.2",
+    default-features = false,
+    features = [
+        "ddsfile",
+    ]
 }
 input-linux = "0.7.1"
 json = { version = "0.12.4", optional = true }
@@ -85,13 +85,13 @@ log-panics = { version = "2.1.0", features = ["with-backtrace"] }
 mint = "0.5.9"
 openxr = { version = "0.21.1", features = ["linked", "mint"], optional = true }
 ovr_overlay = {
-  git = "https://github.com/galister/ovr_overlay_oyasumi",
-  rev = "3b7d24cee24aa2b1ad7dffc5d5c8568508049bdd",
-  features = [
-    "ovr_input",
-    "ovr_system",
-  ],
-  optional = true
+    git = "https://github.com/galister/ovr_overlay_oyasumi",
+    rev = "3b7d24cee24aa2b1ad7dffc5d5c8568508049bdd",
+    features = [
+        "ovr_input",
+        "ovr_system",
+    ],
+    optional = true
 }
 prost = { version = "0.14.4", optional = true }
 pure-rust-locales = "0.8.2"
@@ -99,15 +99,15 @@ rosc = { version = "0.11.4", optional = true }
 serde_yaml = "0.9.33"
 signal-hook = "0.4.4"
 smithay = {
-  git = "https://github.com/Smithay/smithay.git",
-  rev = "0d66849533b475c40c0c461ec182d0f939424452",
-  default-features = false,
-  features = [
-    "backend_vulkan",
-    "desktop",
-    "wayland_frontend",
-    "xwayland",
-  ]
+    git = "https://github.com/Smithay/smithay.git",
+    rev = "0d66849533b475c40c0c461ec182d0f939424452",
+    default-features = false,
+    features = [
+        "backend_vulkan",
+        "desktop",
+        "wayland_frontend",
+        "xwayland",
+    ]
 }
 smithay-clipboard = "0.7.3"
 sysinfo = { version = "0.39.6" }
